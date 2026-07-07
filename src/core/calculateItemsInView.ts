@@ -5,15 +5,15 @@ import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
-import { prepareMVCP } from "@/core/mvcp";
 import {
-    getActivePrefixLayoutStore,
-    materializePrefixLayoutStoreRange,
-    rebuildPrefixLayoutStoreExact,
-    reconcilePrefixDataChange,
+    getActiveLayoutStore,
+    materializeLayoutStoreRange,
+    rebuildLayoutStoreExact,
+    reconcileLayoutStoreDataChange,
     syncActiveRowLayoutStoreSpans,
-    syncPrefixLayoutStoreLayoutState,
-} from "@/core/prefixLayoutStoreLifecycle";
+    syncLayoutStoreState,
+} from "@/core/layoutStoreLifecycle";
+import { prepareMVCP } from "@/core/mvcp";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { updateViewableItems } from "@/core/viewability";
@@ -241,7 +241,7 @@ function getVisibleLoopItemSize(
     );
 }
 
-function reconcilePrefixPinnedIndices(
+function reconcileLayoutStorePinnedIndices(
     ctx: StateContext,
     options: {
         alwaysRenderIndices: number[];
@@ -263,7 +263,7 @@ function reconcilePrefixPinnedIndices(
             const start = Math.max(0, Math.min(startIndex, endIndex));
             const end = Math.min(options.dataLength - 1, Math.max(startIndex, endIndex));
             if (start <= end) {
-                materializePrefixLayoutStoreRange(ctx, start, end);
+                materializeLayoutStoreRange(ctx, start, end);
             }
         }
     };
@@ -279,14 +279,14 @@ function reconcilePrefixPinnedIndices(
     }
 }
 
-function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
-    const store = getActivePrefixLayoutStore(ctx);
+function materializeLayoutStoreOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
+    const store = getActiveLayoutStore(ctx);
     let range: { end: number; start: number } | undefined;
 
     if (store) {
         const indexRange = store.findIndexRangeAtOffsets(startOffset, endOffset);
         if (indexRange) {
-            range = materializePrefixLayoutStoreRange(ctx, indexRange.start, indexRange.end);
+            range = materializeLayoutStoreRange(ctx, indexRange.start, indexRange.end);
         }
     }
 
@@ -461,10 +461,10 @@ export function calculateItemsInView(
             (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
         if ((didDataChange || isInitialLayout) && state.isFirst) {
-            syncPrefixLayoutStoreLayoutState(ctx);
+            syncLayoutStoreState(ctx);
         }
         if (syncActiveRowLayoutStoreSpans(ctx)) {
-            syncPrefixLayoutStoreLayoutState(ctx);
+            syncLayoutStoreState(ctx);
         }
 
         let totalSize = getContentSize(ctx);
@@ -513,7 +513,7 @@ export function calculateItemsInView(
             set$(ctx, "debugComputedScroll", scroll);
         }
 
-        let layout = createLayoutAccess(ctx, getActivePrefixLayoutStore(ctx));
+        let layout = createLayoutAccess(ctx, getActiveLayoutStore(ctx));
         const previousStickyIndex = peek$(ctx, "activeStickyIndex");
         const resolveStickyState = () => {
             const currentStickyIdx =
@@ -620,17 +620,17 @@ export function calculateItemsInView(
         // Handle maintainVisibleContentPosition adjustment early
         const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, didDataChange) : undefined;
 
-        const hasActiveLayoutStore = !!getActivePrefixLayoutStore(ctx);
-        const shouldReconcilePrefixDataChange =
+        const hasActiveLayoutStore = !!getActiveLayoutStore(ctx);
+        const shouldReconcileLayoutStoreDataChange =
             !forceFullItemPositions &&
             didDataChange &&
             !state.isFirst &&
             hasActiveLayoutStore &&
             state.props.hasReliableKeyExtractor;
-        const previousIdCache = shouldReconcilePrefixDataChange ? state.idCache.slice() : undefined;
+        const previousIdCache = shouldReconcileLayoutStoreDataChange ? state.idCache.slice() : undefined;
         if (didDataChange) {
             resetLayoutCachesForDataChange(state, {
-                includePrefixMeasurements: !shouldReconcilePrefixDataChange,
+                includeLayoutStoreMeasurements: !shouldReconcileLayoutStoreDataChange,
             });
         }
 
@@ -641,21 +641,21 @@ export function calculateItemsInView(
         const optimizeForVisibleWindow =
             !forceFullItemPositions && !didDataChange && numColumns > 1 && minIndexSizeChanged !== undefined;
 
-        const shouldMaterializePrefixRange = hasActiveLayoutStore && !didDataChange;
-        let prefixMaterializedRange = shouldMaterializePrefixRange
-            ? materializePrefixLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
+        const shouldMaterializeLayoutStoreRange = hasActiveLayoutStore && !didDataChange;
+        let layoutStoreMaterializedRange = shouldMaterializeLayoutStoreRange
+            ? materializeLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
             : undefined;
-        let didReconcilePrefixDataChange = false;
-        let didResetPrefixDataChange = false;
+        let didReconcileLayoutStoreDataChange = false;
+        let didResetLayoutStoreDataChange = false;
 
-        if (!prefixMaterializedRange && shouldReconcilePrefixDataChange) {
-            didReconcilePrefixDataChange = reconcilePrefixDataChange(ctx, {
+        if (!layoutStoreMaterializedRange && shouldReconcileLayoutStoreDataChange) {
+            didReconcileLayoutStoreDataChange = reconcileLayoutStoreDataChange(ctx, {
                 didKeyExtractorChange: state.dataChangeKeyExtractorChanged,
                 previousIdCache,
             });
-            if (didReconcilePrefixDataChange) {
-                layout = createLayoutAccess(ctx, getActivePrefixLayoutStore(ctx));
-                prefixMaterializedRange = materializePrefixLayoutStoreOffsetRange(
+            if (didReconcileLayoutStoreDataChange) {
+                layout = createLayoutAccess(ctx, getActiveLayoutStore(ctx));
+                layoutStoreMaterializedRange = materializeLayoutStoreOffsetRange(
                     ctx,
                     scrollTopBuffered,
                     scrollBottomBuffered,
@@ -663,24 +663,24 @@ export function calculateItemsInView(
             }
         }
 
-        if (!prefixMaterializedRange && didDataChange && hasActiveLayoutStore) {
-            const didFailReliableReconcile = shouldReconcilePrefixDataChange && !didReconcilePrefixDataChange;
+        if (!layoutStoreMaterializedRange && didDataChange && hasActiveLayoutStore) {
+            const didFailReliableReconcile = shouldReconcileLayoutStoreDataChange && !didReconcileLayoutStoreDataChange;
             if (didFailReliableReconcile || !state.props.hasReliableKeyExtractor) {
                 clearUnsafeSizeCaches(state);
             }
             resetLayoutCachesForDataChange(state);
-            rebuildPrefixLayoutStoreExact(ctx);
-            layout = createLayoutAccess(ctx, getActivePrefixLayoutStore(ctx));
-            prefixMaterializedRange = materializePrefixLayoutStoreOffsetRange(
+            rebuildLayoutStoreExact(ctx);
+            layout = createLayoutAccess(ctx, getActiveLayoutStore(ctx));
+            layoutStoreMaterializedRange = materializeLayoutStoreOffsetRange(
                 ctx,
                 scrollTopBuffered,
                 scrollBottomBuffered,
             );
-            didResetPrefixDataChange = true;
+            didResetLayoutStoreDataChange = true;
         }
 
-        if (prefixMaterializedRange || didReconcilePrefixDataChange || didResetPrefixDataChange) {
-            syncPrefixLayoutStoreLayoutState(ctx);
+        if (layoutStoreMaterializedRange || didReconcileLayoutStoreDataChange || didResetLayoutStoreDataChange) {
+            syncLayoutStoreState(ctx);
         } else {
             updateItemPositions(ctx, didDataChange, {
                 doMVCP,
@@ -741,7 +741,7 @@ export function calculateItemsInView(
         let endBuffered: number | null = null;
 
         let loopStart: number =
-            prefixMaterializedRange?.start ??
+            layoutStoreMaterializedRange?.start ??
             (suppressInitialScrollSideEffects ? bootstrapInitialScrollState?.targetIndexSeed : undefined) ??
             (!didDataChange && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
@@ -806,7 +806,7 @@ export function calculateItemsInView(
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
             const top = layout.getOffset(i);
-            if (top === undefined && prefixMaterializedRange) {
+            if (top === undefined && layoutStoreMaterializedRange) {
                 break;
             }
             if (top === undefined) {
@@ -882,8 +882,8 @@ export function calculateItemsInView(
             }
         }
 
-        if (prefixMaterializedRange) {
-            reconcilePrefixPinnedIndices(ctx, {
+        if (layoutStoreMaterializedRange) {
+            reconcileLayoutStorePinnedIndices(ctx, {
                 alwaysRenderIndices: alwaysRenderIndicesArr,
                 currentStickyIdx: stickyState?.currentStickyIdx ?? -1,
                 dataLength,

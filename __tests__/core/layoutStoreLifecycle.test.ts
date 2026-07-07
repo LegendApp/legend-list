@@ -2,18 +2,18 @@ import { describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import {
-    getActivePrefixLayoutStore,
-    isPrefixLayoutStorePropsSupported,
-    isPrefixLayoutStoreSupported,
-    materializePrefixLayoutStoreRange,
-    maybeFlushInitialPrefixLayoutEstimate,
-    rebuildPrefixLayoutStoreExact,
-    schedulePeriodicPrefixLayoutEstimateFlush,
-    setPrefixLayoutStoreMeasuredSize,
+    getActiveLayoutStore,
+    isLayoutStorePropsSupported,
+    isLayoutStoreSupported,
+    materializeLayoutStoreRange,
+    maybeFlushInitialLayoutStoreEstimate,
+    rebuildLayoutStoreExact,
+    schedulePeriodicLayoutStoreEstimateFlush,
+    setLayoutStoreMeasuredSize,
     syncActiveRowLayoutStoreSpans,
-    syncPrefixLayoutStoreLayoutState,
-    syncPrefixLayoutStoreStructure,
-} from "../../src/core/prefixLayoutStoreLifecycle";
+    syncLayoutStoreState,
+    syncLayoutStoreStructure,
+} from "../../src/core/layoutStoreLifecycle";
 import { RowLayoutStore } from "../../src/core/RowLayoutStore";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -59,31 +59,31 @@ function createLayoutStoreContext(dataLength = 3) {
     );
 }
 
-describe("prefix layout store lifecycle", () => {
+describe("layout store lifecycle", () => {
     it("supports fixed-span lists without override layouts on either axis", () => {
         expect(
-            isPrefixLayoutStorePropsSupported({
+            isLayoutStorePropsSupported({
                 horizontal: false,
                 numColumns: 1,
                 overrideItemLayout: undefined,
             }),
         ).toBe(true);
         expect(
-            isPrefixLayoutStorePropsSupported({
+            isLayoutStorePropsSupported({
                 horizontal: true,
                 numColumns: 1,
                 overrideItemLayout: undefined,
             }),
         ).toBe(true);
         expect(
-            isPrefixLayoutStorePropsSupported({
+            isLayoutStorePropsSupported({
                 horizontal: false,
                 numColumns: 2,
                 overrideItemLayout: undefined,
             }),
         ).toBe(true);
         expect(
-            isPrefixLayoutStorePropsSupported({
+            isLayoutStorePropsSupported({
                 horizontal: false,
                 numColumns: 1,
                 overrideItemLayout: () => undefined,
@@ -94,11 +94,11 @@ describe("prefix layout store lifecycle", () => {
     it("creates a store for the supported single-column path", () => {
         const ctx = createLayoutStoreContext();
 
-        const store = syncPrefixLayoutStoreStructure(ctx);
+        const store = syncLayoutStoreStructure(ctx);
 
-        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
-        expect(getActivePrefixLayoutStore(ctx)).toBe(store);
+        expect(getActiveLayoutStore(ctx)).toBe(store);
         expect(store?.length).toBe(3);
         expect(store?.getTotalSize()).toBe(300);
     });
@@ -107,10 +107,10 @@ describe("prefix layout store lifecycle", () => {
         const ctx = createLayoutStoreContext(5);
         ctx.state.props.numColumns = 2;
 
-        const store = syncPrefixLayoutStoreStructure(ctx);
-        const range = materializePrefixLayoutStoreRange(ctx, 0, 4);
+        const store = syncLayoutStoreStructure(ctx);
+        const range = materializeLayoutStoreRange(ctx, 0, 4);
 
-        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeInstanceOf(RowLayoutStore);
         expect(store?.getTotalSize()).toBe(300);
         expect(range).toEqual({ end: 4, start: 0 });
@@ -129,9 +129,9 @@ describe("prefix layout store lifecycle", () => {
             layout.span = [2, 3, 1, 4, 1][index];
         };
 
-        const store = syncPrefixLayoutStoreStructure(ctx);
+        const store = syncLayoutStoreStructure(ctx);
         const didSync = syncActiveRowLayoutStoreSpans(ctx);
-        const range = materializePrefixLayoutStoreRange(ctx, 0, 4);
+        const range = materializeLayoutStoreRange(ctx, 0, 4);
 
         expect(didSync).toBe(true);
         expect(store).toBeInstanceOf(RowLayoutStore);
@@ -149,12 +149,12 @@ describe("prefix layout store lifecycle", () => {
     it("keeps an existing store when the axis changes without changing column support", () => {
         const ctx = createLayoutStoreContext();
 
-        const initialStore = syncPrefixLayoutStoreStructure(ctx);
+        const initialStore = syncLayoutStoreStructure(ctx);
 
         ctx.state.props.horizontal = true;
-        const store = syncPrefixLayoutStoreStructure(ctx);
+        const store = syncLayoutStoreStructure(ctx);
 
-        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBe(initialStore);
         expect(ctx.state.layoutStoreRuntime?.store).toBe(initialStore);
     });
@@ -164,7 +164,7 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.sizesKnown.set("item-0", 40);
         ctx.state.sizesKnown.set("item-1", 60);
 
-        const store = syncPrefixLayoutStoreStructure(ctx);
+        const store = syncLayoutStoreStructure(ctx);
 
         expect(store?.getEstimatedSize()).toBe(50);
         expect(store?.getMeasuredCount()).toBe(2);
@@ -177,7 +177,7 @@ describe("prefix layout store lifecycle", () => {
         const ctx = createLayoutStoreContext();
         ctx.scrollAxisGap = 8;
 
-        const store = syncPrefixLayoutStoreStructure(ctx);
+        const store = syncLayoutStoreStructure(ctx);
 
         expect(store?.getEstimatedSize()).toBe(108);
         expect(store?.getTotalSize()).toBe(324);
@@ -188,8 +188,8 @@ describe("prefix layout store lifecycle", () => {
         const getFixedItemSize = mock(() => 64);
         ctx.state.props.getFixedItemSize = getFixedItemSize;
 
-        const store = syncPrefixLayoutStoreStructure(ctx);
-        syncPrefixLayoutStoreStructure(ctx);
+        const store = syncLayoutStoreStructure(ctx);
+        syncLayoutStoreStructure(ctx);
 
         expect(store?.getEstimatedSize()).toBe(100);
         expect(store?.getTotalSize()).toBe(100000);
@@ -201,7 +201,7 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.props.getItemType = () => "row";
         ctx.state.props.getFixedItemSize = (_item, _index, itemType) => (itemType === "row" ? 64 : undefined);
 
-        const store = rebuildPrefixLayoutStoreExact(ctx);
+        const store = rebuildLayoutStoreExact(ctx);
 
         expect(store?.getEstimatedSize()).toBe(64);
         expect(store?.getTotalSize()).toBe(192);
@@ -215,7 +215,7 @@ describe("prefix layout store lifecycle", () => {
             return undefined;
         };
 
-        const store = rebuildPrefixLayoutStoreExact(ctx);
+        const store = rebuildLayoutStoreExact(ctx);
 
         expect(store?.getMeasuredCount()).toBe(0);
         expect(store?.getEstimatedSize()).toBe((40 + 100 + 80) / 3);
@@ -231,7 +231,7 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.sizes.set("item-0", 40);
         ctx.state.sizes.set("item-1", 60);
 
-        const store = rebuildPrefixLayoutStoreExact(ctx);
+        const store = rebuildLayoutStoreExact(ctx);
 
         expect(store?.getEstimatedSize()).toBe(50);
         expect(store?.getTotalSize()).toBe(250);
@@ -247,8 +247,8 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.props.getFixedItemSize = (_item, index) => (index === 0 ? 300 : 60);
         ctx.state.props.snapToIndices = [0, 1, 20, 29];
 
-        const store = rebuildPrefixLayoutStoreExact(ctx);
-        syncPrefixLayoutStoreLayoutState(ctx);
+        const store = rebuildLayoutStoreExact(ctx);
+        syncLayoutStoreState(ctx);
 
         expect(store?.getEstimatedSize()).toBe(68);
         expect(store?.getMeasuredCount()).toBe(0);
@@ -264,9 +264,9 @@ describe("prefix layout store lifecycle", () => {
         const getFixedItemSize = mock((_item, index) => (index === 0 ? 300 : 60));
         ctx.state.props.getFixedItemSize = getFixedItemSize;
 
-        const store = rebuildPrefixLayoutStoreExact(ctx);
+        const store = rebuildLayoutStoreExact(ctx);
         getFixedItemSize.mockClear();
-        syncPrefixLayoutStoreStructure(ctx);
+        syncLayoutStoreStructure(ctx);
 
         expect(store?.getEstimatedSize()).toBe(68);
         expect(store?.getOffset(20)).toBe(1440);
@@ -275,11 +275,11 @@ describe("prefix layout store lifecycle", () => {
 
     it("resizes and updates estimates when supported props change", () => {
         const ctx = createLayoutStoreContext();
-        const store = syncPrefixLayoutStoreStructure(ctx)!;
+        const store = syncLayoutStoreStructure(ctx)!;
 
         ctx.state.props.data = Array.from({ length: 5 }, (_, index) => ({ id: `next-${index}` }));
         ctx.state.props.estimatedItemSize = 80;
-        const nextStore = syncPrefixLayoutStoreStructure(ctx);
+        const nextStore = syncLayoutStoreStructure(ctx);
 
         expect(nextStore).toBe(store);
         expect(nextStore?.length).toBe(5);
@@ -289,14 +289,14 @@ describe("prefix layout store lifecycle", () => {
 
     it("preserves learned estimates across syncs until the prop estimate changes", () => {
         const ctx = createLayoutStoreContext();
-        const store = syncPrefixLayoutStoreStructure(ctx)!;
+        const store = syncLayoutStoreStructure(ctx)!;
         store.setEstimatedSize(60);
 
-        expect(syncPrefixLayoutStoreStructure(ctx)).toBe(store);
+        expect(syncLayoutStoreStructure(ctx)).toBe(store);
         expect(store.getEstimatedSize()).toBe(60);
 
         ctx.state.props.estimatedItemSize = 80;
-        syncPrefixLayoutStoreStructure(ctx);
+        syncLayoutStoreStructure(ctx);
 
         expect(store.getEstimatedSize()).toBe(80);
     });
@@ -305,10 +305,10 @@ describe("prefix layout store lifecycle", () => {
         const ctx = createLayoutStoreContext(100);
         ctx.state.props.snapToIndices = [0, 2, 20];
 
-        const store = syncPrefixLayoutStoreStructure(ctx);
-        syncPrefixLayoutStoreLayoutState(ctx);
+        const store = syncLayoutStoreStructure(ctx);
+        syncLayoutStoreState(ctx);
 
-        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 200, 2000]);
         expect(countLayoutValues(ctx.state.positions)).toBe(0);
@@ -317,10 +317,10 @@ describe("prefix layout store lifecycle", () => {
     it("updates snap offsets after an index-0 prefix measurement without materializing downstream positions", () => {
         const ctx = createLayoutStoreContext(100);
         ctx.state.props.snapToIndices = [0, 1, 20];
-        syncPrefixLayoutStoreStructure(ctx);
-        syncPrefixLayoutStoreLayoutState(ctx);
+        syncLayoutStoreStructure(ctx);
+        syncLayoutStoreState(ctx);
 
-        setPrefixLayoutStoreMeasuredSize(ctx, 0, 150);
+        setLayoutStoreMeasuredSize(ctx, 0, 150);
 
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
         expect(countLayoutValues(ctx.state.positions)).toBe(0);
@@ -330,17 +330,17 @@ describe("prefix layout store lifecycle", () => {
         const timers = captureTimeouts();
         try {
             const ctx = createLayoutStoreContext(10);
-            const store = syncPrefixLayoutStoreStructure(ctx)!;
+            const store = syncLayoutStoreStructure(ctx)!;
             ctx.state.props.snapToIndices = [5];
             ctx.state.firstFullyOnScreenIndex = 5;
-            syncPrefixLayoutStoreLayoutState(ctx);
+            syncLayoutStoreState(ctx);
 
             for (let index = 0; index < 4; index++) {
-                setPrefixLayoutStoreMeasuredSize(ctx, index, 50);
+                setLayoutStoreMeasuredSize(ctx, index, 50);
             }
 
             expect(ctx.values.get("snapToOffsets")).toEqual([300]);
-            expect(schedulePeriodicPrefixLayoutEstimateFlush(ctx)).toBe(true);
+            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
             timers.callbacks[0]();
 
             expect(store.getEstimatedSize()).toBe(50);
@@ -355,11 +355,11 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.props.positionComponentInternal = () => null;
         ctx.positionListeners.set("item-1", new Set());
 
-        const store = syncPrefixLayoutStoreStructure(ctx);
+        const store = syncLayoutStoreStructure(ctx);
 
-        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
-        expect(getActivePrefixLayoutStore(ctx)).toBe(store);
+        expect(getActiveLayoutStore(ctx)).toBe(store);
     });
 
     it("notifies position listeners while materializing a prefix range", () => {
@@ -373,9 +373,9 @@ describe("prefix layout store lifecycle", () => {
                 },
             ]),
         );
-        syncPrefixLayoutStoreStructure(ctx);
+        syncLayoutStoreStructure(ctx);
 
-        materializePrefixLayoutStoreRange(ctx, 0, 3);
+        materializeLayoutStoreRange(ctx, 0, 3);
 
         expect(positionUpdates).toEqual([100]);
         expect(ctx.state.indexByKey.get("item-1")).toBe(1);
@@ -395,11 +395,11 @@ describe("prefix layout store lifecycle", () => {
                 },
             ]),
         );
-        syncPrefixLayoutStoreStructure(ctx);
-        materializePrefixLayoutStoreRange(ctx, 20, 20);
+        syncLayoutStoreStructure(ctx);
+        materializeLayoutStoreRange(ctx, 20, 20);
         positionUpdates.length = 0;
 
-        setPrefixLayoutStoreMeasuredSize(ctx, 0, 150);
+        setLayoutStoreMeasuredSize(ctx, 0, 150);
 
         expect(positionUpdates).toEqual([2050]);
         expect(ctx.state.positions[20]).toBeUndefined();
@@ -408,7 +408,7 @@ describe("prefix layout store lifecycle", () => {
 
     it("clears measurements when layout caches reset", () => {
         const ctx = createLayoutStoreContext();
-        const store = syncPrefixLayoutStoreStructure(ctx)!;
+        const store = syncLayoutStoreStructure(ctx)!;
         store.setMeasuredSize(0, 50);
 
         resetLayoutCachesForDataChange(ctx.state);
@@ -419,7 +419,7 @@ describe("prefix layout store lifecycle", () => {
 
     it("clamps stale visible anchors when flushing the initial estimate", () => {
         const ctx = createLayoutStoreContext(2);
-        const store = syncPrefixLayoutStoreStructure(ctx)!;
+        const store = syncLayoutStoreStructure(ctx)!;
         ctx.state.startNoBuffer = 3;
         ctx.state.endNoBuffer = 4;
         ctx.state.idCache[3] = "stale-3";
@@ -427,8 +427,8 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.sizesKnown.set("stale-3", 50);
         ctx.state.sizesKnown.set("stale-4", 50);
 
-        setPrefixLayoutStoreMeasuredSize(ctx, 0, 50);
-        maybeFlushInitialPrefixLayoutEstimate(ctx);
+        setLayoutStoreMeasuredSize(ctx, 0, 50);
+        maybeFlushInitialLayoutStoreEstimate(ctx);
 
         expect(store.getEstimatedSize()).toBe(50);
         expect(store.getTotalSize()).toBe(100);
@@ -438,7 +438,7 @@ describe("prefix layout store lifecycle", () => {
         const timers = captureTimeouts();
         try {
             const ctx = createLayoutStoreContext(10);
-            const store = syncPrefixLayoutStoreStructure(ctx)!;
+            const store = syncLayoutStoreStructure(ctx)!;
             const requestedAdjustments: number[] = [];
             ctx.state.scrollAdjustHandler.requestAdjust = (amount) => {
                 requestedAdjustments.push(amount);
@@ -448,13 +448,13 @@ describe("prefix layout store lifecycle", () => {
             ctx.state.startNoBuffer = 5;
             ctx.state.endBuffered = 6;
             ctx.state.endNoBuffer = 6;
-            materializePrefixLayoutStoreRange(ctx, 5, 6);
+            materializeLayoutStoreRange(ctx, 5, 6);
 
             for (let index = 0; index < 4; index++) {
-                setPrefixLayoutStoreMeasuredSize(ctx, index, 50);
+                setLayoutStoreMeasuredSize(ctx, index, 50);
             }
 
-            expect(schedulePeriodicPrefixLayoutEstimateFlush(ctx)).toBe(true);
+            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
             expect(timers.callbacks.length).toBe(1);
 
             timers.callbacks[0]();
@@ -474,14 +474,14 @@ describe("prefix layout store lifecycle", () => {
         const timers = captureTimeouts();
         try {
             const ctx = createLayoutStoreContext(10);
-            const store = syncPrefixLayoutStoreStructure(ctx)!;
+            const store = syncLayoutStoreStructure(ctx)!;
             ctx.state.scrollTime = Date.now();
 
             for (let index = 0; index < 4; index++) {
-                setPrefixLayoutStoreMeasuredSize(ctx, index, 50);
+                setLayoutStoreMeasuredSize(ctx, index, 50);
             }
 
-            expect(schedulePeriodicPrefixLayoutEstimateFlush(ctx)).toBe(true);
+            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
             timers.callbacks[0]();
 
             expect(store.getEstimatedSize()).toBe(100);
@@ -499,16 +499,16 @@ describe("prefix layout store lifecycle", () => {
 
     it("replaces the store when column support changes", () => {
         const ctx = createLayoutStoreContext();
-        const initialStore = syncPrefixLayoutStoreStructure(ctx);
+        const initialStore = syncLayoutStoreStructure(ctx);
 
         ctx.state.props.numColumns = 2;
-        const rowStore = syncPrefixLayoutStoreStructure(ctx);
+        const rowStore = syncLayoutStoreStructure(ctx);
 
         expect(rowStore).toBeInstanceOf(RowLayoutStore);
         expect(rowStore).not.toBe(initialStore);
 
         ctx.state.props.numColumns = 1;
-        const prefixStore = syncPrefixLayoutStoreStructure(ctx);
+        const prefixStore = syncLayoutStoreStructure(ctx);
 
         expect(prefixStore).not.toBe(rowStore);
         expect(prefixStore).not.toBeInstanceOf(RowLayoutStore);
@@ -526,14 +526,14 @@ describe("prefix layout store lifecycle", () => {
 
         for (const testCase of cases) {
             const ctx = createLayoutStoreContext();
-            syncPrefixLayoutStoreStructure(ctx);
+            syncLayoutStoreStructure(ctx);
 
             testCase.patch(ctx);
-            syncPrefixLayoutStoreStructure(ctx);
+            syncLayoutStoreStructure(ctx);
 
-            expect(isPrefixLayoutStoreSupported(ctx), testCase.name).toBe(false);
+            expect(isLayoutStoreSupported(ctx), testCase.name).toBe(false);
             expect(ctx.state.layoutStoreRuntime?.store, testCase.name).toBeUndefined();
-            expect(getActivePrefixLayoutStore(ctx), testCase.name).toBeUndefined();
+            expect(getActiveLayoutStore(ctx), testCase.name).toBeUndefined();
         }
     });
 });

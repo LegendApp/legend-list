@@ -3,7 +3,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
-import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { getActiveLayoutStore } from "@/core/layoutStoreLifecycle";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -145,7 +145,7 @@ function getArrayTargetViewportRenderRange(
 }
 
 function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
-    const store = getActivePrefixLayoutStore(ctx);
+    const store = getActiveLayoutStore(ctx);
     let range: { end: number; start: number } | undefined;
     if (store) {
         const viewportStart = Math.max(0, targetOffset);

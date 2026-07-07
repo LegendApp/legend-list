@@ -1,5 +1,5 @@
 import type { LayoutStore } from "@/core/LayoutStore";
-import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { getActiveLayoutStore } from "@/core/layoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
@@ -30,22 +30,22 @@ export function createLayoutAccess(ctx: StateContext, store: LayoutStore | undef
 }
 
 export function getLayoutColumn(ctx: StateContext, index: number | undefined) {
-    const store = getActivePrefixLayoutStore(ctx);
+    const store = getActiveLayoutStore(ctx);
     return getLayoutColumnForStore(ctx.state, store, index);
 }
 
 export function getLayoutOffset(ctx: StateContext, index: number | undefined) {
-    const store = getActivePrefixLayoutStore(ctx);
+    const store = getActiveLayoutStore(ctx);
     return getLayoutOffsetForStore(ctx.state, store, index);
 }
 
 export function getLayoutSize(ctx: StateContext, index: number | undefined) {
-    const store = getActivePrefixLayoutStore(ctx);
+    const store = getActiveLayoutStore(ctx);
     return getLayoutSizeForStore(ctx, ctx.state, store, index);
 }
 
 export function getLayoutSpan(ctx: StateContext, index: number | undefined) {
-    const store = getActivePrefixLayoutStore(ctx);
+    const store = getActiveLayoutStore(ctx);
     return getLayoutSpanForStore(ctx.state, store, index);
 }
 
