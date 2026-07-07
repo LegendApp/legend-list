@@ -180,11 +180,6 @@ interface VisibleRangeState {
     startNoBuffer: number | null;
 }
 
-interface IndexRange {
-    end: number;
-    start: number;
-}
-
 function trackVisibleRange(
     range: VisibleRangeState,
     i: number,
@@ -244,52 +239,24 @@ function reconcilePrefixPinnedIndices(
         return;
     }
 
-    const ranges: IndexRange[] = [];
-
-    const addRange = (startIndex: number | undefined, endIndex = startIndex) => {
+    const materializeRange = (startIndex: number | undefined, endIndex = startIndex) => {
         if (startIndex !== undefined && endIndex !== undefined && options.dataLength > 0) {
             const start = Math.max(0, Math.min(startIndex, endIndex));
             const end = Math.min(options.dataLength - 1, Math.max(startIndex, endIndex));
             if (start <= end) {
-                ranges.push({ end, start });
+                materializePrefixLayoutStoreRange(ctx, start, end);
             }
         }
     };
 
     for (const index of options.alwaysRenderIndices) {
-        addRange(index);
+        materializeRange(index);
     }
     if (options.hasScrollTargetPinnedRange) {
-        addRange(options.scrollTargetPinnedStart, options.scrollTargetPinnedEnd);
+        materializeRange(options.scrollTargetPinnedStart, options.scrollTargetPinnedEnd);
     }
     for (let offset = 0; offset <= 1; offset++) {
-        addRange(options.stickyHeaderIndices[options.currentStickyIdx - offset]);
-    }
-
-    if (ranges.length > 0) {
-        ranges.sort((a, b) => a.start - b.start || a.end - b.end);
-
-        let rangeStart: number | undefined;
-        let rangeEnd: number | undefined;
-        const materializeRange = () => {
-            if (rangeStart !== undefined && rangeEnd !== undefined) {
-                materializePrefixLayoutStoreRange(ctx, rangeStart, rangeEnd);
-            }
-        };
-
-        for (const range of ranges) {
-            if (rangeStart === undefined || rangeEnd === undefined) {
-                rangeStart = range.start;
-                rangeEnd = range.end;
-            } else if (range.start <= rangeEnd + 1) {
-                rangeEnd = Math.max(rangeEnd, range.end);
-            } else {
-                materializeRange();
-                rangeStart = range.start;
-                rangeEnd = range.end;
-            }
-        }
-        materializeRange();
+        materializeRange(options.stickyHeaderIndices[options.currentStickyIdx - offset]);
     }
 }
 
