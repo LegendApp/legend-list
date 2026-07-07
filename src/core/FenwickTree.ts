@@ -1,3 +1,5 @@
+import { IS_DEV } from "@/utils/devEnvironment";
+
 export class FenwickTree {
     private lengthValue: number;
     private tree: Float64Array;
@@ -14,9 +16,12 @@ export class FenwickTree {
     }
 
     add(index: number, delta: number) {
-        this.assertIndex(index);
-        if (!Number.isFinite(delta)) {
-            throw new RangeError(`FenwickTree delta must be finite. Received ${delta}`);
+        const indexError = this.getIndexError(index);
+        if (indexError || !Number.isFinite(delta)) {
+            if (IS_DEV) {
+                throw new RangeError(indexError ?? `FenwickTree delta must be finite. Received ${delta}`);
+            }
+            return;
         }
         if (delta !== 0) {
             this.totalValue += delta;
@@ -70,10 +75,12 @@ export class FenwickTree {
         return this.totalValue;
     }
 
-    private assertIndex(index: number) {
+    private getIndexError(index: number) {
+        let error: string | undefined;
         if (!Number.isInteger(index) || index < 0 || index >= this.length) {
-            throw new RangeError(`FenwickTree index ${index} is out of bounds for length ${this.length}`);
+            error = `FenwickTree index ${index} is out of bounds for length ${this.length}`;
         }
+        return error;
     }
 }
 
