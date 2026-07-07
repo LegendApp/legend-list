@@ -97,7 +97,7 @@ async function updateMountedListAndMeasureNotifications(length: number): Promise
     };
     ctx!.state.idCache.length = 0;
     ctx!.state.indexByKey.clear();
-    ctx!.state.positions.length = 0;
+    ctx!.state.arrayLayout.positions.length = 0;
     ctx!.state.sizes.clear();
     ctx!.state.sizesKnown.clear();
     ctx!.state.totalSize = 0;

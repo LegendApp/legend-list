@@ -291,7 +291,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions = null as any;
+            mockState.arrayLayout.positions = null as any;
             mockState.sizes.set(itemId, 50);
 
             expect(() => {

@@ -96,7 +96,7 @@ describe("initialScroll", () => {
                 viewPosition: 1,
             }),
         ).toBe(4700);
-        expect(ctx.state.positions[90]).toBeUndefined();
+        expect(ctx.state.arrayLayout.positions[90]).toBeUndefined();
     });
 
     it("waits for measured layout before advancing bootstrap sessions that are not already scrolling", () => {

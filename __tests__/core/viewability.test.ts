@@ -462,7 +462,7 @@ describe("viewability system", () => {
             expect(onViewableItemsChangedCalls).toHaveLength(1);
 
             onViewableItemsChangedCalls.length = 0;
-            mockState.positions[1] = undefined;
+            mockState.arrayLayout.positions[1] = undefined;
 
             updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
 
