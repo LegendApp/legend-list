@@ -3,8 +3,6 @@ import "../setup";
 
 import {
     getActiveLayoutStore,
-    isLayoutStorePropsSupported,
-    isLayoutStoreSupported,
     materializeLayoutStoreRange,
     maybeFlushInitialLayoutStoreEstimate,
     rebuildLayoutStoreExact,
@@ -60,43 +58,11 @@ function createLayoutStoreContext(dataLength = 3) {
 }
 
 describe("layout store lifecycle", () => {
-    it("supports fixed-span lists without override layouts on either axis", () => {
-        expect(
-            isLayoutStorePropsSupported({
-                horizontal: false,
-                numColumns: 1,
-                overrideItemLayout: undefined,
-            }),
-        ).toBe(true);
-        expect(
-            isLayoutStorePropsSupported({
-                horizontal: true,
-                numColumns: 1,
-                overrideItemLayout: undefined,
-            }),
-        ).toBe(true);
-        expect(
-            isLayoutStorePropsSupported({
-                horizontal: false,
-                numColumns: 2,
-                overrideItemLayout: undefined,
-            }),
-        ).toBe(true);
-        expect(
-            isLayoutStorePropsSupported({
-                horizontal: false,
-                numColumns: 1,
-                overrideItemLayout: () => undefined,
-            }),
-        ).toBe(true);
-    });
-
     it("creates a store for the supported single-column path", () => {
         const ctx = createLayoutStoreContext();
 
         const store = syncLayoutStoreStructure(ctx);
 
-        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
         expect(getActiveLayoutStore(ctx)).toBe(store);
         expect(store?.length).toBe(3);
@@ -110,7 +76,6 @@ describe("layout store lifecycle", () => {
         const store = syncLayoutStoreStructure(ctx);
         const range = materializeLayoutStoreRange(ctx, 0, 4);
 
-        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeInstanceOf(RowLayoutStore);
         expect(store?.getTotalSize()).toBe(300);
         expect(range).toEqual({ end: 4, start: 0 });
@@ -189,7 +154,6 @@ describe("layout store lifecycle", () => {
         ctx.state.props.horizontal = true;
         const store = syncLayoutStoreStructure(ctx);
 
-        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBe(initialStore);
         expect(ctx.state.layoutStoreRuntime?.store).toBe(initialStore);
     });
@@ -343,7 +307,6 @@ describe("layout store lifecycle", () => {
         const store = syncLayoutStoreStructure(ctx);
         syncLayoutStoreState(ctx);
 
-        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 200, 2000]);
         expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
@@ -392,7 +355,6 @@ describe("layout store lifecycle", () => {
 
         const store = syncLayoutStoreStructure(ctx);
 
-        expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
         expect(getActiveLayoutStore(ctx)).toBe(store);
     });
@@ -549,26 +511,15 @@ describe("layout store lifecycle", () => {
         expect(prefixStore).not.toBeInstanceOf(RowLayoutStore);
     });
 
-    it("disables the store for unsupported capabilities", () => {
-        const cases = [
-            {
-                name: "invalid column count",
-                patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
-                    ctx.state.props.numColumns = 0;
-                },
-            },
-        ];
+    it("keeps a store when an invalid internal column count reaches lifecycle sync", () => {
+        const ctx = createLayoutStoreContext();
+        const initialStore = syncLayoutStoreStructure(ctx);
 
-        for (const testCase of cases) {
-            const ctx = createLayoutStoreContext();
-            syncLayoutStoreStructure(ctx);
+        ctx.state.props.numColumns = 0;
+        const store = syncLayoutStoreStructure(ctx);
 
-            testCase.patch(ctx);
-            syncLayoutStoreStructure(ctx);
-
-            expect(isLayoutStoreSupported(ctx), testCase.name).toBe(false);
-            expect(ctx.state.layoutStoreRuntime?.store, testCase.name).toBeUndefined();
-            expect(getActiveLayoutStore(ctx), testCase.name).toBeUndefined();
-        }
+        expect(store).toBe(initialStore);
+        expect(getActiveLayoutStore(ctx)).toBe(initialStore);
+        expect(store).not.toBeInstanceOf(RowLayoutStore);
     });
 });

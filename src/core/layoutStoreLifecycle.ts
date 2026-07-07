@@ -41,13 +41,8 @@ export function clearLayoutStoreKnownSizes(ctx: StateContext) {
     resetLayoutStoreRuntimeState(ctx.state);
 }
 
-export function disableLayoutStoreForCurrentPass(state: InternalState) {
-    resetLayoutStoreRuntimeState(state);
-    state.layoutStoreRuntime = undefined;
-}
-
 function getActiveLayoutStoreRuntime(ctx: StateContext) {
-    return isLayoutStoreSupported(ctx) ? ctx.state.layoutStoreRuntime : undefined;
+    return ctx.state.layoutStoreRuntime;
 }
 
 export function getActiveLayoutStore(ctx: StateContext) {
@@ -266,15 +261,6 @@ export function setLayoutStoreMeasuredSize(ctx: StateContext, index: number | un
     return didSet;
 }
 
-export function isLayoutStoreSupported(ctx: StateContext) {
-    const state = ctx.state;
-    const {
-        props: { horizontal, numColumns, overrideItemLayout },
-    } = state;
-
-    return isLayoutStorePropsSupported({ horizontal, numColumns, overrideItemLayout });
-}
-
 function getLayoutStoreSeedEstimate(input: {
     dataLength: number;
     fallbackSize: number;
@@ -318,14 +304,6 @@ export function reconcileLayoutStoreDataChange(
     return didReconcile;
 }
 
-export function isLayoutStorePropsSupported(props: {
-    horizontal: boolean | undefined;
-    numColumns: number | undefined;
-    overrideItemLayout: unknown;
-}) {
-    return !!props.numColumns && props.numColumns > 0;
-}
-
 export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
     const state = ctx.state;
     const runtime = getActiveLayoutStoreRuntime(ctx);
@@ -360,43 +338,35 @@ export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
 
 export function syncLayoutStoreStructure(ctx: StateContext) {
     const state = ctx.state;
-    if (isLayoutStoreSupported(ctx)) {
-        const estimatedSize = getLayoutStorePropEstimatedSize(ctx);
-        const nextStoreKind = getLayoutStoreKind(state);
-        let runtime = state.layoutStoreRuntime;
-        if (runtime && getLayoutStoreKindForStore(runtime.store) === nextStoreKind) {
-            if (runtime.store instanceof RowLayoutStore) {
-                runtime.store.resize(
-                    state.props.data.length,
-                    getReusableRowSpans(ctx, runtime),
-                    state.props.numColumns,
-                );
-            } else {
-                runtime.store.resize(state.props.data.length);
-            }
-            if (estimatedSize !== runtime.propEstimatedSize) {
-                runtime.store.setEstimatedSize(estimatedSize);
-            }
+    const estimatedSize = getLayoutStorePropEstimatedSize(ctx);
+    const nextStoreKind = getLayoutStoreKind(state);
+    let runtime = state.layoutStoreRuntime;
+    if (runtime && getLayoutStoreKindForStore(runtime.store) === nextStoreKind) {
+        if (runtime.store instanceof RowLayoutStore) {
+            runtime.store.resize(state.props.data.length, getReusableRowSpans(ctx, runtime), state.props.numColumns);
         } else {
-            const store =
-                nextStoreKind === "row"
-                    ? new RowLayoutStore({
-                          estimatedSize,
-                          length: state.props.data.length,
-                          numColumns: state.props.numColumns,
-                      })
-                    : new PrefixLayoutStore(state.props.data.length, estimatedSize);
-            runtime = new LayoutStoreRuntime(store, estimatedSize);
-            state.layoutStoreRuntime = runtime;
-            if (state.sizesKnown.size > 0) {
-                const seed = getLayoutStoreSeed(ctx);
-                applyLayoutStoreSeed(runtime.store, seed);
-            }
+            runtime.store.resize(state.props.data.length);
         }
-        runtime.propEstimatedSize = estimatedSize;
+        if (estimatedSize !== runtime.propEstimatedSize) {
+            runtime.store.setEstimatedSize(estimatedSize);
+        }
     } else {
-        disableLayoutStoreForCurrentPass(state);
+        const store =
+            nextStoreKind === "row"
+                ? new RowLayoutStore({
+                      estimatedSize,
+                      length: state.props.data.length,
+                      numColumns: state.props.numColumns,
+                  })
+                : new PrefixLayoutStore(state.props.data.length, estimatedSize);
+        runtime = new LayoutStoreRuntime(store, estimatedSize);
+        state.layoutStoreRuntime = runtime;
+        if (state.sizesKnown.size > 0) {
+            const seed = getLayoutStoreSeed(ctx);
+            applyLayoutStoreSeed(runtime.store, seed);
+        }
     }
+    runtime.propEstimatedSize = estimatedSize;
 
     return state.layoutStoreRuntime?.store;
 }
