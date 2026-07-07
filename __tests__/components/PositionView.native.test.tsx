@@ -4,10 +4,11 @@ import * as React from "react";
 
 import { describe, expect, it, mock } from "bun:test";
 import { PositionView, PositionViewSticky } from "../../src/components/PositionView.native";
+import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { updateItemSizes } from "../../src/core/updateItemSizes";
 import { type StateContext, StateProvider, useStateContext } from "../../src/state/state";
 import { createMockState } from "../__mocks__/createMockState";
-import { setLayoutValue } from "../helpers/layoutArrays";
+import { setLayoutValue } from "../helpers/layoutStore";
 import { act, render } from "../helpers/testingLibrary";
 
 let currentCtx: StateContext | undefined;
@@ -49,8 +50,13 @@ function StickyHarness({
         }) as any;
     }
 
-    ctx.state.arrayLayout.positions[index] = position;
-    ctx.state.arrayLayout.positions[stickyHeaderIndices[stickyHeaderIndices.indexOf(index) + 1]] = nextStickyPosition;
+    setLayoutValue(ctx.state, "positions", index, position);
+    setLayoutValue(
+        ctx.state,
+        "positions",
+        stickyHeaderIndices[stickyHeaderIndices.indexOf(index) + 1],
+        nextStickyPosition,
+    );
     ctx.state.props.stickyHeaderIndicesArr = stickyHeaderIndices;
     ctx.state.sizes.set(itemKey, currentSize);
 
@@ -109,12 +115,12 @@ function ReplacementMeasurementHarness() {
             state.sizes.set(itemKey, 100);
             state.sizesKnown.set(itemKey, 100);
             state.containerItemKeys.set(itemKey, index);
-            setLayoutValue(state, "positions", itemKey, index * 100);
             ctx.values.set(`containerItemKey${index}`, itemKey);
             ctx.values.set(`containerPosition${index}`, index * 100);
         }
 
         ctx.state = state;
+        syncLayoutStoreStructure(ctx);
         ctx.values.set("numContainers", data.length);
         ctx.values.set("numContainersPooled", data.length);
         ctx.values.set("otherAxisSize", 400);

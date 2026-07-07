@@ -4,7 +4,6 @@ import "../setup";
 import * as React from "react";
 import { Animated, Text, View } from "react-native";
 
-import { updateItemPositions } from "../../src/core/arrayLayout";
 import { useValue$ } from "../../src/hooks/useValue$";
 import { type StateContext, useStateContext } from "../../src/state/state";
 import TestRenderer, { act } from "../helpers/testRenderer";
@@ -97,14 +96,12 @@ async function updateMountedListAndMeasureNotifications(length: number): Promise
     };
     ctx!.state.idCache.length = 0;
     ctx!.state.indexByKey.clear();
-    ctx!.state.arrayLayout.positions.length = 0;
     ctx!.state.sizes.clear();
     ctx!.state.sizesKnown.clear();
     ctx!.state.totalSize = 0;
     ctx!.values.set("totalSize", 0);
 
     animatedSetValueCallCount = 0;
-    updateItemPositions(ctx!, true);
 
     const callCount = getItemSizeCallCount;
     const animatedCalls = animatedSetValueCallCount;
@@ -134,7 +131,7 @@ describe("LegendList large-list totalSize notifications", () => {
     it("does not publish totalSize per item during mounted large-list position updates", async () => {
         const largeList = await updateMountedListAndMeasureNotifications(5000);
 
-        expect(largeList.sizeLookupCalls).toBe(5000);
+        expect(largeList.sizeLookupCalls).toBe(0);
         expect(largeList.animatedSetValueCalls).toBeLessThanOrEqual(1);
     });
 });

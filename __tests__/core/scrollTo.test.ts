@@ -8,6 +8,7 @@ import * as updateScrollModule from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValue } from "../helpers/layoutStore";
 
 describe("scrollTo", () => {
     let mockCtx: StateContext;
@@ -137,7 +138,7 @@ describe("scrollTo", () => {
         mockCtx.state.props.estimatedItemSize = 80;
         mockCtx.state.scrollLength = 300;
         for (let index = 0; index < 10; index++) {
-            mockCtx.state.arrayLayout.positions[index] = index * 80;
+            setLayoutValue(mockCtx.state, "positions", index, index * 80);
         }
 
         scrollTo(mockCtx, {
@@ -169,7 +170,7 @@ describe("scrollTo", () => {
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         for (let index = 0; index < 20; index++) {
-            mockCtx.state.arrayLayout.positions[index] = index * 50;
+            setLayoutValue(mockCtx.state, "positions", index, index * 50);
         }
 
         scrollTo(mockCtx, {
@@ -188,13 +189,14 @@ describe("scrollTo", () => {
         expect(mockCtx.state.scroll).toBe(25);
     });
 
-    it("does not expand scroll target pins through uncomputed tail positions", () => {
+    it("pins the target viewport from estimated store offsets", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
         mockCtx.state.props.estimatedItemSize = 50;
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
-        mockCtx.state.arrayLayout.positions[900] = 45_000;
+        syncLayoutStoreStructure(mockCtx);
+        syncLayoutStoreState(mockCtx);
 
         scrollTo(mockCtx, {
             animated: true,
@@ -204,28 +206,7 @@ describe("scrollTo", () => {
         });
 
         expect(mockCtx.state.scrollTargetPinnedRange).toEqual({
-            end: 900,
-            start: 900,
-        });
-        expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
-    });
-
-    it("pins only the target index when its position is not computed yet", () => {
-        const triggerCalculateItemsInView = mock(() => undefined);
-        mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
-        mockCtx.state.props.estimatedItemSize = 50;
-        mockCtx.state.scrollLength = 100;
-        mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
-
-        scrollTo(mockCtx, {
-            animated: true,
-            index: 900,
-            itemSize: 50,
-            offset: 45_000,
-        });
-
-        expect(mockCtx.state.scrollTargetPinnedRange).toEqual({
-            end: 900,
+            end: 902,
             start: 900,
         });
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
@@ -235,7 +216,6 @@ describe("scrollTo", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
         mockCtx.state.props.estimatedItemSize = 50;
-        mockCtx.state.arrayLayout.positions.length = 0;
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         syncLayoutStoreStructure(mockCtx);
@@ -259,7 +239,6 @@ describe("scrollTo", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
         mockCtx.state.props.estimatedItemSize = 50;
-        mockCtx.state.arrayLayout.positions.length = 0;
         mockCtx.state.scrollForNextCalculateItemsInView = { bottom: 250, top: 50 };
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
@@ -287,7 +266,7 @@ describe("scrollTo", () => {
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         for (let index = 0; index < 20; index++) {
-            mockCtx.state.arrayLayout.positions[index] = index * 50;
+            setLayoutValue(mockCtx.state, "positions", index, index * 50);
         }
 
         scrollTo(mockCtx, {
@@ -306,7 +285,7 @@ describe("scrollTo", () => {
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
     });
 
-    it("pins offset-only animated scroll targets from the position table", () => {
+    it("pins offset-only animated scroll targets from explicit test offsets", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 20 }, (_, index) => ({ id: index }));
         mockCtx.state.props.estimatedItemSize = 50;
@@ -314,7 +293,7 @@ describe("scrollTo", () => {
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         for (let index = 0; index < 20; index++) {
-            mockCtx.state.arrayLayout.positions[index] = index * 50;
+            setLayoutValue(mockCtx.state, "positions", index, index * 50);
         }
 
         scrollTo(mockCtx, {
@@ -331,24 +310,26 @@ describe("scrollTo", () => {
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
     });
 
-    it("skips offset-only target pinning when known positions do not cover the target offset", () => {
+    it("pins offset-only target ranges from estimated store offsets", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
         mockCtx.state.props.estimatedItemSize = 50;
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         mockCtx.state.totalSize = 500_000;
-        for (let index = 0; index < 100; index++) {
-            mockCtx.state.arrayLayout.positions[index] = index * 50;
-        }
+        syncLayoutStoreStructure(mockCtx);
+        syncLayoutStoreState(mockCtx);
 
         scrollTo(mockCtx, {
             animated: true,
             offset: 45_000,
         });
 
-        expect(mockCtx.state.scrollTargetPinnedRange).toBeUndefined();
-        expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
+        expect(mockCtx.state.scrollTargetPinnedRange).toEqual({
+            end: 902,
+            start: 900,
+        });
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
     });
 
     it("does not precompute the target range for synthetic noScrollingTo scrolls", () => {

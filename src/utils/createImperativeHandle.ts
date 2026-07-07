@@ -1,4 +1,3 @@
-import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import { clearLayoutStoreKnownSizes, rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
@@ -200,7 +199,6 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         if (mode === "full") {
             state.indexByKey.clear();
             state.idCache.length = 0;
-            clearArrayLayoutCache(state, { includeColumns: true });
         }
 
         if (shouldRebuildPrefixLayoutStore) {

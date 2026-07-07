@@ -13,7 +13,7 @@ import type {
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState as createMockStateOrig } from "../__mocks__/createMockState";
-import { setLayoutValue } from "../helpers/layoutArrays";
+import { setLayoutValue } from "../helpers/layoutStore";
 
 function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: Partial<InternalState["props"]> }> = {},
@@ -356,23 +356,17 @@ describe("viewability system", () => {
             expect(mockCtx.mapViewabilityAmountValues.has(99)).toBe(false);
         });
 
-        it("should mark missing positions as invalid and clean them up", () => {
+        it("should fall back to estimated positions when stored positions are missing", () => {
             updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
 
             onViewableItemsChangedCalls.length = 0;
-            mockState.arrayLayout.positions[1] = undefined;
+            setLayoutValue(mockState, "positions", 1, undefined);
 
             updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
 
-            expect(mockCtx.mapViewabilityAmountValues.has(1)).toBe(false);
-            expect(onViewableItemsChangedCalls).toHaveLength(1);
-            expect(onViewableItemsChangedCalls[0].changed).toContainEqual(
-                expect.objectContaining({
-                    isViewable: false,
-                    key: "item-1",
-                }),
-            );
+            expect(mockCtx.mapViewabilityAmountValues.has(1)).toBe(true);
+            expect(onViewableItemsChangedCalls).toHaveLength(0);
         });
 
         it("should handle corrupted viewability state gracefully", () => {

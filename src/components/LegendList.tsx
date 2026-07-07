@@ -15,7 +15,6 @@ import { useDevChecks } from "@/components/useDevChecks";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { resetAdaptiveRender } from "@/core/adaptiveRender";
-import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import {
     handleBootstrapInitialScrollFooterLayout,
     handleBootstrapInitialScrollLayoutChange,
@@ -319,11 +318,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             ctx.values.set("adaptiveRender", experimental_adaptiveRender?.initialMode ?? "normal");
 
             ctx.state = {
-                arrayLayout: {
-                    columnSpans: [],
-                    columns: [],
-                    positions: [],
-                },
                 averageSizes: {},
                 containerItemKeys: new Map(),
                 containerItemTypes: new Map(),
@@ -616,7 +610,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             for (const key in refState.current.averageSizes) {
                 delete refState.current.averageSizes[key];
             }
-            clearArrayLayoutCache(refState.current);
             clearLayoutStoreKnownSizes(ctx);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);

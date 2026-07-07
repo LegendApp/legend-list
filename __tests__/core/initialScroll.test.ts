@@ -10,6 +10,7 @@ import { syncLayoutStoreState, syncLayoutStoreStructure } from "../../src/core/l
 import * as scrollToModule from "../../src/core/scrollTo";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { getLayoutValue } from "../helpers/layoutStore";
 
 describe("initialScroll", () => {
     let scrollToSpy: ReturnType<typeof spyOn>;
@@ -96,7 +97,7 @@ describe("initialScroll", () => {
                 viewPosition: 1,
             }),
         ).toBe(4700);
-        expect(ctx.state.arrayLayout.positions[90]).toBeUndefined();
+        expect(getLayoutValue(ctx.state, "positions", 90)).toBeUndefined();
     });
 
     it("waits for measured layout before advancing bootstrap sessions that are not already scrolling", () => {
