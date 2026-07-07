@@ -32,7 +32,6 @@ import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import {
     clearLayoutStoreKnownSizes,
-    isLayoutStorePropsSupported,
     rebuildLayoutStoreExact,
     syncLayoutStoreState,
     syncLayoutStoreStructure,
@@ -482,22 +481,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !isFirstLocal &&
         !didDataChangeLocal &&
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpace?.anchorIndex;
-    const isLayoutStoreSupported = isLayoutStorePropsSupported({
-        horizontal,
-        numColumns: numColumnsProp,
-        overrideItemLayout,
-    });
-    const wasLayoutStoreSupported = isLayoutStorePropsSupported({
-        horizontal: state.props.horizontal,
-        numColumns: state.props.numColumns,
-        overrideItemLayout: state.props.overrideItemLayout,
-    });
     const shouldExactSyncLayoutStore =
         !isFirstLocal &&
         !didDataChangeLocal &&
-        isLayoutStoreSupported &&
-        (!wasLayoutStoreSupported ||
-            state.props.estimatedItemSize !== estimatedItemSize ||
+        (state.props.estimatedItemSize !== estimatedItemSize ||
             !!state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
             didScrollAxisChange ||
             didScrollAxisGapChange);
