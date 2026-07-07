@@ -3,7 +3,6 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
-import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -87,12 +86,6 @@ function findPositionIndexAtOrBeforeOffset(ctx: StateContext, layout: LayoutAcce
     return match;
 }
 
-function getPrefixTargetViewportRenderRange(ctx: StateContext, store: PrefixLayoutStore, targetOffset: number) {
-    const viewportStart = Math.max(0, targetOffset);
-    const viewportEnd = Math.max(viewportStart, targetOffset + ctx.state.scrollLength);
-    return store.findIndexRangeAtOffsets(viewportStart, viewportEnd);
-}
-
 function getArrayTargetViewportRenderRange(
     ctx: StateContext,
     layout: LayoutAccess,
@@ -153,9 +146,14 @@ function getArrayTargetViewportRenderRange(
 
 function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
     const store = getActivePrefixLayoutStore(ctx);
-    const range = store
-        ? getPrefixTargetViewportRenderRange(ctx, store, targetOffset)
-        : getArrayTargetViewportRenderRange(ctx, createLayoutAccess(ctx, undefined), targetOffset, targetIndex);
+    let range: { end: number; start: number } | undefined;
+    if (store) {
+        const viewportStart = Math.max(0, targetOffset);
+        const viewportEnd = Math.max(viewportStart, targetOffset + ctx.state.scrollLength);
+        range = store.findIndexRangeAtOffsets(viewportStart, viewportEnd);
+    } else {
+        range = getArrayTargetViewportRenderRange(ctx, createLayoutAccess(ctx, undefined), targetOffset, targetIndex);
+    }
     if (range) {
         ctx.state.scrollTargetPinnedRange = range;
         ctx.state.scrollForNextCalculateItemsInView = undefined;

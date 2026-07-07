@@ -4,6 +4,7 @@ import { PrefixLayoutStore, type PrefixLayoutStoreSizeEntry } from "@/core/Prefi
 import { notifyPosition$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
+import { getFixedItemLayoutSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
@@ -99,6 +100,11 @@ export function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, start
     }
 
     return range;
+}
+
+function applyPrefixLayoutStoreSeed(store: PrefixLayoutStore, seed: PrefixLayoutStoreSeed) {
+    store.flushEstimatedSize(seed.estimatedSize);
+    store.rebuildSizes(seed.sizeEntries);
 }
 
 function getMaterializeRange(state: InternalState, fallbackStart: number, fallbackEnd: number) {
@@ -341,7 +347,7 @@ export function reconcilePrefixDataChange(ctx: StateContext, options?: PrefixDat
 
     if (store) {
         const {
-            props: { data, estimatedItemSize, getFixedItemSize, getItemType },
+            props: { data, estimatedItemSize, getFixedItemSize },
         } = state;
         const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
         const previousData = state.previousData;
@@ -367,9 +373,7 @@ export function reconcilePrefixDataChange(ctx: StateContext, options?: PrefixDat
 
         for (let index = 0; index < data.length; index++) {
             const item = data[index];
-            const itemType = canSeedFixedSizes && getItemType ? (getItemType(item, index) ?? "") : "";
-            const fixedSize = canSeedFixedSizes ? getFixedItemSize(item, index, itemType) : undefined;
-            const fixedLayoutSize = fixedSize !== undefined ? fixedSize + ctx.scrollAxisGap : undefined;
+            const fixedLayoutSize = canSeedFixedSizes ? getFixedItemLayoutSize(ctx, index, item) : undefined;
             totalSeedSize += fixedLayoutSize ?? fallbackSize;
             const previousKey = options?.previousIdCache?.[index];
             const canReusePreviousKey =
@@ -413,16 +417,16 @@ export function reconcilePrefixDataChange(ctx: StateContext, options?: PrefixDat
 
         didReconcile = !hasDuplicateKey;
         if (didReconcile) {
-            store.flushEstimatedSize(
-                getPrefixLayoutStoreSeedEstimate({
+            applyPrefixLayoutStoreSeed(store, {
+                estimatedSize: getPrefixLayoutStoreSeedEstimate({
                     dataLength: data.length,
                     fallbackSize,
                     fallbackTotalSize: totalSeedSize,
                     measuredCount,
                     measuredTotalSize,
                 }),
-            );
-            store.rebuildSizes(sizeEntries);
+                sizeEntries,
+            });
         }
     }
 
@@ -467,8 +471,7 @@ export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
             state.layoutStore = new PrefixLayoutStore(state.props.data.length, estimatedSize);
             if (state.sizesKnown.size > 0) {
                 const seed = getPrefixLayoutStoreSeed(ctx);
-                state.layoutStore.flushEstimatedSize(seed.estimatedSize);
-                state.layoutStore.rebuildSizes(seed.sizeEntries);
+                applyPrefixLayoutStoreSeed(state.layoutStore, seed);
             }
         }
         state.layoutStorePropEstimatedSize = estimatedSize;
@@ -486,8 +489,7 @@ export function rebuildPrefixLayoutStoreExact(ctx: StateContext) {
     const store = syncPrefixLayoutStoreStructure(ctx);
     if (store) {
         const seed = getPrefixLayoutStoreSeed(ctx);
-        store.flushEstimatedSize(seed.estimatedSize);
-        store.rebuildSizes(seed.sizeEntries);
+        applyPrefixLayoutStoreSeed(store, seed);
     }
     return state.layoutStore;
 }
@@ -546,7 +548,7 @@ function getPrefixLayoutStorePropEstimatedSize(ctx: StateContext) {
 
 function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
     const state = ctx.state;
-    const { data, estimatedItemSize, getFixedItemSize, getItemType } = state.props;
+    const { data, estimatedItemSize, getFixedItemSize } = state.props;
     const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
     const sizeEntries: PrefixLayoutStoreSeed["sizeEntries"] = [];
 
@@ -561,11 +563,10 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
     for (let index = 0; index < data.length; index++) {
         const item = data[index];
         const key = getId(state, index);
-        const itemType = getFixedItemSize && getItemType ? (getItemType(item, index) ?? "") : "";
-        const fixedSize = getFixedItemSize?.(item, index, itemType);
-        const size = fixedSize !== undefined ? fixedSize + ctx.scrollAxisGap : fallbackSize;
+        const fixedLayoutSize = getFixedItemSize ? getFixedItemLayoutSize(ctx, index, item) : undefined;
+        const fallbackOrFixedSize = fixedLayoutSize ?? fallbackSize;
 
-        fallbackTotalSize += size;
+        fallbackTotalSize += fallbackOrFixedSize;
 
         const knownSize = state.sizesKnown.get(key);
         if (knownSize !== undefined) {
@@ -578,7 +579,7 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
             });
         } else {
             const cachedSize = state.sizes.get(key);
-            const cachedOrFixedSize = cachedSize ?? (fixedSize !== undefined ? size : undefined);
+            const cachedOrFixedSize = cachedSize ?? fixedLayoutSize;
             if (cachedOrFixedSize !== undefined) {
                 sizeEntries.push({
                     index,
