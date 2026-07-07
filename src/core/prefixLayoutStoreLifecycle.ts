@@ -85,6 +85,20 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
     return range;
 }
 
+export function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
+    const dataLength = ctx.state.props.data.length;
+    const store = getActivePrefixLayoutStore(ctx);
+    let range: { end: number; start: number } | undefined;
+
+    if (store && dataLength > 0) {
+        const start = store.findIndexAtOffset(startOffset) ?? dataLength - 1;
+        const end = store.findIndexAtOffset(endOffset) ?? dataLength - 1;
+        range = materializePrefixLayoutStoreRange(ctx, start, Math.max(start, end));
+    }
+
+    return range;
+}
+
 function getMaterializeRange(state: InternalState, fallbackStart: number, fallbackEnd: number) {
     const start =
         typeof state.startBuffered === "number" && state.startBuffered >= 0 ? state.startBuffered : fallbackStart;

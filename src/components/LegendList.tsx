@@ -14,8 +14,8 @@ import { ListComponent } from "@/components/ListComponent";
 import { useDevChecks } from "@/components/useDevChecks";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
 import { resetAdaptiveRender } from "@/core/adaptiveRender";
+import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import {
     handleBootstrapInitialScrollFooterLayout,
     handleBootstrapInitialScrollLayoutChange,
