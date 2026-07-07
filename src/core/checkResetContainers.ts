@@ -1,8 +1,8 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { clearPrefixLayoutStoreKnownSizes } from "@/core/prefixLayoutStoreLifecycle";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
-import { clearPrefixLayoutStoreMeasurements } from "@/core/prefixLayoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { getId } from "@/utils/getId";
@@ -27,7 +27,7 @@ export function checkResetContainers(
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }
-        clearPrefixLayoutStoreMeasurements(ctx);
+        clearPrefixLayoutStoreKnownSizes(ctx);
         state.positionRecalculationStartIndex = 0;
         state.scrollForNextCalculateItemsInView = undefined;
     }

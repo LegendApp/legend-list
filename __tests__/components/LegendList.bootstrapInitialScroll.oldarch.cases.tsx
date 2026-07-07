@@ -137,7 +137,7 @@ function seedEstimatedLayout(state: any, count: number, size: number | number[])
     state.scrollLength = 200;
     state.sizes.clear();
     state.sizesKnown.clear();
-    state.layoutStoreRuntime?.store.clearMeasurements();
+    state.layoutStoreRuntime?.store.clearKnownSizes();
     if (!Array.isArray(size)) {
         state.layoutStoreRuntime?.store.flushEstimatedSize(size);
     }

@@ -64,7 +64,7 @@ export class PrefixLayoutStore {
         return range;
     }
 
-    clearMeasurements() {
+    clearKnownSizes() {
         this.clearSizeArrays();
         this.knownCountTree.clear();
         this.knownSizeTree.clear();
