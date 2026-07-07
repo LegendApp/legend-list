@@ -3,6 +3,7 @@ import "../setup";
 
 import {
     getActivePrefixLayoutStore,
+    isPrefixLayoutStorePropsSupported,
     isPrefixLayoutStoreSupported,
     materializePrefixLayoutStoreRange,
     maybeFlushInitialPrefixLayoutEstimate,
@@ -57,6 +58,37 @@ function createLayoutStoreContext(dataLength = 3) {
 }
 
 describe("prefix layout store lifecycle", () => {
+    it("supports only vertical single-column lists without override layouts", () => {
+        expect(
+            isPrefixLayoutStorePropsSupported({
+                horizontal: false,
+                numColumns: 1,
+                overrideItemLayout: undefined,
+            }),
+        ).toBe(true);
+        expect(
+            isPrefixLayoutStorePropsSupported({
+                horizontal: true,
+                numColumns: 1,
+                overrideItemLayout: undefined,
+            }),
+        ).toBe(false);
+        expect(
+            isPrefixLayoutStorePropsSupported({
+                horizontal: false,
+                numColumns: 2,
+                overrideItemLayout: undefined,
+            }),
+        ).toBe(false);
+        expect(
+            isPrefixLayoutStorePropsSupported({
+                horizontal: false,
+                numColumns: 1,
+                overrideItemLayout: () => undefined,
+            }),
+        ).toBe(false);
+    });
+
     it("creates a store for the supported vertical single-column path", () => {
         const ctx = createLayoutStoreContext();
 

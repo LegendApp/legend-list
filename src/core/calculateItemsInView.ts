@@ -622,10 +622,7 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP =
-            doMVCP && !suppressInitialScrollSideEffects
-                ? prepareMVCP(ctx, dataChanged, mvcpAdjustmentSource)
-                : undefined;
+        const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, didDataChange, mvcpAdjustmentSource) : undefined;
 
         const shouldReconcilePrefixDataChange =
             !forceFullItemPositions &&
@@ -676,7 +673,7 @@ export function calculateItemsInView(
                 disablePrefixLayoutStoreForCurrentPass(state);
                 layout = createLayoutAccess(ctx, undefined);
             }
-            updateItemPositions(ctx, dataChanged, {
+            updateItemPositions(ctx, didDataChange, {
                 doMVCP,
                 // Size changes must update the entire legacy position suffix.
                 forceFullUpdate: !!forceFullItemPositions || positionRecalculationStartIndex !== undefined,

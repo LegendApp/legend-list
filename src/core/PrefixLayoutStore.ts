@@ -136,13 +136,12 @@ export class PrefixLayoutStore {
         this.clearSizeArrays();
 
         for (const entry of entries) {
-            const size = normalizeSize(entry.size);
             if (entry.type === "measured") {
                 this.sizeKinds[entry.index] = SIZE_MEASURED;
-                this.knownSizes[entry.index] = size;
+                this.knownSizes[entry.index] = entry.size;
             } else if (this.sizeKinds[entry.index] !== SIZE_MEASURED) {
                 this.sizeKinds[entry.index] = SIZE_CACHED;
-                this.knownSizes[entry.index] = size;
+                this.knownSizes[entry.index] = entry.size;
             }
         }
 
