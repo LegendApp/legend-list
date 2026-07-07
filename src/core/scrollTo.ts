@@ -3,7 +3,8 @@ import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
-import { getLayoutEnd, getLayoutOffset } from "@/core/layoutAccessors";
+import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
+import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -55,7 +56,13 @@ function syncInitialScrollNativeWatchdog(
     }
 }
 
-function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
+function getLayoutEnd(layout: LayoutAccess, index: number | undefined) {
+    const offset = layout.getOffset(index);
+    const size = layout.getSize(index);
+    return offset !== undefined && size !== undefined ? offset + size : undefined;
+}
+
+function findPositionIndexAtOrBeforeOffset(ctx: StateContext, layout: LayoutAccess, offset: number) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
     let low = 0;
@@ -64,7 +71,7 @@ function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
 
     while (low <= high) {
         const mid = Math.floor((low + high) / 2);
-        const top = getLayoutOffset(ctx, mid);
+        const top = layout.getOffset(mid);
         if (top === undefined) {
             high = mid - 1;
         } else {
@@ -80,7 +87,12 @@ function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
     return match;
 }
 
-function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
+function getTargetViewportRenderRange(
+    ctx: StateContext,
+    layout: LayoutAccess,
+    targetOffset: number,
+    targetIndex: number | undefined,
+) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
     if (dataLength === 0) {
@@ -92,29 +104,29 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
     let start =
         targetIndex !== undefined
             ? Math.max(0, Math.min(dataLength - 1, targetIndex))
-            : findPositionIndexAtOrBeforeOffset(ctx, viewportStart);
+            : findPositionIndexAtOrBeforeOffset(ctx, layout, viewportStart);
     if (start === undefined) {
         return undefined;
     }
-    if (targetIndex !== undefined && getLayoutOffset(ctx, start) === undefined) {
+    if (targetIndex !== undefined && layout.getOffset(start) === undefined) {
         return { end: start, start };
     }
     if (targetIndex === undefined) {
-        const startBottom = getLayoutEnd(ctx, start);
+        const startBottom = getLayoutEnd(layout, start);
         if (startBottom === undefined || startBottom <= viewportStart) {
             return undefined;
         }
     }
 
     while (start > 0) {
-        const top = getLayoutOffset(ctx, start);
-        if (top === undefined || top <= viewportStart || getLayoutOffset(ctx, start - 1) === undefined) {
+        const top = layout.getOffset(start);
+        if (top === undefined || top <= viewportStart || layout.getOffset(start - 1) === undefined) {
             break;
         }
         start--;
     }
     while (start > 0) {
-        const previousBottom = getLayoutEnd(ctx, start - 1);
+        const previousBottom = getLayoutEnd(layout, start - 1);
         if (previousBottom === undefined || previousBottom <= viewportStart) {
             break;
         }
@@ -123,7 +135,7 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
 
     let end = start;
     while (end + 1 < dataLength) {
-        const nextTop = getLayoutOffset(ctx, end + 1);
+        const nextTop = layout.getOffset(end + 1);
         if (nextTop === undefined || nextTop > viewportEnd) {
             break;
         }
@@ -134,7 +146,8 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
 }
 
 function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
-    const range = getTargetViewportRenderRange(ctx, targetOffset, targetIndex);
+    const layout = createLayoutAccess(ctx, getActivePrefixLayoutStore(ctx));
+    const range = getTargetViewportRenderRange(ctx, layout, targetOffset, targetIndex);
     if (range) {
         ctx.state.scrollTargetPinnedRange = range;
         ctx.state.scrollForNextCalculateItemsInView = undefined;

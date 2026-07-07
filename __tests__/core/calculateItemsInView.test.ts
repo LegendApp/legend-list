@@ -1,5 +1,6 @@
 import { Platform } from "@/platform/Platform";
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import * as updateItemPositionsModule from "../../src/core/arrayLayout";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
@@ -7,7 +8,6 @@ import {
     setPrefixLayoutStoreMeasuredSize,
     syncPrefixLayoutStoreStructure,
 } from "../../src/core/prefixLayoutStoreLifecycle";
-import * as updateItemPositionsModule from "../../src/core/updateItemPositions";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
