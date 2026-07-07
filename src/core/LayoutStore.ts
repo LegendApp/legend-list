@@ -3,6 +3,12 @@ export interface LayoutIndexRange {
     start: number;
 }
 
+export interface LayoutStoreSizeEntry {
+    index: number;
+    size: number;
+    type: "cached" | "measured";
+}
+
 export interface LayoutStore {
     readonly length: number;
     findIndexRangeAtOffsets(startOffset: number, endOffset: number): LayoutIndexRange | undefined;
