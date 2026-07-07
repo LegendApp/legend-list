@@ -101,12 +101,12 @@ describe("prefix layout store lifecycle", () => {
         expect(store?.getTotalSize()).toBe(300);
     });
 
-    it("does not recreate a store after keyless data changes disable prefix layout", () => {
+    it("clears an existing store when props become unsupported", () => {
         const ctx = createLayoutStoreContext();
 
         expect(syncPrefixLayoutStoreStructure(ctx)).toBeDefined();
 
-        ctx.state.disablePrefixLayoutStoreAfterKeylessDataChange = true;
+        ctx.state.props.horizontal = true;
         const store = syncPrefixLayoutStoreStructure(ctx);
 
         expect(isPrefixLayoutStoreSupported(ctx)).toBe(false);

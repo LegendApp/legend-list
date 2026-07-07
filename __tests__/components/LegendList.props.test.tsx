@@ -881,6 +881,8 @@ describe("LegendList props behavior", () => {
         const keyExtractor = mock((item: (typeof data)[number]) => item.id);
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
         const { LegendList } = await import("../../src/components/LegendList?props-test-inline-callback-rerender");
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
         const renderList = (onLoad?: () => void) => (
             <LegendList
                 data={data}
@@ -894,23 +896,31 @@ describe("LegendList props behavior", () => {
             />
         );
 
-        const rendered = render(renderList());
-        await flushAsync();
-        const fixedSizeCallsAfterMount = getFixedItemSize.mock.calls.length;
-        const itemTypeCallsAfterMount = getItemType.mock.calls.length;
-        const keyExtractorCallsAfterMount = keyExtractor.mock.calls.length;
+        console.warn = consoleWarnSpy as any;
+        try {
+            const rendered = render(renderList());
+            await flushAsync();
+            const fixedSizeCallsAfterMount = getFixedItemSize.mock.calls.length;
+            const itemTypeCallsAfterMount = getItemType.mock.calls.length;
+            const keyExtractorCallsAfterMount = keyExtractor.mock.calls.length;
 
-        rendered.rerender(renderList(() => {}));
-        await flushAsync();
+            rendered.rerender(renderList(() => {}));
+            await flushAsync();
 
-        expect(fixedSizeCallsAfterMount).toBe(data.length);
-        expect(itemTypeCallsAfterMount).toBe(data.length);
-        expect(keyExtractorCallsAfterMount).toBeGreaterThanOrEqual(data.length);
-        expect(getFixedItemSize.mock.calls.length).toBe(fixedSizeCallsAfterMount);
-        expect(getItemType.mock.calls.length).toBe(itemTypeCallsAfterMount);
-        expect(keyExtractor.mock.calls.length).toBe(keyExtractorCallsAfterMount);
+            expect(fixedSizeCallsAfterMount).toBe(data.length);
+            expect(itemTypeCallsAfterMount).toBe(data.length);
+            expect(keyExtractorCallsAfterMount).toBeGreaterThanOrEqual(data.length);
+            expect(getFixedItemSize.mock.calls.length).toBe(fixedSizeCallsAfterMount);
+            expect(getItemType.mock.calls.length).toBe(itemTypeCallsAfterMount);
+            expect(keyExtractor.mock.calls.length).toBe(keyExtractorCallsAfterMount);
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] keyExtractor changed identity without a data change. Pass a stable keyExtractor because item identity is only recomputed during data changes.",
+            );
 
-        rendered.unmount();
+            rendered.unmount();
+        } finally {
+            console.warn = originalWarn;
+        }
     });
 
     it("syncs public totals after an exact prefix-layout estimate rebuild", async () => {
@@ -950,7 +960,7 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("keeps prefix layout disabled after keyless data changes reset layout", async () => {
+    it("keeps prefix layout active after keyless data changes reset layout", async () => {
         const initialData = [{ label: "Alpha" }, { label: "Beta" }];
         const nextData = [{ label: "Gamma" }, { label: "Delta" }, { label: "Epsilon" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
@@ -972,13 +982,16 @@ describe("LegendList props behavior", () => {
         rendered.rerender(renderList(nextData));
         await flushAsync();
 
-        expect(ctx.state.disablePrefixLayoutStoreAfterKeylessDataChange).toBe(true);
-        expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
+        expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
+        expect(ctx.state.layoutStoreRuntime?.store.length).toBe(nextData.length);
+        expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
+        expect(ctx.state.positions.length).toBe(0);
 
         rendered.rerender(renderList(nextData, 80));
         await flushAsync();
 
-        expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
+        expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
+        expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(80);
 
         rendered.unmount();
     });

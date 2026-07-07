@@ -5,8 +5,6 @@ import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.internal";
-import { getId } from "@/utils/getId";
-import { getItemSize } from "@/utils/getItemSize";
 
 export function getViewPositionOffset(
     availableSpace: number,
@@ -48,9 +46,7 @@ export function calculateOffsetWithOffsetPosition(
         }
         const isOutOfBounds = index < 0 || index >= dataLength;
         const fallbackEstimatedSize = state.props.estimatedItemSize ?? 0;
-        const measuredItemSize = isOutOfBounds
-            ? fallbackEstimatedSize
-            : (getLayoutSize(ctx, index) ?? getItemSize(ctx, getId(state, index), index, state.props.data[index]!));
+        const measuredItemSize = isOutOfBounds ? fallbackEstimatedSize : (getLayoutSize(ctx, index) ?? fallbackEstimatedSize);
         const itemSize = Math.max(0, measuredItemSize - (isOutOfBounds ? 0 : ctx.scrollAxisGap));
         const trailingInset = getContentInsetEnd(ctx);
 

@@ -42,7 +42,7 @@ import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@
 import { restoreItemSizeEstimates, saveItemSizeEstimates } from "@/core/itemSizeCache";
 import { onScroll } from "@/core/onScroll";
 import {
-    disablePrefixLayoutStoreForCurrentPass,
+    clearPrefixLayoutStoreKnownSizes,
     isPrefixLayoutStorePropsSupported,
     rebuildPrefixLayoutStoreExact,
     syncPrefixLayoutStoreLayoutState,
@@ -417,7 +417,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 didColumnsChange: false,
                 didDataChange: false,
                 didLoad: false,
-                disablePrefixLayoutStoreAfterKeylessDataChange: false,
                 enableScrollForNextCalculateItemsInView: true,
                 endBuffered: -1,
                 endNoBuffer: -1,
@@ -515,13 +514,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didKeyExtractorChange =
         state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
         (!!keyExtractorProp && state.props.keyExtractor !== wrappedKeyExtractor);
-    if (keyExtractorProp) {
-        state.disablePrefixLayoutStoreAfterKeylessDataChange = false;
-    }
     const didDataChangeLocal =
         didDataKeyChangeLocal ||
         didDataVersionChangeLocal ||
         (didDataReferenceChangeLocal && checkStructuralDataChange(state, dataProp, state.props.data));
+    if (IS_DEV && didKeyExtractorChange && !didDataChangeLocal && !!state.props.hasReliableKeyExtractor) {
+        warnDevOnce(
+            "keyExtractor-identity-changed",
+            "keyExtractor changed identity without a data change. Pass a stable keyExtractor because item identity is only recomputed during data changes.",
+        );
+    }
     const shouldResetFreshDataLayout =
         !isFirstLocal &&
         didDataChangeLocal &&
@@ -765,11 +767,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal || didDataChangeLocal || state.didColumnsChange) {
         refState.current.lastBatchingAction = Date.now();
         if (!keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
-            // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
+            // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset.
             refState.current.sizes.clear();
+            refState.current.sizesKnown.clear();
+            for (const key in refState.current.averageSizes) {
+                delete refState.current.averageSizes[key];
+            }
             clearArrayLayoutCache(refState.current);
-            refState.current.disablePrefixLayoutStoreAfterKeylessDataChange = true;
-            disablePrefixLayoutStoreForCurrentPass(refState.current);
+            clearPrefixLayoutStoreKnownSizes(ctx);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }

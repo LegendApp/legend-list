@@ -270,10 +270,7 @@ export function isPrefixLayoutStoreSupported(ctx: StateContext) {
         props: { horizontal, numColumns, overrideItemLayout },
     } = state;
 
-    return (
-        !state.disablePrefixLayoutStoreAfterKeylessDataChange &&
-        isPrefixLayoutStorePropsSupported({ horizontal, numColumns, overrideItemLayout })
-    );
+    return isPrefixLayoutStorePropsSupported({ horizontal, numColumns, overrideItemLayout });
 }
 
 function getPrefixLayoutStoreSeedEstimate(input: {
