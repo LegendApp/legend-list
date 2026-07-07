@@ -1,6 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import type { LayoutStoreSizeEntry } from "@/core/LayoutStore";
-import { type ActiveLayoutStore, LayoutStoreRuntime } from "@/core/LayoutStoreRuntime";
+import { type ActiveLayoutStore, LayoutStoreRuntime, type RowSpanCacheInput } from "@/core/LayoutStoreRuntime";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import { RowLayoutStore } from "@/core/RowLayoutStore";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
@@ -328,23 +328,31 @@ export function isLayoutStorePropsSupported(props: {
 
 export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
     const state = ctx.state;
-    const store = getActiveLayoutStore(ctx);
+    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const store = runtime?.store;
     const { data, numColumns, overrideItemLayout } = state.props;
     let didSync = false;
 
-    if (store instanceof RowLayoutStore && overrideItemLayout && numColumns > 1) {
+    if (runtime && store instanceof RowLayoutStore && overrideItemLayout && numColumns > 1) {
         const extraData = peek$(ctx, "extraData");
-        const layoutConfig = { span: 1 };
-        const spans = new Array<number | undefined>(data.length);
+        const cacheInput = getRowSpanCacheInput(state, extraData);
+        const cachedSpans = runtime.getCachedRowSpans(cacheInput);
+        if (!cachedSpans) {
+            const layoutConfig = { span: 1 };
+            const spans = new Array<number | undefined>(data.length);
 
-        for (let index = 0; index < data.length; index++) {
-            layoutConfig.span = 1;
-            overrideItemLayout(layoutConfig, data[index], index, numColumns, extraData);
-            spans[index] = layoutConfig.span;
+            for (let index = 0; index < data.length; index++) {
+                layoutConfig.span = 1;
+                overrideItemLayout(layoutConfig, data[index], index, numColumns, extraData);
+                spans[index] = layoutConfig.span;
+            }
+
+            store.resize(data.length, spans, numColumns);
+            runtime.setCachedRowSpans(cacheInput, spans);
+            didSync = true;
         }
-
-        store.resize(data.length, spans, numColumns);
-        didSync = true;
+    } else {
+        runtime?.clearRowSpanCache();
     }
 
     return didSync;
@@ -358,7 +366,11 @@ export function syncLayoutStoreStructure(ctx: StateContext) {
         let runtime = state.layoutStoreRuntime;
         if (runtime && getLayoutStoreKindForStore(runtime.store) === nextStoreKind) {
             if (runtime.store instanceof RowLayoutStore) {
-                runtime.store.resize(state.props.data.length, undefined, state.props.numColumns);
+                runtime.store.resize(
+                    state.props.data.length,
+                    getReusableRowSpans(ctx, runtime),
+                    state.props.numColumns,
+                );
             } else {
                 runtime.store.resize(state.props.data.length);
             }
@@ -387,6 +399,32 @@ export function syncLayoutStoreStructure(ctx: StateContext) {
     }
 
     return state.layoutStoreRuntime?.store;
+}
+
+function getRowSpanCacheInput(state: InternalState, extraData: unknown): RowSpanCacheInput {
+    const { data, dataKey, dataVersion, numColumns, overrideItemLayout } = state.props;
+    return {
+        data,
+        dataKey,
+        dataVersion,
+        extraData,
+        numColumns,
+        overrideItemLayout,
+    };
+}
+
+function getReusableRowSpans(ctx: StateContext, runtime: LayoutStoreRuntime) {
+    const state = ctx.state;
+    const { numColumns, overrideItemLayout } = state.props;
+    let spans: Array<number | undefined> | undefined;
+
+    if (overrideItemLayout && numColumns > 1) {
+        spans = runtime.getCachedRowSpans(getRowSpanCacheInput(state, peek$(ctx, "extraData")));
+    } else {
+        runtime.clearRowSpanCache();
+    }
+
+    return spans;
 }
 
 function getLayoutStoreKind(state: InternalState) {
