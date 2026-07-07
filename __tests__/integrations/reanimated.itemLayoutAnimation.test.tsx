@@ -14,6 +14,7 @@ import { typedMemo } from "../../src/types.internal";
 import { getComponent } from "../../src/utils/getComponent";
 import { createMockState } from "../__mocks__/createMockState";
 import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
+import { setLayoutValue } from "../helpers/layoutStore";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let legendListPropsRenders: any[] = [];
@@ -155,7 +156,7 @@ function StickyPositionComponentHarness({
     }
 
     React.useLayoutEffect(() => {
-        ctx.state.arrayLayout.positions[index] = position;
+        setLayoutValue(ctx.state, "positions", index, position);
         ctx.state.props.stickyHeaderIndicesArr = [index];
         ctx.state.sizes.set(itemKey, 120);
 

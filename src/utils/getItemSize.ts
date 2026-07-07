@@ -41,7 +41,6 @@ function getKnownOrFixedSize(
         const fixedLayoutSize = getFixedItemLayoutSize(ctx, index, data, resolved);
         if (fixedLayoutSize !== undefined) {
             size = fixedLayoutSize;
-            state.positionsAreCurrent = false;
             state.sizesKnown.set(key, size);
         }
     }

@@ -7,6 +7,7 @@ import { syncActiveRowLayoutStoreSpans, syncLayoutStoreStructure } from "../../s
 import { syncMountedContainer } from "../../src/core/syncMountedContainer";
 import { peek$, set$ } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { clearLayoutValues, getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
 
 describe("syncMountedContainer", () => {
     it("reuses cached equality results prepared before a later changed item", () => {
@@ -104,6 +105,7 @@ describe("syncMountedContainer", () => {
                 },
             },
         );
+        setLayoutValue(ctx.state, "positions", "item-0", 200);
         ctx.state.sizes.set("item-0", 50);
         set$(ctx, "containerItemKey0", "item-0");
 
@@ -159,7 +161,7 @@ describe("syncMountedContainer", () => {
                 },
             },
         );
-        ctx.state.arrayLayout.positions.length = 0;
+        clearLayoutValues(ctx.state, "positions");
         syncLayoutStoreStructure(ctx);
         set$(ctx, "containerItemKey0", "item_5");
 
@@ -167,7 +169,7 @@ describe("syncMountedContainer", () => {
 
         expect(result.didChangePosition).toBe(true);
         expect(peek$(ctx, "containerPosition0")).toBe(250);
-        expect(ctx.state.arrayLayout.positions[5]).toBeUndefined();
+        expect(getLayoutValue(ctx.state, "positions", 5)).toBeUndefined();
     });
 
     it("reads row layout column and span from the active store", () => {
@@ -188,8 +190,8 @@ describe("syncMountedContainer", () => {
             },
         );
 
-        ctx.state.arrayLayout.columns.length = 0;
-        ctx.state.arrayLayout.columnSpans.length = 0;
+        clearLayoutValues(ctx.state, "columns");
+        clearLayoutValues(ctx.state, "columnSpans");
         syncLayoutStoreStructure(ctx);
         syncActiveRowLayoutStoreSpans(ctx);
         set$(ctx, "containerItemKey0", "item-2");
@@ -200,7 +202,7 @@ describe("syncMountedContainer", () => {
         expect(peek$(ctx, "containerPosition0")).toBe(50);
         expect(peek$(ctx, "containerColumn0")).toBe(1);
         expect(peek$(ctx, "containerSpan0")).toBe(4);
-        expect(ctx.state.arrayLayout.columns[2]).toBeUndefined();
-        expect(ctx.state.arrayLayout.columnSpans[2]).toBeUndefined();
+        expect(getLayoutValue(ctx.state, "columns", 2)).toBeUndefined();
+        expect(getLayoutValue(ctx.state, "columnSpans", 2)).toBeUndefined();
     });
 });

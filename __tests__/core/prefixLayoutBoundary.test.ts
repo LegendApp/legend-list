@@ -1,5 +1,4 @@
 import { getStickyPushLimit } from "@/components/stickyPositionUtils";
-import * as updateItemPositionsModule from "@/core/arrayLayout";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import * as doScrollToModule from "@/core/doScrollTo";
 import {
@@ -16,7 +15,7 @@ import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMainta
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { describe, expect, it, mock, spyOn } from "bun:test";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { countLayoutValues } from "../helpers/layoutArrays";
+import { countLayoutValues } from "../helpers/layoutStore";
 
 function createPrefixContext(options?: {
     drawDistance?: number;
@@ -59,7 +58,7 @@ function createPrefixContext(options?: {
 }
 
 function expectPrefixPositionsEmpty(ctx: ReturnType<typeof createPrefixContext>) {
-    expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+    expect(countLayoutValues(ctx.state, "positions")).toBe(0);
 }
 
 describe("prefix layout hard boundary", () => {
@@ -84,12 +83,10 @@ describe("prefix layout hard boundary", () => {
                 viewabilityConfig: { id: "default", itemVisiblePercentThreshold: 1 },
             },
         ];
-        const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
         try {
             calculateItemsInView(ctx, { dataChanged: true });
 
-            expect(updateItemPositionsSpy).not.toHaveBeenCalled();
             expectPrefixPositionsEmpty(ctx);
             expect(peek$(ctx, "snapToOffsets")).toEqual([0, 200, 500]);
             expect(peek$(ctx, "activeStickyIndex")).toBe(0);
@@ -97,7 +94,6 @@ describe("prefix layout hard boundary", () => {
             expect(viewabilityCalls).toHaveLength(1);
             expect(viewabilityCalls[0].viewableItems.map((token: any) => token.index)).toEqual([2, 3, 4]);
         } finally {
-            updateItemPositionsSpy.mockRestore();
         }
     });
 

@@ -160,18 +160,12 @@ export interface PendingDataComparison {
 export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export type AnchoredEndSpaceOwner = "list" | "scroll";
-export interface ArrayLayoutState {
-    columns: Array<number | undefined>;
-    columnSpans: Array<number | undefined>;
-    positions: Array<number | undefined>;
-}
 
 export interface InternalState {
     adjustingFromInitialMount?: number;
     anchoredEndSpacePendingReady?: boolean;
     anchoredEndSpaceReadyAnchorIndex?: number;
     anchoredEndSpaceReadyAnchorKey?: string;
-    arrayLayout: ArrayLayoutState;
     averageSizes: AverageSizes;
     containerItemKeys: Map<string, number>;
     containerItemGenerations: Array<number | undefined>;
@@ -250,7 +244,6 @@ export interface InternalState {
     pendingScrollResolve?: (() => void) | undefined;
     runPendingScrollToEnd?: () => void;
     layoutStoreRuntime?: LayoutStoreRuntime;
-    positionsAreCurrent?: boolean;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
 
