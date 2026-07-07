@@ -153,7 +153,7 @@ describe("item size update functions", () => {
 
         it("returns zero for sub-threshold prefix measurements while recording them", () => {
             const store = syncPrefixLayoutStoreStructure(mockCtx)!;
-            store.flushEstimatedSize(200 / 3);
+            store.setEstimatedSize(200 / 3);
             syncPrefixLayoutStoreTotalSize(mockCtx);
 
             const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.7, width: 400 });
