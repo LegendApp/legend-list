@@ -1,4 +1,5 @@
 import { FenwickTree } from "@/core/FenwickTree";
+import type { LayoutIndexRange, LayoutStore } from "@/core/LayoutStore";
 
 const SIZE_UNKNOWN = 0;
 const SIZE_CACHED = 1;
@@ -10,7 +11,7 @@ export interface PrefixLayoutStoreSizeEntry {
     type: "cached" | "measured";
 }
 
-export class PrefixLayoutStore {
+export class PrefixLayoutStore implements LayoutStore {
     // Prefix mode intentionally uses one scalar estimate for all unmeasured rows.
     // Per-item-type averages stay in the array layout path until rows are measured.
     private estimatedSize: number;
@@ -51,8 +52,8 @@ export class PrefixLayoutStore {
         return low < this.length ? low : undefined;
     }
 
-    findIndexRangeAtOffsets(startOffset: number, endOffset: number): { end: number; start: number } | undefined {
-        let range: { end: number; start: number } | undefined;
+    findIndexRangeAtOffsets(startOffset: number, endOffset: number): LayoutIndexRange | undefined {
+        let range: LayoutIndexRange | undefined;
         if (this.length > 0) {
             const start = this.findIndexAtOffset(startOffset) ?? this.length - 1;
             const end = this.findIndexAtOffset(endOffset) ?? this.length - 1;
