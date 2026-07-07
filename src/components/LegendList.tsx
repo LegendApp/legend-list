@@ -15,7 +15,7 @@ import { useDevChecks } from "@/components/useDevChecks";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { resetAdaptiveRender } from "@/core/adaptiveRender";
-import { clearArrayLayoutCache, updateItemPositions } from "@/core/arrayLayout";
+import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import {
     cancelBootstrapInitialScrollFrame,
     handleBootstrapInitialScrollFooterLayout,
@@ -712,9 +712,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         resetLayoutCachesForDataChange(state);
         restoreItemSizeEstimates(ctx, estimatedListSize?.[horizontal ? "height" : "width"], sizeCacheOwnerRef.current);
         rebuildLayoutStoreExact(ctx);
-        if (!syncLayoutStoreState(ctx)) {
-            updateItemPositions(ctx, /*dataChanged*/ true);
-        }
+        syncLayoutStoreState(ctx);
     }
 
     const initialContentOffset = useMemo(() => {

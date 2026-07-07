@@ -1,6 +1,5 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import { updateItemPositions } from "@/core/arrayLayout";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { createContainerItemMetadata, resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { getItemSpaceOffset, getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
@@ -14,6 +13,7 @@ import {
     reconcileLayoutStoreDataChange,
     syncActiveRowLayoutStoreSpans,
     syncLayoutStoreState,
+    syncLayoutStoreStructure,
 } from "@/core/layoutStoreLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
@@ -452,6 +452,7 @@ export function calculateItemsInView(
             return;
         }
         const dataLength = data.length;
+        syncLayoutStoreStructure(ctx);
         const scrollTargetPinnedRange = state.scrollTargetPinnedRange;
         let scrollTargetPinnedStart = 0;
         let scrollTargetPinnedEnd = -1;
@@ -644,8 +645,9 @@ export function calculateItemsInView(
         const doMVCP = !hasEstimatedInitialLayout && (params.doMVCP || shouldApplyDeferredMVCP);
         const mvcpAdjustmentSource = shouldApplyDeferredMVCP ? "item-size" : params.mvcpAdjustmentSource;
 
-        ////// Update item positions and do MVCP
-        // Handle maintainVisibleContentPosition adjustment early
+        ////// Sync layout store and do MVCP
+        // Handle maintainVisibleContentPosition adjustment early, before data-change
+        // reconciliation mutates offsets.
         const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, didDataChange, mvcpAdjustmentSource) : undefined;
 
         const hasActiveLayoutStore = !!getActiveLayoutStore(ctx);
@@ -662,19 +664,11 @@ export function calculateItemsInView(
             });
         }
 
-        // Update all positions upfront so we can assume they're correct
-        // Start at the earliest invalidated position instead of recalculating from index 0.
-        const startIndex =
-            forceFullItemPositions || didDataChange ? 0 : (positionRecalculationStartIndex ?? state.startBuffered ?? 0);
-        const optimizeForVisibleWindow =
-            !forceFullItemPositions && !didDataChange && numColumns > 1 && positionRecalculationStartIndex !== undefined;
-
         const shouldMaterializeLayoutStoreRange = hasActiveLayoutStore && !didDataChange;
         let layoutStoreMaterializedRange = shouldMaterializeLayoutStoreRange
             ? materializeLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
             : undefined;
         let didReconcileLayoutStoreDataChange = false;
-        let didResetLayoutStoreDataChange = false;
 
         if (!layoutStoreMaterializedRange && shouldReconcileLayoutStoreDataChange) {
             didReconcileLayoutStoreDataChange = reconcileLayoutStoreDataChange(ctx, {
@@ -704,22 +698,9 @@ export function calculateItemsInView(
                 scrollTopBuffered,
                 scrollBottomBuffered,
             );
-            didResetLayoutStoreDataChange = true;
         }
 
-        if (layoutStoreMaterializedRange || didReconcileLayoutStoreDataChange || didResetLayoutStoreDataChange) {
-            syncLayoutStoreState(ctx);
-        } else {
-            updateItemPositions(ctx, didDataChange, {
-                doMVCP,
-                // Size changes must update the entire legacy position suffix.
-                forceFullUpdate: !!forceFullItemPositions || positionRecalculationStartIndex !== undefined,
-                optimizeForVisibleWindow,
-                scrollBottomBuffered,
-                scrollVelocity: speed,
-                startIndex,
-            });
-        }
+        syncLayoutStoreState(ctx);
         // Advance the position snapshot for later pending renders and the eventual commit.
         if (state.previousIndexByKey) {
             state.previousIndexByKey = indexByKey;
