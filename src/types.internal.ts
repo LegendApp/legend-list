@@ -314,7 +314,7 @@ export interface InternalState {
     containerSyncAdjust?: number;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
-    queuedLayoutStoreEstimateFlush?: any;
+    queuedLayoutStoreEstimateFlush?: number;
     queuedInitialLayout?: boolean | undefined;
     reprocessCurrentScroll?: () => void;
     refScroller: React.RefObject<LegendListScrollerRef | null>;
