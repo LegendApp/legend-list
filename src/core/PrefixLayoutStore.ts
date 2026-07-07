@@ -1,15 +1,11 @@
 import { FenwickTree } from "@/core/FenwickTree";
-import type { LayoutIndexRange, LayoutStore } from "@/core/LayoutStore";
+import type { LayoutIndexRange, LayoutStore, LayoutStoreSizeEntry } from "@/core/LayoutStore";
 
 const SIZE_UNKNOWN = 0;
 const SIZE_CACHED = 1;
 const SIZE_MEASURED = 2;
 
-export interface PrefixLayoutStoreSizeEntry {
-    index: number;
-    size: number;
-    type: "cached" | "measured";
-}
+export type PrefixLayoutStoreSizeEntry = LayoutStoreSizeEntry;
 
 export class PrefixLayoutStore implements LayoutStore {
     // Prefix mode intentionally uses one scalar estimate for all unmeasured rows.
