@@ -263,6 +263,31 @@ describe("scrollTo", () => {
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
     });
 
+    it("pins offset-only animated scroll targets from the prefix layout store", () => {
+        const triggerCalculateItemsInView = mock(() => undefined);
+        mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
+        mockCtx.state.props.estimatedItemSize = 50;
+        mockCtx.state.positions.length = 0;
+        mockCtx.state.scrollForNextCalculateItemsInView = { bottom: 250, top: 50 };
+        mockCtx.state.scrollLength = 100;
+        mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+        syncPrefixLayoutStoreStructure(mockCtx);
+        syncPrefixLayoutStoreTotalSize(mockCtx);
+
+        scrollTo(mockCtx, {
+            animated: true,
+            offset: 45_000,
+        });
+
+        expect(mockCtx.state.scrollTargetPinnedRange).toEqual({
+            end: 902,
+            start: 900,
+        });
+        expect(mockCtx.state.scrollForNextCalculateItemsInView).toBeUndefined();
+        expect(updateScrollSpy).not.toHaveBeenCalled();
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
+    });
+
     it("pins the whole target viewport for bottom-aligned index scrolls", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 20 }, (_, index) => ({ id: index }));
