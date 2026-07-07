@@ -13,7 +13,7 @@ export class PrefixLayoutRuntime {
         this.store = new PrefixLayoutStore(length, estimatedSize);
     }
 
-    resetEstimateFlushState(timeouts: Set<number>) {
+    resetTransientState(timeouts: Set<number>) {
         if (this.queuedEstimateFlush !== undefined) {
             clearTimeout(this.queuedEstimateFlush);
             timeouts.delete(this.queuedEstimateFlush);
