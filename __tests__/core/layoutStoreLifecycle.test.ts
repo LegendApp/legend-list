@@ -146,6 +146,41 @@ describe("layout store lifecycle", () => {
         expect(store?.getTotalSize()).toBe(400);
     });
 
+    it("reuses cached override spans until span inputs change", () => {
+        const ctx = createLayoutStoreContext(5);
+        const overrideItemLayout = mock((layout, _item, index) => {
+            layout.span = [2, 3, 1, 4, 1][index];
+        });
+        ctx.state.props.numColumns = 4;
+        ctx.state.props.dataVersion = "a";
+        ctx.state.props.overrideItemLayout = overrideItemLayout;
+        ctx.values.set("extraData", "a");
+
+        const store = syncLayoutStoreStructure(ctx);
+
+        expect(syncActiveRowLayoutStoreSpans(ctx)).toBe(true);
+        expect(overrideItemLayout).toHaveBeenCalledTimes(5);
+        expect(Array.from({ length: 5 }, (_, index) => (store as RowLayoutStore).getColumn(index))).toEqual([
+            1, 1, 4, 1, 1,
+        ]);
+
+        expect(syncActiveRowLayoutStoreSpans(ctx)).toBe(false);
+        syncLayoutStoreStructure(ctx);
+        expect(syncActiveRowLayoutStoreSpans(ctx)).toBe(false);
+        expect(overrideItemLayout).toHaveBeenCalledTimes(5);
+        expect(Array.from({ length: 5 }, (_, index) => (store as RowLayoutStore).getColumn(index))).toEqual([
+            1, 1, 4, 1, 1,
+        ]);
+
+        ctx.values.set("extraData", "b");
+        expect(syncActiveRowLayoutStoreSpans(ctx)).toBe(true);
+        expect(overrideItemLayout).toHaveBeenCalledTimes(10);
+
+        ctx.state.props.dataVersion = "b";
+        expect(syncActiveRowLayoutStoreSpans(ctx)).toBe(true);
+        expect(overrideItemLayout).toHaveBeenCalledTimes(15);
+    });
+
     it("keeps an existing store when the axis changes without changing column support", () => {
         const ctx = createLayoutStoreContext();
 
