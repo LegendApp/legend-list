@@ -1,7 +1,6 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkResetContainers } from "@/core/checkResetContainers";
-import { syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
-import { reconcilePrefixDataChange } from "@/core/reconcilePrefixDataChange";
+import { reconcilePrefixDataChange, syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
 import * as updateItemPositionsModule from "@/core/updateItemPositions";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
