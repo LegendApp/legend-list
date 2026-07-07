@@ -10,33 +10,25 @@ export interface LayoutAccess {
     getSize(index: number | undefined): number | undefined;
 }
 
-export function createLayoutAccess(
-    ctx: StateContext,
-    store: PrefixLayoutStore | undefined,
-    state: InternalState = ctx.state,
-): LayoutAccess {
+export function createLayoutAccess(ctx: StateContext, store: PrefixLayoutStore | undefined): LayoutAccess {
     return {
         getOffset(index) {
-            return getLayoutOffsetForStore(state, store, index);
+            return getLayoutOffsetForStore(ctx.state, store, index);
         },
         getSize(index) {
-            return getLayoutSizeForStore(ctx, state, store, index);
+            return getLayoutSizeForStore(ctx, ctx.state, store, index);
         },
     };
 }
 
-export function getLayoutOffset(ctx: StateContext, index: number | undefined, state: InternalState = ctx.state) {
-    const store = getPrefixLayoutStore(ctx, state);
-    return getLayoutOffsetForStore(state, store, index);
+export function getLayoutOffset(ctx: StateContext, index: number | undefined) {
+    const store = getActivePrefixLayoutStore(ctx);
+    return getLayoutOffsetForStore(ctx.state, store, index);
 }
 
-export function getLayoutSize(ctx: StateContext, index: number | undefined, state: InternalState = ctx.state) {
-    const store = getPrefixLayoutStore(ctx, state);
-    return getLayoutSizeForStore(ctx, state, store, index);
-}
-
-function getPrefixLayoutStore(ctx: StateContext, state: InternalState) {
-    return state === ctx.state ? getActivePrefixLayoutStore(ctx) : state.layoutStore;
+export function getLayoutSize(ctx: StateContext, index: number | undefined) {
+    const store = getActivePrefixLayoutStore(ctx);
+    return getLayoutSizeForStore(ctx, ctx.state, store, index);
 }
 
 function getLayoutOffsetForStore(

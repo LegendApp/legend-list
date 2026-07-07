@@ -230,6 +230,18 @@ function areViewabilityAmountTokensEqual(prev: ViewAmountToken | undefined, next
     );
 }
 
+function getViewabilityLayoutOffset(ctx: StateContext, state: InternalState, index: number) {
+    let offset: number | undefined;
+    if (state === ctx.state) {
+        offset = getLayoutOffset(ctx, index);
+    } else if (state.layoutStore?.hasIndex(index)) {
+        offset = state.layoutStore.getOffset(index);
+    } else if (index >= 0) {
+        offset = state.positions[index];
+    }
+    return offset;
+}
+
 function computeViewability(
     state: InternalState,
     ctx: StateContext,
@@ -249,7 +261,7 @@ function computeViewability(
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = scrollState - topPad;
-    const position = getLayoutOffset(ctx, index, state);
+    const position = getViewabilityLayoutOffset(ctx, state, index);
     const size = sizes.get(key)! || 0;
 
     if (position === undefined) {
