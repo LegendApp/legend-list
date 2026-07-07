@@ -10,8 +10,8 @@ import {
     rebuildPrefixLayoutStoreExact,
     schedulePeriodicPrefixLayoutEstimateFlush,
     setPrefixLayoutStoreMeasuredSize,
+    syncPrefixLayoutStoreLayoutState,
     syncPrefixLayoutStoreStructure,
-    syncPrefixLayoutStoreTotalSize,
 } from "../../src/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -203,7 +203,7 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.props.snapToIndices = [0, 1, 20, 29];
 
         const store = rebuildPrefixLayoutStoreExact(ctx);
-        syncPrefixLayoutStoreTotalSize(ctx);
+        syncPrefixLayoutStoreLayoutState(ctx);
 
         expect(store?.getEstimatedSize()).toBe(68);
         expect(store?.getMeasuredCount()).toBe(0);
@@ -261,7 +261,7 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.props.snapToIndices = [0, 2, 20];
 
         const store = syncPrefixLayoutStoreStructure(ctx);
-        syncPrefixLayoutStoreTotalSize(ctx);
+        syncPrefixLayoutStoreLayoutState(ctx);
 
         expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
@@ -273,9 +273,9 @@ describe("prefix layout store lifecycle", () => {
         const ctx = createLayoutStoreContext(100);
         ctx.state.props.snapToIndices = [0, 1, 20];
         syncPrefixLayoutStoreStructure(ctx);
-        syncPrefixLayoutStoreTotalSize(ctx);
+        syncPrefixLayoutStoreLayoutState(ctx);
 
-        setPrefixLayoutStoreMeasuredSize(ctx, 0, "item-0", 150);
+        setPrefixLayoutStoreMeasuredSize(ctx, 0, 150);
 
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
         expect(countLayoutValues(ctx.state.positions)).toBe(0);
@@ -288,10 +288,10 @@ describe("prefix layout store lifecycle", () => {
             const store = syncPrefixLayoutStoreStructure(ctx)!;
             ctx.state.props.snapToIndices = [5];
             ctx.state.firstFullyOnScreenIndex = 5;
-            syncPrefixLayoutStoreTotalSize(ctx);
+            syncPrefixLayoutStoreLayoutState(ctx);
 
             for (let index = 0; index < 4; index++) {
-                setPrefixLayoutStoreMeasuredSize(ctx, index, `item-${index}`, 50);
+                setPrefixLayoutStoreMeasuredSize(ctx, index, 50);
             }
 
             expect(ctx.values.get("snapToOffsets")).toEqual([300]);
@@ -334,7 +334,8 @@ describe("prefix layout store lifecycle", () => {
 
         expect(positionUpdates).toEqual([100]);
         expect(ctx.state.indexByKey.get("item-1")).toBe(1);
-        expect(ctx.state.sizes.get("item-1")).toBe(100);
+        expect(ctx.state.layoutStoreRuntime?.store.getSize(1)).toBe(100);
+        expect(ctx.state.sizes.get("item-1")).toBeUndefined();
         expect(countLayoutValues(ctx.state.positions)).toBe(0);
     });
 
@@ -353,7 +354,7 @@ describe("prefix layout store lifecycle", () => {
         materializePrefixLayoutStoreRange(ctx, 20, 20);
         positionUpdates.length = 0;
 
-        setPrefixLayoutStoreMeasuredSize(ctx, 0, "item-0", 150);
+        setPrefixLayoutStoreMeasuredSize(ctx, 0, 150);
 
         expect(positionUpdates).toEqual([2050]);
         expect(ctx.state.positions[20]).toBeUndefined();
@@ -381,7 +382,7 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.sizesKnown.set("stale-3", 50);
         ctx.state.sizesKnown.set("stale-4", 50);
 
-        setPrefixLayoutStoreMeasuredSize(ctx, 0, "item-0", 50);
+        setPrefixLayoutStoreMeasuredSize(ctx, 0, 50);
         maybeFlushInitialPrefixLayoutEstimate(ctx);
 
         expect(store.getEstimatedSize()).toBe(50);
@@ -405,7 +406,7 @@ describe("prefix layout store lifecycle", () => {
             materializePrefixLayoutStoreRange(ctx, 5, 6);
 
             for (let index = 0; index < 4; index++) {
-                setPrefixLayoutStoreMeasuredSize(ctx, index, `item-${index}`, 50);
+                setPrefixLayoutStoreMeasuredSize(ctx, index, 50);
             }
 
             expect(schedulePeriodicPrefixLayoutEstimateFlush(ctx)).toBe(true);
@@ -432,7 +433,7 @@ describe("prefix layout store lifecycle", () => {
             ctx.state.scrollTime = Date.now();
 
             for (let index = 0; index < 4; index++) {
-                setPrefixLayoutStoreMeasuredSize(ctx, index, `item-${index}`, 50);
+                setPrefixLayoutStoreMeasuredSize(ctx, index, 50);
             }
 
             expect(schedulePeriodicPrefixLayoutEstimateFlush(ctx)).toBe(true);

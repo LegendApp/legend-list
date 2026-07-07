@@ -34,8 +34,8 @@ import {
     disablePrefixLayoutStoreForCurrentPass,
     isPrefixLayoutStorePropsSupported,
     rebuildPrefixLayoutStoreExact,
+    syncPrefixLayoutStoreLayoutState,
     syncPrefixLayoutStoreStructure,
-    syncPrefixLayoutStoreTotalSize,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -530,7 +530,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     syncPrefixLayoutStoreStructure(ctx);
     if (shouldExactSyncPrefixLayoutStore) {
         rebuildPrefixLayoutStoreExact(ctx);
-        syncPrefixLayoutStoreTotalSize(ctx);
+        syncPrefixLayoutStoreLayoutState(ctx);
     }
 
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
@@ -587,7 +587,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
         rebuildPrefixLayoutStoreExact(ctx);
-        if (!syncPrefixLayoutStoreTotalSize(ctx)) {
+        if (!syncPrefixLayoutStoreLayoutState(ctx)) {
             updateItemPositions(ctx, /*dataChanged*/ true);
         }
     }

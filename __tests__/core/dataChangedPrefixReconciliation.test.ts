@@ -400,7 +400,8 @@ describe("dataChanged prefix reconciliation", () => {
 
             expect(ctx.state.totalSize).toBe(123);
             expect(ctx.state.sizesKnown.get("a")).toBe(123);
-            expect(ctx.state.sizes.get("a")).toBe(123);
+            expect(ctx.state.sizes.get("a")).toBe(111);
+            expect(ctx.state.layoutStoreRuntime?.store.getSize(0)).toBe(123);
         });
     });
 

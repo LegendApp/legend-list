@@ -1,4 +1,4 @@
-import { getLayoutOffset, type LayoutAccess } from "@/core/layoutAccessors";
+import { getLayoutOffset, getLayoutSize, type LayoutAccess } from "@/core/layoutAccessors";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import type {
@@ -239,7 +239,7 @@ function computeViewability(
     item: any,
     index: number,
 ): ViewAmountToken {
-    const { sizes, scroll: scrollState } = state;
+    const { scroll: scrollState } = state;
     const topPad =
         (peek$(ctx, "stylePaddingTop") || 0) +
         (peek$(ctx, "alignItemsAtEndPadding") || 0) +
@@ -249,7 +249,7 @@ function computeViewability(
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = scrollState - topPad;
     const position = layout ? layout.getOffset(index) : getLayoutOffset(ctx, index);
-    const size = sizes.get(key)! || 0;
+    const size = (layout ? layout.getSize(index) : getLayoutSize(ctx, index)) ?? 0;
 
     if (position === undefined) {
         const value: ViewAmountToken = {
