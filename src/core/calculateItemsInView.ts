@@ -3,16 +3,16 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
+import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
 import { prepareMVCP } from "@/core/mvcp";
-import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import {
     disablePrefixLayoutStoreForCurrentPass,
     getActivePrefixLayoutStore,
     materializePrefixLayoutStoreOffsetRange,
     materializePrefixLayoutStoreRange,
+    reconcilePrefixDataChange,
     syncPrefixLayoutStoreTotalSize,
 } from "@/core/prefixLayoutStoreLifecycle";
-import { reconcilePrefixDataChange } from "@/core/reconcilePrefixDataChange";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -37,54 +37,6 @@ import { setDidLayout } from "@/utils/setDidLayout";
 
 const RENDER_RANGE_PROJECTION_FULL_VELOCITY = 4;
 const RENDER_RANGE_PROJECTION_SETTLE_DELAY = 100;
-
-interface LayoutAccess {
-    hasPrefixStore: boolean;
-    getOffset(index: number | undefined): number | undefined;
-    getSize(index: number | undefined): number | undefined;
-}
-
-function createLayoutAccess(ctx: StateContext, store: PrefixLayoutStore | undefined): LayoutAccess {
-    const state = ctx.state;
-    return {
-        getOffset(index) {
-            let offset: number | undefined;
-            if (store) {
-                if (isValidPrefixIndex(store, index)) {
-                    offset = store.getOffset(index);
-                }
-            } else if (isValidArrayOffsetIndex(index)) {
-                offset = state.positions[index];
-            }
-            return offset;
-        },
-        getSize(index) {
-            let size: number | undefined;
-            if (store) {
-                if (isValidPrefixIndex(store, index)) {
-                    size = store.getSize(index);
-                }
-            } else if (isValidArrayIndex(state, index)) {
-                const id = state.idCache[index] ?? getId(state, index);
-                size = state.sizes.get(id) ?? getItemSize(ctx, id, index, state.props.data[index]);
-            }
-            return size;
-        },
-        hasPrefixStore: !!store,
-    };
-}
-
-function isValidArrayIndex(state: InternalState, index: number | undefined): index is number {
-    return index !== undefined && Number.isInteger(index) && index >= 0 && index < state.props.data.length;
-}
-
-function isValidArrayOffsetIndex(index: number | undefined): index is number {
-    return index !== undefined && Number.isInteger(index) && index >= 0;
-}
-
-function isValidPrefixIndex(store: PrefixLayoutStore, index: number | undefined): index is number {
-    return index !== undefined && Number.isInteger(index) && index >= 0 && index < store.length;
-}
 
 function getProjectedBufferAdjustment(scrollVelocity: number, trailingBuffer: number) {
     if (trailingBuffer <= 0) {
