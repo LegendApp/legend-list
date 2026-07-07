@@ -10,7 +10,7 @@ export interface PrefixLayoutStoreSizeEntry {
     type: "cached" | "measured";
 }
 
-export interface PrefixLayoutStoreIndexRange {
+interface PrefixLayoutStoreIndexRange {
     end: number;
     start: number;
 }
@@ -88,6 +88,10 @@ export class PrefixLayoutStore {
 
     getMeasuredCount() {
         return this.measuredCount;
+    }
+
+    hasIndex(index: number | undefined): index is number {
+        return index !== undefined && Number.isInteger(index) && index >= 0 && index < this.length;
     }
 
     getOffset(index: number) {
@@ -234,7 +238,7 @@ export class PrefixLayoutStore {
     }
 
     private assertIndex(index: number) {
-        if (!Number.isInteger(index) || index < 0 || index >= this.length) {
+        if (!this.hasIndex(index)) {
             throw new RangeError(`PrefixLayoutStore index ${index} is out of bounds for length ${this.length}`);
         }
     }
