@@ -24,25 +24,8 @@ interface PrefixLayoutStoreSeed {
 
 interface PrefixLayoutStoreSeedOptions {
     didKeyExtractorChange?: boolean;
-    fixedSizeMode: "cached" | "measured";
+    mode: "reconcile" | "seed";
     previousIdCache?: readonly (string | undefined)[];
-    rebuildIdentity?: boolean;
-}
-
-export interface PrefixLayoutStoreExactRebuildProps {
-    estimatedItemSize: number | undefined;
-    hasReliableKeyExtractor: boolean;
-    horizontal: boolean;
-    numColumns: number | undefined;
-    overrideItemLayout: unknown;
-}
-
-interface PrefixLayoutStoreExactRebuildInput {
-    didDataChange: boolean;
-    didScrollAxisGapChange: boolean;
-    isFirst: boolean;
-    next: PrefixLayoutStoreExactRebuildProps;
-    previous: PrefixLayoutStoreExactRebuildProps;
 }
 
 export interface PrefixDataChangeReconciliationOptions {
@@ -56,10 +39,6 @@ export function clearPrefixLayoutStoreMeasurements(ctx: StateContext) {
 }
 
 export function disablePrefixLayoutStoreForCurrentPass(state: InternalState) {
-    clearPrefixLayoutStoreState(state);
-}
-
-function clearPrefixLayoutStoreState(state: InternalState) {
     resetPrefixLayoutStoreEstimateFlushState(state);
     state.layoutStore = undefined;
     state.layoutStorePropEstimatedSize = undefined;
@@ -209,27 +188,19 @@ function hasEnoughNewMeasurementsForPeriodicFlush(state: InternalState, store: P
 }
 
 function shouldDeferPeriodicEstimateFlush(state: InternalState) {
-    const now = Date.now();
-    const recentScrollAge = state.scrollTime > 0 ? now - state.scrollTime : Number.POSITIVE_INFINITY;
-    let shouldDefer = false;
-
-    if (!state.didContainersLayout) {
-        shouldDefer = true;
-    } else if (hasActiveInitialScroll(state) || state.queuedInitialLayout) {
-        shouldDefer = true;
-    } else if (state.scrollingTo || state.pendingScrollToEnd) {
-        shouldDefer = true;
-    } else if (state.pendingLayoutEffectMeasurements?.size || state.userScrollAnchorReset?.keys.size) {
-        shouldDefer = true;
-    } else if (hasActiveMVCPAnchorLock(state)) {
-        shouldDefer = true;
-    } else if (recentScrollAge < PERIODIC_ESTIMATE_FLUSH_DELAY) {
-        shouldDefer = true;
-    } else if (Math.abs(getScrollVelocity(state)) > PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY) {
-        shouldDefer = true;
-    }
-
-    return shouldDefer;
+    const recentScrollAge = state.scrollTime > 0 ? Date.now() - state.scrollTime : Number.POSITIVE_INFINITY;
+    return (
+        !state.didContainersLayout ||
+        hasActiveInitialScroll(state) ||
+        !!state.queuedInitialLayout ||
+        !!state.scrollingTo ||
+        !!state.pendingScrollToEnd ||
+        !!state.pendingLayoutEffectMeasurements?.size ||
+        !!state.userScrollAnchorReset?.keys.size ||
+        hasActiveMVCPAnchorLock(state) ||
+        recentScrollAge < PERIODIC_ESTIMATE_FLUSH_DELAY ||
+        Math.abs(getScrollVelocity(state)) > PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY
+    );
 }
 
 function getEstimateFlushAnchorIndex(state: InternalState) {
@@ -360,9 +331,8 @@ export function reconcilePrefixDataChange(ctx: StateContext, options?: PrefixDat
 
         const seed = getPrefixLayoutStoreSeed(ctx, {
             didKeyExtractorChange: options?.didKeyExtractorChange,
-            fixedSizeMode: "measured",
+            mode: "reconcile",
             previousIdCache: options?.previousIdCache,
-            rebuildIdentity: true,
         });
 
         didReconcile = !seed.hasDuplicateKey;
@@ -372,23 +342,6 @@ export function reconcilePrefixDataChange(ctx: StateContext, options?: PrefixDat
     }
 
     return didReconcile;
-}
-
-export function shouldRebuildPrefixLayoutStoreExact(input: PrefixLayoutStoreExactRebuildInput) {
-    const { didDataChange, didScrollAxisGapChange, isFirst, next, previous } = input;
-    const isNextSupported = isPrefixLayoutStorePropsSupported(next);
-    const isPreviousSupported = isPrefixLayoutStorePropsSupported(previous);
-    let shouldRebuild = false;
-
-    if (!isFirst && !didDataChange && isNextSupported) {
-        shouldRebuild =
-            !isPreviousSupported ||
-            previous.estimatedItemSize !== next.estimatedItemSize ||
-            previous.hasReliableKeyExtractor !== next.hasReliableKeyExtractor ||
-            didScrollAxisGapChange;
-    }
-
-    return shouldRebuild;
 }
 
 function isPrefixLayoutStorePropsSupported(props: {
@@ -417,7 +370,7 @@ export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
         }
         state.layoutStorePropEstimatedSize = estimatedSize;
     } else {
-        clearPrefixLayoutStoreState(state);
+        disablePrefixLayoutStoreForCurrentPass(state);
     }
 
     return state.layoutStore;
@@ -479,7 +432,7 @@ function getPrefixLayoutStorePropEstimatedSize(ctx: StateContext) {
 
 function getPrefixLayoutStoreSeed(
     ctx: StateContext,
-    options: PrefixLayoutStoreSeedOptions = { fixedSizeMode: "cached" },
+    options: PrefixLayoutStoreSeedOptions = { mode: "seed" },
 ): PrefixLayoutStoreSeed {
     const state = ctx.state;
     const { data, estimatedItemSize, getFixedItemSize } = state.props;
@@ -489,7 +442,7 @@ function getPrefixLayoutStoreSeed(
     const canSeedCachedSizes = state.sizes.size > 0;
 
     if (
-        !options.rebuildIdentity &&
+        options.mode === "seed" &&
         ((!getFixedItemSize && !canSeedKnownSizes && !canSeedCachedSizes) || data.length === 0)
     ) {
         return { estimatedSize: fallbackSize, sizeEntries };
@@ -512,7 +465,7 @@ function getPrefixLayoutStoreSeed(
         const item = data[index];
         const previousKey = options.previousIdCache?.[index];
         const canReusePreviousKey =
-            options.rebuildIdentity &&
+            options.mode === "reconcile" &&
             !options.didKeyExtractorChange &&
             previousKey !== undefined &&
             previousData !== undefined &&
@@ -523,7 +476,7 @@ function getPrefixLayoutStoreSeed(
 
         fallbackTotalSize += fallbackOrFixedSize;
 
-        if (options.rebuildIdentity) {
+        if (options.mode === "reconcile") {
             state.idCache[index] = key;
             if (state.indexByKey.has(key)) {
                 hasDuplicateKey = true;
@@ -536,7 +489,7 @@ function getPrefixLayoutStoreSeed(
         if (knownSize !== undefined) {
             measuredCount++;
             measuredTotalSize += knownSize;
-            if (options.rebuildIdentity) {
+            if (options.mode === "reconcile") {
                 state.sizes.set(key, knownSize);
             }
             sizeEntries.push({
@@ -547,7 +500,7 @@ function getPrefixLayoutStoreSeed(
         } else {
             const cachedSize = canSeedCachedSizes ? state.sizes.get(key) : undefined;
 
-            if (fixedLayoutSize !== undefined && options.fixedSizeMode === "measured") {
+            if (fixedLayoutSize !== undefined && options.mode === "reconcile") {
                 state.sizesKnown.set(key, fixedLayoutSize);
                 state.sizes.set(key, fixedLayoutSize);
                 measuredCount++;

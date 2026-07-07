@@ -93,7 +93,7 @@ describe("current positions-backed layout behavior", () => {
         set$(ctx, "containerItemKey2", "item-2");
         set$(ctx, "headerSize", 10);
 
-        updateViewableItems(ctx.state, ctx, pairs, 150, 0, 2);
+        updateViewableItems(ctx, pairs, 150, 0, 2);
 
         expect(calls).toHaveLength(1);
         expect(calls[0].viewableItems).toEqual([

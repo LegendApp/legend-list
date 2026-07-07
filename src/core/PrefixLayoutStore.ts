@@ -66,7 +66,8 @@ export class PrefixLayoutStore {
 
     clearMeasurements() {
         this.clearSizeArrays();
-        this.syncTreesAndTotalsFromArrays();
+        this.knownCountTree.clear();
+        this.knownSizeTree.clear();
     }
 
     flushEstimatedSize(estimatedSize: number) {
