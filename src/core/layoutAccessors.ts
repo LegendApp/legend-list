@@ -6,19 +6,32 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 
 export interface LayoutAccess {
+    getColumn(index: number | undefined): number | undefined;
     getOffset(index: number | undefined): number | undefined;
     getSize(index: number | undefined): number | undefined;
+    getSpan(index: number | undefined): number | undefined;
 }
 
 export function createLayoutAccess(ctx: StateContext, store: LayoutStore | undefined): LayoutAccess {
     return {
+        getColumn(index) {
+            return getLayoutColumnForStore(ctx.state, store, index);
+        },
         getOffset(index) {
             return getLayoutOffsetForStore(ctx.state, store, index);
         },
         getSize(index) {
             return getLayoutSizeForStore(ctx, ctx.state, store, index);
         },
+        getSpan(index) {
+            return getLayoutSpanForStore(ctx.state, store, index);
+        },
     };
+}
+
+export function getLayoutColumn(ctx: StateContext, index: number | undefined) {
+    const store = getActivePrefixLayoutStore(ctx);
+    return getLayoutColumnForStore(ctx.state, store, index);
 }
 
 export function getLayoutOffset(ctx: StateContext, index: number | undefined) {
@@ -29,6 +42,23 @@ export function getLayoutOffset(ctx: StateContext, index: number | undefined) {
 export function getLayoutSize(ctx: StateContext, index: number | undefined) {
     const store = getActivePrefixLayoutStore(ctx);
     return getLayoutSizeForStore(ctx, ctx.state, store, index);
+}
+
+export function getLayoutSpan(ctx: StateContext, index: number | undefined) {
+    const store = getActivePrefixLayoutStore(ctx);
+    return getLayoutSpanForStore(ctx.state, store, index);
+}
+
+function getLayoutColumnForStore(state: InternalState, store: LayoutStore | undefined, index: number | undefined) {
+    let column: number | undefined;
+    if (hasColumnLayout(store)) {
+        if (store.hasIndex(index)) {
+            column = store.getColumn(index);
+        }
+    } else if (isValidArrayIndex(state, index)) {
+        column = state.columns[index];
+    }
+    return column;
 }
 
 function getLayoutOffsetForStore(state: InternalState, store: LayoutStore | undefined, index: number | undefined) {
@@ -59,6 +89,24 @@ function getLayoutSizeForStore(
         size = state.sizes.get(id) ?? getItemSize(ctx, id, index, state.props.data[index]);
     }
     return size;
+}
+
+function getLayoutSpanForStore(state: InternalState, store: LayoutStore | undefined, index: number | undefined) {
+    let span: number | undefined;
+    if (hasColumnLayout(store)) {
+        if (store.hasIndex(index)) {
+            span = store.getSpan(index);
+        }
+    } else if (isValidArrayIndex(state, index)) {
+        span = state.columnSpans[index];
+    }
+    return span;
+}
+
+function hasColumnLayout(
+    store: LayoutStore | undefined,
+): store is LayoutStore & { getColumn(index: number): number; getSpan(index: number): number } {
+    return !!store && "getColumn" in store && "getSpan" in store;
 }
 
 function isValidArrayIndex(state: InternalState, index: number | undefined): index is number {
