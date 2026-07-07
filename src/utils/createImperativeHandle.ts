@@ -9,7 +9,7 @@ import { getLayoutOffset } from "@/core/layoutAccessors";
 import {
     clearPrefixLayoutStoreKnownSizes,
     rebuildPrefixLayoutStoreExact,
-    syncPrefixLayoutStoreTotalSize,
+    syncPrefixLayoutStoreLayoutState,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
@@ -220,7 +220,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
 
         if (shouldRebuildPrefixLayoutStore) {
             rebuildPrefixLayoutStoreExact(ctx);
-            syncPrefixLayoutStoreTotalSize(ctx);
+            syncPrefixLayoutStoreLayoutState(ctx);
         }
 
         triggerMountedContainerLayouts(ctx);

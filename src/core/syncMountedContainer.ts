@@ -38,7 +38,6 @@ export function syncMountedContainer(
         const logicalPosition = (positionValue || 0) - (options?.scrollAdjustPending ?? 0);
         const itemSize =
             (layout ? layout.getSize(itemIndex) : getLayoutSize(ctx, itemIndex)) ??
-            state.sizes.get(itemKey) ??
             getItemSize(ctx, itemKey, itemIndex, item);
         const position = toPhysicalHorizontalItemPosition(state, logicalPosition, itemSize, peek$(ctx, "totalSize"));
         const column = columns[itemIndex] || 1;

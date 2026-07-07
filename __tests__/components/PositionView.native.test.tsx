@@ -38,9 +38,14 @@ function StickyHarness({
     const ctx = useStateContext();
 
     if (!ctx.state) {
+        const dataLength = Math.max(...stickyHeaderIndices, index) + 1;
         ctx.state = createMockState({
+            idCache: Array.from({ length: dataLength }, (_, itemIndex) =>
+                itemIndex === index ? itemKey : `item-${itemIndex}`,
+            ),
             positions: [],
             props: {
+                data: Array.from({ length: dataLength }, (_, itemIndex) => ({ id: `item-${itemIndex}` })),
                 stickyHeaderIndicesArr: stickyHeaderIndices,
             },
         }) as any;

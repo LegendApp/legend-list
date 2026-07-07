@@ -285,9 +285,10 @@ describe("LegendList initial scroll integration", () => {
         await scenario.fireLayout();
 
         expect(Math.abs((scenario.ref.current?.getState().scroll ?? 0) - 450) <= 1).toBe(true);
+        expect(scenario.ref.current?.getState().startBuffered).toBe(4);
         expectRenderedWindow(scenario.renderer, {
             absent: ["Item 0", "Item 9"],
-            present: ["Item 4", "Item 5"],
+            present: ["Item 5", "Item 6"],
         });
 
         await scenario.cleanup();
@@ -306,9 +307,10 @@ describe("LegendList initial scroll integration", () => {
         await scenario.fireLayout();
 
         expectScrollClose(scenario.ref, 425);
+        expect(scenario.ref.current?.getState().startBuffered).toBe(4);
         expectRenderedWindow(scenario.renderer, {
             absent: ["Item 0", "Item 9"],
-            present: ["Item 4", "Item 5"],
+            present: ["Item 5", "Item 6"],
         });
 
         await scenario.cleanup();

@@ -10,10 +10,9 @@ import { prepareMVCP } from "@/core/mvcp";
 import {
     disablePrefixLayoutStoreForCurrentPass,
     getActivePrefixLayoutStore,
-    materializePrefixLayoutStoreOffsetRange,
     materializePrefixLayoutStoreRange,
     reconcilePrefixDataChange,
-    syncPrefixLayoutStoreTotalSize,
+    syncPrefixLayoutStoreLayoutState,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
@@ -163,7 +162,7 @@ function handleStickyRecycling(
             if (currentId) {
                 const currentPos = layout.getOffset(itemIndex);
                 const currentSize =
-                    state.sizes.get(currentId) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
+                    layout.getSize(itemIndex) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
                 shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + drawDistance * 3;
             }
         }
@@ -233,7 +232,6 @@ function getVisibleLoopItemSize(
     return (
         (preferKnownOrFixedSize ? getKnownOrFixedItemSize(ctx, index) : undefined) ??
         layout.getSize(index) ??
-        state.sizes.get(id) ??
         getItemSize(ctx, id, index, state.props.data[index])
     );
 }
@@ -274,6 +272,20 @@ function reconcilePrefixPinnedIndices(
     for (let offset = 0; offset <= 1; offset++) {
         materializeRange(options.stickyHeaderIndices[options.currentStickyIdx - offset]);
     }
+}
+
+function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
+    const store = getActivePrefixLayoutStore(ctx);
+    let range: { end: number; start: number } | undefined;
+
+    if (store) {
+        const indexRange = store.findIndexRangeAtOffsets(startOffset, endOffset);
+        if (indexRange) {
+            range = materializePrefixLayoutStoreRange(ctx, indexRange.start, indexRange.end);
+        }
+    }
+
+    return range;
 }
 
 function maybeEmitFirstVisibleItemChanged(state: InternalState, index: number | null) {
@@ -437,7 +449,7 @@ export function calculateItemsInView(
             (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
         if ((didDataChange || isInitialLayout) && state.isFirst) {
-            syncPrefixLayoutStoreTotalSize(ctx);
+            syncPrefixLayoutStoreLayoutState(ctx);
         }
 
         let totalSize = getContentSize(ctx);
@@ -637,7 +649,7 @@ export function calculateItemsInView(
         }
 
         if (prefixMaterializedRange || didReconcilePrefixDataChange) {
-            syncPrefixLayoutStoreTotalSize(ctx);
+            syncPrefixLayoutStoreLayoutState(ctx);
         } else {
             if (didDataChange && getActivePrefixLayoutStore(ctx)) {
                 disablePrefixLayoutStoreForCurrentPass(state);
