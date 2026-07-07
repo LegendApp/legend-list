@@ -4,13 +4,6 @@ const SIZE_UNKNOWN = 0;
 const SIZE_CACHED = 1;
 const SIZE_MEASURED = 2;
 
-export interface MaterializedLayout {
-    end: number;
-    index: number;
-    offset: number;
-    size: number;
-}
-
 export interface PrefixLayoutStoreSizeEntry {
     index: number;
     size: number;
@@ -42,23 +35,20 @@ export class PrefixLayoutStore {
     }
 
     findIndexAtOffset(offset: number) {
-        let match: number | undefined;
-        if (this.length > 0) {
-            let low = 0;
-            let high = this.length - 1;
+        let low = 0;
+        let high = this.length;
 
-            while (low <= high) {
-                const mid = Math.floor((low + high) / 2);
-                const end = this.getEnd(mid);
-                if (end > offset) {
-                    match = mid;
-                    high = mid - 1;
-                } else {
-                    low = mid + 1;
-                }
+        while (low < high) {
+            const mid = Math.floor((low + high) / 2);
+            const end = this.getOffset(mid) + this.getSize(mid);
+            if (end > offset) {
+                high = mid;
+            } else {
+                low = mid + 1;
             }
         }
-        return match;
+
+        return low < this.length ? low : undefined;
     }
 
     clearMeasurements() {
@@ -68,10 +58,6 @@ export class PrefixLayoutStore {
 
     flushEstimatedSize(estimatedSize: number) {
         this.estimatedSize = normalizeSize(estimatedSize);
-    }
-
-    getEnd(index: number) {
-        return this.getOffset(index) + this.getSize(index);
     }
 
     getEstimatedSize() {
@@ -105,8 +91,11 @@ export class PrefixLayoutStore {
         return knownSize + (this.length - knownCount) * this.estimatedSize;
     }
 
-    materializeRange(startIndex: number, endIndex: number) {
-        const layouts: MaterializedLayout[] = [];
+    forEachLayout(
+        startIndex: number,
+        endIndex: number,
+        callback: (index: number, offset: number, size: number) => void,
+    ) {
         const start = Math.max(0, Math.trunc(startIndex));
         const end = Math.min(this.length - 1, Math.trunc(endIndex));
 
@@ -114,13 +103,10 @@ export class PrefixLayoutStore {
             let offset = this.getOffset(start);
             for (let index = start; index <= end; index++) {
                 const size = this.getSize(index);
-                const nextOffset = offset + size;
-                layouts.push({ end: nextOffset, index, offset, size });
-                offset = nextOffset;
+                callback(index, offset, size);
+                offset += size;
             }
         }
-
-        return layouts;
     }
 
     rebuildSizes(entries: PrefixLayoutStoreSizeEntry[]) {

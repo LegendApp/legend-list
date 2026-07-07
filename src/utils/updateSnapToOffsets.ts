@@ -1,4 +1,5 @@
-import { getLayoutSnapOffsets } from "@/core/layoutAccessors";
+import { getLayoutOffset } from "@/core/layoutAccessors";
+import { getSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
 import { type StateContext, set$ } from "@/state/state";
 
 export function updateSnapToOffsets(ctx: StateContext) {
@@ -7,5 +8,9 @@ export function updateSnapToOffsets(ctx: StateContext) {
         props: { snapToIndices },
     } = state;
 
-    set$(ctx, "snapToOffsets", getLayoutSnapOffsets(ctx, snapToIndices!));
+    set$(
+        ctx,
+        "snapToOffsets",
+        getSnapOffsetsForLayout(ctx, snapToIndices!, (index) => getLayoutOffset(ctx, index)),
+    );
 }

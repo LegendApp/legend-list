@@ -3,7 +3,7 @@ import "../setup"; // Import global test setup
 
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { setSize } from "../../src/core/setSize";
-import { updateItemPositions } from "../../src/core/updateItemPositions";
+import { updateItemPositions } from "../../src/core/arrayLayout";
 import { updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import { listen$ } from "../../src/state/state";

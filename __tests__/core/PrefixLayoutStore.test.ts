@@ -123,13 +123,17 @@ describe("PrefixLayoutStore", () => {
         expect(store.getTotalSize()).toBe(50);
     });
 
-    it("materializes only the requested range", () => {
+    it("walks only the requested range", () => {
         const store = new PrefixLayoutStore(5, 100);
+        const layouts: Array<{ end: number; index: number; offset: number; size: number }> = [];
 
         store.setMeasuredSize(1, 50);
         store.setMeasuredSize(3, 150);
+        store.forEachLayout(1, 3, (index, offset, size) => {
+            layouts.push({ end: offset + size, index, offset, size });
+        });
 
-        expect(store.materializeRange(1, 3)).toEqual([
+        expect(layouts).toEqual([
             { end: 150, index: 1, offset: 100, size: 50 },
             { end: 250, index: 2, offset: 150, size: 100 },
             { end: 400, index: 3, offset: 250, size: 150 },

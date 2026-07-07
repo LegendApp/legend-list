@@ -15,7 +15,7 @@ import { useDevChecks } from "@/components/useDevChecks";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { resetAdaptiveRender } from "@/core/adaptiveRender";
-import { clearArrayLayoutCache } from "@/core/arrayLayout";
+import { clearArrayLayoutCache, updateItemPositions } from "@/core/arrayLayout";
 import {
     handleBootstrapInitialScrollFooterLayout,
     handleBootstrapInitialScrollLayoutChange,
@@ -48,7 +48,6 @@ import { scrollToEnd } from "@/core/scrollToEnd";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdjustment";
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
-import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
