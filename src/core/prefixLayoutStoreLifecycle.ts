@@ -2,7 +2,7 @@ import { addTotalSize } from "@/core/addTotalSize";
 import { type ActiveLayoutStore, PrefixLayoutRuntime } from "@/core/PrefixLayoutRuntime";
 import { PrefixLayoutStore, type PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
 import { RowLayoutStore } from "@/core/RowLayoutStore";
-import { notifyPosition$, type StateContext } from "@/state/state";
+import { notifyPosition$, peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { getFixedItemLayoutSize } from "@/utils/getItemSize";
@@ -323,7 +323,31 @@ export function isPrefixLayoutStorePropsSupported(props: {
     numColumns: number | undefined;
     overrideItemLayout: unknown;
 }) {
-    return !!props.numColumns && props.numColumns > 0 && !props.overrideItemLayout;
+    return !!props.numColumns && props.numColumns > 0;
+}
+
+export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
+    const state = ctx.state;
+    const store = getActivePrefixLayoutStore(ctx);
+    const { data, numColumns, overrideItemLayout } = state.props;
+    let didSync = false;
+
+    if (store instanceof RowLayoutStore && overrideItemLayout && numColumns > 1) {
+        const extraData = peek$(ctx, "extraData");
+        const layoutConfig = { span: 1 };
+        const spans = new Array<number | undefined>(data.length);
+
+        for (let index = 0; index < data.length; index++) {
+            layoutConfig.span = 1;
+            overrideItemLayout(layoutConfig, data[index], index, numColumns, extraData);
+            spans[index] = layoutConfig.span;
+        }
+
+        store.resize(data.length, spans, numColumns);
+        didSync = true;
+    }
+
+    return didSync;
 }
 
 export function syncPrefixLayoutStoreStructure(ctx: StateContext) {

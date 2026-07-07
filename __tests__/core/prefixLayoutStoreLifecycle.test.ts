@@ -10,6 +10,7 @@ import {
     rebuildPrefixLayoutStoreExact,
     schedulePeriodicPrefixLayoutEstimateFlush,
     setPrefixLayoutStoreMeasuredSize,
+    syncActiveRowLayoutStoreSpans,
     syncPrefixLayoutStoreLayoutState,
     syncPrefixLayoutStoreStructure,
 } from "../../src/core/prefixLayoutStoreLifecycle";
@@ -87,7 +88,7 @@ describe("prefix layout store lifecycle", () => {
                 numColumns: 1,
                 overrideItemLayout: () => undefined,
             }),
-        ).toBe(false);
+        ).toBe(true);
     });
 
     it("creates a store for the supported single-column path", () => {
@@ -115,6 +116,26 @@ describe("prefix layout store lifecycle", () => {
         expect(range).toEqual({ end: 4, start: 0 });
         expect(ctx.state.columns.slice(0, 5)).toEqual([1, 2, 1, 2, 1]);
         expect(ctx.state.columnSpans.slice(0, 5)).toEqual([1, 1, 1, 1, 1]);
+    });
+
+    it("syncs override layout spans into the row store during calculation", () => {
+        const ctx = createLayoutStoreContext(5);
+        ctx.state.props.numColumns = 4;
+        ctx.state.props.overrideItemLayout = (layout, _item, index) => {
+            layout.span = [2, 3, 1, 4, 1][index];
+        };
+
+        const store = syncPrefixLayoutStoreStructure(ctx);
+        const didSync = syncActiveRowLayoutStoreSpans(ctx);
+        const range = materializePrefixLayoutStoreRange(ctx, 0, 4);
+
+        expect(didSync).toBe(true);
+        expect(store).toBeInstanceOf(RowLayoutStore);
+        expect(range).toEqual({ end: 4, start: 0 });
+        expect(ctx.state.columns.slice(0, 5)).toEqual([1, 1, 4, 1, 1]);
+        expect(ctx.state.columnSpans.slice(0, 5)).toEqual([2, 3, 1, 4, 1]);
+        expect(store?.getOffset(4)).toBe(300);
+        expect(store?.getTotalSize()).toBe(400);
     });
 
     it("keeps an existing store when the axis changes without changing column support", () => {
@@ -488,9 +509,9 @@ describe("prefix layout store lifecycle", () => {
     it("disables the store for unsupported capabilities", () => {
         const cases = [
             {
-                name: "override layout",
+                name: "invalid column count",
                 patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
-                    ctx.state.props.overrideItemLayout = () => undefined;
+                    ctx.state.props.numColumns = 0;
                 },
             },
         ];
