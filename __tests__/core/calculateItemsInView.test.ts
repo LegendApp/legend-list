@@ -636,7 +636,7 @@ describe("calculateItemsInView", () => {
 
                 expect(updateItemPositionsSpy).toHaveBeenCalledWith(
                     mockCtx,
-                    undefined,
+                    false,
                     expect.objectContaining({ scrollVelocity: 2 }),
                 );
             } finally {

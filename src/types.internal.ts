@@ -177,9 +177,9 @@ export interface InternalState {
     didFlushInitialLayoutStoreEstimate?: boolean;
     edgeReachedGate?: "closed" | "prepared";
     endBuffered: number;
-    endNoBuffer: number;
+    endNoBuffer: number | null;
     endReachedSnapshot: ThresholdSnapshot | undefined;
-    firstFullyOnScreenIndex: number;
+    firstFullyOnScreenIndex: number | undefined;
     preservedEndAnchorCorrection?: {
         lastRequestTime?: number;
     };
@@ -263,7 +263,8 @@ export interface InternalState {
     sizesKnown: Map<string, number>;
     startBuffered: number;
     startBufferedId?: string;
-    startNoBuffer: number;
+    startNoBuffer: number | null;
+    startReachedSnapshotDataChangeEpoch: number | undefined;
     startReachedSnapshot: ThresholdSnapshot | undefined;
     stickyContainerPool: Set<number>;
     stickyContainers: Map<number, number>;
