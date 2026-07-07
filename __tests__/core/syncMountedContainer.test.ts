@@ -2,10 +2,7 @@ import { describe, expect, it } from "bun:test";
 import "../setup";
 
 import { checkStructuralDataChange } from "../../src/core/checkStructuralDataChange";
-import {
-    syncActiveRowLayoutStoreSpans,
-    syncPrefixLayoutStoreStructure,
-} from "../../src/core/prefixLayoutStoreLifecycle";
+import { syncActiveRowLayoutStoreSpans, syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { syncMountedContainer } from "../../src/core/syncMountedContainer";
 import { peek$, set$ } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -126,7 +123,7 @@ describe("syncMountedContainer", () => {
             },
         );
         ctx.state.positions.length = 0;
-        syncPrefixLayoutStoreStructure(ctx);
+        syncLayoutStoreStructure(ctx);
         set$(ctx, "containerItemKey0", "item_5");
 
         const result = syncMountedContainer(ctx, 0, 5);
@@ -156,7 +153,7 @@ describe("syncMountedContainer", () => {
 
         ctx.state.columns.length = 0;
         ctx.state.columnSpans.length = 0;
-        syncPrefixLayoutStoreStructure(ctx);
+        syncLayoutStoreStructure(ctx);
         syncActiveRowLayoutStoreSpans(ctx);
         set$(ctx, "containerItemKey0", "item-2");
 

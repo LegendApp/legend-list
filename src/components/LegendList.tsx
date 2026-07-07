@@ -30,14 +30,14 @@ import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
-import { onScroll } from "@/core/onScroll";
 import {
-    clearPrefixLayoutStoreKnownSizes,
-    isPrefixLayoutStorePropsSupported,
-    rebuildPrefixLayoutStoreExact,
-    syncPrefixLayoutStoreLayoutState,
-    syncPrefixLayoutStoreStructure,
-} from "@/core/prefixLayoutStoreLifecycle";
+    clearLayoutStoreKnownSizes,
+    isLayoutStorePropsSupported,
+    rebuildLayoutStoreExact,
+    syncLayoutStoreState,
+    syncLayoutStoreStructure,
+} from "@/core/layoutStoreLifecycle";
+import { onScroll } from "@/core/onScroll";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -479,21 +479,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !isFirstLocal &&
         !didDataChangeLocal &&
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpace?.anchorIndex;
-    const isPrefixLayoutSupported = isPrefixLayoutStorePropsSupported({
+    const isLayoutStoreSupported = isLayoutStorePropsSupported({
         horizontal,
         numColumns: numColumnsProp,
         overrideItemLayout,
     });
-    const wasPrefixLayoutSupported = isPrefixLayoutStorePropsSupported({
+    const wasLayoutStoreSupported = isLayoutStorePropsSupported({
         horizontal: state.props.horizontal,
         numColumns: state.props.numColumns,
         overrideItemLayout: state.props.overrideItemLayout,
     });
-    const shouldExactSyncPrefixLayoutStore =
+    const shouldExactSyncLayoutStore =
         !isFirstLocal &&
         !didDataChangeLocal &&
-        isPrefixLayoutSupported &&
-        (!wasPrefixLayoutSupported ||
+        isLayoutStoreSupported &&
+        (!wasLayoutStoreSupported ||
             state.props.estimatedItemSize !== estimatedItemSize ||
             !!state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
             didScrollAxisChange ||
@@ -553,10 +553,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingTop: stylePaddingTopState,
         useWindowScroll: useWindowScrollResolved,
     };
-    syncPrefixLayoutStoreStructure(ctx);
-    if (shouldExactSyncPrefixLayoutStore) {
-        rebuildPrefixLayoutStoreExact(ctx);
-        syncPrefixLayoutStoreLayoutState(ctx);
+    syncLayoutStoreStructure(ctx);
+    if (shouldExactSyncLayoutStore) {
+        rebuildLayoutStoreExact(ctx);
+        syncLayoutStoreState(ctx);
     }
 
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
@@ -605,8 +605,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal) {
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
-        rebuildPrefixLayoutStoreExact(ctx);
-        if (!syncPrefixLayoutStoreLayoutState(ctx)) {
+        rebuildLayoutStoreExact(ctx);
+        if (!syncLayoutStoreState(ctx)) {
             updateItemPositions(ctx, /*dataChanged*/ true);
         }
     }
@@ -644,7 +644,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 delete refState.current.averageSizes[key];
             }
             clearArrayLayoutCache(refState.current);
-            clearPrefixLayoutStoreKnownSizes(ctx);
+            clearLayoutStoreKnownSizes(ctx);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }
