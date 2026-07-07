@@ -245,7 +245,7 @@ describe("prefix layout store lifecycle", () => {
     it("preserves learned estimates across syncs until the prop estimate changes", () => {
         const ctx = createLayoutStoreContext();
         const store = syncPrefixLayoutStoreStructure(ctx)!;
-        store.flushEstimatedSize(60);
+        store.setEstimatedSize(60);
 
         expect(syncPrefixLayoutStoreStructure(ctx)).toBe(store);
         expect(store.getEstimatedSize()).toBe(60);
