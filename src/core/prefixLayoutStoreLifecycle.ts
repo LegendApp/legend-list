@@ -1,6 +1,7 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { PrefixLayoutRuntime } from "@/core/PrefixLayoutRuntime";
-import type { PrefixLayoutStore, PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
+import { type ActiveLayoutStore, PrefixLayoutRuntime } from "@/core/PrefixLayoutRuntime";
+import { PrefixLayoutStore, type PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
+import { RowLayoutStore } from "@/core/RowLayoutStore";
 import { notifyPosition$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
@@ -65,6 +66,10 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
             range = { end, start };
             store.forEachLayout(start, end, (index, offset) => {
                 const id = state.idCache[index] ?? getId(state, index);
+                if (store instanceof RowLayoutStore) {
+                    state.columns[index] = store.getColumn(index);
+                    state.columnSpans[index] = store.getSpan(index);
+                }
                 if (ctx.positionListeners.has(id)) {
                     notifyPrefixLayoutStorePosition(ctx, runtime, id, offset);
                 }
@@ -76,7 +81,7 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
     return range;
 }
 
-function applyPrefixLayoutStoreSeed(store: PrefixLayoutStore, seed: PrefixLayoutStoreSeed) {
+function applyPrefixLayoutStoreSeed(store: ActiveLayoutStore, seed: PrefixLayoutStoreSeed) {
     store.setEstimatedSize(seed.estimatedSize);
     store.replaceKnownSizeEntries(seed.sizeEntries);
 }
@@ -318,21 +323,34 @@ export function isPrefixLayoutStorePropsSupported(props: {
     numColumns: number | undefined;
     overrideItemLayout: unknown;
 }) {
-    return props.numColumns === 1 && !props.overrideItemLayout;
+    return !!props.numColumns && props.numColumns > 0 && !props.overrideItemLayout;
 }
 
 export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
     const state = ctx.state;
     if (isPrefixLayoutStoreSupported(ctx)) {
         const estimatedSize = getPrefixLayoutStorePropEstimatedSize(ctx);
+        const nextStoreKind = getLayoutStoreKind(state);
         let runtime = state.layoutStoreRuntime;
-        if (runtime) {
-            runtime.store.resize(state.props.data.length);
+        if (runtime && getLayoutStoreKindForStore(runtime.store) === nextStoreKind) {
+            if (runtime.store instanceof RowLayoutStore) {
+                runtime.store.resize(state.props.data.length, undefined, state.props.numColumns);
+            } else {
+                runtime.store.resize(state.props.data.length);
+            }
             if (estimatedSize !== runtime.propEstimatedSize) {
                 runtime.store.setEstimatedSize(estimatedSize);
             }
         } else {
-            runtime = new PrefixLayoutRuntime(state.props.data.length, estimatedSize);
+            const store =
+                nextStoreKind === "row"
+                    ? new RowLayoutStore({
+                          estimatedSize,
+                          length: state.props.data.length,
+                          numColumns: state.props.numColumns,
+                      })
+                    : new PrefixLayoutStore(state.props.data.length, estimatedSize);
+            runtime = new PrefixLayoutRuntime(store, estimatedSize);
             state.layoutStoreRuntime = runtime;
             if (state.sizesKnown.size > 0) {
                 const seed = getPrefixLayoutStoreSeed(ctx);
@@ -345,6 +363,14 @@ export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
     }
 
     return state.layoutStoreRuntime?.store;
+}
+
+function getLayoutStoreKind(state: InternalState) {
+    return state.props.numColumns > 1 ? "row" : "prefix";
+}
+
+function getLayoutStoreKindForStore(store: ActiveLayoutStore) {
+    return store instanceof RowLayoutStore ? "row" : "prefix";
 }
 
 export function rebuildPrefixLayoutStoreExact(ctx: StateContext) {

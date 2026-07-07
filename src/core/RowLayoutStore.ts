@@ -43,6 +43,12 @@ export class RowLayoutStore implements LayoutStore {
         return this.knownSizes.length;
     }
 
+    clearKnownSizes() {
+        this.knownSizes.fill(0);
+        this.sizeKinds.fill(SIZE_UNKNOWN);
+        this.rebuildRowsAndTotals();
+    }
+
     findIndexRangeAtOffsets(startOffset: number, endOffset: number): LayoutIndexRange | undefined {
         let range: LayoutIndexRange | undefined;
         if (this.length > 0) {
@@ -112,6 +118,10 @@ export class RowLayoutStore implements LayoutStore {
         return this.measuredCount;
     }
 
+    getEstimatedSize() {
+        return this.estimatedSize;
+    }
+
     hasIndex(index: number | undefined): index is number {
         return index !== undefined && Number.isInteger(index) && index >= 0 && index < this.length;
     }
@@ -138,8 +148,9 @@ export class RowLayoutStore implements LayoutStore {
         this.rebuildRowsAndTotals();
     }
 
-    resize(length: number, spans?: ArrayLike<number | undefined>) {
+    resize(length: number, spans?: ArrayLike<number | undefined>, numColumns = this.numColumns) {
         const normalizedLength = normalizeLength(length);
+        const normalizedNumColumns = normalizeNumColumns(numColumns);
         if (normalizedLength !== this.length) {
             const previousKinds = this.sizeKinds;
             const previousSizes = this.knownSizes;
@@ -154,6 +165,7 @@ export class RowLayoutStore implements LayoutStore {
             this.knownSizes.set(previousSizes.subarray(0, copyLength));
             this.sizeKinds.set(previousKinds.subarray(0, copyLength));
         }
+        this.numColumns = normalizedNumColumns;
         this.repack(spans);
     }
 
