@@ -114,8 +114,12 @@ describe("prefix layout store lifecycle", () => {
         expect(store).toBeInstanceOf(RowLayoutStore);
         expect(store?.getTotalSize()).toBe(300);
         expect(range).toEqual({ end: 4, start: 0 });
-        expect(ctx.state.columns.slice(0, 5)).toEqual([1, 2, 1, 2, 1]);
-        expect(ctx.state.columnSpans.slice(0, 5)).toEqual([1, 1, 1, 1, 1]);
+        expect(Array.from({ length: 5 }, (_, index) => (store as RowLayoutStore).getColumn(index))).toEqual([
+            1, 2, 1, 2, 1,
+        ]);
+        expect(Array.from({ length: 5 }, (_, index) => (store as RowLayoutStore).getSpan(index))).toEqual([
+            1, 1, 1, 1, 1,
+        ]);
     });
 
     it("syncs override layout spans into the row store during calculation", () => {
@@ -132,8 +136,12 @@ describe("prefix layout store lifecycle", () => {
         expect(didSync).toBe(true);
         expect(store).toBeInstanceOf(RowLayoutStore);
         expect(range).toEqual({ end: 4, start: 0 });
-        expect(ctx.state.columns.slice(0, 5)).toEqual([1, 1, 4, 1, 1]);
-        expect(ctx.state.columnSpans.slice(0, 5)).toEqual([2, 3, 1, 4, 1]);
+        expect(Array.from({ length: 5 }, (_, index) => (store as RowLayoutStore).getColumn(index))).toEqual([
+            1, 1, 4, 1, 1,
+        ]);
+        expect(Array.from({ length: 5 }, (_, index) => (store as RowLayoutStore).getSpan(index))).toEqual([
+            2, 3, 1, 4, 1,
+        ]);
         expect(store?.getOffset(4)).toBe(300);
         expect(store?.getTotalSize()).toBe(400);
     });

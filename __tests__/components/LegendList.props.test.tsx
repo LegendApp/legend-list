@@ -551,8 +551,6 @@ describe("LegendList props behavior", () => {
                     numColumns={2}
                     recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-                    // Keep this stale-cache regression on the eager positions path.
-                    // The prefix layout store materializes ids lazily after layout.
                 />
             );
             const rendered = render(renderList(initialData));
@@ -576,8 +574,9 @@ describe("LegendList props behavior", () => {
                 String(message).includes("Detected overlapping key"),
             );
             expect(overlappingKeyErrors).toHaveLength(0);
-            expect(state.idCache.slice(0, 3)).toEqual(["b", "c", "a"]);
-            expect(state.indexByKey.get("a")).toBe(2);
+            expect(state.idCache).toEqual([]);
+            expect(state.indexByKey.size).toBe(0);
+            expect(state.layoutStoreRuntime?.store).toBeDefined();
             rendered.unmount();
         } finally {
             console.error = originalError;

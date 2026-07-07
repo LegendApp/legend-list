@@ -1,5 +1,11 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
-import { getLayoutOffset, getLayoutSize, type LayoutAccess } from "@/core/layoutAccessors";
+import {
+    getLayoutColumn,
+    getLayoutOffset,
+    getLayoutSize,
+    getLayoutSpan,
+    type LayoutAccess,
+} from "@/core/layoutAccessors";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -13,8 +19,6 @@ export function syncMountedContainer(
 ) {
     const state = ctx.state;
     const {
-        columns,
-        columnSpans,
         props: { data, itemsAreEqual, keyExtractor },
     } = state;
     const item = data[itemIndex];
@@ -40,8 +44,8 @@ export function syncMountedContainer(
             (layout ? layout.getSize(itemIndex) : getLayoutSize(ctx, itemIndex)) ??
             getItemSize(ctx, itemKey, itemIndex, item);
         const position = toPhysicalHorizontalItemPosition(state, logicalPosition, itemSize, peek$(ctx, "totalSize"));
-        const column = columns[itemIndex] || 1;
-        const span = columnSpans[itemIndex] || 1;
+        const column = (layout ? layout.getColumn(itemIndex) : getLayoutColumn(ctx, itemIndex)) || 1;
+        const span = (layout ? layout.getSpan(itemIndex) : getLayoutSpan(ctx, itemIndex)) || 1;
 
         const prevPos = peek$(ctx, `containerPosition${containerIndex}`);
         const prevColumn = peek$(ctx, `containerColumn${containerIndex}`);

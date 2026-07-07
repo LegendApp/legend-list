@@ -419,7 +419,6 @@ export function calculateItemsInView(
     const state = ctx.state;
     batchedUpdates(() => {
         const {
-            columns,
             containerItemKeys,
             enableScrollForNextCalculateItemsInView,
             idCache,
@@ -774,7 +773,7 @@ export function calculateItemsInView(
 
         if (numColumns > 1) {
             while (loopStart > 0) {
-                const loopColumn = columns[loopStart];
+                const loopColumn = layout.getColumn(loopStart);
                 if (loopColumn === 1 || loopColumn === undefined) {
                     break;
                 }

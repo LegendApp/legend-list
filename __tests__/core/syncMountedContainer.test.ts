@@ -2,7 +2,10 @@ import { describe, expect, it } from "bun:test";
 import "../setup";
 
 import { checkStructuralDataChange } from "../../src/core/checkStructuralDataChange";
-import { syncPrefixLayoutStoreStructure } from "../../src/core/prefixLayoutStoreLifecycle";
+import {
+    syncActiveRowLayoutStoreSpans,
+    syncPrefixLayoutStoreStructure,
+} from "../../src/core/prefixLayoutStoreLifecycle";
 import { syncMountedContainer } from "../../src/core/syncMountedContainer";
 import { peek$, set$ } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -29,7 +32,7 @@ describe("syncMountedContainer", () => {
                         itemsAreEqualCalls += 1;
                         return index === 0;
                     },
-                    keyExtractor: (item: { id: string }) => item.id,
+                    keyExtractor: (item?: { id: string }) => item?.id,
                 },
             },
         );
@@ -68,7 +71,7 @@ describe("syncMountedContainer", () => {
                         itemsAreEqualCalls += 1;
                         return index === 1;
                     },
-                    keyExtractor: (item: { id: string }) => item.id,
+                    keyExtractor: (item?: { id: string }) => item?.id,
                 },
             },
         );
@@ -131,5 +134,39 @@ describe("syncMountedContainer", () => {
         expect(result.didChangePosition).toBe(true);
         expect(peek$(ctx, "containerPosition0")).toBe(250);
         expect(ctx.state.positions[5]).toBeUndefined();
+    });
+
+    it("reads row layout column and span from the active store", () => {
+        const ctx = createMockContext(
+            {
+                numColumns: 4,
+            },
+            {
+                props: {
+                    data: Array.from({ length: 3 }, (_, index) => ({ id: `item-${index}` })),
+                    estimatedItemSize: 50,
+                    keyExtractor: (item?: { id: string }) => item?.id,
+                    numColumns: 4,
+                    overrideItemLayout: (layout, _item, index) => {
+                        layout.span = [2, 1, 4][index];
+                    },
+                },
+            },
+        );
+
+        ctx.state.columns.length = 0;
+        ctx.state.columnSpans.length = 0;
+        syncPrefixLayoutStoreStructure(ctx);
+        syncActiveRowLayoutStoreSpans(ctx);
+        set$(ctx, "containerItemKey0", "item-2");
+
+        const result = syncMountedContainer(ctx, 0, 2);
+
+        expect(result.didChangePosition).toBe(true);
+        expect(peek$(ctx, "containerPosition0")).toBe(50);
+        expect(peek$(ctx, "containerColumn0")).toBe(1);
+        expect(peek$(ctx, "containerSpan0")).toBe(4);
+        expect(ctx.state.columns[2]).toBeUndefined();
+        expect(ctx.state.columnSpans[2]).toBeUndefined();
     });
 });
