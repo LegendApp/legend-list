@@ -364,7 +364,7 @@ describe("mvcp helpers", () => {
 
         try {
             const adjustFunction = prepareMVCP(mockCtx);
-            store.flushEstimatedSize(50);
+            store.setEstimatedSize(50);
 
             adjustFunction?.();
 

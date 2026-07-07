@@ -70,7 +70,7 @@ export class PrefixLayoutStore {
         this.knownSizeTree.clear();
     }
 
-    flushEstimatedSize(estimatedSize: number) {
+    setEstimatedSize(estimatedSize: number) {
         this.estimatedSize = normalizeSize(estimatedSize);
     }
 
@@ -127,7 +127,7 @@ export class PrefixLayoutStore {
         }
     }
 
-    rebuildSizes(entries: PrefixLayoutStoreSizeEntry[]) {
+    replaceKnownSizeEntries(entries: PrefixLayoutStoreSizeEntry[]) {
         for (const entry of entries) {
             this.assertIndex(entry.index);
             normalizeSize(entry.size);

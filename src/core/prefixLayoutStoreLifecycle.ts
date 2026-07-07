@@ -92,8 +92,8 @@ export function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, start
 }
 
 function applyPrefixLayoutStoreSeed(store: PrefixLayoutStore, seed: PrefixLayoutStoreSeed) {
-    store.flushEstimatedSize(seed.estimatedSize);
-    store.rebuildSizes(seed.sizeEntries);
+    store.setEstimatedSize(seed.estimatedSize);
+    store.replaceKnownSizeEntries(seed.sizeEntries);
 }
 
 function getMaterializeRange(state: InternalState, fallbackStart: number, fallbackEnd: number) {
@@ -122,7 +122,7 @@ function flushPrefixLayoutStoreEstimate(
         if (!options?.requireAnchorCorrection || anchorIndex === 0 || canCorrectAnchor) {
             const clampedAnchorIndex = Math.min(Math.max(anchorIndex, 0), store.length - 1);
             const oldAnchorTop = store.getOffset(clampedAnchorIndex);
-            store.flushEstimatedSize(estimatedSize);
+            store.setEstimatedSize(estimatedSize);
             syncPrefixLayoutStoreTotalSize(ctx);
             const newAnchorTop = store.getOffset(clampedAnchorIndex);
             const positionDiff = newAnchorTop - oldAnchorTop;
@@ -353,7 +353,7 @@ export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
         if (runtime) {
             runtime.store.resize(state.props.data.length);
             if (estimatedSize !== runtime.propEstimatedSize) {
-                runtime.store.flushEstimatedSize(estimatedSize);
+                runtime.store.setEstimatedSize(estimatedSize);
             }
         } else {
             runtime = new PrefixLayoutRuntime(state.props.data.length, estimatedSize);
