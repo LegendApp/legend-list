@@ -8,7 +8,7 @@ import { getContentSize } from "../../src/state/getContentSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { setLayoutValue } from "../helpers/layoutArrays";
+import { getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
 
 describe("scrollToIndex", () => {
     let mockCtx: StateContext;
@@ -141,14 +141,13 @@ describe("scrollToIndex", () => {
             expect(mockScrollCalls[0].y).toBe(350); // 300 + 20 + 30
         });
 
-        it("should handle missing position data gracefully", () => {
-            // Remove position for item 3
-            mockState.arrayLayout.positions[3] = undefined;
+        it("should use estimated layout when explicit position data is missing", () => {
+            setLayoutValue(mockState, "positions", 3, undefined);
 
             scrollToIndex(mockCtx, { index: 3 });
 
             expect(mockScrollCalls.length).toBe(1);
-            expect(mockScrollCalls[0].y).toBe(0); // Defaults to 0 when position is missing
+            expect(mockScrollCalls[0].y).toBe(300);
         });
     });
 
@@ -156,7 +155,7 @@ describe("scrollToIndex", () => {
         it("should extend max offset for negative viewOffset", () => {
             mockState.scrollLength = 400;
             mockState.totalSize = 1200;
-            const desiredOffset = (mockState.arrayLayout.positions[9] ?? 0) - -150;
+            const desiredOffset = (getLayoutValue(mockState, "positions", 9) ?? 0) - -150;
 
             scrollToIndex(mockCtx, { index: 9, viewOffset: -150, viewPosition: 0 });
 

@@ -5,7 +5,6 @@ import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
-import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import { armAppScrollRearm, interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
@@ -249,7 +248,6 @@ export function createImperativeHandle(
             set$(ctx, "totalSize", 0);
             state.indexByKey.clear();
             state.idCache.length = 0;
-            clearArrayLayoutCache(state, { includeColumns: true });
         }
 
         if (shouldRebuildPrefixLayoutStore) {

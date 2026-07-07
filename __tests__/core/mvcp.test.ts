@@ -8,6 +8,7 @@ import type { StateContext } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValue } from "../helpers/layoutStore";
 
 const originalPlatform = Platform.OS;
 
@@ -332,7 +333,7 @@ describe("mvcp helpers", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjustFunction = prepareMVCP(mockCtx, true);
-            mockCtx.state.arrayLayout.positions[2] = 300;
+            setLayoutValue(mockCtx.state, "positions", 2, 300);
 
             adjustFunction?.();
 
@@ -406,7 +407,7 @@ describe("mvcp helpers", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjustFunction = prepareMVCP(mockCtx);
-            mockCtx.state.arrayLayout.positions[2] = 11785.25;
+            setLayoutValue(mockCtx.state, "positions", 2, 11785.25);
             mockCtx.state.totalSize = 11973.25;
 
             adjustFunction?.();
@@ -456,7 +457,7 @@ describe("mvcp helpers", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjustFunction = prepareMVCP(mockCtx);
-            mockCtx.state.arrayLayout.positions[2] = 650;
+            setLayoutValue(mockCtx.state, "positions", 2, 650);
             mockCtx.state.totalSize = 950;
 
             adjustFunction?.();
@@ -505,7 +506,7 @@ describe("mvcp helpers", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjustFunction = prepareMVCP(mockCtx);
-            mockCtx.state.arrayLayout.positions[2] = 650;
+            setLayoutValue(mockCtx.state, "positions", 2, 650);
             mockCtx.state.totalSize = 950;
 
             adjustFunction?.();

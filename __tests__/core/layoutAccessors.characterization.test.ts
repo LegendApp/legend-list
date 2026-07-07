@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import { updateItemPositions } from "@/core/arrayLayout";
 import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
+import { syncLayoutStoreState, syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 function createItems(count: number) {
@@ -27,20 +27,20 @@ function createLaidOutContext(sizes: number[]) {
     );
 
     sizes.forEach((size, index) => {
-        ctx.state.sizesKnown.set(`item-${index}`, size);
-        ctx.state.sizes.set(`item-${index}`, size);
+        const id = `item-${index}`;
+        ctx.state.idCache[index] = id;
+        ctx.state.indexByKey.set(id, index);
+        ctx.state.sizesKnown.set(id, size);
+        ctx.state.sizes.set(id, size);
     });
-    updateItemPositions(ctx, false, {
-        doMVCP: false,
-        scrollBottomBuffered: -1,
-        startIndex: 0,
-    });
+    syncLayoutStoreStructure(ctx);
+    syncLayoutStoreState(ctx);
 
     return ctx;
 }
 
-describe("current positions-backed layout accessors", () => {
-    it("reads offset and size from the current layout state", () => {
+describe("layout accessors", () => {
+    it("reads offset and size from the current layout store", () => {
         const ctx = createLaidOutContext([40, 60, 125, 75]);
 
         expect(getLayoutOffset(ctx, 0)).toBe(0);
@@ -49,7 +49,7 @@ describe("current positions-backed layout accessors", () => {
         expect(ctx.state.totalSize).toBe(300);
     });
 
-    it("returns undefined for unknown array offsets and sizes", () => {
+    it("returns undefined for unknown store indexes", () => {
         const ctx = createLaidOutContext([40, 60]);
 
         expect(getLayoutOffset(ctx, 10)).toBeUndefined();

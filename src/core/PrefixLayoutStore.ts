@@ -9,7 +9,7 @@ export type PrefixLayoutStoreSizeEntry = LayoutStoreSizeEntry;
 
 export class PrefixLayoutStore implements LayoutStore {
     // Prefix mode intentionally uses one scalar estimate for all unmeasured rows.
-    // Per-item-type averages stay in the array layout path until rows are measured.
+    // Per-item-type averages are intentionally not represented until rows are measured.
     private estimatedSize: number;
     private knownCountTree: FenwickTree;
     private knownSizes: Float64Array;

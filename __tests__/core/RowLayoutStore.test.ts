@@ -36,7 +36,7 @@ describe("RowLayoutStore", () => {
         expect(store.getMeasuredAverageSize()).toBe(60);
     });
 
-    it("packs spans using the same next-row overflow rule as array layout", () => {
+    it("packs spans using the next-row overflow rule", () => {
         const store = new RowLayoutStore({
             estimatedSize: 50,
             length: 5,

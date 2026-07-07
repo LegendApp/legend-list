@@ -374,7 +374,6 @@ export function updateOneItemSize(
 
     // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
     const size = Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
-    if (prevSizeKnown !== size && prevSize !== size) state.positionsAreCurrent = false;
     sizesKnown.set(itemKey, size);
 
     // Update averages per item type

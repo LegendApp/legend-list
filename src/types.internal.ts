@@ -173,11 +173,6 @@ export interface PendingDataComparison {
 export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export type AnchoredEndSpaceOwner = "list" | "scroll";
-export interface ArrayLayoutState {
-    columns: Array<number | undefined>;
-    columnSpans: Array<number | undefined>;
-    positions: Array<number | undefined>;
-}
 
 /**
  * Wraps the native content extent of a vertical list so an integration can publish its shrink on
@@ -206,7 +201,6 @@ export interface InternalState {
     anchoredEndSpacePendingReady?: boolean;
     anchoredEndSpaceReadyAnchorIndex?: number;
     anchoredEndSpaceReadyAnchorKey?: string;
-    arrayLayout: ArrayLayoutState;
     averageSizes: AverageSizes;
     containerItemKeys: Map<string, number>;
     containerItemGenerations: Array<number | undefined>;
@@ -308,7 +302,6 @@ export interface InternalState {
     pendingScrollResolve?: ScrollResolve | undefined;
     runPendingScrollToEnd?: () => void;
     layoutStoreRuntime?: LayoutStoreRuntime;
-    positionsAreCurrent?: boolean;
     containerSyncAdjust?: number;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;

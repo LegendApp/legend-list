@@ -41,9 +41,6 @@ function getKnownOrFixedSize(
         const fixedLayoutSize = getFixedItemLayoutSize(ctx, index, data, resolved);
         if (fixedLayoutSize !== undefined) {
             size = fixedLayoutSize;
-            state.positionsAreCurrent = false;
-            state.positionRecalculationStartIndex = Math.min(state.positionRecalculationStartIndex ?? index, index);
-            state.scrollForNextCalculateItemsInView = undefined;
             state.sizesKnown.set(key, size);
             state.fixedItemSizeKeys ??= new Set();
             state.fixedItemSizeKeys.add(key);

@@ -17,7 +17,6 @@ import { Platform } from "../../src/platform/Platform";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { getId } from "../../src/utils/getId";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { countLayoutValues } from "../helpers/layoutArrays";
 
 describe("createImperativeHandle.scrollToEnd", () => {
     let scrollToIndexSpy: ReturnType<typeof spyOn>;
@@ -493,9 +492,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
 
         expect(ctx.state.indexByKey.size).toBe(0);
         expect(ctx.state.idCache.length).toBe(0);
-        expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
-        expect(countLayoutValues(ctx.state.arrayLayout.columns)).toBe(0);
-        expect(countLayoutValues(ctx.state.arrayLayout.columnSpans)).toBe(0);
     });
 
     it("clearCaches full mode discards sizes and the reader anchor without MVCP", () => {
