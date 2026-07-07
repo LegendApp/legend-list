@@ -7,8 +7,8 @@ import {
     setInitialScrollTarget,
 } from "../../src/core/initialScroll";
 import {
+    syncPrefixLayoutStoreLayoutState,
     syncPrefixLayoutStoreStructure,
-    syncPrefixLayoutStoreTotalSize,
 } from "../../src/core/prefixLayoutStoreLifecycle";
 import * as scrollToModule from "../../src/core/scrollTo";
 import type { StateContext } from "../../src/state/state";
@@ -85,7 +85,7 @@ describe("initialScroll", () => {
             },
         );
         syncPrefixLayoutStoreStructure(ctx);
-        syncPrefixLayoutStoreTotalSize(ctx);
+        syncPrefixLayoutStoreLayoutState(ctx);
 
         expect(
             resolveInitialScrollOffset(ctx, {

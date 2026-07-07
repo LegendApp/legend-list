@@ -63,28 +63,13 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
         const end = Math.min(store.length - 1, Math.trunc(endIndex));
         if (start <= end) {
             range = { end, start };
-            store.forEachLayout(start, end, (index, offset, size) => {
+            store.forEachLayout(start, end, (index, offset) => {
                 const id = state.idCache[index] ?? getId(state, index);
                 if (ctx.positionListeners.has(id)) {
                     notifyPrefixLayoutStorePosition(ctx, runtime, id, offset);
                 }
                 state.indexByKey.set(id, index);
-                state.sizes.set(id, size);
             });
-        }
-    }
-
-    return range;
-}
-
-export function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
-    const store = getActivePrefixLayoutStore(ctx);
-    let range: { end: number; start: number } | undefined;
-
-    if (store) {
-        const indexRange = store.findIndexRangeAtOffsets(startOffset, endOffset);
-        if (indexRange) {
-            range = materializePrefixLayoutStoreRange(ctx, indexRange.start, indexRange.end);
         }
     }
 
@@ -123,7 +108,7 @@ function flushPrefixLayoutStoreEstimate(
             const clampedAnchorIndex = Math.min(Math.max(anchorIndex, 0), store.length - 1);
             const oldAnchorTop = store.getOffset(clampedAnchorIndex);
             store.setEstimatedSize(estimatedSize);
-            syncPrefixLayoutStoreTotalSize(ctx);
+            syncPrefixLayoutStoreLayoutState(ctx);
             const newAnchorTop = store.getOffset(clampedAnchorIndex);
             const positionDiff = newAnchorTop - oldAnchorTop;
 
@@ -268,18 +253,12 @@ export function resetPrefixLayoutStoreRuntimeState(state: InternalState) {
     state.layoutStoreRuntime?.resetTransientState(state.timeouts);
 }
 
-export function setPrefixLayoutStoreMeasuredSize(
-    ctx: StateContext,
-    index: number | undefined,
-    key: string,
-    size: number,
-) {
+export function setPrefixLayoutStoreMeasuredSize(ctx: StateContext, index: number | undefined, size: number) {
     const store = getActivePrefixLayoutStore(ctx);
     let didSet = false;
     if (store?.hasIndex(index)) {
         store.setMeasuredSize(index, size);
-        ctx.state.sizes.set(key, size);
-        syncPrefixLayoutStoreTotalSize(ctx);
+        syncPrefixLayoutStoreLayoutState(ctx);
         didSet = true;
     }
     return didSet;
@@ -381,7 +360,7 @@ export function rebuildPrefixLayoutStoreExact(ctx: StateContext) {
     return state.layoutStoreRuntime?.store;
 }
 
-export function syncPrefixLayoutStoreTotalSize(ctx: StateContext) {
+export function syncPrefixLayoutStoreLayoutState(ctx: StateContext) {
     const runtime = getActivePrefixLayoutRuntime(ctx);
     let didSync = false;
     if (runtime) {
@@ -485,9 +464,6 @@ function getPrefixLayoutStoreSeed(
         if (knownSize !== undefined) {
             measuredCount++;
             measuredTotalSize += knownSize;
-            if (options.mode === "reconcile") {
-                state.sizes.set(key, knownSize);
-            }
             sizeEntries.push({
                 index,
                 size: knownSize,
@@ -498,7 +474,6 @@ function getPrefixLayoutStoreSeed(
 
             if (fixedLayoutSize !== undefined && options.mode === "reconcile") {
                 state.sizesKnown.set(key, fixedLayoutSize);
-                state.sizes.set(key, fixedLayoutSize);
                 measuredCount++;
                 measuredTotalSize += fixedLayoutSize;
                 sizeEntries.push({
