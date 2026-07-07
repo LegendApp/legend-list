@@ -86,10 +86,6 @@ export class PrefixLayoutStore {
         return this.measuredCount;
     }
 
-    getMeasuredSizeTotal() {
-        return this.measuredSizeTotal;
-    }
-
     getOffset(index: number) {
         this.assertIndex(index);
         const knownCountBefore = this.knownCountTree.sumBefore(index);
