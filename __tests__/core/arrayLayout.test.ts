@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import { updateItemPositions } from "../../src/core/updateItemPositions";
+import { updateItemPositions } from "../../src/core/arrayLayout";
 import type { StateContext } from "../../src/state/state";
 import { listen$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";

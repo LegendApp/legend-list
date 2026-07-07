@@ -2,11 +2,11 @@ import { describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
 import { getStickyPushLimit } from "@/components/stickyPositionUtils";
+import { updateItemPositions } from "@/core/arrayLayout";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { getLayoutEnd, getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
+import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
 import { prepareMVCP } from "@/core/mvcp";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
-import { updateItemPositions } from "@/core/updateItemPositions";
 import { setupViewability, updateViewableItems } from "@/core/viewability";
 import { peek$, set$ } from "@/state/state";
 import * as requestAdjustModule from "@/utils/requestAdjust";
@@ -48,13 +48,12 @@ function createLaidOutContext(sizes: number[]) {
 }
 
 describe("current positions-backed layout behavior", () => {
-    it("reads offset, size, end, total, and unknown rows from the current layout state", () => {
+    it("reads offset, size, total, and unknown rows from the current layout state", () => {
         const ctx = createLaidOutContext([40, 60, 125, 75]);
 
         expect(getLayoutOffset(ctx, 0)).toBe(0);
         expect(getLayoutOffset(ctx, 2)).toBe(100);
         expect(getLayoutSize(ctx, 2)).toBe(125);
-        expect(getLayoutEnd(ctx, 2)).toBe(225);
         expect(ctx.state.totalSize).toBe(300);
         expect(calculateOffsetForIndex(ctx, 3)).toBe(225);
         expect(getLayoutOffset(ctx, 10)).toBeUndefined();

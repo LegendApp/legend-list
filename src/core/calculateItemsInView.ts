@@ -1,5 +1,6 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { updateItemPositions } from "@/core/arrayLayout";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
@@ -15,7 +16,6 @@ import {
 } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
-import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
@@ -37,6 +37,7 @@ import { setDidLayout } from "@/utils/setDidLayout";
 
 const RENDER_RANGE_PROJECTION_FULL_VELOCITY = 4;
 const RENDER_RANGE_PROJECTION_SETTLE_DELAY = 100;
+const EMPTY_INDEX_SET = new Set<number>();
 
 function getProjectedBufferAdjustment(scrollVelocity: number, trailingBuffer: number) {
     if (trailingBuffer <= 0) {
@@ -183,6 +184,11 @@ interface VisibleRangeState {
     startNoBuffer: number | null;
 }
 
+interface IndexRange {
+    end: number;
+    start: number;
+}
+
 function trackVisibleRange(
     range: VisibleRangeState,
     i: number,
@@ -227,7 +233,6 @@ function getIdsInVisibleRange(state: InternalState, range: VisibleRangeState) {
 
 function reconcilePrefixPinnedIndices(
     ctx: StateContext,
-    layout: LayoutAccess,
     options: {
         alwaysRenderIndices: number[];
         currentStickyIdx: number;
@@ -238,53 +243,52 @@ function reconcilePrefixPinnedIndices(
         stickyHeaderIndices: number[];
     },
 ) {
-    if (layout.hasPrefixStore) {
-        const hasStickyIndex = options.currentStickyIdx >= 0 && options.stickyHeaderIndices.length > 0;
-        if (options.alwaysRenderIndices.length === 0 && !options.hasScrollTargetPinnedRange && !hasStickyIndex) {
-            return;
-        }
+    const ranges: IndexRange[] = [];
 
-        const indices = new Set<number>();
-        const addIndex = (index: number | undefined) => {
-            if (index !== undefined && index >= 0 && index < options.dataLength) {
-                indices.add(index);
-            }
-        };
-
-        for (const index of options.alwaysRenderIndices) {
-            addIndex(index);
-        }
-        if (options.hasScrollTargetPinnedRange) {
-            for (let index = options.scrollTargetPinnedStart; index <= options.scrollTargetPinnedEnd; index++) {
-                addIndex(index);
+    const addRange = (startIndex: number | undefined, endIndex = startIndex) => {
+        if (startIndex !== undefined && endIndex !== undefined && options.dataLength > 0) {
+            const start = Math.max(0, Math.min(startIndex, endIndex));
+            const end = Math.min(options.dataLength - 1, Math.max(startIndex, endIndex));
+            if (start <= end) {
+                ranges.push({ end, start });
             }
         }
-        for (let offset = 0; offset <= 1; offset++) {
-            addIndex(options.stickyHeaderIndices[options.currentStickyIdx - offset]);
-        }
+    };
 
-        const sortedIndices = Array.from(indices).sort((a, b) => a - b);
+    for (const index of options.alwaysRenderIndices) {
+        addRange(index);
+    }
+    if (options.hasScrollTargetPinnedRange) {
+        addRange(options.scrollTargetPinnedStart, options.scrollTargetPinnedEnd);
+    }
+    for (let offset = 0; offset <= 1; offset++) {
+        addRange(options.stickyHeaderIndices[options.currentStickyIdx - offset]);
+    }
+
+    if (ranges.length > 0) {
+        ranges.sort((a, b) => a.start - b.start || a.end - b.end);
+
         let rangeStart: number | undefined;
         let rangeEnd: number | undefined;
-        const reconcileRange = () => {
+        const materializeRange = () => {
             if (rangeStart !== undefined && rangeEnd !== undefined) {
                 materializePrefixLayoutStoreRange(ctx, rangeStart, rangeEnd);
             }
         };
 
-        for (const index of sortedIndices) {
+        for (const range of ranges) {
             if (rangeStart === undefined || rangeEnd === undefined) {
-                rangeStart = index;
-                rangeEnd = index;
-            } else if (index === rangeEnd + 1) {
-                rangeEnd = index;
+                rangeStart = range.start;
+                rangeEnd = range.end;
+            } else if (range.start <= rangeEnd + 1) {
+                rangeEnd = Math.max(rangeEnd, range.end);
             } else {
-                reconcileRange();
-                rangeStart = index;
-                rangeEnd = index;
+                materializeRange();
+                rangeStart = range.start;
+                rangeEnd = range.end;
             }
         }
-        reconcileRange();
+        materializeRange();
     }
 }
 
@@ -423,7 +427,7 @@ export function calculateItemsInView(
         } = state;
         const { data } = state.props;
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
-        const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
+        const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || EMPTY_INDEX_SET;
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
         const { dataChanged, doMVCP, forceFullItemPositions, initialLayout } = params;
         const didDataChange = !!dataChanged;
@@ -636,13 +640,12 @@ export function calculateItemsInView(
         let didReconcilePrefixDataChange = false;
 
         if (!prefixMaterializedRange && shouldReconcilePrefixDataChange && getActivePrefixLayoutStore(ctx)) {
-            const reconciliation = reconcilePrefixDataChange(ctx, {
+            didReconcilePrefixDataChange = reconcilePrefixDataChange(ctx, {
                 didKeyExtractorChange: state.dataChangeKeyExtractorChanged,
                 previousIdCache,
             });
-            if (reconciliation.reconciled) {
+            if (didReconcilePrefixDataChange) {
                 layout = createLayoutAccess(ctx, getActivePrefixLayoutStore(ctx));
-                didReconcilePrefixDataChange = true;
                 prefixMaterializedRange = materializePrefixLayoutStoreOffsetRange(
                     ctx,
                     scrollTopBuffered,
@@ -854,7 +857,7 @@ export function calculateItemsInView(
         }
 
         if (prefixMaterializedRange) {
-            reconcilePrefixPinnedIndices(ctx, layout, {
+            reconcilePrefixPinnedIndices(ctx, {
                 alwaysRenderIndices: alwaysRenderIndicesArr,
                 currentStickyIdx: stickyState?.currentStickyIdx ?? -1,
                 dataLength,

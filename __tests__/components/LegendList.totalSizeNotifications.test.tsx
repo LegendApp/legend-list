@@ -4,7 +4,7 @@ import "../setup";
 import * as React from "react";
 import { Animated, Text, View } from "react-native";
 
-import { updateItemPositions } from "../../src/core/updateItemPositions";
+import { updateItemPositions } from "../../src/core/arrayLayout";
 import { useValue$ } from "../../src/hooks/useValue$";
 import { type StateContext, useStateContext } from "../../src/state/state";
 import TestRenderer, { act } from "../helpers/testRenderer";
