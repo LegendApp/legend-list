@@ -58,6 +58,11 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
     let range: { end: number; start: number } | undefined;
 
     if (store) {
+        const start = Math.max(0, Math.trunc(startIndex));
+        const end = Math.min(store.length - 1, Math.trunc(endIndex));
+        if (start <= end) {
+            range = { end, start };
+        }
         store.forEachLayout(startIndex, endIndex, (index, offset, size) => {
             const id = state.idCache[index] ?? getId(state, index);
             if (ctx.positionListeners.has(id)) {
@@ -65,11 +70,6 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
             }
             state.indexByKey.set(id, index);
             state.sizes.set(id, size);
-
-            range = {
-                end: index,
-                start: range?.start ?? index,
-            };
         });
     }
 
@@ -344,7 +344,7 @@ export function reconcilePrefixDataChange(ctx: StateContext, options?: PrefixDat
     return didReconcile;
 }
 
-function isPrefixLayoutStorePropsSupported(props: {
+export function isPrefixLayoutStorePropsSupported(props: {
     horizontal: boolean | undefined;
     numColumns: number | undefined;
     overrideItemLayout: unknown;

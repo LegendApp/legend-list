@@ -410,8 +410,8 @@ export function calculateItemsInView(
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || EMPTY_INDEX_SET;
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
-        const { dataChanged, doMVCP, forceFullItemPositions, mvcpAdjustmentSource, initialLayout } = params;
-        const didDataChange = !!dataChanged;
+        const { doMVCP, forceFullItemPositions, mvcpAdjustmentSource, initialLayout } = params;
+        const didDataChange = !!params.dataChanged;
         const isInitialLayout = !!initialLayout;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
@@ -600,10 +600,7 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP =
-            doMVCP && !suppressInitialScrollSideEffects
-                ? prepareMVCP(ctx, dataChanged, mvcpAdjustmentSource)
-                : undefined;
+        const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, didDataChange, mvcpAdjustmentSource) : undefined;
 
         const shouldReconcilePrefixDataChange =
             !forceFullItemPositions &&
@@ -654,7 +651,7 @@ export function calculateItemsInView(
                 disablePrefixLayoutStoreForCurrentPass(state);
                 layout = createLayoutAccess(ctx, undefined);
             }
-            updateItemPositions(ctx, dataChanged, {
+            updateItemPositions(ctx, didDataChange, {
                 doMVCP,
                 // Size changes must update the entire legacy position suffix.
                 forceFullUpdate: !!forceFullItemPositions || positionRecalculationStartIndex !== undefined,
