@@ -2,28 +2,6 @@ import { describe, expect, it } from "bun:test";
 import "../setup";
 
 import { PrefixLayoutStore } from "../../src/core/PrefixLayoutStore";
-import type { CreateLayoutReaderHarness } from "../helpers/layoutReaderContract";
-import { runLayoutReaderContract } from "../helpers/layoutReaderContract";
-
-const createPrefixLayoutHarness: CreateLayoutReaderHarness = ({ estimatedItemSize = 100, sizes }) => {
-    const store = new PrefixLayoutStore(sizes.length, estimatedItemSize);
-
-    sizes.forEach((size, index) => {
-        if (size !== undefined) {
-            store.setMeasuredSize(index, size);
-        }
-    });
-
-    return {
-        reader: store,
-        setMeasuredSize(index, size) {
-            store.setMeasuredSize(index, size);
-        },
-        updateFrom() {},
-    };
-};
-
-runLayoutReaderContract("PrefixLayoutStore", createPrefixLayoutHarness);
 
 describe("PrefixLayoutStore", () => {
     it("uses aggregate estimates for initially unmeasured items", () => {
@@ -33,6 +11,22 @@ describe("PrefixLayoutStore", () => {
         expect(store.getOffset(3)).toBe(240);
         expect(store.getSize(4)).toBe(80);
         expect(store.getTotalSize()).toBe(400);
+    });
+
+    it("finds the first item whose end offset is greater than the target offset", () => {
+        const store = new PrefixLayoutStore(3, 100);
+
+        store.setMeasuredSize(0, 50);
+        store.setMeasuredSize(1, 75);
+        store.setMeasuredSize(2, 25);
+
+        expect(store.findIndexAtOffset(0)).toBe(0);
+        expect(store.findIndexAtOffset(49.999)).toBe(0);
+        expect(store.findIndexAtOffset(50)).toBe(1);
+        expect(store.findIndexAtOffset(124.999)).toBe(1);
+        expect(store.findIndexAtOffset(125)).toBe(2);
+        expect(store.findIndexAtOffset(149.999)).toBe(2);
+        expect(store.findIndexAtOffset(150)).toBeUndefined();
     });
 
     it("updates the estimated size without rebasing measured rows", () => {
@@ -83,8 +77,6 @@ describe("PrefixLayoutStore", () => {
         expect(store.getOffset(3)).toBe(250);
         expect(store.getOffset(4)).toBe(400);
         expect(store.getTotalSize()).toBe(500);
-        expect(store.getCachedCount()).toBe(2);
-        expect(store.getCachedSizeTotal()).toBe(200);
         expect(store.getMeasuredCount()).toBe(0);
         expect(store.getMeasuredSizeTotal()).toBe(0);
         expect(store.getMeasuredAverageSize()).toBeUndefined();
@@ -98,8 +90,6 @@ describe("PrefixLayoutStore", () => {
 
         expect(store.getSize(1)).toBe(80);
         expect(store.getTotalSize()).toBe(280);
-        expect(store.getCachedCount()).toBe(0);
-        expect(store.getCachedSizeTotal()).toBe(0);
         expect(store.getMeasuredCount()).toBe(1);
         expect(store.getMeasuredSizeTotal()).toBe(80);
     });
@@ -123,8 +113,6 @@ describe("PrefixLayoutStore", () => {
         expect(store.getSize(4)).toBe(100);
         expect(store.getOffset(4)).toBe(320);
         expect(store.getTotalSize()).toBe(420);
-        expect(store.getCachedCount()).toBe(1);
-        expect(store.getCachedSizeTotal()).toBe(50);
         expect(store.getMeasuredCount()).toBe(2);
         expect(store.getMeasuredSizeTotal()).toBe(170);
         expect(store.getMeasuredAverageSize()).toBe(85);
@@ -187,7 +175,6 @@ describe("PrefixLayoutStore", () => {
         expect(store.getSize(1)).toBe(100);
         expect(store.getSize(2)).toBe(100);
         expect(store.getTotalSize()).toBe(300);
-        expect(store.getCachedCount()).toBe(0);
         expect(store.getMeasuredCount()).toBe(0);
     });
 

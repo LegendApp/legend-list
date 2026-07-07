@@ -5,7 +5,7 @@ import { doScrollTo } from "@/core/doScrollTo";
 import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
-import { createLayoutEngine, type LayoutEngine } from "@/core/LayoutEngine";
+import { getLayoutEnd, getLayoutOffset } from "@/core/layoutAccessors";
 import { cancelNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -58,16 +58,7 @@ function syncInitialScrollNativeWatchdog(
     }
 }
 
-function getItemBottom(layoutEngine: LayoutEngine, index: number) {
-    return layoutEngine.getEnd(index);
-}
-
-export function findVisibleItemIndex(
-    ctx: StateContext,
-    viewportStart: number,
-    viewportEnd: number,
-    layoutEngine = createLayoutEngine(ctx),
-) {
+export function findVisibleItemIndex(ctx: StateContext, viewportStart: number, viewportEnd: number) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
     let low = 0;
@@ -76,7 +67,7 @@ export function findVisibleItemIndex(
 
     while (low <= high) {
         const mid = Math.floor((low + high) / 2);
-        const top = layoutEngine.getOffset(mid);
+        const top = getLayoutOffset(ctx, mid);
         if (top !== undefined && top <= viewportStart) {
             match = mid;
             low = mid + 1;
@@ -87,22 +78,17 @@ export function findVisibleItemIndex(
 
     let index = match ?? 0;
     // The last cell at this row's top may end above the viewport while a taller sibling remains visible.
-    while (index > 0 && layoutEngine.getOffset(index - 1) === layoutEngine.getOffset(index)) index--;
+    while (index > 0 && getLayoutOffset(ctx, index - 1) === getLayoutOffset(ctx, index)) index--;
     for (; index < state.props.data.length; index++) {
-        const top = layoutEngine.getOffset(index);
+        const top = getLayoutOffset(ctx, index);
         if (top === undefined || top >= viewportEnd) break;
-        const bottom = getItemBottom(layoutEngine, index)! - ctx.scrollAxisGap;
+        const bottom = getLayoutEnd(ctx, index)! - ctx.scrollAxisGap;
         if (bottom > viewportStart && bottom > top) return index;
     }
     return undefined;
 }
 
-function getTargetViewportRenderRange(
-    ctx: StateContext,
-    layoutEngine: LayoutEngine,
-    targetOffset: number,
-    targetIndex: number | undefined,
-) {
+function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
     if (dataLength === 0) {
@@ -116,22 +102,22 @@ function getTargetViewportRenderRange(
     let start =
         targetIndex !== undefined
             ? Math.max(0, Math.min(dataLength - 1, targetIndex))
-            : findVisibleItemIndex(ctx, viewportStart, viewportEnd, layoutEngine);
+            : findVisibleItemIndex(ctx, viewportStart, viewportEnd);
     if (start === undefined) {
         return undefined;
     }
-    if (targetIndex !== undefined && layoutEngine.getOffset(start) === undefined) {
+    if (targetIndex !== undefined && getLayoutOffset(ctx, start) === undefined) {
         return { end: start, start };
     }
     while (start > 0) {
-        const top = layoutEngine.getOffset(start);
-        if (top === undefined || top <= viewportStart || layoutEngine.getOffset(start - 1) === undefined) {
+        const top = getLayoutOffset(ctx, start);
+        if (top === undefined || top <= viewportStart || getLayoutOffset(ctx, start - 1) === undefined) {
             break;
         }
         start--;
     }
     while (start > 0) {
-        const previousBottom = getItemBottom(layoutEngine, start - 1);
+        const previousBottom = getLayoutEnd(ctx, start - 1);
         if (previousBottom === undefined || previousBottom <= viewportStart) {
             break;
         }
@@ -140,7 +126,7 @@ function getTargetViewportRenderRange(
 
     let end = start;
     while (end + 1 < dataLength) {
-        const nextTop = layoutEngine.getOffset(end + 1);
+        const nextTop = getLayoutOffset(ctx, end + 1);
         if (nextTop === undefined || nextTop > viewportEnd) {
             break;
         }
@@ -190,7 +176,7 @@ export function scrollTo(
         if (!isInitialScroll) {
             // The replacement owns its offset samples, including the optimistic update for an instant scroll.
             state.pendingNativeMVCPAdjust = undefined;
-            state.scrollTargetPinnedRange = getTargetViewportRenderRange(ctx, createLayoutEngine(ctx), targetOffset, scrollTarget.index);
+            state.scrollTargetPinnedRange = getTargetViewportRenderRange(ctx, targetOffset, scrollTarget.index);
             if (state.scrollTargetPinnedRange) {
                 state.scrollForNextCalculateItemsInView = undefined;
             }

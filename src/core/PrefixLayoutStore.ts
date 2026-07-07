@@ -18,8 +18,6 @@ export interface PrefixLayoutStoreSizeEntry {
 }
 
 export class PrefixLayoutStore {
-    private cachedCount = 0;
-    private cachedSizeTotal = 0;
     // Prefix mode intentionally uses one scalar estimate for all unmeasured rows.
     // Per-item-type averages stay in the array layout path until rows are measured.
     private estimatedSize: number;
@@ -169,14 +167,6 @@ export class PrefixLayoutStore {
         }
     }
 
-    getCachedCount() {
-        return this.cachedCount;
-    }
-
-    getCachedSizeTotal() {
-        return this.cachedSizeTotal;
-    }
-
     setCachedSize(index: number, size: number) {
         this.assertIndex(index);
         if (this.sizeKinds[index] !== SIZE_MEASURED) {
@@ -184,13 +174,9 @@ export class PrefixLayoutStore {
             const previousKind = this.sizeKinds[index];
             const previousSize = this.knownSizes[index];
             if (previousKind === SIZE_UNKNOWN) {
-                this.cachedCount++;
                 this.knownCountTree.add(index, 1);
-            } else {
-                this.cachedSizeTotal -= previousSize;
             }
 
-            this.cachedSizeTotal += normalizedSize;
             this.sizeKinds[index] = SIZE_CACHED;
             this.knownSizes[index] = normalizedSize;
             this.knownSizeTree.add(index, normalizedSize - previousSize);
@@ -204,8 +190,6 @@ export class PrefixLayoutStore {
         const previousSize = this.knownSizes[index];
 
         if (previousKind === SIZE_CACHED) {
-            this.cachedCount--;
-            this.cachedSizeTotal -= previousSize;
             this.measuredCount++;
             this.measuredSizeTotal += normalizedSize;
         } else if (previousKind === SIZE_MEASURED) {
@@ -222,8 +206,6 @@ export class PrefixLayoutStore {
     }
 
     private clearSizeArrays() {
-        this.cachedCount = 0;
-        this.cachedSizeTotal = 0;
         this.knownSizes.fill(0);
         this.measuredCount = 0;
         this.measuredSizeTotal = 0;
@@ -231,8 +213,6 @@ export class PrefixLayoutStore {
     }
 
     private syncTreesAndTotalsFromArrays() {
-        this.cachedCount = 0;
-        this.cachedSizeTotal = 0;
         this.measuredCount = 0;
         this.measuredSizeTotal = 0;
 
@@ -245,9 +225,6 @@ export class PrefixLayoutStore {
                 if (sizeKind === SIZE_MEASURED) {
                     this.measuredCount++;
                     this.measuredSizeTotal += size;
-                } else {
-                    this.cachedCount++;
-                    this.cachedSizeTotal += size;
                 }
             }
         }

@@ -5,7 +5,7 @@ import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
-import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
+import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import { armAppScrollRearm, interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";

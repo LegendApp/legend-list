@@ -303,7 +303,6 @@ describe("prefix layout store lifecycle", () => {
         const store = rebuildPrefixLayoutStoreExact(ctx);
 
         expect(store?.getMeasuredCount()).toBe(0);
-        expect(store?.getCachedCount()).toBe(2);
         expect(store?.getEstimatedSize()).toBe((40 + 100 + 80) / 3);
         expect(store?.getSize(0)).toBe(40);
         expect(store?.getSize(1)).toBe((40 + 100 + 80) / 3);
@@ -338,7 +337,6 @@ describe("prefix layout store lifecycle", () => {
 
         expect(store?.getEstimatedSize()).toBe(68);
         expect(store?.getMeasuredCount()).toBe(0);
-        expect(store?.getCachedCount()).toBe(30);
         expect(store?.getSize(0)).toBe(300);
         expect(store?.getSize(29)).toBe(60);
         expect(store?.getOffset(20)).toBe(1440);

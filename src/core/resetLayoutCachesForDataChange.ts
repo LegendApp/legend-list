@@ -1,4 +1,4 @@
-import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
+import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import { resetPrefixLayoutStoreEstimateFlushState } from "@/core/prefixLayoutStoreLifecycle";
 import type { InternalState } from "@/types.internal";
 

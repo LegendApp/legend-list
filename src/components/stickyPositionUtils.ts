@@ -1,4 +1,4 @@
-import { createLayoutEngine } from "@/core/LayoutEngine";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import type { StateContext } from "@/state/state";
 
 export function getStickyPushLimit(ctx: StateContext, index: number, itemKey: string | undefined) {
@@ -22,7 +22,7 @@ export function getStickyPushLimit(ctx: StateContext, index: number, itemKey: st
         return undefined;
     }
 
-    const nextStickyPosition = createLayoutEngine(ctx).getOffset(nextStickyIndex);
+    const nextStickyPosition = getLayoutOffset(ctx, nextStickyIndex);
     if (nextStickyPosition === undefined) {
         return undefined;
     }
