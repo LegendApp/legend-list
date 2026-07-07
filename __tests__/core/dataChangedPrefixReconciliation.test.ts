@@ -102,7 +102,7 @@ function seedPreviousPrefixLayout(ctx: StateContext, data: TestItem[], sizesByKe
     state.idCache.length = 0;
     state.indexByKey.clear();
     state.positions.length = 0;
-    store?.clearMeasurements();
+    store?.clearKnownSizes();
     for (let index = 0; index < data.length; index++) {
         const key = data[index].id;
         const size = sizesByKey[key];

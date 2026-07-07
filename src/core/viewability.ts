@@ -1,4 +1,4 @@
-import { getLayoutOffset } from "@/core/layoutAccessors";
+import { getLayoutOffset, type LayoutAccess } from "@/core/layoutAccessors";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import type {
@@ -79,6 +79,7 @@ export function updateViewableItems(
     end: number,
     startBuffered = start,
     endBuffered = end,
+    layout?: LayoutAccess,
 ) {
     const state = ctx.state;
     const {
@@ -98,7 +99,7 @@ export function updateViewableItems(
             }, viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime);
             timeouts.add(timer);
         } else {
-            updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize);
+            updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize, layout);
         }
     }
 }
@@ -109,6 +110,7 @@ function updateViewableItemsWithConfig(
     state: InternalState,
     ctx: StateContext,
     scrollSize: number,
+    layout?: LayoutAccess,
 ) {
     const { viewabilityConfig, onViewableItemsChanged } = viewabilityConfigCallbackPair;
     const configId = viewabilityConfig.id!;
@@ -120,6 +122,7 @@ function updateViewableItemsWithConfig(
         const nextValue = computeViewability(
             state,
             ctx,
+            layout,
             viewabilityConfig,
             containerId,
             value.key,
@@ -142,6 +145,7 @@ function updateViewableItemsWithConfig(
                 !checkIsViewable(
                     state,
                     ctx,
+                    layout,
                     viewabilityConfig,
                     containerId,
                     viewToken.key,
@@ -163,7 +167,7 @@ function updateViewableItemsWithConfig(
         if (item) {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
-            if (checkIsViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, i)) {
+            if (checkIsViewable(state, ctx, layout, viewabilityConfig, containerId, key, scrollSize, item, i)) {
                 const viewToken: ViewToken = {
                     containerId,
                     index: i,
@@ -227,6 +231,7 @@ function areViewabilityAmountTokensEqual(prev: ViewAmountToken | undefined, next
 function computeViewability(
     state: InternalState,
     ctx: StateContext,
+    layout: LayoutAccess | undefined,
     viewabilityConfig: ViewabilityConfig,
     containerId: number,
     key: string,
@@ -243,7 +248,7 @@ function computeViewability(
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = scrollState - topPad;
-    const position = getLayoutOffset(ctx, index);
+    const position = layout ? layout.getOffset(index) : getLayoutOffset(ctx, index);
     const size = sizes.get(key)! || 0;
 
     if (position === undefined) {
@@ -310,6 +315,7 @@ function computeViewability(
 function checkIsViewable(
     state: InternalState,
     ctx: StateContext,
+    layout: LayoutAccess | undefined,
     viewabilityConfig: ViewabilityConfig,
     containerId: number,
     key: string,
@@ -319,7 +325,7 @@ function checkIsViewable(
 ) {
     let value = ctx.mapViewabilityAmountValues.get(containerId);
     if (!value || value.key !== key || value.index !== index) {
-        value = computeViewability(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, index);
+        value = computeViewability(state, ctx, layout, viewabilityConfig, containerId, key, scrollSize, item, index);
     }
 
     return value.isViewable;

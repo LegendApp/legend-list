@@ -2,7 +2,7 @@ import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import {
-    clearPrefixLayoutStoreMeasurements,
+    clearPrefixLayoutStoreKnownSizes,
     rebuildPrefixLayoutStoreExact,
     syncPrefixLayoutStoreTotalSize,
 } from "@/core/prefixLayoutStoreLifecycle";
@@ -193,7 +193,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }
-        clearPrefixLayoutStoreMeasurements(ctx);
+        clearPrefixLayoutStoreKnownSizes(ctx);
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
 

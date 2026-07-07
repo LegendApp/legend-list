@@ -1,5 +1,5 @@
 import { clearArrayLayoutCache } from "@/core/arrayLayout";
-import { resetPrefixLayoutStoreEstimateFlushState } from "@/core/prefixLayoutStoreLifecycle";
+import { resetPrefixLayoutStoreRuntimeState } from "@/core/prefixLayoutStoreLifecycle";
 import type { InternalState } from "@/types.internal";
 
 export function resetLayoutCachesForDataChange(
@@ -10,7 +10,7 @@ export function resetLayoutCachesForDataChange(
     state.idCache.length = 0;
     clearArrayLayoutCache(state, { includeColumns: true });
     if (options?.includePrefixMeasurements !== false) {
-        state.layoutStoreRuntime?.store.clearMeasurements();
-        resetPrefixLayoutStoreEstimateFlushState(state);
+        state.layoutStoreRuntime?.store.clearKnownSizes();
+        resetPrefixLayoutStoreRuntimeState(state);
     }
 }

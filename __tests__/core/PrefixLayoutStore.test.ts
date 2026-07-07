@@ -186,7 +186,7 @@ describe("PrefixLayoutStore", () => {
         expect(store.getTotalSize()).toBe(110);
     });
 
-    it("clears measurements without changing length or estimate", () => {
+    it("clears known sizes without changing length or estimate", () => {
         const store = new PrefixLayoutStore(3, 100);
 
         store.rebuildSizes([
@@ -194,7 +194,7 @@ describe("PrefixLayoutStore", () => {
             { index: 1, size: 60, type: "cached" },
             { index: 2, size: 75, type: "measured" },
         ]);
-        store.clearMeasurements();
+        store.clearKnownSizes();
 
         expect(store.length).toBe(3);
         expect(store.getEstimatedSize()).toBe(100);
