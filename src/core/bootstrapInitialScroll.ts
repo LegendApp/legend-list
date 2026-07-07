@@ -9,7 +9,7 @@ import type { InternalState } from "@/types.internal";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
-import { getItemSize, getKnownOrFixedItemSize } from "@/utils/getItemSize";
+import { getKnownOrFixedItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { getStylePaddingEnd } from "@/utils/rtl";
 
@@ -894,10 +894,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     const visibleIndices = getBootstrapRevealVisibleIndices({
         dataLength: data.length,
         getPosition: (index) => getLayoutOffset(ctx, index),
-        getSize: (index) =>
-            getKnownOrFixedItemSize(ctx, index) ??
-            getLayoutSize(ctx, index) ??
-            getItemSize(ctx, getId(state, index), index, data[index]),
+        getSize: (index) => getKnownOrFixedItemSize(ctx, index) ?? getLayoutSize(ctx, index),
         offset: resolvedOffset,
         scrollLength: state.scrollLength,
         startIndex:

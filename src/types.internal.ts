@@ -172,7 +172,6 @@ export interface InternalState {
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
-    disablePrefixLayoutStoreAfterKeylessDataChange?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     edgeReachedGate?: "closed" | "prepared";
     endBuffered: number;
