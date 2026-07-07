@@ -12,6 +12,7 @@ import {
     materializePrefixLayoutStoreRange,
     rebuildPrefixLayoutStoreExact,
     reconcilePrefixDataChange,
+    syncActiveRowLayoutStoreSpans,
     syncPrefixLayoutStoreLayoutState,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
@@ -457,6 +458,9 @@ export function calculateItemsInView(
             (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
         if ((didDataChange || isInitialLayout) && state.isFirst) {
+            syncPrefixLayoutStoreLayoutState(ctx);
+        }
+        if (syncActiveRowLayoutStoreSpans(ctx)) {
             syncPrefixLayoutStoreLayoutState(ctx);
         }
 
