@@ -10,11 +10,6 @@ export interface PrefixLayoutStoreSizeEntry {
     type: "cached" | "measured";
 }
 
-interface PrefixLayoutStoreIndexRange {
-    end: number;
-    start: number;
-}
-
 export class PrefixLayoutStore {
     // Prefix mode intentionally uses one scalar estimate for all unmeasured rows.
     // Per-item-type averages stay in the array layout path until rows are measured.
@@ -56,8 +51,8 @@ export class PrefixLayoutStore {
         return low < this.length ? low : undefined;
     }
 
-    findIndexRangeAtOffsets(startOffset: number, endOffset: number): PrefixLayoutStoreIndexRange | undefined {
-        let range: PrefixLayoutStoreIndexRange | undefined;
+    findIndexRangeAtOffsets(startOffset: number, endOffset: number): { end: number; start: number } | undefined {
+        let range: { end: number; start: number } | undefined;
         if (this.length > 0) {
             const start = this.findIndexAtOffset(startOffset) ?? this.length - 1;
             const end = this.findIndexAtOffset(endOffset) ?? this.length - 1;
@@ -168,22 +163,6 @@ export class PrefixLayoutStore {
             this.knownSizes.set(previousSizes.subarray(0, copyLength));
             this.sizeKinds.set(previousKinds.subarray(0, copyLength));
             this.syncTreesAndTotalsFromArrays();
-        }
-    }
-
-    setCachedSize(index: number, size: number) {
-        this.assertIndex(index);
-        if (this.sizeKinds[index] !== SIZE_MEASURED) {
-            const normalizedSize = normalizeSize(size);
-            const previousKind = this.sizeKinds[index];
-            const previousSize = this.knownSizes[index];
-            if (previousKind === SIZE_UNKNOWN) {
-                this.knownCountTree.add(index, 1);
-            }
-
-            this.sizeKinds[index] = SIZE_CACHED;
-            this.knownSizes[index] = normalizedSize;
-            this.knownSizeTree.add(index, normalizedSize - previousSize);
         }
     }
 
