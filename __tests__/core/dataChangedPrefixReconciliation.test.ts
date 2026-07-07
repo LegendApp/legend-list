@@ -1,7 +1,7 @@
+import * as updateItemPositionsModule from "@/core/arrayLayout";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { reconcilePrefixDataChange, syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
-import * as updateItemPositionsModule from "@/core/updateItemPositions";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";
@@ -675,14 +675,9 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             );
 
-            const result = reconcilePrefixDataChange(ctx);
+            const didReconcile = reconcilePrefixDataChange(ctx);
 
-            expect(result).toMatchObject({
-                cachedSizeCount: 1,
-                fixedSizeCount: 2,
-                knownSizeCount: 1,
-                reconciled: true,
-            });
+            expect(didReconcile).toBe(true);
             expect(ctx.state.indexByKey).toEqual(
                 new Map([
                     ["a", 0],
@@ -696,6 +691,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.sizesKnown.get("a")).toBe(20);
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
             expect(ctx.state.sizesKnown.get("c")).toBe(30);
+            expect(ctx.state.sizes.get("d")).toBe(90);
             expect(countLayoutValues(ctx.state.positions)).toBe(0);
         });
 
@@ -708,25 +704,21 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             });
 
-            const result = reconcilePrefixDataChange(ctx);
+            const didReconcile = reconcilePrefixDataChange(ctx);
 
-            expect(result).toMatchObject({
-                knownSizeCount: 2,
-                reconciled: true,
-            });
+            expect(didReconcile).toBe(true);
             expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(30);
             expect(ctx.state.layoutStore?.getTotalSize()).toBe(120);
         });
 
-        it("reports duplicate keys so callers can use the legacy fallback", () => {
+        it("returns false for duplicate keys so callers can use the legacy fallback", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "a" }], {
                 estimatedItemSize: 50,
             });
 
-            const result = reconcilePrefixDataChange(ctx);
+            const didReconcile = reconcilePrefixDataChange(ctx);
 
-            expect(result.reconciled).toBe(false);
-            expect(result.duplicateKey).toBe("a");
+            expect(didReconcile).toBe(false);
             expect(ctx.state.indexByKey.get("a")).toBe(0);
         });
 
@@ -739,14 +731,9 @@ describe("dataChanged prefix reconciliation", () => {
             ctx.state.sizes = sizes;
             ctx.state.sizesKnown = sizesKnown;
 
-            const result = reconcilePrefixDataChange(ctx);
+            const didReconcile = reconcilePrefixDataChange(ctx);
 
-            expect(result).toMatchObject({
-                cachedSizeCount: 0,
-                fixedSizeCount: 0,
-                knownSizeCount: 0,
-                reconciled: true,
-            });
+            expect(didReconcile).toBe(true);
             expect(sizes.getCount).toBe(0);
             expect(sizesKnown.getCount).toBe(0);
             expect(ctx.state.layoutStore?.getTotalSize()).toBe(120);

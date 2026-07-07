@@ -1,5 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { getLayoutOffset, syncLayoutItemTotalSize } from "@/core/layoutAccessors";
+import { getLayoutOffset } from "@/core/layoutAccessors";
+import { syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -13,7 +14,7 @@ export function updateTotalSize(ctx: StateContext) {
 
     if (data.length === 0) {
         addTotalSize(ctx, null, 0);
-    } else if (syncLayoutItemTotalSize(ctx)) {
+    } else if (syncPrefixLayoutStoreTotalSize(ctx)) {
         return;
     } else {
         const lastIndex = data.length - 1;

@@ -1,4 +1,5 @@
 import { getStickyPushLimit } from "@/components/stickyPositionUtils";
+import * as updateItemPositionsModule from "@/core/arrayLayout";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import * as doScrollToModule from "@/core/doScrollTo";
 import { prepareMVCP } from "@/core/mvcp";
@@ -9,7 +10,6 @@ import {
 } from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
-import * as updateItemPositionsModule from "@/core/updateItemPositions";
 import * as updateScrollModule from "@/core/updateScroll";
 import { peek$, set$ } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";

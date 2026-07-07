@@ -35,7 +35,7 @@ export function clearArrayLayoutCache(state: InternalState, options?: { includeC
     }
 }
 
-export function updateArrayItemPositions(
+export function updateItemPositions(
     ctx: StateContext,
     dataChanged: boolean | undefined,
     {

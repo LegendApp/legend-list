@@ -1,5 +1,6 @@
 import { Platform } from "@/platform/Platform";
-import { afterEach, beforeEach, describe, expect, it, jest, mock, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import * as updateItemPositionsModule from "../../src/core/arrayLayout";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { checkResetContainers } from "../../src/core/checkResetContainers";
@@ -10,7 +11,6 @@ import {
     syncPrefixLayoutStoreStructure,
 } from "../../src/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "../../src/core/scrollTo";
-import * as updateItemPositionsModule from "../../src/core/updateItemPositions";
 import { updateScroll } from "../../src/core/updateScroll";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";

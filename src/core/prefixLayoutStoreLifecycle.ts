@@ -39,14 +39,6 @@ interface PrefixLayoutStoreExactRebuildInput {
     previous: PrefixLayoutStoreExactRebuildProps;
 }
 
-export interface PrefixDataChangeReconciliationResult {
-    cachedSizeCount: number;
-    duplicateKey?: string;
-    fixedSizeCount: number;
-    knownSizeCount: number;
-    reconciled: boolean;
-}
-
 export interface PrefixDataChangeReconciliationOptions {
     didKeyExtractorChange?: boolean;
     previousIdCache?: readonly (string | undefined)[];
@@ -77,22 +69,19 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
     let range: { end: number; start: number } | undefined;
 
     if (store) {
-        const layouts = store.materializeRange(startIndex, endIndex);
-        for (const layout of layouts) {
-            const id = state.idCache[layout.index] ?? getId(state, layout.index);
+        store.forEachLayout(startIndex, endIndex, (index, offset, size) => {
+            const id = state.idCache[index] ?? getId(state, index);
             if (ctx.positionListeners.has(id)) {
-                notifyPrefixLayoutStorePosition(ctx, id, layout.offset);
+                notifyPrefixLayoutStorePosition(ctx, id, offset);
             }
-            state.indexByKey.set(id, layout.index);
-            state.sizes.set(id, layout.size);
-        }
+            state.indexByKey.set(id, index);
+            state.sizes.set(id, size);
 
-        if (layouts.length > 0) {
             range = {
-                end: layouts[layouts.length - 1].index,
-                start: layouts[0].index,
+                end: index,
+                start: range?.start ?? index,
             };
-        }
+        });
     }
 
     return range;
@@ -345,18 +334,10 @@ function getPrefixLayoutStoreSeedEstimate(input: {
           : fallbackSize;
 }
 
-export function reconcilePrefixDataChange(
-    ctx: StateContext,
-    options?: PrefixDataChangeReconciliationOptions,
-): PrefixDataChangeReconciliationResult {
+export function reconcilePrefixDataChange(ctx: StateContext, options?: PrefixDataChangeReconciliationOptions): boolean {
     const state = ctx.state;
     const store = getActivePrefixLayoutStore(ctx);
-    const result: PrefixDataChangeReconciliationResult = {
-        cachedSizeCount: 0,
-        fixedSizeCount: 0,
-        knownSizeCount: 0,
-        reconciled: false,
-    };
+    let didReconcile = false;
 
     if (store) {
         const {
@@ -382,6 +363,7 @@ export function reconcilePrefixDataChange(
         let totalSeedSize = 0;
         let measuredCount = 0;
         let measuredTotalSize = 0;
+        let hasDuplicateKey = false;
 
         for (let index = 0; index < data.length; index++) {
             const item = data[index];
@@ -399,7 +381,7 @@ export function reconcilePrefixDataChange(
             state.idCache[index] = key;
 
             if (state.indexByKey.has(key)) {
-                result.duplicateKey = key;
+                hasDuplicateKey = true;
                 break;
             }
 
@@ -411,7 +393,6 @@ export function reconcilePrefixDataChange(
                 sizeEntries.push({ index, size: knownSize, type: "measured" });
                 measuredCount++;
                 measuredTotalSize += knownSize;
-                result.knownSizeCount++;
             } else {
                 let didSeedSize = false;
                 if (fixedLayoutSize !== undefined) {
@@ -420,20 +401,18 @@ export function reconcilePrefixDataChange(
                     sizeEntries.push({ index, size: fixedLayoutSize, type: "measured" });
                     measuredCount++;
                     measuredTotalSize += fixedLayoutSize;
-                    result.fixedSizeCount++;
                     didSeedSize = true;
                 }
 
                 const cachedSize = !didSeedSize && canSeedCachedSizes ? state.sizes.get(key) : undefined;
                 if (cachedSize !== undefined) {
                     sizeEntries.push({ index, size: cachedSize, type: "cached" });
-                    result.cachedSizeCount++;
                 }
             }
         }
 
-        result.reconciled = result.duplicateKey === undefined;
-        if (result.reconciled) {
+        didReconcile = !hasDuplicateKey;
+        if (didReconcile) {
             store.flushEstimatedSize(
                 getPrefixLayoutStoreSeedEstimate({
                     dataLength: data.length,
@@ -447,7 +426,7 @@ export function reconcilePrefixDataChange(
         }
     }
 
-    return result;
+    return didReconcile;
 }
 
 export function shouldRebuildPrefixLayoutStoreExact(input: PrefixLayoutStoreExactRebuildInput) {
