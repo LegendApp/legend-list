@@ -1,7 +1,7 @@
 import type { Key } from "react";
 import * as React from "react";
 
-import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
+import type { PrefixLayoutRuntime } from "@/core/PrefixLayoutRuntime";
 import type { ScheduledWork } from "@/core/ScheduledWork";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type {
@@ -174,7 +174,6 @@ export interface InternalState {
     didContainersLayout?: boolean;
     disablePrefixLayoutStoreAfterKeylessDataChange?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
-    didFlushInitialLayoutStoreEstimate?: boolean;
     edgeReachedGate?: "closed" | "prepared";
     endBuffered: number;
     endNoBuffer: number | null;
@@ -197,7 +196,6 @@ export interface InternalState {
     isFirst?: boolean;
     isStartReached: boolean | null;
     lastBatchingAction: number;
-    lastFlushedLayoutStoreEstimateMeasurementCount?: number;
     lastLayout: LayoutRectangle | undefined;
     lastFirstVisibleItemCallback?: { index: number; key: string };
     lastNativeScroll?: number;
@@ -234,13 +232,10 @@ export interface InternalState {
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     runPendingScrollToEnd?: () => void;
-    layoutStore?: PrefixLayoutStore;
-    layoutStorePositionListenerOffsets?: Map<string, number>;
-    layoutStorePropEstimatedSize?: number;
+    layoutStoreRuntime?: PrefixLayoutRuntime;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
-    queuedLayoutStoreEstimateFlush?: number;
     queuedInitialLayout?: boolean | undefined;
     reprocessCurrentScroll?: () => void;
     refScroller: React.RefObject<LegendListScrollerRef | null>;

@@ -475,7 +475,7 @@ describe("LegendList props behavior", () => {
         rendered.rerender(renderList(80));
         await flushAsync();
 
-        expect(ctx.state.layoutStore?.getTotalSize()).toBe(240);
+        expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(240);
         expect(ctx.state.totalSize).toBe(240);
         expect(ctx.values.get("totalSize")).toBe(240);
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 160]);
@@ -500,18 +500,18 @@ describe("LegendList props behavior", () => {
         const rendered = render(renderList(initialData));
         const ctx = await getContextFromRender();
 
-        expect(ctx.state.layoutStore).toBeDefined();
+        expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
 
         rendered.rerender(renderList(nextData));
         await flushAsync();
 
         expect(ctx.state.disablePrefixLayoutStoreAfterKeylessDataChange).toBe(true);
-        expect(ctx.state.layoutStore).toBeUndefined();
+        expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
 
         rendered.rerender(renderList(nextData, 80));
         await flushAsync();
 
-        expect(ctx.state.layoutStore).toBeUndefined();
+        expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
 
         rendered.unmount();
     });
