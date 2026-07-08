@@ -160,6 +160,8 @@ describe("layout store lifecycle", () => {
 
     it("seeds newly created stores from known measurements", () => {
         const ctx = createLayoutStoreContext(4);
+        ctx.state.idCache[0] = "item-0";
+        ctx.state.idCache[1] = "item-1";
         ctx.state.sizesKnown.set("item-0", 40);
         ctx.state.sizesKnown.set("item-1", 60);
 
@@ -229,6 +231,8 @@ describe("layout store lifecycle", () => {
 
     it("uses measured known sizes as the exact rebuild seed estimate", () => {
         const ctx = createLayoutStoreContext(5);
+        ctx.state.idCache[0] = "item-0";
+        ctx.state.idCache[1] = "item-1";
         ctx.state.sizesKnown.set("item-0", 40);
         ctx.state.sizesKnown.set("item-1", 60);
         ctx.state.sizes.set("item-0", 40);

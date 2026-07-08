@@ -123,42 +123,40 @@ describe("dataChanged prefix reconciliation", () => {
             expect(runDataChange(ctx)).toBe(240);
         });
 
-        it("preserves all known sizes across append, prepend, remove, and reorder shapes", () => {
-            const cases = [
-                {
-                    data: [{ id: "a" }, { id: "b" }, { id: "c" }],
-                    expected: 180,
-                    name: "append",
+        it("leaves unmaterialized known sizes estimate-backed instead of globally placing them", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
+                estimatedItemSize: 25,
+                knownSizes: {
+                    a: 40,
+                    b: 80,
+                    c: 60,
                 },
-                {
-                    data: [{ id: "c" }, { id: "a" }, { id: "b" }],
-                    expected: 180,
-                    name: "prepend/reorder",
-                },
-                {
-                    data: [{ id: "a" }, { id: "c" }],
-                    expected: 100,
-                    name: "remove",
-                },
-                {
-                    data: [{ id: "c" }, { id: "a" }],
-                    expected: 100,
-                    name: "remove/reorder",
-                },
-            ];
+            });
 
-            for (const testCase of cases) {
-                const ctx = createDataChangeContext(testCase.data, {
-                    estimatedItemSize: 25,
-                    knownSizes: {
-                        a: 40,
-                        b: 80,
-                        c: 60,
-                    },
-                });
+            expect(runDataChange(ctx)).toBe(75);
+            expect(ctx.state.indexByKey.size).toBe(3);
+        });
 
-                expect(runDataChange(ctx), testCase.name).toBe(testCase.expected);
-            }
+        it("preserves materialized known sizes across append shapes", () => {
+            const previousData = [{ id: "a" }, { id: "b" }];
+            const nextData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const ctx = createDataChangeContext(nextData, {
+                estimatedItemSize: 25,
+                knownSizes: {
+                    a: 40,
+                    b: 80,
+                    c: 60,
+                },
+            });
+            seedPreviousPrefixLayout(ctx, previousData, {
+                a: 40,
+                b: 80,
+            });
+
+            expect(runDataChange(ctx)).toBe(180);
+            expect(ctx.state.indexByKey.get("a")).toBe(0);
+            expect(ctx.state.indexByKey.get("b")).toBe(1);
+            expect(ctx.state.indexByKey.get("c")).toBe(2);
         });
 
         it("combines known sizes with estimates for unknown rows", () => {
@@ -182,7 +180,7 @@ describe("dataChanged prefix reconciliation", () => {
                 estimatedItemSize: 100,
             });
 
-            expect(runDataChange(ctx)).toBe(100);
+            expect(runDataChange(ctx)).toBe(200);
             expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
         });
 
@@ -198,7 +196,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.sizesKnown.get("c")).toBeUndefined();
         });
 
-        it("does not let removed known keys contribute to total size", () => {
+        it("does not let unmaterialized removed known keys contribute to total size", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "c" }], {
                 estimatedItemSize: 100,
                 knownSizes: {
@@ -208,17 +206,24 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             });
 
-            expect(runDataChange(ctx)).toBe(100);
+            expect(runDataChange(ctx)).toBe(200);
         });
 
-        it("moves known sizes with keys after reorder", () => {
-            const ctx = createDataChangeContext([{ id: "c" }, { id: "a" }, { id: "b" }], {
+        it("moves materialized known sizes with keys after reorder", () => {
+            const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const nextData = [{ id: "c" }, { id: "a" }, { id: "b" }];
+            const ctx = createDataChangeContext(nextData, {
                 estimatedItemSize: 100,
                 knownSizes: {
                     a: 40,
                     b: 80,
                     c: 60,
                 },
+            });
+            seedPreviousPrefixLayout(ctx, previousData, {
+                a: 40,
+                b: 80,
+                c: 60,
             });
 
             runDataChange(ctx);
@@ -242,8 +247,8 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             });
 
-            expect(runDataChange(ctx)).toBe(240);
-            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(60);
+            expect(runDataChange(ctx)).toBe(100);
+            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(25);
         });
 
         it("uses the updated estimate for unknown rows without double-counting known rows", () => {
@@ -257,7 +262,7 @@ describe("dataChanged prefix reconciliation", () => {
             ctx.state.props.estimatedItemSize = 70;
             syncLayoutStoreStructure(ctx);
 
-            expect(runDataChange(ctx)).toBe(150);
+            expect(runDataChange(ctx)).toBe(210);
         });
     });
 
@@ -394,6 +399,7 @@ describe("dataChanged prefix reconciliation", () => {
                     a: 123,
                 },
             });
+            ctx.state.idCache[0] = "a";
 
             runDataChange(ctx);
 
@@ -464,6 +470,7 @@ describe("dataChanged prefix reconciliation", () => {
 
     describe("dense position regression coverage", () => {
         it("preserves appended known-size totals through store reconciliation", () => {
+            const previousData = [{ id: "a" }, { id: "b" }];
             const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
                 estimatedItemSize: 25,
                 knownSizes: {
@@ -471,6 +478,10 @@ describe("dataChanged prefix reconciliation", () => {
                     b: 80,
                     c: 60,
                 },
+            });
+            seedPreviousPrefixLayout(ctx, previousData, {
+                a: 40,
+                b: 80,
             });
 
             try {
@@ -523,19 +534,25 @@ describe("dataChanged prefix reconciliation", () => {
             try {
                 runDataChange(ctx);
 
-                expect(peek$(ctx, "snapToOffsets")).toEqual([0, 100]);
+                expect(peek$(ctx, "snapToOffsets")).toEqual([0, 200]);
                 expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             } finally {
             }
         });
 
         it("resets duplicate-key data changes to fresh prefix estimates", () => {
+            const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
             const ctx = createDataChangeContext([{ id: "a" }, { id: "a" }, { id: "b" }], {
                 estimatedItemSize: 50,
                 knownSizes: {
                     a: 25,
                     b: 75,
                 },
+            });
+            seedPreviousPrefixLayout(ctx, previousData, {
+                a: 25,
+                b: 75,
+                c: 50,
             });
 
             try {
@@ -581,7 +598,7 @@ describe("dataChanged prefix reconciliation", () => {
                 await new Promise((resolve) => setTimeout(resolve, 0));
 
                 expect(countLayoutValues(ctx.state, "positions")).toBe(0);
-                expect(ctx.state.totalSize).toBe(220);
+                expect(ctx.state.totalSize).toBe(150);
                 expect(scrollToEnd).toHaveBeenCalledWith({ animated: false });
                 expect(ctx.state.isEndReached).not.toBe(false);
             } finally {
@@ -682,7 +699,7 @@ describe("dataChanged prefix reconciliation", () => {
     });
 
     describe("prefix reconciliation helper", () => {
-        it("rebuilds identity and seeds known and cached sizes without probing fixed sizes", () => {
+        it("rebuilds sparse materialized identity and seeds known and cached sizes without probing fixed sizes", () => {
             const ctx = createDataChangeContext(
                 [{ fixed: 20, id: "a" }, { id: "b" }, { fixed: 30, id: "c" }, { id: "d" }],
                 {
@@ -698,15 +715,15 @@ describe("dataChanged prefix reconciliation", () => {
             );
             const getFixedItemSize = mock((item: TestItem) => item.fixed);
             ctx.state.props.getFixedItemSize = getFixedItemSize;
+            ctx.state.idCache[1] = "b";
+            ctx.state.idCache[3] = "d";
 
             const didReconcile = reconcileLayoutStoreDataChange(ctx);
 
             expect(didReconcile).toBe(true);
             expect(ctx.state.indexByKey).toEqual(
                 new Map([
-                    ["a", 0],
                     ["b", 1],
-                    ["c", 2],
                     ["d", 3],
                 ]),
             );
@@ -728,6 +745,8 @@ describe("dataChanged prefix reconciliation", () => {
                     b: 40,
                 },
             });
+            ctx.state.idCache[0] = "a";
+            ctx.state.idCache[1] = "b";
 
             const didReconcile = reconcileLayoutStoreDataChange(ctx);
 
@@ -736,10 +755,40 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(120);
         });
 
+        it("preserves shifted materialized keys after front deletion without duplicate reset", () => {
+            const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const ctx = createDataChangeContext([{ id: "b" }, { id: "c" }], {
+                estimatedItemSize: 50,
+                knownSizes: {
+                    a: 30,
+                    b: 70,
+                    c: 90,
+                },
+            });
+            ctx.state.previousData = previousData;
+            ctx.state.idCache[0] = "a";
+            ctx.state.idCache[1] = "b";
+            ctx.state.idCache[2] = "c";
+
+            const didReconcile = reconcileLayoutStoreDataChange(ctx);
+
+            expect(didReconcile).toBe(true);
+            expect(ctx.state.indexByKey).toEqual(
+                new Map([
+                    ["b", 0],
+                    ["c", 1],
+                ]),
+            );
+            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(2);
+            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(160);
+        });
+
         it("returns false for duplicate keys so callers can reset prefix preservation", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "a" }], {
                 estimatedItemSize: 50,
             });
+            ctx.state.idCache[0] = "old-a";
+            ctx.state.idCache[1] = "old-b";
 
             const didReconcile = reconcileLayoutStoreDataChange(ctx);
 
@@ -762,6 +811,30 @@ describe("dataChanged prefix reconciliation", () => {
             expect(sizes.getCount).toBe(0);
             expect(sizesKnown.getCount).toBe(0);
             expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(120);
+        });
+
+        it("reconciles million-item data from sparse materialized identities", () => {
+            const data = Array.from({ length: 1_000_000 }, (_, index) => ({ id: `item-${index}` }));
+            const ctx = createDataChangeContext(data, {
+                estimatedItemSize: 10,
+                knownSizes: {
+                    "item-999999": 20,
+                },
+            });
+            let keyExtractorCalls = 0;
+            ctx.state.props.keyExtractor = (item: TestItem) => {
+                keyExtractorCalls++;
+                return item.id;
+            };
+            ctx.state.idCache[999_999] = "item-999999";
+
+            const didReconcile = reconcileLayoutStoreDataChange(ctx);
+
+            expect(didReconcile).toBe(true);
+            expect(keyExtractorCalls).toBe(1);
+            expect(ctx.state.indexByKey.get("item-999999")).toBe(999_999);
+            expect(ctx.state.indexByKey.size).toBe(1);
+            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(10_000_010);
         });
     });
 });

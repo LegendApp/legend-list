@@ -1,5 +1,16 @@
 import type { InternalState } from "@/types.internal";
 
+function getMaterializedIdCacheIndices(idCache: InternalState["idCache"]) {
+    const indices: number[] = [];
+    for (const key of Object.keys(idCache)) {
+        const index = Number(key);
+        if (Number.isInteger(index)) {
+            indices.push(index);
+        }
+    }
+    return indices;
+}
+
 export function checkStructuralDataChange(
     state: InternalState,
     dataProp: readonly unknown[],
@@ -16,8 +27,16 @@ export function checkStructuralDataChange(
         props: { itemsAreEqual, keyExtractor },
     } = state;
     let byIndex: Array<0 | 1 | 2 | undefined> | undefined;
+    const materializedIndices = getMaterializedIdCacheIndices(idCache);
 
-    for (let i = 0; i < dataProp.length; i++) {
+    if (materializedIndices.length === 0) {
+        return true;
+    }
+
+    for (const i of materializedIndices) {
+        if (i >= dataProp.length) {
+            continue;
+        }
         if (dataProp[i] === previousData[i]) {
             continue;
         }
