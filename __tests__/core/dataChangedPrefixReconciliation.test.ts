@@ -186,16 +186,16 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
         });
 
-        it("seeds fixed item sizes and estimates only rows without a fixed size", () => {
+        it("keeps fixed item sizes estimate-backed until rows are materialized", () => {
             const ctx = createDataChangeContext([{ fixed: 10, id: "a" }, { id: "b" }, { fixed: 30, id: "c" }], {
                 estimatedItemSize: 50,
                 fixedSizes: true,
             });
 
-            expect(runDataChange(ctx)).toBe(60);
-            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(20);
-            expect(ctx.state.sizesKnown.get("a")).toBe(10);
-            expect(ctx.state.sizesKnown.get("c")).toBe(30);
+            expect(runDataChange(ctx)).toBe(150);
+            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(50);
+            expect(ctx.state.sizesKnown.get("a")).toBeUndefined();
+            expect(ctx.state.sizesKnown.get("c")).toBeUndefined();
         });
 
         it("does not let removed known keys contribute to total size", () => {
@@ -232,7 +232,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
         });
 
-        it("uses estimates or fixed sizes for inserted and prepended new keys", () => {
+        it("uses estimates for inserted and prepended new keys until rows are materialized", () => {
             const ctx = createDataChangeContext([{ fixed: 15, id: "x" }, { id: "a" }, { id: "b" }, { id: "y" }], {
                 estimatedItemSize: 25,
                 fixedSizes: true,
@@ -242,8 +242,8 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             });
 
-            expect(runDataChange(ctx)).toBe(180);
-            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(45);
+            expect(runDataChange(ctx)).toBe(240);
+            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(60);
         });
 
         it("uses the updated estimate for unknown rows without double-counting known rows", () => {
@@ -682,7 +682,7 @@ describe("dataChanged prefix reconciliation", () => {
     });
 
     describe("prefix reconciliation helper", () => {
-        it("rebuilds identity and seeds known and fixed sizes without writing positions", () => {
+        it("rebuilds identity and seeds known and cached sizes without probing fixed sizes", () => {
             const ctx = createDataChangeContext(
                 [{ fixed: 20, id: "a" }, { id: "b" }, { fixed: 30, id: "c" }, { id: "d" }],
                 {
@@ -696,6 +696,8 @@ describe("dataChanged prefix reconciliation", () => {
                     },
                 },
             );
+            const getFixedItemSize = mock((item: TestItem) => item.fixed);
+            ctx.state.props.getFixedItemSize = getFixedItemSize;
 
             const didReconcile = reconcileLayoutStoreDataChange(ctx);
 
@@ -708,12 +710,13 @@ describe("dataChanged prefix reconciliation", () => {
                     ["d", 3],
                 ]),
             );
-            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(220);
-            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(3);
-            expect(ctx.state.sizesKnown.get("a")).toBe(20);
+            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(270);
+            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(1);
+            expect(ctx.state.sizesKnown.get("a")).toBeUndefined();
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
-            expect(ctx.state.sizesKnown.get("c")).toBe(30);
+            expect(ctx.state.sizesKnown.get("c")).toBeUndefined();
             expect(ctx.state.sizes.get("d")).toBe(90);
+            expect(getFixedItemSize).not.toHaveBeenCalled();
             expect(countLayoutValues(ctx.state, "positions")).toBe(0);
         });
 
