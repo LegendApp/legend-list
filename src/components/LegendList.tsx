@@ -705,7 +705,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
         restoreItemSizeEstimates(ctx, estimatedListSize?.[horizontal ? "height" : "width"], sizeCacheOwnerRef.current);
-        rebuildLayoutStoreExact(ctx);
+        if (state.initialScrollSession?.kind === "bootstrap" || snapToIndices?.length) {
+            rebuildLayoutStoreExact(ctx);
+        }
         syncLayoutStoreState(ctx);
     }
 
