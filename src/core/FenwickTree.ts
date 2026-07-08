@@ -75,6 +75,68 @@ export class FenwickTree {
         return this.totalValue;
     }
 
+    findFirstPrefixGreaterThan(offset: number) {
+        let index: number | undefined;
+        if (!Number.isNaN(offset)) {
+            index = FenwickTree.findFirstPrefixGreaterThanFromTrees(offset, this);
+        }
+        return index;
+    }
+
+    static findFirstCompositePrefixGreaterThan(
+        offset: number,
+        countTree: FenwickTree,
+        sizeTree: FenwickTree,
+        estimatedSize: number,
+    ) {
+        let index: number | undefined;
+        if (countTree.length !== sizeTree.length) {
+            throw new RangeError(
+                `FenwickTree composite lengths must match. Received ${countTree.length} and ${sizeTree.length}`,
+            );
+        }
+        if (!Number.isNaN(offset)) {
+            index = FenwickTree.findFirstPrefixGreaterThanFromTrees(offset, sizeTree, countTree, estimatedSize);
+        }
+        return index;
+    }
+
+    private static findFirstPrefixGreaterThanFromTrees(
+        offset: number,
+        sizeTree: FenwickTree,
+        countTree?: FenwickTree,
+        estimatedSize = 0,
+    ) {
+        let index = 0;
+        let knownCount = 0;
+        let knownSize = 0;
+        let bit = 1;
+
+        while (bit * 2 <= sizeTree.length) {
+            bit *= 2;
+        }
+
+        while (bit > 0) {
+            const nextIndex = index + bit;
+            if (nextIndex <= sizeTree.length) {
+                const nextKnownSize = knownSize + sizeTree.tree[nextIndex]!;
+                const nextKnownCount = knownCount + (countTree?.tree[nextIndex] ?? nextIndex - index);
+                const nextPrefixSize =
+                    countTree === undefined
+                        ? nextKnownSize
+                        : nextKnownSize + (nextIndex - nextKnownCount) * estimatedSize;
+                if (isLessThanOrEqualOffset(nextPrefixSize, offset)) {
+                    index = nextIndex;
+                    knownCount = nextKnownCount;
+                    knownSize = nextKnownSize;
+                }
+            }
+            bit >>= 1;
+        }
+
+        return index < sizeTree.length ? index : undefined;
+    }
+
     private getIndexError(index: number) {
         let error: string | undefined;
         if (!Number.isInteger(index) || index < 0 || index >= this.length) {
@@ -89,4 +151,13 @@ function normalizeLength(length: number) {
         throw new RangeError(`FenwickTree length must be a non-negative integer. Received ${length}`);
     }
     return length;
+}
+
+function isLessThanOrEqualOffset(prefixSize: number, offset: number) {
+    return (
+        prefixSize <= offset ||
+        (Number.isFinite(prefixSize) &&
+            Number.isFinite(offset) &&
+            Math.abs(prefixSize - offset) <= Number.EPSILON * Math.max(1, Math.abs(prefixSize), Math.abs(offset)) * 16)
+    );
 }

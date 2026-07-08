@@ -32,20 +32,12 @@ export class PrefixLayoutStore implements LayoutStore {
     }
 
     findIndexAtOffset(offset: number) {
-        let low = 0;
-        let high = this.length;
-
-        while (low < high) {
-            const mid = Math.floor((low + high) / 2);
-            const end = this.getOffset(mid) + this.getSize(mid);
-            if (end > offset) {
-                high = mid;
-            } else {
-                low = mid + 1;
-            }
-        }
-
-        return low < this.length ? low : undefined;
+        return FenwickTree.findFirstCompositePrefixGreaterThan(
+            offset,
+            this.knownCountTree,
+            this.knownSizeTree,
+            this.estimatedSize,
+        );
     }
 
     findIndexRangeAtOffsets(startOffset: number, endOffset: number): LayoutIndexRange | undefined {

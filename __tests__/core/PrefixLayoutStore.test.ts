@@ -3,6 +3,25 @@ import "../setup";
 
 import { PrefixLayoutStore } from "../../src/core/PrefixLayoutStore";
 
+function findFirstItemEndGreaterThan(sizes: number[], offset: number) {
+    let index: number | undefined;
+    if (!Number.isNaN(offset)) {
+        let end = 0;
+        for (let i = 0; i < sizes.length; i++) {
+            end += sizes[i]!;
+            if (end > offset) {
+                index = i;
+                break;
+            }
+        }
+    }
+    return index;
+}
+
+function nextRandom(seed: number) {
+    return (seed * 1664525 + 1013904223) >>> 0;
+}
+
 describe("PrefixLayoutStore", () => {
     it("uses aggregate estimates for initially unmeasured items", () => {
         const store = new PrefixLayoutStore(5, 80);
@@ -27,6 +46,100 @@ describe("PrefixLayoutStore", () => {
         expect(store.findIndexAtOffset(125)).toBe(2);
         expect(store.findIndexAtOffset(149.999)).toBe(2);
         expect(store.findIndexAtOffset(150)).toBeUndefined();
+    });
+
+    it("finds offsets through mixed cached, measured, and estimated rows", () => {
+        const store = new PrefixLayoutStore(6, 100);
+        const sizes = [100, 40, 100, 0, 150, 100];
+
+        store.replaceKnownSizeEntries([
+            { index: 1, size: 40, type: "cached" },
+            { index: 3, size: 0, type: "measured" },
+            { index: 4, size: 150, type: "measured" },
+        ]);
+
+        for (const offset of [
+            Number.NEGATIVE_INFINITY,
+            -1,
+            0,
+            99.999,
+            100,
+            139.999,
+            140,
+            239.999,
+            240,
+            389.999,
+            390,
+            489.999,
+            490,
+            Number.POSITIVE_INFINITY,
+            Number.NaN,
+        ]) {
+            expect(store.findIndexAtOffset(offset)).toBe(findFirstItemEndGreaterThan(sizes, offset));
+        }
+    });
+
+    it("updates lower-bound offset lookup when the estimate changes", () => {
+        const store = new PrefixLayoutStore(5, 100);
+
+        store.replaceKnownSizeEntries([
+            { index: 1, size: 50, type: "cached" },
+            { index: 3, size: 150, type: "measured" },
+        ]);
+        store.setEstimatedSize(80);
+
+        const sizes = [80, 50, 80, 150, 80];
+        for (const offset of [-1, 0, 79.999, 80, 129.999, 130, 209.999, 210, 359.999, 360, 439.999, 440]) {
+            expect(store.findIndexAtOffset(offset)).toBe(findFirstItemEndGreaterThan(sizes, offset));
+        }
+    });
+
+    it("matches naive lower-bound lookup across deterministic random layouts", () => {
+        let seed = 112233;
+
+        for (let length = 0; length < 64; length++) {
+            seed = nextRandom(seed);
+            const estimate = seed % 5 === 0 ? 0 : (seed % 20000) / 100;
+            const store = new PrefixLayoutStore(length, estimate);
+            const sizes = Array.from({ length }, () => estimate);
+            const entries: Array<{ index: number; size: number; type: "cached" | "measured" }> = [];
+
+            for (let index = 0; index < length; index++) {
+                seed = nextRandom(seed);
+                if (seed % 3 === 0) {
+                    seed = nextRandom(seed);
+                    const size = seed % 7 === 0 ? 0 : (seed % 20000) / 100;
+                    const type = seed % 2 === 0 ? "cached" : "measured";
+                    sizes[index] = size;
+                    entries.push({ index, size, type });
+                }
+            }
+
+            store.replaceKnownSizeEntries(entries);
+            const total = sizes.reduce((sum, size) => sum + size, 0);
+            const offsets = [
+                Number.NEGATIVE_INFINITY,
+                -1,
+                0,
+                0.001,
+                total / 2,
+                total - 0.001,
+                total,
+                total + 1,
+                Number.POSITIVE_INFINITY,
+                Number.NaN,
+            ];
+
+            for (const offset of offsets) {
+                expect(store.findIndexAtOffset(offset)).toBe(findFirstItemEndGreaterThan(sizes, offset));
+            }
+            let end = 0;
+            for (const size of sizes) {
+                end += size;
+                expect(store.findIndexAtOffset(end - 0.001)).toBe(findFirstItemEndGreaterThan(sizes, end - 0.001));
+                expect(store.findIndexAtOffset(end)).toBe(findFirstItemEndGreaterThan(sizes, end));
+            }
+        }
     });
 
     it("finds the item range intersecting an offset range", () => {
