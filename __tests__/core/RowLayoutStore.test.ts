@@ -3,6 +3,25 @@ import "../setup";
 
 import { RowLayoutStore } from "../../src/core/RowLayoutStore";
 
+function findFirstRowEndGreaterThan(rowHeights: number[], offset: number) {
+    let rowIndex: number | undefined;
+    if (!Number.isNaN(offset)) {
+        let end = 0;
+        for (let index = 0; index < rowHeights.length; index++) {
+            end += rowHeights[index]!;
+            if (end > offset) {
+                rowIndex = index;
+                break;
+            }
+        }
+    }
+    return rowIndex;
+}
+
+function nextRandom(seed: number) {
+    return (seed * 1664525 + 1013904223) >>> 0;
+}
+
 describe("RowLayoutStore", () => {
     it("packs fixed-column rows with estimated sizes", () => {
         const store = new RowLayoutStore({ estimatedSize: 100, length: 5, numColumns: 2 });
@@ -63,6 +82,93 @@ describe("RowLayoutStore", () => {
         expect(
             new RowLayoutStore({ estimatedSize: 100, length: 0, numColumns: 2 }).findIndexRangeAtOffsets(0, 10),
         ).toBeUndefined();
+    });
+
+    it("finds row ranges through zero-height and measured row heights", () => {
+        const store = new RowLayoutStore({ estimatedSize: 0, length: 6, numColumns: 2 });
+        const rowHeights = [0, 75, 25];
+        const rowRanges = [
+            { end: 1, start: 0 },
+            { end: 3, start: 2 },
+            { end: 5, start: 4 },
+        ];
+
+        store.setMeasuredSize(2, 75);
+        store.setMeasuredSize(3, 0);
+        store.setMeasuredSize(4, 25);
+
+        for (const offset of [
+            Number.NEGATIVE_INFINITY,
+            -1,
+            0,
+            74.999,
+            75,
+            99.999,
+            100,
+            Number.POSITIVE_INFINITY,
+            Number.NaN,
+        ]) {
+            const rowIndex = findFirstRowEndGreaterThan(rowHeights, offset) ?? rowRanges.length - 1;
+            expect(store.findIndexRangeAtOffsets(offset, offset)).toEqual(rowRanges[rowIndex]);
+        }
+    });
+
+    it("matches naive lower-bound row lookup across deterministic random layouts", () => {
+        let seed = 998877;
+
+        for (let length = 0; length < 64; length++) {
+            seed = nextRandom(seed);
+            const numColumns = (seed % 4) + 1;
+            seed = nextRandom(seed);
+            const estimatedSize = seed % 5 === 0 ? 0 : (seed % 20000) / 100;
+            const store = new RowLayoutStore({ estimatedSize, length, numColumns });
+            const itemSizes = Array.from({ length }, () => estimatedSize);
+
+            for (let index = 0; index < length; index++) {
+                seed = nextRandom(seed);
+                if (seed % 3 === 0) {
+                    seed = nextRandom(seed);
+                    const size = seed % 7 === 0 ? 0 : (seed % 20000) / 100;
+                    itemSizes[index] = size;
+                    store.setMeasuredSize(index, size);
+                }
+            }
+
+            const rowStarts: number[] = [];
+            const rowEnds: number[] = [];
+            const rowHeights: number[] = [];
+            for (let start = 0; start < length; start += numColumns) {
+                const end = Math.min(length - 1, start + numColumns - 1);
+                rowStarts.push(start);
+                rowEnds.push(end);
+                rowHeights.push(Math.max(...itemSizes.slice(start, end + 1)));
+            }
+            const total = rowHeights.reduce((sum, height) => sum + height, 0);
+            const offsets = [
+                Number.NEGATIVE_INFINITY,
+                -1,
+                0,
+                0.001,
+                total / 2,
+                total - 0.001,
+                total,
+                total + 1,
+                Number.POSITIVE_INFINITY,
+                Number.NaN,
+            ];
+
+            for (const offset of offsets) {
+                const rowIndex = findFirstRowEndGreaterThan(rowHeights, offset) ?? rowHeights.length - 1;
+                const expected =
+                    length > 0
+                        ? {
+                              end: rowEnds[rowIndex],
+                              start: rowStarts[rowIndex],
+                          }
+                        : undefined;
+                expect(store.findIndexRangeAtOffsets(offset, offset)).toEqual(expected);
+            }
+        }
     });
 
     it("walks only the requested item range with row offsets", () => {
