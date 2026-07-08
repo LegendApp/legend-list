@@ -11,6 +11,7 @@ let suppressScrollToImplementation = true;
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
@@ -147,6 +148,109 @@ afterEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("does not scan fixed-size hints on initial top-of-list mount", async () => {
+        const data = Array.from({ length: 1000 }, (_, index) => ({ id: `item-${index}` }));
+        const getFixedItemSize = mock(() => 64);
+        const renderItem = ({ item }: { item: { id: string } }) => <Text>{item.id}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-initial-fixed-size-window");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={64}
+                getFixedItemSize={getFixedItemSize}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+
+        expect(getFixedItemSize).not.toHaveBeenCalled();
+    });
+
+    it("does not treat alwaysRender as an initial exact-layout requirement", async () => {
+        const data = Array.from({ length: 1000 }, (_, index) => ({ id: `item-${index}` }));
+        const getFixedItemSize = mock(() => 64);
+        const renderItem = ({ item }: { item: { id: string } }) => <Text>{item.id}</Text>;
+        const { LegendList } = await import(
+            "../../src/components/LegendList?props-test-always-render-fixed-size-window"
+        );
+
+        render(
+            <LegendList
+                alwaysRender={{ bottom: 1, indices: [500], top: 1 }}
+                data={data}
+                estimatedItemSize={64}
+                getFixedItemSize={getFixedItemSize}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+
+        expect(getFixedItemSize).not.toHaveBeenCalled();
+    });
+
+    it("resolves only anchoredEndSpace tail fixed sizes after layout is known", async () => {
+        const data = Array.from({ length: 1000 }, (_, index) => ({ id: `item-${index}` }));
+        const getFixedItemSize = mock(() => 64);
+        const renderItem = ({ item }: { item: { id: string } }) => <Text>{item.id}</Text>;
+        const { LegendList } = await import(
+            "../../src/components/LegendList?props-test-anchored-tail-fixed-size-window"
+        );
+
+        render(
+            <LegendList
+                anchoredEndSpace={{ anchorIndex: 998 }}
+                data={data}
+                estimatedItemSize={64}
+                getFixedItemSize={getFixedItemSize}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+
+        const ctx = await getContextFromRender();
+        expect(getFixedItemSize).not.toHaveBeenCalled();
+
+        ctx.state.scrollLength = 200;
+        maybeUpdateAnchoredEndSpace(ctx);
+
+        expect(getFixedItemSize.mock.calls.map(([, index]) => index)).toEqual([998, 999]);
+        expect(ctx.values.get("anchoredEndSpaceSize")).toBe(72);
+    });
+
+    it("keeps a full anchoredEndSpace tail scan separate from the initial layout seed", async () => {
+        const data = Array.from({ length: 1000 }, (_, index) => ({ id: `item-${index}` }));
+        const getFixedItemSize = mock(() => 64);
+        const renderItem = ({ item }: { item: { id: string } }) => <Text>{item.id}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-anchored-full-tail-fixed-size");
+
+        render(
+            <LegendList
+                anchoredEndSpace={{ anchorIndex: 0 }}
+                data={data}
+                estimatedItemSize={64}
+                getFixedItemSize={getFixedItemSize}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+
+        const ctx = await getContextFromRender();
+        expect(getFixedItemSize).not.toHaveBeenCalled();
+
+        ctx.state.scrollLength = 200;
+        maybeUpdateAnchoredEndSpace(ctx);
+
+        expect(getFixedItemSize).toHaveBeenCalledTimes(data.length);
+        expect(getFixedItemSize.mock.calls[0][1]).toBe(0);
+        expect(getFixedItemSize.mock.calls.at(-1)?.[1]).toBe(data.length - 1);
+        expect(ctx.values.get("anchoredEndSpaceSize")).toBe(0);
+    });
+
     it("prepares the reached-edge gate when a native drag begins", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
@@ -429,7 +533,7 @@ describe("LegendList props behavior", () => {
         rendered.rerender(renderList(() => {}));
         await flushAsync();
 
-        expect(callsAfterMount).toBe(data.length);
+        expect(callsAfterMount).toBe(0);
         expect(getFixedItemSize.mock.calls.length).toBe(callsAfterMount);
 
         rendered.unmount();
@@ -474,9 +578,9 @@ describe("LegendList props behavior", () => {
             rendered.rerender(renderList(() => {}));
             await flushAsync();
 
-            expect(fixedSizeCallsAfterMount).toBe(data.length);
-            expect(itemTypeCallsAfterMount).toBe(data.length);
-            expect(keyExtractorCallsAfterMount).toBeGreaterThanOrEqual(data.length);
+            expect(fixedSizeCallsAfterMount).toBe(0);
+            expect(itemTypeCallsAfterMount).toBe(0);
+            expect(keyExtractorCallsAfterMount).toBeLessThan(data.length);
             expect(getFixedItemSize.mock.calls.length).toBe(fixedSizeCallsAfterMount);
             expect(getItemType.mock.calls.length).toBe(itemTypeCallsAfterMount);
             expect(keyExtractor.mock.calls.length).toBe(keyExtractorCallsAfterMount);
