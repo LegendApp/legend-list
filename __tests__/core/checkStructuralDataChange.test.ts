@@ -95,4 +95,29 @@ describe("checkStructuralDataChange", () => {
 
         expect(didChange).toBe(true);
     });
+
+    it("checks only materialized identity entries for million-item same-length data", () => {
+        const previousLargeData = new Array<{ id: string }>(1_000_000);
+        const nextLargeData = new Array<{ id: string }>(1_000_000);
+        previousLargeData[500_000] = { id: "materialized" };
+        nextLargeData[500_000] = { id: "materialized" };
+        let keyExtractorCalls = 0;
+        state = createMockState({
+            idCache: [],
+            props: {
+                data: previousLargeData,
+                itemsAreEqual: (previous, next) => previous.id === next.id,
+                keyExtractor: (item: { id: string }) => {
+                    keyExtractorCalls++;
+                    return item.id;
+                },
+            },
+        });
+        state.idCache[500_000] = "materialized";
+
+        const didChange = checkStructuralDataChange(state, nextLargeData, previousLargeData);
+
+        expect(didChange).toBe(false);
+        expect(keyExtractorCalls).toBe(1);
+    });
 });

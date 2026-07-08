@@ -123,7 +123,8 @@ export function findAvailableContainers(
                     if (key === undefined) continue;
                     if (protectedKeys?.has(key) && state.indexByKey.has(key)) continue;
 
-                    const index = state.indexByKey.get(key)!;
+                    const index = state.indexByKey.get(key);
+                    if (index === undefined) continue;
                     const isOutOfView = index < startBuffered || index > endBuffered;
                     if (isOutOfView) {
                         const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
