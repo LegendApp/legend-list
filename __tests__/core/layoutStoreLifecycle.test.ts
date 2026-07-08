@@ -195,32 +195,36 @@ describe("layout store lifecycle", () => {
         expect(getFixedItemSize).not.toHaveBeenCalled();
     });
 
-    it("seeds the initial estimate from fixed-size hints when available", () => {
+    it("does not seed the initial estimate from fixed-size hints", () => {
         const ctx = createLayoutStoreContext();
+        const getFixedItemSize = mock((_item, _index, itemType) => (itemType === "row" ? 64 : undefined));
         ctx.state.props.getItemType = () => "row";
-        ctx.state.props.getFixedItemSize = (_item, _index, itemType) => (itemType === "row" ? 64 : undefined);
+        ctx.state.props.getFixedItemSize = getFixedItemSize;
 
         const store = rebuildLayoutStoreExact(ctx);
 
-        expect(store?.getEstimatedSize()).toBe(64);
-        expect(store?.getTotalSize()).toBe(192);
+        expect(store?.getEstimatedSize()).toBe(100);
+        expect(store?.getTotalSize()).toBe(300);
+        expect(getFixedItemSize).not.toHaveBeenCalled();
     });
 
-    it("uses the fallback estimate for missing fixed-size hints without marking them measured", () => {
+    it("leaves fixed-size hints estimate-backed until rows are materialized", () => {
         const ctx = createLayoutStoreContext();
-        ctx.state.props.getFixedItemSize = (_item, index) => {
+        const getFixedItemSize = mock((_item, index) => {
             if (index === 0) return 40;
             if (index === 2) return 80;
             return undefined;
-        };
+        });
+        ctx.state.props.getFixedItemSize = getFixedItemSize;
 
         const store = rebuildLayoutStoreExact(ctx);
 
         expect(store?.getMeasuredCount()).toBe(0);
-        expect(store?.getEstimatedSize()).toBe((40 + 100 + 80) / 3);
-        expect(store?.getSize(0)).toBe(40);
-        expect(store?.getSize(1)).toBe((40 + 100 + 80) / 3);
-        expect(store?.getSize(2)).toBe(80);
+        expect(store?.getEstimatedSize()).toBe(100);
+        expect(store?.getSize(0)).toBe(100);
+        expect(store?.getSize(1)).toBe(100);
+        expect(store?.getSize(2)).toBe(100);
+        expect(getFixedItemSize).not.toHaveBeenCalled();
     });
 
     it("uses measured known sizes as the exact rebuild seed estimate", () => {
@@ -237,28 +241,30 @@ describe("layout store lifecycle", () => {
         expect(store?.getMeasuredCount()).toBe(2);
     });
 
-    it("seeds every fixed-size hint so variable fixed offsets stay exact", () => {
+    it("keeps variable fixed offsets estimated until target rows are materialized", () => {
         const ctx = createLayoutStoreContext(30);
+        const getFixedItemSize = mock((_item, index) => (index === 0 ? 300 : 60));
         ctx.state.initialScroll = {
             index: 29,
             viewPosition: 1,
         };
-        ctx.state.props.getFixedItemSize = (_item, index) => (index === 0 ? 300 : 60);
+        ctx.state.props.getFixedItemSize = getFixedItemSize;
         ctx.state.props.snapToIndices = [0, 1, 20, 29];
 
         const store = rebuildLayoutStoreExact(ctx);
         syncLayoutStoreState(ctx);
 
-        expect(store?.getEstimatedSize()).toBe(68);
+        expect(store?.getEstimatedSize()).toBe(100);
         expect(store?.getMeasuredCount()).toBe(0);
-        expect(store?.getSize(0)).toBe(300);
-        expect(store?.getSize(29)).toBe(60);
-        expect(store?.getOffset(20)).toBe(1440);
-        expect(ctx.values.get("snapToOffsets")).toEqual([0, 300, 1440, 1980]);
+        expect(store?.getSize(0)).toBe(100);
+        expect(store?.getSize(29)).toBe(100);
+        expect(store?.getOffset(20)).toBe(2000);
+        expect(ctx.values.get("snapToOffsets")).toEqual([0, 100, 2000, 2900]);
+        expect(getFixedItemSize).not.toHaveBeenCalled();
         expect(countLayoutValues(ctx.state, "positions")).toBe(0);
     });
 
-    it("preserves an exact fixed-size estimate across later structural syncs", () => {
+    it("preserves estimate-backed fixed-size layout across later structural syncs", () => {
         const ctx = createLayoutStoreContext(30);
         const getFixedItemSize = mock((_item, index) => (index === 0 ? 300 : 60));
         ctx.state.props.getFixedItemSize = getFixedItemSize;
@@ -267,8 +273,8 @@ describe("layout store lifecycle", () => {
         getFixedItemSize.mockClear();
         syncLayoutStoreStructure(ctx);
 
-        expect(store?.getEstimatedSize()).toBe(68);
-        expect(store?.getOffset(20)).toBe(1440);
+        expect(store?.getEstimatedSize()).toBe(100);
+        expect(store?.getOffset(20)).toBe(2000);
         expect(getFixedItemSize).not.toHaveBeenCalled();
     });
 
