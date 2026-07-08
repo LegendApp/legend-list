@@ -306,7 +306,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.containerItemMetadata.get(0)?.fixedItemSize).toBeUndefined();
     });
 
-    it("clearCaches preserves variable fixed-size offsets in the prefix layout store", () => {
+    it("clearCaches leaves variable fixed-size offsets estimated until rows are materialized", () => {
         const ctx = createMockContext(
             {},
             {
@@ -324,11 +324,11 @@ describe("createImperativeHandle.scrollToEnd", () => {
         handle.clearCaches();
         const state = handle.getState();
 
-        expect(state.positionAtIndex(1)).toBe(300);
-        expect(state.positionAtIndex(2)).toBe(360);
+        expect(state.positionAtIndex(1)).toBe(100);
+        expect(state.positionAtIndex(2)).toBe(200);
         expect(ctx.state.sizes.size).toBe(0);
         expect(ctx.state.sizesKnown.size).toBe(0);
-        expect(ctx.state.totalSize).toBe(420);
+        expect(ctx.state.totalSize).toBe(300);
     });
 
     it("setItemSize updates item measurement through the public ref", () => {

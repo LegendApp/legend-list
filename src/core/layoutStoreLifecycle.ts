@@ -6,7 +6,6 @@ import { RowLayoutStore } from "@/core/RowLayoutStore";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
-import { getFixedItemLayoutSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
@@ -466,16 +465,13 @@ function getLayoutStorePropEstimatedSize(ctx: StateContext) {
 
 function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions = { mode: "seed" }): LayoutStoreSeed {
     const state = ctx.state;
-    const { data, estimatedItemSize, getFixedItemSize } = state.props;
+    const { data, estimatedItemSize } = state.props;
     const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
     const sizeEntries: LayoutStoreSeed["sizeEntries"] = [];
     const canSeedKnownSizes = state.sizesKnown.size > 0;
     const canSeedCachedSizes = state.sizes.size > 0;
 
-    if (
-        options.mode === "seed" &&
-        ((!getFixedItemSize && !canSeedKnownSizes && !canSeedCachedSizes) || data.length === 0)
-    ) {
+    if (options.mode === "seed" && !canSeedKnownSizes && !canSeedCachedSizes) {
         return { estimatedSize: fallbackSize, sizeEntries };
     }
 
@@ -502,10 +498,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
             previousData !== undefined &&
             (previousData[index] === item || pendingDataComparison?.byIndex[index] !== undefined);
         const key = canReusePreviousKey ? previousKey : getId(state, index);
-        const fixedLayoutSize = getFixedItemSize ? getFixedItemLayoutSize(ctx, index, item) : undefined;
-        const fallbackOrFixedSize = fixedLayoutSize ?? fallbackSize;
-
-        fallbackTotalSize += fallbackOrFixedSize;
+        fallbackTotalSize += fallbackSize;
 
         if (options.mode === "reconcile") {
             state.idCache[index] = key;
@@ -528,24 +521,12 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
         } else {
             const cachedSize = canSeedCachedSizes ? state.sizes.get(key) : undefined;
 
-            if (fixedLayoutSize !== undefined && options.mode === "reconcile") {
-                state.sizesKnown.set(key, fixedLayoutSize);
-                measuredCount++;
-                measuredTotalSize += fixedLayoutSize;
+            if (cachedSize !== undefined) {
                 sizeEntries.push({
                     index,
-                    size: fixedLayoutSize,
-                    type: "measured",
+                    size: cachedSize,
+                    type: "cached",
                 });
-            } else {
-                const cachedOrFixedSize = cachedSize ?? fixedLayoutSize;
-                if (cachedOrFixedSize !== undefined) {
-                    sizeEntries.push({
-                        index,
-                        size: cachedOrFixedSize,
-                        type: "cached",
-                    });
-                }
             }
         }
     }

@@ -2322,7 +2322,7 @@ describe("calculateItemsInView", () => {
                 { id: "section-b:item" },
             ];
             mockState.props.drawDistance = 0;
-            mockState.props.getFixedItemSize = () => 50;
+            mockState.props.estimatedItemSize = 50;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
             mockState.props.onStickyHeaderChange = onStickyHeaderChange;
             mockState.props.stickyHeaderIndicesArr = [0, 2];
