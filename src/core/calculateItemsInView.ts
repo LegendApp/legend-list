@@ -7,6 +7,7 @@ import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
 import {
     getActiveLayoutStore,
+    getSparseIdCacheSnapshot,
     materializeLayoutStoreRange,
     rebuildLayoutStoreExact,
     reconcileLayoutStoreDataChange,
@@ -626,7 +627,7 @@ export function calculateItemsInView(
             !state.isFirst &&
             hasActiveLayoutStore &&
             state.props.hasReliableKeyExtractor;
-        const previousIdCache = shouldReconcileLayoutStoreDataChange ? state.idCache.slice() : undefined;
+        const previousIdCache = shouldReconcileLayoutStoreDataChange ? getSparseIdCacheSnapshot(state) : undefined;
         if (didDataChange) {
             resetLayoutCachesForDataChange(state, {
                 includeLayoutStoreMeasurements: !shouldReconcileLayoutStoreDataChange,
@@ -770,8 +771,10 @@ export function calculateItemsInView(
         for (let i = 0; i < prevNumContainers; i++) {
             const key = peek$(ctx, `containerItemKey${i}`);
             if (key !== undefined) {
-                const index = indexByKey.get(key)!;
-                maxIndexRendered = Math.max(maxIndexRendered, index);
+                const index = indexByKey.get(key);
+                if (index !== undefined) {
+                    maxIndexRendered = Math.max(maxIndexRendered, index);
+                }
             }
         }
 
