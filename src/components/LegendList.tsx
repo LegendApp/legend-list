@@ -574,7 +574,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal) {
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
-        rebuildLayoutStoreExact(ctx);
+        if (state.initialScrollSession?.kind === "bootstrap" || snapToIndices?.length) {
+            rebuildLayoutStoreExact(ctx);
+        }
         syncLayoutStoreState(ctx);
     }
 
