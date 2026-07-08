@@ -27,13 +27,15 @@ interface LayoutStoreSeed {
 interface LayoutStoreSeedOptions {
     didKeyExtractorChange?: boolean;
     mode: "reconcile" | "seed";
-    previousIdCache?: readonly (string | undefined)[];
+    previousIdCache?: SparseIdCacheSnapshot;
 }
 
 export interface LayoutStoreDataChangeReconciliationOptions {
     didKeyExtractorChange?: boolean;
-    previousIdCache?: readonly (string | undefined)[];
+    previousIdCache?: SparseIdCacheSnapshot;
 }
+
+export type SparseIdCacheSnapshot = Map<number, string>;
 
 export function clearLayoutStoreKnownSizes(ctx: StateContext) {
     ctx.state.layoutStoreRuntime?.store.clearKnownSizes();
@@ -46,6 +48,18 @@ function getActiveLayoutStoreRuntime(ctx: StateContext) {
 
 export function getActiveLayoutStore(ctx: StateContext) {
     return getActiveLayoutStoreRuntime(ctx)?.store;
+}
+
+export function getSparseIdCacheSnapshot(state: InternalState): SparseIdCacheSnapshot {
+    const snapshot: SparseIdCacheSnapshot = new Map();
+    for (const key of Object.keys(state.idCache)) {
+        const index = Number(key);
+        const id = state.idCache[index];
+        if (Number.isInteger(index) && id !== undefined) {
+            snapshot.set(index, id);
+        }
+    }
+    return snapshot;
 }
 
 export function materializeLayoutStoreRange(ctx: StateContext, startIndex: number, endIndex: number) {
@@ -284,6 +298,7 @@ export function reconcileLayoutStoreDataChange(
     let didReconcile = false;
 
     if (store) {
+        const previousIdCache = options?.previousIdCache ?? getSparseIdCacheSnapshot(state);
         state.indexByKey.clear();
         state.idCache.length = 0;
         resetLayoutStoreRuntimeState(state);
@@ -291,7 +306,7 @@ export function reconcileLayoutStoreDataChange(
         const seed = getLayoutStoreSeed(ctx, {
             didKeyExtractorChange: options?.didKeyExtractorChange,
             mode: "reconcile",
-            previousIdCache: options?.previousIdCache,
+            previousIdCache,
         });
 
         didReconcile = !seed.hasDuplicateKey;
@@ -483,30 +498,63 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
         statePendingDataComparison.nextData === data
             ? statePendingDataComparison
             : undefined;
-    let fallbackTotalSize = 0;
+    const fallbackTotalSize = data.length * fallbackSize;
     let hasDuplicateKey = false;
     let measuredCount = 0;
     let measuredTotalSize = 0;
+    const dataLengthDelta = previousData ? data.length - previousData.length : 0;
 
-    for (let index = 0; index < data.length; index++) {
-        const item = data[index];
-        const previousKey = options.previousIdCache?.[index];
+    const materializedIndices =
+        options.mode === "reconcile" ? options.previousIdCache?.keys() : getSparseIdCacheSnapshot(state).keys();
+
+    for (const index of materializedIndices ?? []) {
+        const isIndexInRange = index >= 0 && index < data.length;
+        if (!isIndexInRange && options.mode !== "reconcile") {
+            continue;
+        }
+        const previousKey = options.previousIdCache?.get(index);
         const canReusePreviousKey =
+            isIndexInRange &&
             options.mode === "reconcile" &&
             !options.didKeyExtractorChange &&
             previousKey !== undefined &&
             previousData !== undefined &&
-            (previousData[index] === item || pendingDataComparison?.byIndex[index] !== undefined);
-        const key = canReusePreviousKey ? previousKey : getId(state, index);
-        fallbackTotalSize += fallbackSize;
+            (previousData[index] === data[index] || pendingDataComparison?.byIndex[index] !== undefined);
+        let shouldSeedKey = isIndexInRange;
+        let targetIndex = index;
+        let key = canReusePreviousKey ? previousKey : isIndexInRange ? getId(state, index) : previousKey;
+        if (
+            options.mode === "reconcile" &&
+            !canReusePreviousKey &&
+            !options.didKeyExtractorChange &&
+            previousKey !== undefined &&
+            (!isIndexInRange || key !== previousKey)
+        ) {
+            shouldSeedKey = dataLengthDelta === 0 && isIndexInRange;
+            if (dataLengthDelta !== 0) {
+                const shiftedIndex = index + dataLengthDelta;
+                if (shiftedIndex >= 0 && shiftedIndex < data.length) {
+                    const shiftedKey = state.idCache[shiftedIndex] ?? getId(state, shiftedIndex);
+                    if (shiftedKey === previousKey) {
+                        shouldSeedKey = true;
+                        targetIndex = shiftedIndex;
+                        key = previousKey;
+                    }
+                }
+            }
+        }
+
+        if (!shouldSeedKey || key === undefined) {
+            continue;
+        }
 
         if (options.mode === "reconcile") {
-            state.idCache[index] = key;
+            state.idCache[targetIndex] = key;
             if (state.indexByKey.has(key)) {
                 hasDuplicateKey = true;
                 break;
             }
-            state.indexByKey.set(key, index);
+            state.indexByKey.set(key, targetIndex);
         }
 
         const knownSize = canSeedKnownSizes ? state.sizesKnown.get(key) : undefined;
@@ -514,7 +562,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
             measuredCount++;
             measuredTotalSize += knownSize;
             sizeEntries.push({
-                index,
+                index: targetIndex,
                 size: knownSize,
                 type: "measured",
             });
@@ -523,7 +571,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
 
             if (cachedSize !== undefined) {
                 sizeEntries.push({
-                    index,
+                    index: targetIndex,
                     size: cachedSize,
                     type: "cached",
                 });
