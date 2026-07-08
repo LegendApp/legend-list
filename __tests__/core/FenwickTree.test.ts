@@ -12,6 +12,21 @@ function naiveSumBefore(values: number[], index: number) {
     return sum;
 }
 
+function naiveFindFirstPrefixGreaterThan(values: number[], offset: number) {
+    let index: number | undefined;
+    if (!Number.isNaN(offset)) {
+        let sum = 0;
+        for (let i = 0; i < values.length; i++) {
+            sum += values[i]!;
+            if (sum > offset) {
+                index = i;
+                break;
+            }
+        }
+    }
+    return index;
+}
+
 function nextRandom(seed: number) {
     return (seed * 1664525 + 1013904223) >>> 0;
 }
@@ -56,6 +71,104 @@ describe("FenwickTree", () => {
         expect(tree.sumBefore(3)).toBe(40);
         expect(tree.sumBefore(4)).toBe(80);
         expect(tree.total()).toBe(85);
+    });
+
+    it("finds the first prefix greater than an offset", () => {
+        const values = [10, 0, 30, 40, 5];
+        const tree = new FenwickTree(values.length);
+        tree.replaceValues(values);
+
+        expect(tree.findFirstPrefixGreaterThan(Number.NEGATIVE_INFINITY)).toBe(0);
+        expect(tree.findFirstPrefixGreaterThan(-1)).toBe(0);
+        expect(tree.findFirstPrefixGreaterThan(0)).toBe(0);
+        expect(tree.findFirstPrefixGreaterThan(9.999)).toBe(0);
+        expect(tree.findFirstPrefixGreaterThan(10)).toBe(2);
+        expect(tree.findFirstPrefixGreaterThan(39.999)).toBe(2);
+        expect(tree.findFirstPrefixGreaterThan(40)).toBe(3);
+        expect(tree.findFirstPrefixGreaterThan(79.999)).toBe(3);
+        expect(tree.findFirstPrefixGreaterThan(80)).toBe(4);
+        expect(tree.findFirstPrefixGreaterThan(84.999)).toBe(4);
+        expect(tree.findFirstPrefixGreaterThan(85)).toBeUndefined();
+        expect(tree.findFirstPrefixGreaterThan(Number.POSITIVE_INFINITY)).toBeUndefined();
+        expect(tree.findFirstPrefixGreaterThan(Number.NaN)).toBeUndefined();
+    });
+
+    it("skips zero-size prefixes while preserving negative offset behavior", () => {
+        const values = [0, 0, 10, 0, 5, 0];
+        const tree = new FenwickTree(values.length);
+        tree.replaceValues(values);
+
+        expect(tree.findFirstPrefixGreaterThan(-1)).toBe(0);
+        expect(tree.findFirstPrefixGreaterThan(0)).toBe(2);
+        expect(tree.findFirstPrefixGreaterThan(9.999)).toBe(2);
+        expect(tree.findFirstPrefixGreaterThan(10)).toBe(4);
+        expect(tree.findFirstPrefixGreaterThan(14.999)).toBe(4);
+        expect(tree.findFirstPrefixGreaterThan(15)).toBeUndefined();
+    });
+
+    it("matches a naive lower-bound search across deterministic random values", () => {
+        let seed = 24680;
+
+        for (let length = 0; length < 64; length++) {
+            const values = Array.from({ length }, () => {
+                seed = nextRandom(seed);
+                return seed % 7 === 0 ? 0 : (seed % 10000) / 100;
+            });
+            const tree = new FenwickTree(values.length);
+            tree.replaceValues(values);
+            const total = naiveSumBefore(values, values.length);
+            const offsets = [
+                Number.NEGATIVE_INFINITY,
+                -1,
+                0,
+                0.001,
+                total / 2,
+                total - 0.001,
+                total,
+                total + 1,
+                Number.POSITIVE_INFINITY,
+                Number.NaN,
+            ];
+
+            for (const offset of offsets) {
+                expect(tree.findFirstPrefixGreaterThan(offset)).toBe(naiveFindFirstPrefixGreaterThan(values, offset));
+            }
+            for (let index = 0; index < values.length; index++) {
+                const end = naiveSumBefore(values, index + 1);
+                expect(tree.findFirstPrefixGreaterThan(end - 0.001)).toBe(
+                    naiveFindFirstPrefixGreaterThan(values, end - 0.001),
+                );
+                expect(tree.findFirstPrefixGreaterThan(end)).toBe(naiveFindFirstPrefixGreaterThan(values, end));
+            }
+        }
+    });
+
+    it("finds composite prefixes from known-size and known-count trees", () => {
+        const knownCounts = new FenwickTree(5);
+        const knownSizes = new FenwickTree(5);
+        knownCounts.replaceValues([0, 1, 0, 1, 0]);
+        knownSizes.replaceValues([0, 50, 0, 150, 0]);
+
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(-1, knownCounts, knownSizes, 100)).toBe(0);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(99.999, knownCounts, knownSizes, 100)).toBe(0);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(100, knownCounts, knownSizes, 100)).toBe(1);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(149.999, knownCounts, knownSizes, 100)).toBe(1);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(150, knownCounts, knownSizes, 100)).toBe(2);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(249.999, knownCounts, knownSizes, 100)).toBe(2);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(250, knownCounts, knownSizes, 100)).toBe(3);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(399.999, knownCounts, knownSizes, 100)).toBe(3);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(400, knownCounts, knownSizes, 100)).toBe(4);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(499.999, knownCounts, knownSizes, 100)).toBe(4);
+        expect(FenwickTree.findFirstCompositePrefixGreaterThan(500, knownCounts, knownSizes, 100)).toBeUndefined();
+        expect(
+            FenwickTree.findFirstCompositePrefixGreaterThan(Number.NaN, knownCounts, knownSizes, 100),
+        ).toBeUndefined();
+    });
+
+    it("throws when composite prefix trees have different lengths", () => {
+        expect(() =>
+            FenwickTree.findFirstCompositePrefixGreaterThan(0, new FenwickTree(1), new FenwickTree(2), 100),
+        ).toThrow(RangeError);
     });
 
     it("matches a naive array across deterministic random updates", () => {

@@ -196,24 +196,7 @@ export class RowLayoutStore implements LayoutStore {
     }
 
     private findRowIndexAtOffset(offset: number) {
-        let rowIndex: number | undefined;
-        let low = 0;
-        let high = this.rowStartIndexes.length;
-
-        while (low < high) {
-            const mid = Math.floor((low + high) / 2);
-            const end = this.rowHeightTree.sumBefore(mid + 1);
-            if (end > offset) {
-                high = mid;
-            } else {
-                low = mid + 1;
-            }
-        }
-
-        if (low < this.rowStartIndexes.length) {
-            rowIndex = low;
-        }
-        return rowIndex;
+        return this.rowHeightTree.findFirstPrefixGreaterThan(offset);
     }
 
     private getItemSize(index: number) {
