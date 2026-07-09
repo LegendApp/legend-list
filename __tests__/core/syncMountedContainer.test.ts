@@ -86,7 +86,7 @@ describe("syncMountedContainer", () => {
         expect(ctx.state.pendingDataComparison?.byIndex[1]).toBe(1);
     });
 
-    it("mirrors horizontal rtl container positions into physical space", () => {
+    it("mirrors a prop-forced rtl container position on an LTR native tree", () => {
         const ctx = createMockContext(
             {
                 totalSize: 1000,
@@ -107,6 +107,8 @@ describe("syncMountedContainer", () => {
 
         const result = syncMountedContainer(ctx, 0, 0);
 
+        // Prop-forced RTL (rtl prop, global I18nManager.isRTL === false): the native tree stays LTR
+        // so RN's left->start swap doesn't fire — the JS mirror is still needed here (1000-200-50).
         expect(result.didChangePosition).toBe(true);
         expect(peek$(ctx, "containerPosition0")).toBe(750);
     });

@@ -92,6 +92,16 @@ export function toPhysicalHorizontalItemPosition(
         return logicalPosition;
     }
 
+    // When the native tree is actually RTL, RN's `doLeftAndRightSwapInRTL` (on by default) rewrites
+    // the item's `left` inset to `start`, which Yoga resolves from the right edge — so native layout
+    // already mirrors logical positions. Mirroring here as well double-mirrors every item off screen
+    // (blank list, #477 / #458). Gate on the global `I18nManager.isRTL`: a per-list `rtl` prop on an
+    // otherwise-LTR native tree gets no native swap, so it still needs the JS mirror. Web always keeps
+    // the JS mirror since Container forces `direction: ltr` there.
+    if (Platform.OS !== "web" && I18nManager.isRTL) {
+        return logicalPosition;
+    }
+
     return Math.max(0, listSize - logicalPosition - itemSize);
 }
 
@@ -133,6 +143,23 @@ export function toLogicalHorizontalOffset(
 
     const maxOffset = getHorizontalMaxOffset(state, contentWidth);
 
+    // Native: the scroll coordinate space is deterministic — iOS/Android Fabric flip contentOffset in
+    // both directions with the self-inverse `maxOffset - x`, so JS reads a physical-left-based offset
+    // ("inverted"). Pin it instead of the per-frame distance heuristic, which could reclassify
+    // "inverted" -> "normal" on a single overscroll-bounce frame (a transient negative rawOffset first
+    // pinned "negative", then the next positive frame fell through to the heuristic) and mirror the
+    // visible-range math mid-scroll, blanking the whole list. A negative rawOffset is bounce: clamp it,
+    // never switch modes.
+    if (Platform.OS !== "web") {
+        if (maxOffset === undefined) {
+            return rawOffset < 0 ? -rawOffset : rawOffset;
+        }
+        state.horizontalRTLScrollType = "inverted";
+        return clampHorizontalOffset(maxOffset - rawOffset, maxOffset);
+    }
+
+    // Web: browsers report flow-relative scroll offsets that may be normal or, in an RTL scroll root
+    // (inherited dir="rtl" / direction: rtl), negative. Keep the existing adaptive classification.
     if (rawOffset < 0) {
         state.horizontalRTLScrollType = "negative";
         return clampHorizontalOffset(-rawOffset, maxOffset);

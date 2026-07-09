@@ -75,31 +75,33 @@ describe("onScroll", () => {
             expect(mockState.scroll).toBe(150);
         });
 
-        it("normalizes negative horizontal offsets in RTL mode", () => {
+        it("clamps a negative (overscroll bounce) horizontal offset to the list end in RTL", () => {
             mockState.props.horizontal = true;
             I18nManager.isRTL = true;
             mockState.scrollLength = 500;
-            mockScrollEvent.nativeEvent.contentSize.width = 1400;
+            mockScrollEvent.nativeEvent.contentSize.width = 1400; // maxOffset = 900
             mockScrollEvent.nativeEvent.contentOffset.x = -120;
 
             onScroll(mockCtx, mockScrollEvent);
 
-            expect(mockState.scrollPending).toBe(120);
-            expect(mockState.scroll).toBe(120);
-            expect(mockState.horizontalRTLScrollType).toBe("negative");
+            // Native RTL flips contentOffset; a negative raw is overscroll past the end, not a
+            // separate coordinate mode. Clamp to the end and keep the pinned "inverted" mode.
+            expect(mockState.scrollPending).toBe(900);
+            expect(mockState.scroll).toBe(900);
+            expect(mockState.horizontalRTLScrollType).toBe("inverted");
         });
 
         it("uses the rtl prop override when global I18nManager is false", () => {
             mockState.props.horizontal = true;
             mockState.props.rtl = true;
             mockState.scrollLength = 500;
-            mockScrollEvent.nativeEvent.contentSize.width = 1400;
-            mockScrollEvent.nativeEvent.contentOffset.x = -75;
+            mockScrollEvent.nativeEvent.contentSize.width = 1400; // maxOffset = 900
+            mockScrollEvent.nativeEvent.contentOffset.x = 600; // inverted -> 300
 
             onScroll(mockCtx, mockScrollEvent);
 
-            expect(mockState.scroll).toBe(75);
-            expect(mockState.horizontalRTLScrollType).toBe("negative");
+            expect(mockState.scroll).toBe(300);
+            expect(mockState.horizontalRTLScrollType).toBe("inverted");
         });
 
         it("respects rtl=false override when global I18nManager is true", () => {
