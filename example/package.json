@@ -15,7 +15,6 @@
         "web": "EXPO_PUBLIC_LEGEND_LIST_MODE=examples expo start --web",
         "web:fixtures": "EXPO_PUBLIC_LEGEND_LIST_MODE=fixtures expo start --web",
         "test": "jest --watchAll",
-        "lint": "expo lint",
         "prebuild:clean": "rm -rf ios android && npx expo prebuild --clean && npx expo prebuild"
     },
     "jest": {
@@ -66,8 +65,6 @@
         "@types/jest": "^29.5.14",
         "@types/react": "~19.1.10",
         "@types/react-test-renderer": "^19.0.0",
-        "eslint": "^9.0.0",
-        "eslint-config-expo": "~10.0.0",
         "jest": "~29.7.0",
         "jest-expo": "~54.0.17",
         "react-test-renderer": "19.0.0",
