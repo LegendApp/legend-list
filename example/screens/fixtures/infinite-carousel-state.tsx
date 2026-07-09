@@ -9,16 +9,16 @@ type CarouselItem = {
     title: string;
     emoji: string;
     color: string;
-    likes: number;
+    goals: number;
 };
 
 const ITEMS: CarouselItem[] = [
-    { color: "#F94144", emoji: "🌋", id: "volcano", likes: 0, title: "Volcano" },
-    { color: "#F3722C", emoji: "🏜️", id: "desert", likes: 0, title: "Desert" },
-    { color: "#F8961E", emoji: "🏞️", id: "canyon", likes: 0, title: "Canyon" },
-    { color: "#90BE6D", emoji: "🌴", id: "jungle", likes: 0, title: "Jungle" },
-    { color: "#43AA8B", emoji: "🏝️", id: "island", likes: 0, title: "Island" },
-    { color: "#277DA1", emoji: "❄️", id: "glacier", likes: 0, title: "Glacier" },
+    { color: "#3C3B6E", emoji: "🇺🇸", goals: 0, id: "usa", title: "USA" },
+    { color: "#006847", emoji: "🇲🇽", goals: 0, id: "mexico", title: "Mexico" },
+    { color: "#D52B1E", emoji: "🇨🇦", goals: 0, id: "canada", title: "Canada" },
+    { color: "#74ACDF", emoji: "🇦🇷", goals: 0, id: "argentina", title: "Argentina" },
+    { color: "#009C3B", emoji: "🇧🇷", goals: 0, id: "brazil", title: "Brazil" },
+    { color: "#0055A4", emoji: "🇫🇷", goals: 0, id: "france", title: "France" },
 ];
 
 const CAROUSEL_HEIGHT = 420;
@@ -50,15 +50,15 @@ const Card = ({
     index,
     infiniteIndex,
     itemWidth,
-    onLike,
+    onGoal,
 }: {
     item: CarouselItem;
     index: number;
     infiniteIndex: number;
     itemWidth: number;
-    onLike: (id: string) => void;
+    onGoal: (id: string) => void;
 }) => {
-    const likeCount = item.likes;
+    const goalCount = item.goals;
     const [copyCount, setCopyCount] = useRecyclingState(() => 0);
     const [containerCount, setContainerCount] = useState(0);
 
@@ -71,11 +71,11 @@ const Card = ({
             </Text>
             <View style={styles.counters}>
                 <CounterRow
-                    label="❤️ Likes"
-                    onPress={() => onLike(item.id)}
+                    label="⚽ Goals"
+                    onPress={() => onGoal(item.id)}
                     sublabel="stored in the data item — persists everywhere"
                     tone="good"
-                    value={likeCount}
+                    value={goalCount}
                 />
                 <CounterRow
                     label="useRecyclingState"
@@ -102,8 +102,8 @@ export default function InfiniteCarouselStateFixtureScreen() {
     const sidePadding = (windowWidth - itemWidth) / 2;
 
     const [items, setItems] = useState(ITEMS);
-    const handleLike = useCallback((id: string) => {
-        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, likes: item.likes + 1 } : item)));
+    const handleGoal = useCallback((id: string) => {
+        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, goals: item.goals + 1 } : item)));
     }, []);
 
     return (
@@ -123,7 +123,7 @@ export default function InfiniteCarouselStateFixtureScreen() {
                             infiniteIndex={infiniteIndex}
                             item={item}
                             itemWidth={itemWidth}
-                            onLike={handleLike}
+                            onGoal={handleGoal}
                         />
                     )}
                     showsHorizontalScrollIndicator={false}
@@ -138,7 +138,7 @@ export default function InfiniteCarouselStateFixtureScreen() {
                     The card header shows which virtual copy you are looking at.
                 </Text>
                 <Text style={styles.explainerText}>
-                    ❤️ Likes persist — they live in the data item itself, updated immutably at the screen level (the
+                    ⚽ Goals persist — they live in the data item itself, updated immutably at the screen level (the
                     mutable-cells pattern). Every copy renders the same item object.{"\n"}
                     ⚠️ useRecyclingState is scoped to one virtual copy — it resets when you reach the item via another
                     copy.{"\n"}❌ useState sticks to the recycled container and shows up on unrelated items.

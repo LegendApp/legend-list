@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
-import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import Animated, {
+    Extrapolation,
+    interpolate,
+    interpolateColor,
+    useAnimatedStyle,
+    useDerivedValue,
+    useSharedValue,
+} from "react-native-reanimated";
 
 import { InfiniteLegendList } from "@legendapp/list/infinite";
-import type { LegendListRef } from "@legendapp/list/react-native";
+import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
 
 type CarouselItem = {
@@ -14,15 +21,55 @@ type CarouselItem = {
     color: string;
 };
 
-const ITEMS: CarouselItem[] = [
-    { color: "#F94144", emoji: "🌋", id: "volcano", title: "Volcano" },
-    { color: "#F3722C", emoji: "🏜️", id: "desert", title: "Desert" },
-    { color: "#F8961E", emoji: "🏞️", id: "canyon", title: "Canyon" },
-    { color: "#90BE6D", emoji: "🌴", id: "jungle", title: "Jungle" },
-    { color: "#43AA8B", emoji: "🏝️", id: "island", title: "Island" },
-    { color: "#4D908E", emoji: "🌊", id: "ocean", title: "Ocean" },
-    { color: "#577590", emoji: "🏔️", id: "mountain", title: "Mountain" },
-    { color: "#277DA1", emoji: "❄️", id: "glacier", title: "Glacier" },
+const TEAMS: CarouselItem[] = [
+    { color: "#3C3B6E", emoji: "🇺🇸", id: "usa", title: "USA" },
+    { color: "#006847", emoji: "🇲🇽", id: "mexico", title: "Mexico" },
+    { color: "#D52B1E", emoji: "🇨🇦", id: "canada", title: "Canada" },
+    { color: "#74ACDF", emoji: "🇦🇷", id: "argentina", title: "Argentina" },
+    { color: "#009C3B", emoji: "🇧🇷", id: "brazil", title: "Brazil" },
+    { color: "#262626", emoji: "🇩🇪", id: "germany", title: "Germany" },
+    { color: "#0055A4", emoji: "🇫🇷", id: "france", title: "France" },
+    { color: "#BC002D", emoji: "🇯🇵", id: "japan", title: "Japan" },
+    { color: "#AA151B", emoji: "🇪🇸", id: "spain", title: "Spain" },
+    { color: "#21366C", emoji: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", id: "england", title: "England" },
+    { color: "#046A38", emoji: "🇵🇹", id: "portugal", title: "Portugal" },
+    { color: "#F36C21", emoji: "🇳🇱", id: "netherlands", title: "Netherlands" },
+    { color: "#C8102E", emoji: "🇧🇪", id: "belgium", title: "Belgium" },
+    { color: "#1D3F94", emoji: "🇭🇷", id: "croatia", title: "Croatia" },
+    { color: "#55A8CE", emoji: "🇺🇾", id: "uruguay", title: "Uruguay" },
+    { color: "#C99700", emoji: "🇨🇴", id: "colombia", title: "Colombia" },
+    { color: "#23407E", emoji: "🇪🇨", id: "ecuador", title: "Ecuador" },
+    { color: "#B9314F", emoji: "🇵🇾", id: "paraguay", title: "Paraguay" },
+    { color: "#00205B", emoji: "🇳🇴", id: "norway", title: "Norway" },
+    { color: "#005293", emoji: "🇸🇪", id: "sweden", title: "Sweden" },
+    { color: "#8B1A1A", emoji: "🇨🇭", id: "switzerland", title: "Switzerland" },
+    { color: "#9E1B32", emoji: "🇦🇹", id: "austria", title: "Austria" },
+    { color: "#123C7D", emoji: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", id: "scotland", title: "Scotland" },
+    { color: "#7A1220", emoji: "🇹🇷", id: "turkiye", title: "Türkiye" },
+    { color: "#11457E", emoji: "🇨🇿", id: "czechia", title: "Czechia" },
+    { color: "#002F6C", emoji: "🇧🇦", id: "bosnia", title: "Bosnia and Herzegovina" },
+    { color: "#7C1F24", emoji: "🇲🇦", id: "morocco", title: "Morocco" },
+    { color: "#00853F", emoji: "🇸🇳", id: "senegal", title: "Senegal" },
+    { color: "#A31621", emoji: "🇪🇬", id: "egypt", title: "Egypt" },
+    { color: "#006233", emoji: "🇩🇿", id: "algeria", title: "Algeria" },
+    { color: "#A02128", emoji: "🇹🇳", id: "tunisia", title: "Tunisia" },
+    { color: "#B08900", emoji: "🇬🇭", id: "ghana", title: "Ghana" },
+    { color: "#E06D10", emoji: "🇨🇮", id: "ivory-coast", title: "Ivory Coast" },
+    { color: "#003893", emoji: "🇨🇻", id: "cape-verde", title: "Cape Verde" },
+    { color: "#007749", emoji: "🇿🇦", id: "south-africa", title: "South Africa" },
+    { color: "#0085CA", emoji: "🇨🇩", id: "dr-congo", title: "DR Congo" },
+    { color: "#7D1128", emoji: "🇰🇷", id: "south-korea", title: "South Korea" },
+    { color: "#2E7D32", emoji: "🇮🇷", id: "iran", title: "Iran" },
+    { color: "#556B2F", emoji: "🇮🇶", id: "iraq", title: "Iraq" },
+    { color: "#165B33", emoji: "🇸🇦", id: "saudi-arabia", title: "Saudi Arabia" },
+    { color: "#8A1538", emoji: "🇶🇦", id: "qatar", title: "Qatar" },
+    { color: "#365314", emoji: "🇯🇴", id: "jordan", title: "Jordan" },
+    { color: "#0099B5", emoji: "🇺🇿", id: "uzbekistan", title: "Uzbekistan" },
+    { color: "#B8860B", emoji: "🇦🇺", id: "australia", title: "Australia" },
+    { color: "#101820", emoji: "🇳🇿", id: "new-zealand", title: "New Zealand" },
+    { color: "#002B7F", emoji: "🇨🇼", id: "curacao", title: "Curaçao" },
+    { color: "#00209F", emoji: "🇭🇹", id: "haiti", title: "Haiti" },
+    { color: "#26428B", emoji: "🇵🇦", id: "panama", title: "Panama" },
 ];
 
 const CAROUSEL_HEIGHT = 340;
@@ -92,17 +139,21 @@ const Card = ({
     );
 };
 
-const ITEM_COUNT_OPTIONS = [2, 8, 16, 32, 64];
+const Dot = ({ index, position, totalCount }: { index: number; position: SharedValue<number>; totalCount: number }) => {
+    const animatedStyle = useAnimatedStyle(() => {
+        const distance = Math.abs(position.value - index);
+        const wrappedDistance = Math.min(distance, totalCount - distance);
 
-const buildItems = (count: number): CarouselItem[] =>
-    Array.from({ length: count }, (_, i) => {
-        const base = ITEMS[i % ITEMS.length];
         return {
-            ...base,
-            id: `${base.id}-${Math.floor(i / ITEMS.length)}`,
-            title: `${base.title} ${i}`,
+            backgroundColor: interpolateColor(wrappedDistance, [0, 1], ["#1f1f1f", "#D0D0D0"]),
+            width: interpolate(wrappedDistance, [0, 1], [20, 8], Extrapolation.CLAMP),
         };
-    });
+    }, [index, totalCount]);
+
+    return <Animated.View style={[styles.dot, animatedStyle]} />;
+};
+
+const ITEM_COUNT_OPTIONS = [2, 8, 16, 32, 48];
 
 export default function InfiniteCarouselFixtureScreen() {
     const { width: windowWidth } = useWindowDimensions();
@@ -111,35 +162,30 @@ export default function InfiniteCarouselFixtureScreen() {
 
     const refList = useRef<LegendListRef>(null);
     const scrollOffset = useSharedValue(0);
-    const [activeIndex, setActiveIndex] = useState(0);
     const [itemCount, setItemCount] = useState(8);
     const [loadTimeMs, setLoadTimeMs] = useState<number | undefined>(undefined);
     const mountedCardsCount = useMountedCardsCount();
 
-    const items = useMemo(() => buildItems(itemCount), [itemCount]);
+    const items = useMemo(() => TEAMS.slice(0, itemCount), [itemCount]);
     const period = itemWidth * items.length;
 
-    const jumpTargets = useMemo(
-        () =>
-            items.length <= 16
-                ? items.map((_, index) => index)
-                : [0, 1, 2, 3].map((quarter) => Math.floor((items.length / 4) * quarter)),
-        [items],
-    );
+    const position = useDerivedValue(() => {
+        const rawPosition = scrollOffset.value / itemWidth;
+        return ((rawPosition % itemCount) + itemCount) % itemCount;
+    }, [itemWidth, itemCount]);
 
     return (
         <View style={styles.container}>
-            <ScrollView
+            <LegendList
                 contentContainerStyle={styles.countRow}
+                data={ITEM_COUNT_OPTIONS}
+                extraData={itemCount}
                 horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.countScroll}
-            >
-                {ITEM_COUNT_OPTIONS.map((count) => (
+                keyExtractor={(count) => String(count)}
+                recycleItems={false}
+                renderItem={({ item: count }) => (
                     <Pressable
-                        key={count}
                         onPress={() => {
-                            setActiveIndex(0);
                             setLoadTimeMs(undefined);
                             setItemCount(count);
                         }}
@@ -151,11 +197,13 @@ export default function InfiniteCarouselFixtureScreen() {
                                 itemCount === count ? styles.countButtonTextActive : undefined,
                             ]}
                         >
-                            {count} item{count === 1 ? "" : "s"}
+                            {count} team{count === 1 ? "" : "s"}
                         </Text>
                     </Pressable>
-                ))}
-            </ScrollView>
+                )}
+                showsHorizontalScrollIndicator={false}
+                style={styles.countScroll}
+            />
             <View style={{ height: CAROUSEL_HEIGHT }}>
                 <InfiniteLegendList
                     contentContainerStyle={{ paddingHorizontal: sidePadding }}
@@ -167,12 +215,6 @@ export default function InfiniteCarouselFixtureScreen() {
                     keyExtractor={(item) => item.id}
                     ListComponent={AnimatedLegendList}
                     onLoad={({ elapsedTimeInMs }) => setLoadTimeMs(elapsedTimeInMs)}
-                    onViewableItemsChanged={({ viewableItems }) => {
-                        const centered = viewableItems.find((token) => token.isViewable);
-                        if (centered && centered.index != null) {
-                            setActiveIndex(centered.index);
-                        }
-                    }}
                     recycleItems
                     ref={refList}
                     renderItem={({ item, index, infiniteIndex }) => (
@@ -189,38 +231,31 @@ export default function InfiniteCarouselFixtureScreen() {
                     showsHorizontalScrollIndicator={false}
                     snapToInterval={itemWidth}
                     style={{ height: CAROUSEL_HEIGHT }}
-                    viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
                 />
             </View>
 
             {items.length <= 16 && (
                 <View style={styles.dotsRow}>
                     {items.map((item, index) => (
-                        <View
-                            key={item.id}
-                            style={[styles.dot, index === activeIndex ? styles.dotActive : undefined]}
-                        />
+                        <Dot index={index} key={item.id} position={position} totalCount={items.length} />
                     ))}
                 </View>
             )}
 
-            <Text style={styles.activeLabel}>
-                Active: {items[activeIndex]?.emoji} {items[activeIndex]?.title}
-            </Text>
             <Text style={styles.loadLabel}>
-                {loadTimeMs !== undefined ? `onLoad: ${Math.round(loadTimeMs)}ms · ${items.length} items · ` : ""}
+                {loadTimeMs !== undefined ? `onLoad: ${Math.round(loadTimeMs)}ms · ${items.length} teams · ` : ""}
                 mounted cards: {mountedCardsCount}
             </Text>
 
             <Text style={styles.hint}>Swipe endlessly in either direction, or jump with shortest-path wrap:</Text>
             <View style={styles.buttonsRow}>
-                {jumpTargets.map((index) => (
+                {items.map((item, index) => (
                     <Pressable
-                        key={items[index].id}
+                        key={item.id}
                         onPress={() => refList.current?.scrollToIndex({ animated: true, index })}
-                        style={[styles.jumpButton, { backgroundColor: items[index].color }]}
+                        style={[styles.jumpButton, { backgroundColor: item.color }]}
                     >
-                        <Text style={styles.jumpButtonText}>{index}</Text>
+                        <Text style={styles.jumpButtonText}>{item.emoji}</Text>
                     </Pressable>
                 ))}
             </View>
@@ -229,13 +264,6 @@ export default function InfiniteCarouselFixtureScreen() {
 }
 
 const styles = StyleSheet.create({
-    activeLabel: {
-        color: "#1f1f1f",
-        fontSize: 16,
-        fontWeight: "700",
-        marginTop: 12,
-        textAlign: "center",
-    },
     buttonsRow: {
         flexDirection: "row",
         flexWrap: "wrap",
@@ -292,12 +320,12 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
     },
     countRow: {
-        flexDirection: "row",
         gap: 8,
         paddingHorizontal: 16,
     },
     countScroll: {
         flexGrow: 0,
+        height: 34,
         marginBottom: 8,
     },
     dot: {
@@ -305,10 +333,6 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         height: 8,
         width: 8,
-    },
-    dotActive: {
-        backgroundColor: "#1f1f1f",
-        width: 20,
     },
     dotsRow: {
         flexDirection: "row",
@@ -331,9 +355,7 @@ const styles = StyleSheet.create({
         width: 36,
     },
     jumpButtonText: {
-        color: "#FFFFFF",
-        fontSize: 14,
-        fontWeight: "700",
+        fontSize: 18,
     },
     loadLabel: {
         color: "#8A8580",
