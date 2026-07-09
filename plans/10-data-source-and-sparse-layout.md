@@ -275,7 +275,7 @@ Performance acceptance should prove asymptotic behavior, not only one favorable 
 ## Steps
 
 - [x] Add characterization tests and benchmark instrumentation for the current array-change, identity-reconciliation, sparse-layout, MVCP, grid, and million-item paths.
-- [ ] Define the public `LegendListDataSource` interface, mutation-batch semantics, and mutually exclusive public data modes with type-level contract tests.
+- [x] Define the public `LegendListDataSource` interface, mutation-batch semantics, and mutually exclusive public data modes with type-level contract tests.
 - [ ] Introduce the internal `IndexedData` seam and migrate core reads to array and data-source adapters without changing array behavior.
 - [ ] Implement stable data-source subscription, revision validation, source replacement, lifecycle cleanup, and explicit safe-reset behavior.
 - [ ] Implement the mutation coordinator and transform sparse identity, renderer, container, viewability, sticky, snap, pinned, and listener state directly from mutation batches.
