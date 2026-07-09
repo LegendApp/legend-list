@@ -150,6 +150,44 @@ describe("layout store lifecycle", () => {
         expect(overrideItemLayout).toHaveBeenCalledTimes(15);
     });
 
+    it("evaluates every span when an invalidation arrives before the first span cache", () => {
+        const ctx = createLayoutStoreContext(5);
+        const overrideItemLayout = mock((layout, _item, index) => {
+            layout.span = [2, 1, 3, 4, 2][index];
+        });
+        ctx.state.props.numColumns = 4;
+        ctx.state.props.overrideItemLayout = overrideItemLayout;
+        ctx.state.dataSourceSpanInvalidationIndex = 3;
+
+        const store = syncLayoutStoreStructure(ctx) as RowLayoutStore;
+
+        expect(syncActiveRowLayoutStoreSpans(ctx)).toBe(true);
+        expect(overrideItemLayout).toHaveBeenCalledTimes(5);
+        expect(Array.from({ length: 5 }, (_, index) => store.getSpan(index))).toEqual([2, 1, 3, 4, 2]);
+    });
+
+    it("re-evaluates cached variable spans only from the mutation boundary", () => {
+        const ctx = createLayoutStoreContext(1_000);
+        const spans = Array.from({ length: 1_000 }, () => 1);
+        const overrideItemLayout = mock((layout, _item, index) => {
+            layout.span = spans[index];
+        });
+        ctx.state.props.numColumns = 4;
+        ctx.state.props.overrideItemLayout = overrideItemLayout;
+
+        const store = syncLayoutStoreStructure(ctx) as RowLayoutStore;
+        syncActiveRowLayoutStoreSpans(ctx);
+        overrideItemLayout.mockClear();
+        spans[990] = 4;
+        ctx.state.dataSourceSpanInvalidationIndex = 990;
+
+        expect(syncActiveRowLayoutStoreSpans(ctx)).toBe(true);
+        expect(overrideItemLayout).toHaveBeenCalledTimes(10);
+        expect(store.getSpan(989)).toBe(1);
+        expect(store.getSpan(990)).toBe(4);
+        expect(ctx.state.dataSourceSpanInvalidationIndex).toBeUndefined();
+    });
+
     it("keeps an existing store when the axis changes without changing column support", () => {
         const ctx = createLayoutStoreContext();
 

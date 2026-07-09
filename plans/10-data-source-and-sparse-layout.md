@@ -281,7 +281,7 @@ Performance acceptance should prove asymptotic behavior, not only one favorable 
 - [x] Implement the mutation coordinator and transform sparse identity, renderer, container, viewability, sticky, snap, pinned, and listener state directly from mutation batches.
 - [x] Add structural mutation methods and a randomized model-based contract suite to `LayoutStore` and `RowLayoutStore`.
 - [x] Implement the packed implicit sparse sequence store, migrate single-column layout behind the existing layout seam, and compare its correctness, memory, GC, and latency with the current treap.
-- [ ] Complete regular-grid mutation handling and the explicit variable-span invalidation/repacking path with focused performance and behavior tests.
+- [x] Complete regular-grid mutation handling and the explicit variable-span invalidation/repacking path with focused performance and behavior tests.
 - [ ] Add the million-item markdown fixture plus chat and grid fixtures, then profile array and data-source paths under V8 and Hermes.
 - [ ] Document the public interface, mutation ordering, sparse-item behavior, compatibility rules, performance characteristics, and migration examples.
 - [ ] Run internal application rollout, resolve behavioral or performance regressions, and prepare `4.0.0-beta.0` only after all completion criteria pass.
