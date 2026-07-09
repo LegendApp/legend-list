@@ -1,3 +1,4 @@
+import { getDataItem } from "@/core/IndexedData";
 import { setSize } from "@/core/setSize";
 import type { StateContext } from "@/state/state";
 import { roundSize } from "@/utils/helpers";
@@ -50,7 +51,7 @@ function getKnownOrFixedSize(
 
 export function getKnownOrFixedItemSize(ctx: StateContext, index: number) {
     const key = getId(ctx.state, index);
-    return getKnownOrFixedSize(ctx, key, index, ctx.state.props.data[index]);
+    return getKnownOrFixedSize(ctx, key, index, getDataItem(ctx.state, index));
 }
 
 export function areKnownOrFixedItemSizesAvailable(ctx: StateContext, startIndex: number, endIndex: number) {
@@ -139,5 +140,5 @@ export function getItemSizeAtIndex(ctx: StateContext, index: number | undefined)
     }
 
     const targetId = getId(ctx.state, index);
-    return getItemSize(ctx, targetId, index, ctx.state.props.data[index]);
+    return getItemSize(ctx, targetId, index, getDataItem(ctx.state, index));
 }

@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { getDataItem, getDataLength, getLegacyData } from "@/core/IndexedData";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
@@ -254,8 +255,8 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const scrollingToViewPosition = scrollingTo?.viewPosition;
     const isEndAnchoredScrollTarget =
         scrollTarget !== undefined &&
-        state.props.data.length > 0 &&
-        scrollTarget >= state.props.data.length - 1 &&
+        getDataLength(state) > 0 &&
+        scrollTarget >= getDataLength(state) - 1 &&
         (scrollingToViewPosition ?? 0) > 0;
 
     const shouldMVCP = dataChanged ? mvcpData : mvcpScroll;
@@ -313,7 +314,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             let anchorIdForLock = anchorLock?.id;
             let anchorPositionForLock: number | undefined;
             let skipTargetAnchor = false;
-            const data = state.props.data;
+            const data = getLegacyData(state) ?? [];
 
             // Respect shouldRestorePosition for locked anchors when data changes invalidate the old target.
             const shouldValidateLockedAnchor =
@@ -327,7 +328,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             if (shouldValidateLockedAnchor && targetId !== undefined) {
                 const index = indexByKey.get(targetId);
                 if (index !== undefined) {
-                    const item = data[index];
+                    const item = getDataItem(state, index);
                     skipTargetAnchor = item === undefined || !shouldRestorePosition(item, index, data);
                     if (skipTargetAnchor && anchorLock?.id === targetId) {
                         state.mvcpAnchorLock = undefined;
@@ -353,7 +354,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                     const { id, position } = idsInViewWithPositions[i];
                     const index = indexByKey.get(id);
                     if (index !== undefined && shouldRestorePosition) {
-                        const item = data[index];
+                        const item = getDataItem(state, index);
                         if (item === undefined || !shouldRestorePosition(item, index, data)) {
                             continue;
                         }
@@ -400,7 +401,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             }
 
             if (scrollingToViewPosition && scrollingToViewPosition > 0) {
-                const newSize = getItemSize(ctx, targetId!, scrollTarget!, state.props.data[scrollTarget!]);
+                const newSize = getItemSize(ctx, targetId!, scrollTarget!, getDataItem(state, scrollTarget!));
                 const prevSize = scrollingTo?.itemSize;
                 if (newSize !== undefined && prevSize !== undefined && newSize !== prevSize) {
                     const diff = newSize - prevSize;

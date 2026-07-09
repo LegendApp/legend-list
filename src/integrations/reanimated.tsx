@@ -58,7 +58,7 @@ export interface AnimatedLegendListSharedValues {
     scrollOffset?: SharedValue<number>;
 }
 
-export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView"> {
+interface AnimatedLegendListAdditionalProps {
     animatedProps?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
     refScrollView?: React.Ref<AnimatedScrollView>;
     sharedValues?: AnimatedLegendListSharedValues;
@@ -69,7 +69,9 @@ export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT
     itemLayoutAnimation?: ReanimatedLayoutAnimation;
 }
 
-type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
+export interface AnimatedLegendListPropsBase<ItemT>
+    extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView">,
+        AnimatedLegendListAdditionalProps {}
 
 type ReanimatedScrollBridgeProps = ReanimatedScrollViewProps & {
     forwardedRef?: React.Ref<AnimatedScrollView>;
@@ -432,8 +434,11 @@ const LegendListForwardedRef = typedMemo(
 
 const AnimatedLegendListComponent = Reanimated.createAnimatedComponent(LegendListForwardedRef);
 
-type AnimatedLegendListProps<ItemT> = Omit<AnimatedLegendListPropsBase<ItemT>, "refLegendList" | "ref"> &
-    OtherAnimatedLegendListProps<ItemT>;
+type AnimatedLegendListProps<ItemT> = PropsBase<ItemT> extends infer Props
+    ? Props extends unknown
+        ? Omit<Props, "refScrollView"> & AnimatedLegendListAdditionalProps
+        : never
+    : never;
 
 type AnimatedLegendListDefinition = <ItemT>(
     props: AnimatedLegendListProps<ItemT> & { ref?: React.Ref<LegendListRef> },

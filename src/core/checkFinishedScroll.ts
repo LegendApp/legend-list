@@ -2,6 +2,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getDataLength } from "@/core/IndexedData";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
@@ -91,14 +92,14 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     const { state } = ctx;
     return (
         !!state.scrollingTo?.isInitialScroll &&
-        state.props.data.length > 0 &&
+        getDataLength(state) > 0 &&
         getContentSize(ctx) <= state.scrollLength &&
         state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
     );
 }
 
 function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    return scrollingTo.index === ctx.state.props.data.length - 1 && scrollingTo.viewPosition === 1;
+    return scrollingTo.index === getDataLength(ctx.state) - 1 && scrollingTo.viewPosition === 1;
 }
 
 function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {

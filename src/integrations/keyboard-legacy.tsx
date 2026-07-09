@@ -26,7 +26,9 @@ type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed
 type KeyboardAnimationMode = "idle" | "running";
 type AnimatedScrollView = React.ElementRef<typeof Reanimated.ScrollView>;
 
-type KeyboardControllerLegendListProps<ItemT> = Omit<
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+type KeyboardControllerLegendListProps<ItemT> = DistributiveOmit<
     AnimatedLegendListProps<ItemT>,
     "onScroll" | "contentInset" | "automaticallyAdjustContentInsets"
 > & {

@@ -1,3 +1,4 @@
+import { getDataLength } from "@/core/IndexedData";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
@@ -17,7 +18,7 @@ function getAlignItemsAtEndPadding(ctx: StateContext) {
     const shouldPad =
         !!state.props.alignItemsAtEndPaddingEnabled &&
         !state.props.horizontal &&
-        state.props.data.length > 0 &&
+        getDataLength(state) > 0 &&
         state.scrollLength > 0;
 
     return shouldPad ? Math.max(0, state.scrollLength - getRawContentLength(ctx) - getContentInsetEnd(ctx)) : 0;

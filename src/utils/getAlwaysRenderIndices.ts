@@ -1,3 +1,4 @@
+import { ArrayDataAdapter, type IndexedData } from "@/core/IndexedData";
 import type { AlwaysRenderConfig } from "@/types.base";
 
 const sortAsc = (a: number, b: number) => a - b;
@@ -13,16 +14,19 @@ const addIndex = (result: Set<number>, dataLength: number, index: number) => {
 
 export function getAlwaysRenderIndices<ItemT>(
     config: AlwaysRenderConfig | undefined,
-    data: readonly ItemT[],
-    keyExtractor: (item: ItemT, index: number) => string,
+    data: IndexedData<ItemT> | readonly ItemT[],
+    keyExtractor?: (item: ItemT, index: number) => string,
     anchoredEndSpaceAnchorIndex?: number,
 ): number[] {
-    if (data.length === 0) {
+    const indexedData = Array.isArray(data)
+        ? new ArrayDataAdapter(data as readonly ItemT[], keyExtractor)
+        : (data as IndexedData<ItemT>);
+    const dataLength = indexedData.getLength();
+    if (dataLength === 0) {
         return [];
     }
 
     const result = new Set<number>();
-    const dataLength = data.length;
 
     const topCount = toCount(config?.top);
     if (topCount > 0) {
@@ -48,7 +52,7 @@ export function getAlwaysRenderIndices<ItemT>(
     if (config?.keys?.length) {
         const keys = new Set(config.keys);
         for (let i = 0; i < dataLength && keys.size > 0; i++) {
-            const key = keyExtractor(data[i], i);
+            const key = indexedData.getKey(i);
             if (keys.has(key)) {
                 addIndex(result, dataLength, i);
                 keys.delete(key);

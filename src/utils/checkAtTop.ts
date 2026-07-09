@@ -1,4 +1,5 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
+import { getDataLength } from "@/core/IndexedData";
 import { type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import {
@@ -16,14 +17,14 @@ export function checkAtTop(ctx: StateContext, allowedEdge?: ReachedEdge, allowGa
     }
     const {
         isStartReached,
-        props: { data, onStartReachedThreshold },
+        props: { onStartReachedThreshold },
         scroll,
         scrollLength,
         startReachedSnapshot,
         totalSize,
     } = state;
 
-    const dataLength = data.length;
+    const dataLength = getDataLength(state);
     const threshold = onStartReachedThreshold! * scrollLength;
     resetSharedEdgeGateIfOutsideHysteresis(ctx);
 
