@@ -77,8 +77,49 @@ export type BaseScrollViewProps<TScrollView> = Omit<
     | "onScroll"
 >;
 
-// Core props for data mode
-interface DataModeProps<ItemT, TItemType extends string | undefined> {
+export type DataSourceOperation =
+    | { type: "splice"; index: number; deleteCount: number; insertCount: number }
+    | { type: "move"; from: number; to: number; count: number }
+    | { type: "update"; index: number; count: number; layout: "preserve" | "invalidate" }
+    | { type: "reset" };
+
+export interface DataSourceMutationBatch {
+    previousRevision: number;
+    revision: number;
+    previousLength: number;
+    length: number;
+    operations: DataSourceOperation[];
+}
+
+export interface LegendListDataSource<ItemT> {
+    /** Returns the item at a logical index, or `undefined` when that item is not currently loaded. */
+    getItem(index: number): ItemT | undefined;
+
+    /** Returns the stable unique key for a logical index without requiring the item to be loaded. */
+    getKey(index: number): string;
+
+    /** Returns the current logical item count, including unloaded items. */
+    getLength(): number;
+
+    /** Returns the monotonically increasing revision represented by the current readable source state. */
+    getRevision(): number;
+
+    /** Subscribes to atomic, ordered mutation batches emitted after the source reaches its new readable state. */
+    subscribe(listener: (batch: DataSourceMutationBatch) => void): () => void;
+}
+
+export interface LegendListDataSourceRenderItemProps<
+    ItemT,
+    TItemType extends string | number | undefined = string | number | undefined,
+> {
+    dataSource: LegendListDataSource<ItemT>;
+    extraData: any;
+    index: number;
+    item: ItemT | undefined;
+    type: TItemType;
+}
+
+export interface LegendListArrayDataModeProps<ItemT, TItemType extends string | undefined> {
     /**
      * Array of items to render in the list.
      * @required when using data mode
@@ -93,7 +134,27 @@ interface DataModeProps<ItemT, TItemType extends string | undefined> {
     renderItem: (props: LegendListRenderItemProps<ItemT, TItemType>) => React.ReactNode;
 
     children?: never;
+    dataSource?: never;
 }
+
+export interface LegendListDataSourceModeProps<ItemT, TItemType extends string | undefined> {
+    children?: never;
+    data?: never;
+
+    /**
+     * Indexed source that owns logical item access, stable identity, and precise mutation notifications.
+     */
+    dataSource: LegendListDataSource<ItemT>;
+
+    /**
+     * Renders a loaded item or an unloaded logical item represented by `item: undefined`.
+     */
+    renderItem: (props: LegendListDataSourceRenderItemProps<ItemT, TItemType>) => React.ReactNode;
+}
+
+export type LegendListDataMode<ItemT, TItemType extends string | undefined = string | undefined> =
+    | LegendListArrayDataModeProps<ItemT, TItemType>
+    | LegendListDataSourceModeProps<ItemT, TItemType>;
 
 // Core props for children mode
 interface ChildrenModeProps {
@@ -105,6 +166,7 @@ interface ChildrenModeProps {
     children: React.ReactNode;
 
     data?: never;
+    dataSource?: never;
     renderItem?: never;
 }
 
@@ -451,7 +513,7 @@ export type LegendListPropsBase<
     TItemType extends string | undefined = string | undefined,
 > = BaseScrollViewProps<TScrollViewProps> &
     LegendListSpecificProps<ItemT, TItemType> &
-    (DataModeProps<ItemT, TItemType> | ChildrenModeProps);
+    (LegendListArrayDataModeProps<ItemT, TItemType> | ChildrenModeProps);
 
 export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;
