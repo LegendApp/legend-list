@@ -210,6 +210,28 @@ describe("RowLayoutStore", () => {
         expect(store.getTotalSize()).toBe(60);
     });
 
+    it("does not rebuild row geometry when structural inputs are unchanged", () => {
+        const store = new RowLayoutStore({ estimatedSize: 100, length: 1_000_000, numColumns: 2 });
+        const rowHeightTree = (store as unknown as { rowHeightTree: unknown }).rowHeightTree;
+
+        store.resize(1_000_000, undefined, 2);
+        store.setEstimatedSize(100);
+
+        expect((store as unknown as { rowHeightTree: unknown }).rowHeightTree).toBe(rowHeightTree);
+    });
+
+    it("rebuilds row geometry when the span topology identity changes", () => {
+        const spans = [1, 1, 1, 1];
+        const store = new RowLayoutStore({ estimatedSize: 100, length: 4, numColumns: 2, spans });
+        const rowHeightTree = (store as unknown as { rowHeightTree: unknown }).rowHeightTree;
+
+        store.resize(4, spans, 2);
+        expect((store as unknown as { rowHeightTree: unknown }).rowHeightTree).toBe(rowHeightTree);
+
+        store.resize(4, [...spans], 2);
+        expect((store as unknown as { rowHeightTree: unknown }).rowHeightTree).not.toBe(rowHeightTree);
+    });
+
     it("throws for invalid sizes, spans, indexes, and column counts", () => {
         const store = new RowLayoutStore({ estimatedSize: 100, length: 1, numColumns: 1 });
 

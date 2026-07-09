@@ -63,6 +63,23 @@ describe("calculateOffsetForIndex", () => {
             expect(result).toBe(1000);
             expect(getLayoutValue(mockState, "positions", 20)).toBeUndefined();
         });
+
+        it("keeps distant variable fixed offsets sparse and estimate-backed", () => {
+            let fixedSizeCalls = 0;
+            mockState.props.data = Array.from({ length: 1_000_000 }, (_, index) => index);
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.getFixedItemSize = (_item, index) => {
+                fixedSizeCalls++;
+                return index === 0 ? 300 : 60;
+            };
+            mockState.layoutStoreRuntime = undefined;
+            mockState.idCache.length = 0;
+            syncLayoutStoreStructure(mockCtx);
+
+            expect(calculateOffsetForIndex(mockCtx, 900_000)).toBe(90_000_000);
+            expect(fixedSizeCalls).toBe(0);
+            expect(mockState.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
+        });
     });
 
     describe("padding top exclusion", () => {

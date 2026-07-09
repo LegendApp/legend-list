@@ -1,4 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { materializeFixedLayoutStoreIndex } from "@/core/fixedLayoutMaterialization";
+import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import type { StateContext } from "@/state/state";
 import type { LegendListRef } from "@/types.base";
@@ -37,6 +39,9 @@ export function scrollToIndex(
     const { data } = state.props;
     index = clampScrollIndex(index, data.length);
     const itemSize = getItemSizeAtIndex(ctx, index);
+    if (materializeFixedLayoutStoreIndex(ctx, index)) {
+        syncLayoutStoreState(ctx);
+    }
 
     const firstIndexOffset = calculateOffsetForIndex(ctx, index);
 

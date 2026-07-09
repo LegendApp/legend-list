@@ -1,8 +1,9 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
+import { materializeFixedLayoutStoreRangeAtOffsets } from "@/core/fixedLayoutMaterialization";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
-import { getActiveLayoutStore } from "@/core/layoutStoreLifecycle";
+import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -55,15 +56,14 @@ function syncInitialScrollNativeWatchdog(
 }
 
 function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number) {
-    const store = getActiveLayoutStore(ctx);
-    let range: { end: number; start: number } | undefined;
-    if (store) {
-        const viewportStart = Math.max(0, targetOffset);
-        const viewportEnd = Math.max(viewportStart, targetOffset + ctx.state.scrollLength);
-        range = store.findIndexRangeAtOffsets(viewportStart, viewportEnd);
+    const viewportStart = Math.max(0, targetOffset);
+    const viewportEnd = Math.max(viewportStart, targetOffset + ctx.state.scrollLength);
+    const materialized = materializeFixedLayoutStoreRangeAtOffsets(ctx, viewportStart, viewportEnd);
+    if (materialized.didChange) {
+        syncLayoutStoreState(ctx);
     }
-    if (range) {
-        ctx.state.scrollTargetPinnedRange = range;
+    if (materialized.range) {
+        ctx.state.scrollTargetPinnedRange = materialized.range;
         ctx.state.scrollForNextCalculateItemsInView = undefined;
     } else {
         ctx.state.scrollTargetPinnedRange = undefined;

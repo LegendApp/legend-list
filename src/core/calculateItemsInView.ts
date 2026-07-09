@@ -1,6 +1,10 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
+import {
+    materializeFixedLayoutStoreRange,
+    materializeFixedLayoutStoreRangeAtOffsets,
+} from "@/core/fixedLayoutMaterialization";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
@@ -259,11 +263,14 @@ function reconcileLayoutStorePinnedIndices(
         return;
     }
 
+    let didMaterializeFixedSizes = false;
     const materializeRange = (startIndex: number | undefined, endIndex = startIndex) => {
         if (startIndex !== undefined && endIndex !== undefined && options.dataLength > 0) {
             const start = Math.max(0, Math.min(startIndex, endIndex));
             const end = Math.min(options.dataLength - 1, Math.max(startIndex, endIndex));
             if (start <= end) {
+                didMaterializeFixedSizes =
+                    materializeFixedLayoutStoreRange(ctx, start, end) || didMaterializeFixedSizes;
                 materializeLayoutStoreRange(ctx, start, end);
             }
         }
@@ -278,17 +285,20 @@ function reconcileLayoutStorePinnedIndices(
     for (let offset = 0; offset <= 1; offset++) {
         materializeRange(options.stickyHeaderIndices[options.currentStickyIdx - offset]);
     }
+    if (didMaterializeFixedSizes) {
+        syncLayoutStoreState(ctx);
+    }
 }
 
 function materializeLayoutStoreOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
-    const store = getActiveLayoutStore(ctx);
+    const materialized = materializeFixedLayoutStoreRangeAtOffsets(ctx, startOffset, endOffset);
+    if (materialized.didChange) {
+        syncLayoutStoreState(ctx);
+    }
     let range: { end: number; start: number } | undefined;
 
-    if (store) {
-        const indexRange = store.findIndexRangeAtOffsets(startOffset, endOffset);
-        if (indexRange) {
-            range = materializeLayoutStoreRange(ctx, indexRange.start, indexRange.end);
-        }
+    if (materialized.range) {
+        range = materializeLayoutStoreRange(ctx, materialized.range.start, materialized.range.end);
     }
 
     return range;
