@@ -1,4 +1,4 @@
-import type { LayoutIndexRange, LayoutStore, LayoutStoreSizeEntry } from "@/core/LayoutStore";
+import type { LayoutIndexRange, LayoutStoreSizeEntry, MutableLayoutStore } from "@/core/LayoutStore";
 
 const SIZE_CACHED = 1;
 const SIZE_MEASURED = 2;
@@ -23,7 +23,7 @@ interface KnownSizeNode extends PrefixStats {
     size: number;
 }
 
-export class PrefixLayoutStore implements LayoutStore {
+export class PrefixLayoutStore implements MutableLayoutStore {
     // Prefix mode intentionally uses one scalar estimate for all unknown rows.
     // Known rows are sparse nodes that store measured/cached deviations from the estimate.
     private estimatedSize: number;
@@ -154,11 +154,49 @@ export class PrefixLayoutStore implements LayoutStore {
         }
     }
 
+    invalidateRange(index: number, count: number) {
+        assertMutationRange(this.length, index, count, "invalidateRange");
+        if (count > 0 && this.root) {
+            const end = index + count;
+            const entries = collectKnownSizeEntries(this.root).filter(
+                (entry) => entry.index < index || entry.index >= end,
+            );
+            this.replaceKnownSizeEntries(entries);
+        }
+    }
+
+    move(from: number, to: number, count: number) {
+        assertMoveRange(this.length, from, to, count);
+        if (count > 0 && from !== to && this.root) {
+            const entries = collectKnownSizeEntries(this.root).map((entry) => ({
+                ...entry,
+                index: transformMoveIndex(entry.index, from, to, count),
+            }));
+            this.replaceKnownSizeEntries(entries);
+        }
+    }
+
     resize(length: number) {
         const normalizedLength = normalizeLength(length);
         if (normalizedLength !== this.length) {
             this.lengthValue = normalizedLength;
             this.root = pruneFromIndex(this.root, normalizedLength);
+        }
+    }
+
+    splice(index: number, deleteCount: number, insertCount: number) {
+        assertMutationRange(this.length, index, deleteCount, "splice");
+        normalizeLength(insertCount);
+        if (deleteCount > 0 || insertCount > 0) {
+            const deletedEnd = index + deleteCount;
+            const entries = collectKnownSizeEntries(this.root)
+                .filter((entry) => entry.index < index || entry.index >= deletedEnd)
+                .map((entry) => ({
+                    ...entry,
+                    index: entry.index >= deletedEnd ? entry.index + insertCount - deleteCount : entry.index,
+                }));
+            this.lengthValue += insertCount - deleteCount;
+            this.replaceKnownSizeEntries(entries);
         }
     }
 
@@ -178,6 +216,49 @@ export class PrefixLayoutStore implements LayoutStore {
             throw new RangeError(`PrefixLayoutStore index ${index} is out of bounds for length ${this.length}`);
         }
     }
+}
+
+function assertMoveRange(length: number, from: number, to: number, count: number) {
+    assertMutationRange(length, from, count, "move");
+    if (!Number.isInteger(to) || to < 0 || to > length - count) {
+        throw new RangeError(
+            `PrefixLayoutStore move destination ${to} is invalid for length ${length} and count ${count}`,
+        );
+    }
+}
+
+function assertMutationRange(length: number, index: number, count: number, operation: string) {
+    if (!Number.isInteger(index) || !Number.isInteger(count) || index < 0 || count < 0 || index + count > length) {
+        throw new RangeError(`PrefixLayoutStore ${operation} range ${index}:${count} is invalid for length ${length}`);
+    }
+}
+
+function collectKnownSizeEntries(root: KnownSizeNode | undefined) {
+    const entries: PrefixLayoutStoreSizeEntry[] = [];
+    const visit = (node: KnownSizeNode | undefined) => {
+        if (node) {
+            visit(node.left);
+            entries.push({
+                index: node.index,
+                size: node.size,
+                type: node.kind === SIZE_MEASURED ? "measured" : "cached",
+            });
+            visit(node.right);
+        }
+    };
+    visit(root);
+    return entries;
+}
+
+function transformMoveIndex(index: number, from: number, to: number, count: number) {
+    let nextIndex = index;
+    if (index >= from && index < from + count) {
+        nextIndex = to + index - from;
+    } else {
+        const indexAfterRemoval = index >= from + count ? index - count : index;
+        nextIndex = indexAfterRemoval >= to ? indexAfterRemoval + count : indexAfterRemoval;
+    }
+    return nextIndex;
 }
 
 function findIndexAtOffsetInRange(

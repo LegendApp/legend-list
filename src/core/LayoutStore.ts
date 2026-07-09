@@ -22,3 +22,9 @@ export interface LayoutStore {
     getTotalSize(): number;
     hasIndex(index: number | undefined): index is number;
 }
+
+export interface MutableLayoutStore extends LayoutStore {
+    invalidateRange(index: number, count: number): void;
+    move(from: number, to: number, count: number): void;
+    splice(index: number, deleteCount: number, insertCount: number): void;
+}

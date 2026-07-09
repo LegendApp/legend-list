@@ -34,7 +34,6 @@ import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@
 import {
     clearLayoutStoreKnownSizes,
     rebuildLayoutStoreExact,
-    reconcileLayoutStoreDataSourceMutation,
     syncLayoutStoreState,
     syncLayoutStoreStructure,
 } from "@/core/layoutStoreLifecycle";
@@ -566,8 +565,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         const result = applyDataSourceMutationBatches(ctx, dataSource, [batch]);
                         state.dataSourceMutationApplied = state.dataSourceMutationApplied || result.applied;
                         if (result.applied) {
-                            syncLayoutStoreStructure(ctx);
-                            reconcileLayoutStoreDataSourceMutation(ctx);
+                            if (!state.layoutStoreRuntime) {
+                                syncLayoutStoreStructure(ctx);
+                            }
                             syncLayoutStoreState(ctx);
                         }
                         if (result.resetReason) {

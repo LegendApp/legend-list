@@ -1,4 +1,4 @@
-import type { LayoutIndexRange, LayoutStore, LayoutStoreSizeEntry } from "@/core/LayoutStore";
+import type { LayoutIndexRange, LayoutStoreSizeEntry, MutableLayoutStore } from "@/core/LayoutStore";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 
 const SIZE_CACHED = 1;
@@ -26,7 +26,7 @@ export interface RowLayoutStoreOptions {
     spans?: ArrayLike<number | undefined>;
 }
 
-export class RowLayoutStore implements LayoutStore {
+export class RowLayoutStore implements MutableLayoutStore {
     private estimatedSize: number;
     private knownSizes = new Map<number, KnownItemSize>();
     private lengthValue: number;
@@ -148,6 +148,38 @@ export class RowLayoutStore implements LayoutStore {
         this.rebuildRowsAndTotals();
     }
 
+    invalidateRange(index: number, count: number) {
+        assertMutationRange(this.length, index, count, "invalidateRange");
+        if (count > 0) {
+            const end = index + count;
+            for (const knownIndex of this.knownSizes.keys()) {
+                if (knownIndex >= index && knownIndex < end) {
+                    this.knownSizes.delete(knownIndex);
+                }
+            }
+            this.rebuildRowsAndTotals();
+        }
+    }
+
+    move(from: number, to: number, count: number) {
+        assertMoveRange(this.length, from, to, count);
+        if (count > 0 && from !== to) {
+            const knownSizes = new Map<number, KnownItemSize>();
+            for (const [index, entry] of this.knownSizes) {
+                knownSizes.set(transformMoveIndex(index, from, to, count), entry);
+            }
+            this.knownSizes = knownSizes;
+            const spans = this.getMutableSpans();
+            if (spans) {
+                const moved = spans.splice(from, count);
+                spans.splice(to, 0, ...moved);
+                this.spanInput = spans;
+                this.spanTopology = createSpanTopology(this.length, this.numColumns, spans);
+            }
+            this.rebuildRowsAndTotals();
+        }
+    }
+
     resize(length: number, spans?: ArrayLike<number | undefined>, numColumns = this.numColumns) {
         const normalizedLength = normalizeLength(length);
         const normalizedNumColumns = normalizeNumColumns(numColumns);
@@ -160,6 +192,31 @@ export class RowLayoutStore implements LayoutStore {
             this.spanInput = spans;
             this.spanTopology = spans ? createSpanTopology(this.length, this.numColumns, spans) : undefined;
             this.pruneKnownSizes();
+            this.rebuildRowsAndTotals();
+        }
+    }
+
+    splice(index: number, deleteCount: number, insertCount: number) {
+        assertMutationRange(this.length, index, deleteCount, "splice");
+        normalizeLength(insertCount);
+        if (deleteCount > 0 || insertCount > 0) {
+            const deletedEnd = index + deleteCount;
+            const knownSizes = new Map<number, KnownItemSize>();
+            for (const [knownIndex, entry] of this.knownSizes) {
+                if (knownIndex < index) {
+                    knownSizes.set(knownIndex, entry);
+                } else if (knownIndex >= deletedEnd) {
+                    knownSizes.set(knownIndex + insertCount - deleteCount, entry);
+                }
+            }
+            this.knownSizes = knownSizes;
+            const spans = this.getMutableSpans();
+            if (spans) {
+                spans.splice(index, deleteCount, ...new Array<number>(insertCount).fill(1));
+                this.spanInput = spans;
+            }
+            this.lengthValue += insertCount - deleteCount;
+            this.spanTopology = spans ? createSpanTopology(this.length, this.numColumns, spans) : undefined;
             this.rebuildRowsAndTotals();
         }
     }
@@ -219,6 +276,14 @@ export class RowLayoutStore implements LayoutStore {
         return this.spanTopology?.rowStartIndexes[rowIndex] ?? rowIndex * this.numColumns;
     }
 
+    private getMutableSpans() {
+        let spans: number[] | undefined;
+        if (this.spanTopology) {
+            spans = Array.from({ length: this.length }, (_, index) => this.spanTopology?.spans[index] || 1);
+        }
+        return spans;
+    }
+
     private pruneKnownSizes() {
         for (const index of this.knownSizes.keys()) {
             if (index >= this.length) {
@@ -269,6 +334,32 @@ export class RowLayoutStore implements LayoutStore {
             this.rowLayout.clearKnownSize(rowIndex);
         }
     }
+}
+
+function assertMoveRange(length: number, from: number, to: number, count: number) {
+    assertMutationRange(length, from, count, "move");
+    if (!Number.isInteger(to) || to < 0 || to > length - count) {
+        throw new RangeError(
+            `RowLayoutStore move destination ${to} is invalid for length ${length} and count ${count}`,
+        );
+    }
+}
+
+function assertMutationRange(length: number, index: number, count: number, operation: string) {
+    if (!Number.isInteger(index) || !Number.isInteger(count) || index < 0 || count < 0 || index + count > length) {
+        throw new RangeError(`RowLayoutStore ${operation} range ${index}:${count} is invalid for length ${length}`);
+    }
+}
+
+function transformMoveIndex(index: number, from: number, to: number, count: number) {
+    let nextIndex = index;
+    if (index >= from && index < from + count) {
+        nextIndex = to + index - from;
+    } else {
+        const indexAfterRemoval = index >= from + count ? index - count : index;
+        nextIndex = indexAfterRemoval >= to ? indexAfterRemoval + count : indexAfterRemoval;
+    }
+    return nextIndex;
 }
 
 function createSpanTopology(

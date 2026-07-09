@@ -279,7 +279,7 @@ Performance acceptance should prove asymptotic behavior, not only one favorable 
 - [x] Introduce the internal `IndexedData` seam and migrate core reads to array and data-source adapters without changing array behavior.
 - [x] Implement stable data-source subscription, revision validation, source replacement, lifecycle cleanup, and explicit safe-reset behavior.
 - [x] Implement the mutation coordinator and transform sparse identity, renderer, container, viewability, sticky, snap, pinned, and listener state directly from mutation batches.
-- [ ] Add structural mutation methods and a randomized model-based contract suite to `LayoutStore` and `RowLayoutStore`.
+- [x] Add structural mutation methods and a randomized model-based contract suite to `LayoutStore` and `RowLayoutStore`.
 - [ ] Implement the packed implicit sparse sequence store, migrate single-column layout behind the existing layout seam, and compare its correctness, memory, GC, and latency with the current treap.
 - [ ] Complete regular-grid mutation handling and the explicit variable-span invalidation/repacking path with focused performance and behavior tests.
 - [ ] Add the million-item markdown fixture plus chat and grid fixtures, then profile array and data-source paths under V8 and Hermes.
