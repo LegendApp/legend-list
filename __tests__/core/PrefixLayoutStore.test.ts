@@ -301,6 +301,47 @@ describe("PrefixLayoutStore", () => {
         expect(store.getTotalSize()).toBe(110);
     });
 
+    it("keeps million-row layouts estimate-backed with sparse known sizes", () => {
+        const store = new PrefixLayoutStore(1_000_000, 10);
+
+        store.replaceKnownSizeEntries([
+            { index: 10, size: 20, type: "measured" },
+            { index: 500_000, size: 5, type: "cached" },
+            { index: 999_999, size: 30, type: "measured" },
+        ]);
+
+        expect(store.length).toBe(1_000_000);
+        expect(store.getMeasuredCount()).toBe(2);
+        expect(store.getMeasuredAverageSize()).toBe(25);
+        expect(store.getOffset(10)).toBe(100);
+        expect(store.getOffset(11)).toBe(120);
+        expect(store.getOffset(500_000)).toBe(5_000_010);
+        expect(store.getOffset(500_001)).toBe(5_000_015);
+        expect(store.getOffset(999_999)).toBe(9_999_995);
+        expect(store.getTotalSize()).toBe(10_000_025);
+        expect(store.findIndexAtOffset(5_000_009)).toBe(499_999);
+        expect(store.findIndexAtOffset(5_000_010)).toBe(500_000);
+        expect(store.findIndexAtOffset(10_000_024)).toBe(999_999);
+        expect(store.findIndexAtOffset(10_000_025)).toBeUndefined();
+    });
+
+    it("drops only out-of-range sparse sizes when a huge layout is truncated", () => {
+        const store = new PrefixLayoutStore(1_000_000, 10);
+
+        store.replaceKnownSizeEntries([
+            { index: 1, size: 20, type: "measured" },
+            { index: 999_999, size: 30, type: "measured" },
+        ]);
+        store.resize(3);
+
+        expect(store.length).toBe(3);
+        expect(store.getSize(1)).toBe(20);
+        expect(store.getMeasuredCount()).toBe(1);
+        expect(store.getTotalSize()).toBe(40);
+        expect(store.findIndexAtOffset(39)).toBe(2);
+        expect(store.findIndexAtOffset(40)).toBeUndefined();
+    });
+
     it("clears known sizes without changing length or estimate", () => {
         const store = new PrefixLayoutStore(3, 100);
 
