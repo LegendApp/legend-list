@@ -303,6 +303,30 @@ describe("RowLayoutStore", () => {
         expect(store.getTotalSize()).toBe(50_000_000);
     });
 
+    it("keeps million-item regular-grid mutations proportional to sparse measurements", () => {
+        const store = new RowLayoutStore({ estimatedSize: 100, length: 1_000_000, numColumns: 3 });
+        const internals = store as unknown as {
+            knownSizes: Map<number, unknown>;
+            spanTopology?: unknown;
+        };
+        store.replaceKnownSizeEntries([
+            { index: 10, size: 110, type: "measured" },
+            { index: 500_000, size: 120, type: "measured" },
+            { index: 999_999, size: 130, type: "measured" },
+        ]);
+
+        store.splice(0, 0, 3);
+        store.move(500_003, 30, 1);
+        store.invalidateRange(13, 1);
+
+        expect(store.length).toBe(1_000_003);
+        expect(internals.spanTopology).toBeUndefined();
+        expect(internals.knownSizes.size).toBe(2);
+        expect(store.getSize(30)).toBe(120);
+        expect(store.getSize(1_000_002)).toBe(130);
+        expect(store.getColumn(1_000_002)).toBe(1);
+    });
+
     it("stores distant regular-grid measurements without materializing skipped rows", () => {
         const store = new RowLayoutStore({ estimatedSize: 100, length: 1_000_000, numColumns: 2 });
         const internals = store as unknown as { knownSizes: Map<number, unknown> };
