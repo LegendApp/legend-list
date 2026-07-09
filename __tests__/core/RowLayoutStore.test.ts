@@ -413,6 +413,21 @@ describe("RowLayoutStore", () => {
         expect((store as unknown as { rowLayout: unknown }).rowLayout).not.toBe(rowLayout);
     });
 
+    it("repacks a same-length variable-span topology in place from the affected row", () => {
+        const spans = new Array<number | undefined>(100_000).fill(1);
+        const store = new RowLayoutStore({ estimatedSize: 10, length: spans.length, numColumns: 4, spans });
+        const internals = store as unknown as { spanTopology: unknown };
+        const topology = internals.spanTopology;
+        spans[90_000] = 4;
+
+        store.resize(spans.length, spans, 4, 90_000);
+
+        expect(internals.spanTopology).toBe(topology);
+        expect(store.getSpan(89_999)).toBe(1);
+        expect(store.getSpan(90_000)).toBe(4);
+        expect(store.getColumn(90_001)).toBe(1);
+    });
+
     it("throws for invalid sizes, spans, indexes, and column counts", () => {
         const store = new RowLayoutStore({ estimatedSize: 100, length: 1, numColumns: 1 });
 

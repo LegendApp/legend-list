@@ -67,6 +67,7 @@
     },
     "scripts": {
         "bench:data-source": "bun run benchmarks/data-source-baseline.ts",
+        "bench:engines": "bun run benchmarks/profile-engines.ts",
         "bench:sparse-layout": "bun run benchmarks/sparse-sequence-layout.ts",
         "prebuild": "bun run lint && bun run prebuild.ts",
         "build": "tsup",
