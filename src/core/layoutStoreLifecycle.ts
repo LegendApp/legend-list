@@ -341,7 +341,10 @@ export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
 
             for (let index = startIndex; index < dataLength; index++) {
                 layoutConfig.span = 1;
-                overrideItemLayout(layoutConfig, getDataItem(state, index), index, numColumns, extraData);
+                const item = getDataItem(state, index);
+                if (item !== undefined) {
+                    overrideItemLayout(layoutConfig, item, index, numColumns, extraData);
+                }
                 spans[index] = layoutConfig.span;
             }
 

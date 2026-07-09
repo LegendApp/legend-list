@@ -188,6 +188,22 @@ describe("layout store lifecycle", () => {
         expect(ctx.state.dataSourceSpanInvalidationIndex).toBeUndefined();
     });
 
+    it("keeps unloaded variable-span items at the default span", () => {
+        const ctx = createLayoutStoreContext(3);
+        const overrideItemLayout = mock((layout) => {
+            layout.span = 2;
+        });
+        ctx.state.props.data = [undefined, { id: "loaded" }, undefined] as any;
+        ctx.state.props.numColumns = 4;
+        ctx.state.props.overrideItemLayout = overrideItemLayout;
+
+        const store = syncLayoutStoreStructure(ctx) as RowLayoutStore;
+        syncActiveRowLayoutStoreSpans(ctx);
+
+        expect(overrideItemLayout).toHaveBeenCalledTimes(1);
+        expect(Array.from({ length: 3 }, (_, index) => store.getSpan(index))).toEqual([1, 2, 1]);
+    });
+
     it("keeps an existing store when the axis changes without changing column support", () => {
         const ctx = createLayoutStoreContext();
 
