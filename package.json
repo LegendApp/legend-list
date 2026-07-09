@@ -66,6 +66,7 @@
         "npm": ">=8.11.0"
     },
     "scripts": {
+        "bench:data-source": "bun run benchmarks/data-source-baseline.ts",
         "prebuild": "bun run lint && bun run prebuild.ts",
         "build": "tsup",
         "postbuild": "bun run postbuild.ts",
@@ -77,8 +78,8 @@
         "testsilently": "bun test > /dev/null 2>&1",
         "test:watch": "bun test --watch",
         "test:coverage": "bun test --coverage",
-        "lint": "bunx biome check ./src ./__tests__ ./example/app ./example/screens ./example-web",
-        "lint:fix": "bunx biome check --write --unsafe ./src ./__tests__ ./example/app ./example/screens ./example-web",
+        "lint": "bunx biome check ./src ./__tests__ ./benchmarks ./example/app ./example/screens ./example-web",
+        "lint:fix": "bunx biome check --write --unsafe ./src ./__tests__ ./benchmarks ./example/app ./example/screens ./example-web",
         "test:visualize": "bun run visualize-tests.js && open test-visualization.html",
         "tsc": "status=0; bun run tsc:src || status=1; bun run tsc:example || status=1; bun run tsc:example-web || status=1; exit $status",
         "tsc:src": "tsc --noEmit --project tsconfig.src.json",
