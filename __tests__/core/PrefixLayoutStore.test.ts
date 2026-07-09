@@ -325,6 +325,36 @@ describe("PrefixLayoutStore", () => {
         expect(store.findIndexAtOffset(10_000_025)).toBeUndefined();
     });
 
+    it("packs sequential known sizes into bounded typed-array blocks", () => {
+        const store = new PrefixLayoutStore(1_000_000, 10);
+        for (let index = 0; index < 10_000; index++) {
+            store.setMeasuredSize(index, 10 + (index % 5));
+        }
+
+        const stats = store.getDebugStats();
+        expect(stats.knownCount).toBe(10_000);
+        expect(stats.knownBlockCount).toBeLessThanOrEqual(Math.ceil(10_000 / 128));
+        expect(stats.allocatedKnownSlots).toBeLessThanOrEqual(stats.knownBlockCount * 128);
+        expect(stats.nodeCount).toBeLessThanOrEqual(stats.knownBlockCount + 1);
+        expect(stats.unknownRunCount).toBe(1);
+    });
+
+    it("keeps structural edits at piece granularity instead of rebuilding known rows", () => {
+        const store = new PrefixLayoutStore(1_000_000, 10);
+        for (let index = 0; index < 10_000; index++) {
+            store.setMeasuredSize(index, 20);
+        }
+        const before = store.getDebugStats();
+
+        store.splice(0, 0, 100);
+        store.move(5_000, 900_000, 1_000);
+
+        const after = store.getDebugStats();
+        expect(after.knownCount).toBe(before.knownCount);
+        expect(after.knownBlockCount).toBeLessThanOrEqual(before.knownBlockCount + 4);
+        expect(store.getSize(900_000)).toBe(20);
+    });
+
     it("finds offsets directly through large sparse gaps", () => {
         const store = new PrefixLayoutStore(1_000_000, 10);
 
