@@ -42,6 +42,9 @@ import CountriesReorderFixture from "~/screens/fixtures/countries-reorder";
 import CountriesWithHeadersFixture from "~/screens/fixtures/countries-with-headers";
 import CountriesWithHeadersFixedFixture from "~/screens/fixtures/countries-with-headers-fixed";
 import CountriesWithHeadersStickyFixture from "~/screens/fixtures/countries-with-headers-sticky";
+import DataSourceChatFixture from "~/screens/fixtures/data-source-chat";
+import DataSourceGridFixture from "~/screens/fixtures/data-source-grid";
+import DataSourceMillionMarkdownFixture from "~/screens/fixtures/data-source-million-markdown";
 import ExtraDataFixture from "~/screens/fixtures/extra-data";
 import FilterElementsFixture from "~/screens/fixtures/filter-elements";
 import HorizontalAlignItemsFixture from "~/screens/fixtures/horizontal-align-items";
@@ -268,6 +271,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         title: "Chat Infinite",
     },
     {
+        component: DataSourceChatFixture,
+        description: "Exercises exact prepend and append mutations through an indexed chat source.",
+        groupKey: "chat",
+        groupTitle: "Chat & Keyboard",
+        kind: "fixture",
+        slug: "data-source-chat",
+        title: "Data Source Chat",
+    },
+    {
         component: ChatKeyboardFixture,
         description: "Checks chat input and keyboard avoidance together.",
         groupKey: "chat",
@@ -392,6 +404,24 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "columns",
         title: "Columns",
+    },
+    {
+        component: DataSourceGridFixture,
+        description: "Exercises sparse regular-grid edits and explicit variable-span repacking.",
+        groupKey: "data",
+        groupTitle: "Data & Layout",
+        kind: "fixture",
+        slug: "data-source-grid",
+        title: "Data Source Grid",
+    },
+    {
+        component: DataSourceMillionMarkdownFixture,
+        description: "Navigates and edits a million logical markdown lines without constructing a full array.",
+        groupKey: "data",
+        groupTitle: "Data & Layout",
+        kind: "fixture",
+        slug: "data-source-million-markdown",
+        title: "Million-line Data Source",
     },
     {
         component: CardsColumnsFixture,
