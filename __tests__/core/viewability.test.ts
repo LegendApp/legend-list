@@ -4,14 +4,16 @@ import "../setup"; // Import global test setup
 import { setupViewability, updateViewableItems } from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type {
-    InternalState,
+    OnViewableItemsChangedInfo,
     ViewAmountToken,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewToken,
-} from "../../src/types";
+} from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState as createMockStateOrig } from "../__mocks__/createMockState";
+import { setLayoutValue } from "../helpers/layoutArrays";
 
 function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: Partial<InternalState["props"]> }> = {},
@@ -24,18 +26,11 @@ function createMockState(
         ["item-4", 180],
     ]);
 
-    const positions = new Map([
-        ["item-0", 0],
-        ["item-1", 100],
-        ["item-2", 250],
-        ["item-3", 450],
-        ["item-4", 550],
-    ]);
+    const positions = [0, 100, 250, 450, 550];
 
     return createMockStateOrig({
         hasScrolled: false,
         idCache: ["item-0", "item-1", "item-2", "item-3", "item-4"],
-        ignoreScrollFromMVCP: undefined,
         indexByKey: new Map([
             ["item-0", 0],
             ["item-1", 1],
@@ -43,7 +38,6 @@ function createMockState(
             ["item-3", 3],
             ["item-4", 4],
         ]),
-        lastBatchingAction: 0,
         positions,
         props: {
             data: [
@@ -55,16 +49,8 @@ function createMockState(
             ],
             keyExtractor: (item: any) => `item-${item.id}`,
         },
-        scroll: 0,
-        scrollHistory: [],
-        scrollingTo: undefined,
         scrollLength: 500,
-        scrollPending: 0,
-        scrollPrev: 0,
-        scrollPrevTime: 0,
-        scrollTime: 0,
         sizes,
-        timeouts: new Set(),
         ...overrides,
     });
 }
@@ -190,7 +176,7 @@ describe("viewability system", () => {
 
             viewabilityPairs = [
                 {
-                    onViewableItemsChanged: (info: { changed: ViewToken[]; viewableItems: ViewToken[] }) => {
+                    onViewableItemsChanged: (info: OnViewableItemsChangedInfo<any>) => {
                         onViewableItemsChangedCalls.push(info);
                     },
                     viewabilityConfig: {
@@ -207,10 +193,16 @@ describe("viewability system", () => {
         });
 
         it("should update viewable items immediately when no minimumViewTime", () => {
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2, 0, 4);
 
             // Should trigger callback immediately
             expect(onViewableItemsChangedCalls).toHaveLength(1);
+            expect(onViewableItemsChangedCalls[0]).toMatchObject({
+                end: 2,
+                endBuffered: 4,
+                start: 0,
+                startBuffered: 0,
+            });
         });
 
         it("should delay updates when minimumViewTime is set", async () => {
@@ -258,6 +250,10 @@ describe("viewability system", () => {
             const firstCall = onViewableItemsChangedCalls[0];
             expect(firstCall.viewableItems).toHaveLength(3);
             expect(firstCall.changed.every((item: ViewToken) => item.isViewable)).toBe(true);
+            expect(firstCall.start).toBe(0);
+            expect(firstCall.end).toBe(2);
+            expect(firstCall.startBuffered).toBe(0);
+            expect(firstCall.endBuffered).toBe(2);
 
             // Reset calls
             onViewableItemsChangedCalls.length = 0;
@@ -269,6 +265,44 @@ describe("viewability system", () => {
             const secondCall = onViewableItemsChangedCalls[0];
             // Should have items becoming visible and invisible
             expect(secondCall.changed.length).toBeGreaterThan(0);
+        });
+
+        it("should recompute cached viewability when a prepended item keeps the same key at a new index", () => {
+            const data = Array.from({ length: 13 }, (_, i) => ({ id: i < 10 ? `new-${i}` : `${i - 10}` }));
+            const key = "item-2";
+            const positions = Array.from({ length: 13 }, () => 1000);
+            positions[12] = 0;
+            mockState = createMockState({
+                containerItemKeys: new Map([[key, 2]]),
+                idCache: data.map((item) => `item-${item.id}`),
+                indexByKey: new Map(data.map((item, index) => [`item-${item.id}`, index])),
+                positions,
+                props: {
+                    data,
+                    keyExtractor: (item: { id: string }) => `item-${item.id}`,
+                },
+                sizes: new Map([[key, 100]]),
+            });
+            mockCtx.values.set("containerItemKey2", key);
+            mockCtx.mapViewabilityAmountValues.set(2, {
+                containerId: 2,
+                index: 2,
+                isViewable: false,
+                item: { id: "2" },
+                key,
+                percentOfScroller: 0,
+                percentVisible: 0,
+                scrollSize: 500,
+                size: 100,
+                sizeVisible: 0,
+            });
+
+            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 12, 12);
+
+            expect(onViewableItemsChangedCalls).toHaveLength(1);
+            expect(onViewableItemsChangedCalls[0].viewableItems).toEqual([
+                expect.objectContaining({ index: 12, isViewable: true, key }),
+            ]);
         });
 
         it("should handle scroll position changes affecting viewability", () => {
@@ -283,7 +317,7 @@ describe("viewability system", () => {
             // Create a mock setup where an item would compute to negative sizeVisible
             // This happens when an item is positioned way above the visible area
             mockState.sizes.set("item-99", 100);
-            mockState.positions.set("item-99", -500); // Position way above visible area
+            setLayoutValue(mockState, "positions", "item-99", -500); // Position way above visible area
             mockState.idCache[99] = "item-99";
 
             // Add a container mapping for this item
@@ -311,6 +345,25 @@ describe("viewability system", () => {
             updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
 
             expect(mockCtx.mapViewabilityAmountValues.has(99)).toBe(false);
+        });
+
+        it("should mark missing positions as invalid and clean them up", () => {
+            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            expect(onViewableItemsChangedCalls).toHaveLength(1);
+
+            onViewableItemsChangedCalls.length = 0;
+            mockState.positions[1] = undefined;
+
+            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+
+            expect(mockCtx.mapViewabilityAmountValues.has(1)).toBe(false);
+            expect(onViewableItemsChangedCalls).toHaveLength(1);
+            expect(onViewableItemsChangedCalls[0].changed).toContainEqual(
+                expect.objectContaining({
+                    isViewable: false,
+                    key: "item-1",
+                }),
+            );
         });
 
         it("should handle corrupted viewability state gracefully", () => {
@@ -428,7 +481,7 @@ describe("viewability system", () => {
         it("should handle NaN and Infinity values in viewability calculations", () => {
             const corruptedState = createMockState();
             corruptedState.sizes.set("item-0", NaN);
-            corruptedState.positions.set("item-1", Infinity);
+            setLayoutValue(corruptedState, "positions", "item-1", Infinity);
 
             const pairs: ViewabilityConfigCallbackPair[] = [
                 {
@@ -640,7 +693,7 @@ describe("viewability system", () => {
             // Populate sizes, positions, and idCache for test
             for (let i = 0; i < 100; i++) {
                 mockState.sizes.set(`item-${i}`, 100);
-                mockState.positions.set(`item-${i}`, i * 100);
+                setLayoutValue(mockState, "positions", `item-${i}`, i * 100);
                 mockState.idCache[i] = `item-${i}`;
             }
 

@@ -1,0 +1,68 @@
+import { Fragment, useRef } from "react";
+import { Platform, StyleSheet, View } from "react-native";
+
+import { FlashList, type ListRenderItemInfo } from "@shopify/flash-list";
+import type { LegendListRenderItemProps } from "@legendapp/list/react-native";
+import renderItem, { type Item } from "~/app/cards-renderItem";
+import { DRAW_DISTANCE, RECYCLE_ITEMS } from "~/constants/constants";
+
+export default function HomeScreen() {
+    const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));
+
+    const scrollRef = useRef<FlashList<Item>>(null);
+
+    const renderItemFn = (info: ListRenderItemInfo<Item>) => {
+        const legendListProps = {
+            data,
+            extraData: undefined,
+            index: info.index,
+            item: info.item,
+            type: undefined,
+        } satisfies LegendListRenderItemProps<Item>;
+
+        return RECYCLE_ITEMS ? renderItem(legendListProps) : <Fragment key={info.item.id}>{renderItem(legendListProps)}</Fragment>;
+    };
+
+    return (
+        <View key="flashlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
+            <FlashList
+                data={data}
+                drawDistance={DRAW_DISTANCE}
+                keyExtractor={(item) => item.id}
+                ListHeaderComponent={<View />}
+                ListHeaderComponentStyle={styles.listHeader}
+                ref={scrollRef}
+                renderItem={renderItemFn}
+                style={styles.listContainer}
+            />
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    listContainer: {
+        marginHorizontal: "auto",
+        maxWidth: "100%",
+        width: 400,
+    },
+    listEmpty: {
+        alignItems: "center",
+        backgroundColor: "#6789AB",
+        flex: 1,
+        justifyContent: "center",
+        paddingVertical: 16,
+    },
+    listHeader: {
+        alignSelf: "center",
+        backgroundColor: "#456AAA",
+        borderRadius: 12,
+        height: 100,
+        marginHorizontal: 8,
+        marginVertical: 8,
+        width: 100,
+    },
+    outerContainer: {
+        backgroundColor: "#456",
+        bottom: Platform.OS === "ios" ? 82 : 0,
+    },
+});

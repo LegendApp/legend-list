@@ -1,8 +1,8 @@
-import { useCallback } from "react";
+import { type MutableRefObject, useCallback } from "react";
 
 import { isFunction } from "@/utils/helpers";
 
-type RefItem<T> = ((element: T | null) => void) | React.MutableRefObject<T | null> | null | undefined;
+type RefItem<T> = ((element: T | null) => void) | MutableRefObject<T | null> | null | undefined;
 
 export const useCombinedRef = <T>(...refs: RefItem<T>[]) => {
     const callback = useCallback((element: T | null) => {

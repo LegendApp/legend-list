@@ -1,0 +1,35 @@
+{
+    "name": "legend-list-web-example",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "VITE_LEGEND_LIST_MODE=examples vite",
+        "dev:fixtures": "VITE_LEGEND_LIST_MODE=fixtures vite",
+        "devs": "VITE_LEGEND_LIST_MODE=examples vite --mode https --port 5174",
+        "build": "VITE_LEGEND_LIST_MODE=examples tsc && vite build",
+        "build:fixtures": "VITE_LEGEND_LIST_MODE=fixtures tsc && vite build",
+        "build:ignore-errors": "vite build --mode development",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@tanstack/react-router": "^1.59.0",
+        "@tanstack/react-virtual": "^3.13.12",
+        "countries-list": "^3.1.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-virtuoso": "^4.13.0",
+        "react-window": "^2.2.5",
+        "virtua": "^0.41.5"
+    },
+    "devDependencies": {
+        "@tailwindcss/vite": "^4.1.14",
+        "@types/react": "^18.2.15",
+        "@types/react-dom": "^18.2.7",
+        "@vitejs/plugin-react": "^5.0.4",
+        "tailwindcss": "^4.0.0",
+        "typescript": "^5.0.2",
+        "vite": "^7.1.11",
+        "vite-plugin-mkcert": "^1.17.9"
+    }
+}

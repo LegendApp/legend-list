@@ -1,0 +1,74 @@
+{
+    "compilerOptions": {
+        "paths": {
+            "@/*": [
+                "../src/*"
+            ],
+            "@/components/*": [
+                "../src/components/*",
+            ],
+            "@/core/*": [
+                "../src/core/*"
+            ],
+            "@/hooks/*": [
+                "../src/hooks/*"
+            ],
+            "@/integrations/*": [
+                "../src/integrations/*"
+            ],
+            "@/state/*": [
+                "../src/state/*"
+            ],
+            "@/utils/*": [
+                "../src/utils/*"
+            ],
+            "@legendapp/list/react": [
+                "../src/react"
+            ],
+            "@legendapp/list/react-native": [
+                "../src/react-native"
+            ],
+            "@legendapp/list/keyboard": [
+                "../src/integrations/keyboard"
+            ],
+            "@legendapp/list/keyboard-legacy": [
+                "../src/integrations/keyboard-legacy"
+            ],
+            "@legendapp/list/reanimated": [
+                "../src/integrations/reanimated"
+            ],
+            "react": [
+                "../node_modules/@types/react"
+            ],
+            "react/jsx-runtime": [
+                "../node_modules/@types/react/jsx-runtime"
+            ],
+            "react/jsx-dev-runtime": [
+                "../node_modules/@types/react/jsx-dev-runtime"
+            ],
+            "react-native": [
+                "../node_modules/react-native"
+            ],
+            "react-native-reanimated": [
+                "../node_modules/react-native-reanimated"
+            ],
+            "~/*": [
+                "./*"
+            ]
+        },
+        "strict": true,
+        "types": [
+            "react",
+            "react-native",
+            "jest",
+            "node"
+        ]
+    },
+    "extends": "expo/tsconfig.base",
+    "include": [
+        "**/*.ts",
+        "**/*.tsx",
+        ".expo/types/**/*.ts",
+        "expo-env.d.ts"
+    ]
+}

@@ -1,0 +1,1389 @@
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import "../setup";
+import { RefreshControl, Text } from "react-native";
+
+import { act, render } from "../helpers/testingLibrary";
+
+let lastListProps: any;
+let requestAdjustCalls: number[] = [];
+let scrollToCalls: any[] = [];
+
+import { finishScrollTo } from "../../src/core/finishScrollTo";
+import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { type StateContext, set$ } from "../../src/state/state";
+import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
+import { setDidLayout } from "../../src/utils/setDidLayout";
+
+const handlerInstances: ScrollAdjustHandler[] = [];
+const layoutEvent = {
+    nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } },
+};
+
+function registerLegendListPropMocks() {
+    mock.module("@/components/ListComponent", () => ({
+        ListComponent: (props: any) => {
+            lastListProps = props;
+            return null;
+        },
+    }));
+
+    mock.module("@/core/ScrollAdjustHandler", () => {
+        return {
+            ScrollAdjustHandler: class {
+                context: StateContext;
+                appliedAdjust = 0;
+                pendingAdjust = 0;
+                mounted = false;
+                constructor(ctx: StateContext) {
+                    this.context = ctx;
+                    handlerInstances.push(this as any);
+                }
+                requestAdjust() {}
+                setMounted() {
+                    this.mounted = true;
+                }
+                getAdjust() {
+                    return this.appliedAdjust;
+                }
+                commitPendingAdjust() {}
+            },
+        };
+    });
+
+    mock.module("@/utils/requestAdjust", () => ({
+        requestAdjust: (_ctx: unknown, diff: number) => {
+            requestAdjustCalls.push(diff);
+        },
+    }));
+
+    mock.module("@/core/scrollTo", () => ({
+        scrollTo: (_ctx: unknown, params: any) => {
+            scrollToCalls.push(params);
+        },
+    }));
+}
+
+async function flushAsync() {
+    await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+}
+
+async function getStateFromRender() {
+    for (let i = 0; i < 5; i++) {
+        const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
+        if (handler) {
+            return (handler as any).context.state;
+        }
+        await flushAsync();
+    }
+    throw new Error("scrollAdjustHandler not found after retries");
+}
+
+async function getContextFromRender() {
+    for (let i = 0; i < 5; i++) {
+        const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
+        if (handler) {
+            return (handler as any).context as StateContext;
+        }
+        await flushAsync();
+    }
+    throw new Error("scrollAdjustHandler not found after retries");
+}
+
+async function waitForTailWindow(
+    state: any,
+    dataLength: number,
+    observedRenderedIndices: Set<number>,
+    getRenderedItem: ((key: string) => { index: number } | null) | undefined,
+) {
+    for (let i = 0; i < 20; i++) {
+        for (const key of state.containerItemKeys.keys()) {
+            const rendered = getRenderedItem?.(key);
+            if (rendered?.index !== undefined) {
+                observedRenderedIndices.add(rendered.index);
+            }
+        }
+
+        if (state.startBuffered !== null && state.endBuffered === dataLength - 1 && observedRenderedIndices.size > 0) {
+            return;
+        }
+        await flushAsync();
+    }
+    throw new Error("tail window did not stabilize");
+}
+
+beforeEach(() => {
+    registerLegendListPropMocks();
+    clearWarnDevOnceForTests();
+    handlerInstances.length = 0;
+    lastListProps = undefined;
+    requestAdjustCalls = [];
+    scrollToCalls = [];
+});
+
+describe("LegendList props behavior", () => {
+    it("clears tracked timeouts on unmount", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-timeout-cleanup");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+        const state = await getStateFromRender();
+        const timeout = setTimeout(() => {}, 1000) as unknown as number;
+        state.timeouts.add(timeout);
+
+        rendered.unmount();
+
+        expect(state.timeouts.size).toBe(0);
+    });
+
+    it("cancels queued full drawDistance prewarm on unmount", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-draw-distance-cleanup");
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const cancelCalls: number[] = [];
+        globalThis.cancelAnimationFrame = (id: number) => {
+            cancelCalls.push(id);
+        };
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={renderItem}
+                />,
+            );
+            const state = await getStateFromRender();
+            state.queuedFullDrawDistancePrewarm = 123;
+
+            rendered.unmount();
+
+            expect(cancelCalls).toEqual([123]);
+            expect(state.queuedFullDrawDistancePrewarm).toBeUndefined();
+        } finally {
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
+    it("stores the derived scroll-axis gap on context", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-scroll-axis-gap");
+        const renderList = (horizontal?: boolean) => (
+            <LegendList
+                contentContainerStyle={{ columnGap: 16, gap: 10, rowGap: 12 }}
+                data={data}
+                estimatedItemSize={100}
+                horizontal={horizontal}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList(true));
+        const ctx = await getContextFromRender();
+
+        expect(ctx.scrollAxisGap).toBe(16);
+
+        rendered.rerender(renderList());
+
+        expect(ctx.scrollAxisGap).toBe(12);
+
+        rendered.unmount();
+    });
+
+    it("invalidates cached item sizes when the scroll-axis gap changes", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-scroll-axis-gap-cache");
+        const renderList = (gap: number) => (
+            <LegendList
+                contentContainerStyle={{ rowGap: gap }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList(12));
+        const ctx = await getContextFromRender();
+        const state = ctx.state;
+
+        state.sizes.set("item-1", 112);
+        state.sizesKnown.set("item-1", 112);
+        state.totalSize = 112;
+        set$(ctx, "totalSize", 112);
+
+        rendered.rerender(renderList(24));
+
+        expect(ctx.scrollAxisGap).toBe(24);
+        expect(state.sizes.size).toBe(0);
+        expect(state.sizesKnown.size).toBe(0);
+
+        rendered.unmount();
+    });
+
+    it("calls warnDevOnce when recycleItems is omitted", async () => {
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-recycle-warning");
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] recycleItems was not provided, so it defaults to false. Set recycleItems explicitly to true for better performance with recycling-aware rows, or false to preserve remount-on-reuse behavior.",
+            );
+
+            rendered.unmount();
+        } finally {
+            console.warn = originalWarn;
+        }
+    });
+
+    it("does not call warnDevOnce when recycleItems is explicit", async () => {
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-recycle-explicit");
+
+        try {
+            const renderedTrue = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+            const renderedFalse = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
+
+            renderedTrue.unmount();
+            renderedFalse.unmount();
+        } finally {
+            console.warn = originalWarn;
+        }
+    });
+
+    it("clears stale first-render layout caches before rebuilding positions", async () => {
+        const initialData = [
+            { id: "a", label: "Alpha" },
+            { id: "b", label: "Beta" },
+        ];
+        const nextData = [
+            { id: "b", label: "Beta" },
+            { id: "c", label: "Gamma" },
+            { id: "a", label: "Alpha" },
+        ];
+        const consoleErrorSpy = mock(() => {});
+        const originalError = console.error;
+        console.error = consoleErrorSpy as any;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-stale-first-cache");
+
+        try {
+            const renderList = (data: typeof initialData | typeof nextData) => (
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />
+            );
+            const rendered = render(renderList(initialData));
+            const state = await getStateFromRender();
+
+            state.isFirst = true;
+            state.idCache[0] = "a";
+            state.idCache[1] = "b";
+            state.indexByKey.set("a", 0);
+            state.indexByKey.set("b", 1);
+            state.positions[0] = 0;
+            state.positions[1] = 100;
+            state.columns[0] = 1;
+            state.columns[1] = 1;
+            state.columnSpans[0] = 1;
+            state.columnSpans[1] = 1;
+
+            rendered.rerender(renderList(nextData));
+
+            const overlappingKeyErrors = consoleErrorSpy.mock.calls.filter(([message]) =>
+                String(message).includes("Detected overlapping key"),
+            );
+            expect(overlappingKeyErrors).toHaveLength(0);
+            expect(state.idCache.slice(0, 3)).toEqual(["b", "c", "a"]);
+            expect(state.indexByKey.get("a")).toBe(2);
+            rendered.unmount();
+        } finally {
+            console.error = originalError;
+        }
+    });
+
+    it("does not install a public throttled onScroll when scrollEventThrottle is set without onScroll", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-throttle-without-onscroll");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                scrollEventThrottle={16}
+            />,
+        );
+
+        expect(lastListProps.onScroll).toBeDefined();
+
+        expect(() =>
+            lastListProps.onScroll({
+                nativeEvent: {
+                    contentOffset: { x: 0, y: 32 },
+                    contentSize: { height: 200, width: 320 },
+                    layoutMeasurement: { height: 200, width: 320 },
+                },
+            }),
+        ).not.toThrow();
+
+        const state = await getStateFromRender();
+        expect(state.props.onScroll).toBeUndefined();
+
+        rendered.unmount();
+    });
+
+    it("computes sparse snap offsets for targets outside the rendered viewport", async () => {
+        const data = Array.from({ length: 40 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?props-test-sparse-snap-indices");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={296}
+                getFixedItemSize={() => 296}
+                horizontal
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                snapToIndices={[0, 12, 24, 36]}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.({
+                nativeEvent: { layout: { height: 200, width: 696, x: 0, y: 0 } },
+            } as any);
+        });
+        await flushAsync();
+
+        const ctx = await getContextFromRender();
+        expect(lastListProps?.snapToIndices).toEqual([0, 12, 24, 36]);
+        expect(ctx.values.get("snapToOffsets")).toEqual([0, 3552, 7104, 10656]);
+        expect(ctx.state.startBuffered).toBe(0);
+        expect(ctx.state.endBuffered).toBeLessThan(12);
+
+        rendered.unmount();
+    });
+
+    it("does not issue a mount content offset when no initial scroll is configured", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-no-initial-scroll");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await getStateFromRender();
+        expect(lastListProps.initialContentOffset).toBeUndefined();
+
+        rendered.unmount();
+    });
+
+    it("sets readyToRender after layout when no initial scroll is configured", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const onLoadCalls: number[] = [];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-ready-no-initial-scroll");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const ctx = await getContextFromRender();
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(onLoadCalls).toHaveLength(1);
+
+        rendered.unmount();
+    });
+
+    it("uses the configured adaptive render initial mode before readyToRender", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-adaptive-render-initial-mode");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                experimental_adaptiveRender={{ initialMode: "light" }}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const ctx = await getContextFromRender();
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+        expect(ctx.values.get("adaptiveRender")).toBe("light");
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+
+        rendered.unmount();
+    });
+
+    it("resets adaptive render when the config is disabled", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const changes: Array<[string, string]> = [];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-adaptive-render-disable");
+        const renderList = (experimental_adaptiveRender?: {
+            exitDelay?: number;
+            initialMode?: "light";
+            onChange?: (mode: "normal" | "light", reason: string) => void;
+        }) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                experimental_adaptiveRender={experimental_adaptiveRender}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(
+            renderList({
+                exitDelay: 10_000,
+                initialMode: "light",
+                onChange: (mode, reason) => changes.push([mode, reason]),
+            }),
+        );
+        const ctx = await getContextFromRender();
+        const timeout = setTimeout(() => {}, 10_000) as unknown as number;
+        ctx.state.timeoutAdaptiveRender = timeout;
+        ctx.state.timeouts.add(timeout);
+
+        expect(ctx.values.get("adaptiveRender")).toBe("light");
+
+        rendered.rerender(renderList());
+        await flushAsync();
+
+        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+        expect(ctx.state.timeoutAdaptiveRender).toBeUndefined();
+        expect(ctx.state.timeouts.has(timeout)).toBe(false);
+        expect(changes).toEqual([]);
+
+        rendered.unmount();
+    });
+
+    it("restarts layout readiness when cleared data is replaced with a new non-empty dataset", async () => {
+        const initialData = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const nextData = [
+            { id: "item-3", label: "Gamma" },
+            { id: "item-4", label: "Delta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-empty-fresh-dataset");
+        const renderList = (data: typeof initialData) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                experimental_adaptiveRender={{ initialMode: "light" }}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList(initialData));
+        const ctx = await getContextFromRender();
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+
+        rendered.rerender(renderList([]));
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+
+        rendered.rerender(renderList(nextData));
+        await flushAsync();
+
+        expect(ctx.state.didContainersLayout).toBe(false);
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(false);
+        expect(ctx.values.get("adaptiveRender")).toBe("light");
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+
+        rendered.unmount();
+    });
+
+    it("restarts layout readiness when dataKey changes with non-empty data", async () => {
+        const initialData = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const nextData = [
+            { id: "item-3", label: "Gamma" },
+            { id: "item-4", label: "Delta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-data-key-fresh-dataset");
+        const renderList = (data: typeof initialData, dataKey: string) => (
+            <LegendList
+                data={data}
+                dataKey={dataKey}
+                estimatedItemSize={100}
+                experimental_adaptiveRender={{ initialMode: "light" }}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList(initialData, "conversation-1"));
+        const ctx = await getContextFromRender();
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+
+        rendered.rerender(renderList(nextData, "conversation-2"));
+        await flushAsync();
+
+        expect(ctx.state.didContainersLayout).toBe(false);
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(false);
+        expect(ctx.values.get("adaptiveRender")).toBe("light");
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+
+        rendered.unmount();
+    });
+
+    it("clears zero-valued initial scroll targets on mount", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-zero");
+
+        const renderList = (props: { initialScrollIndex?: number; initialScrollOffset?: number }) =>
+            render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                    {...props}
+                />,
+            );
+
+        const indexRenderer = renderList({ initialScrollIndex: 0 });
+        const indexState = await getStateFromRender();
+        const indexContext = await getContextFromRender();
+        expect(indexState.didFinishInitialScroll).toBe(true);
+        expect(indexState.initialScroll).toBeUndefined();
+        expect(indexContext.values.get("readyToRender")).toBeUndefined();
+        await act(async () => {
+            setDidLayout(indexContext);
+        });
+        await flushAsync();
+        expect(indexContext.values.get("readyToRender")).toBe(true);
+        indexRenderer.unmount();
+
+        const offsetRenderer = renderList({ initialScrollOffset: 0 });
+        const offsetState = await getStateFromRender();
+        const offsetContext = await getContextFromRender();
+        expect(offsetState.didFinishInitialScroll).toBe(true);
+        expect(offsetState.initialScroll).toBeUndefined();
+        expect(offsetContext.values.get("readyToRender")).toBeUndefined();
+        await act(async () => {
+            setDidLayout(offsetContext);
+        });
+        await flushAsync();
+        expect(offsetContext.values.get("readyToRender")).toBe(true);
+        offsetRenderer.unmount();
+    });
+
+    it("clears zero-valued object initial scroll targets on mount", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-zero-object");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={{ index: 0, viewOffset: 0, viewPosition: 0 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll).toBeUndefined();
+
+        rendered.unmount();
+    });
+
+    it("finishes empty zero-valued initial scroll targets so onLoad can fire", async () => {
+        const onLoadCalls: number[] = [];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-empty-zero");
+
+        const renderList = (props: { initialScrollIndex?: number; initialScrollOffset?: number }) =>
+            render(
+                <LegendList
+                    data={[]}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                    {...props}
+                />,
+            );
+
+        const indexRenderer = renderList({ initialScrollIndex: 0 });
+        const indexState = await getStateFromRender();
+        const indexContext = await getContextFromRender();
+        expect(indexState.didFinishInitialScroll).toBe(true);
+        expect(indexState.initialScroll).toBeUndefined();
+        await act(async () => {
+            setDidLayout(indexContext);
+        });
+        await flushAsync();
+        expect(indexContext.values.get("readyToRender")).toBe(true);
+        expect(onLoadCalls).toHaveLength(1);
+        indexRenderer.unmount();
+
+        onLoadCalls.length = 0;
+
+        const offsetRenderer = renderList({ initialScrollOffset: 0 });
+        const offsetState = await getStateFromRender();
+        const offsetContext = await getContextFromRender();
+        expect(offsetState.didFinishInitialScroll).toBe(true);
+        expect(offsetState.initialScroll).toBeUndefined();
+        await act(async () => {
+            setDidLayout(offsetContext);
+        });
+        await flushAsync();
+        expect(offsetContext.values.get("readyToRender")).toBe(true);
+        expect(onLoadCalls).toHaveLength(1);
+        offsetRenderer.unmount();
+    });
+
+    it("initialScrollAtEnd scrolls to the last item", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+
+        expect(state.initialScroll?.index).toBe(2);
+        expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
+
+        rendered.unmount();
+    });
+
+    it("finishes empty initialScrollAtEnd mounts so onLoad can fire", async () => {
+        const onLoadCalls: number[] = [];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-empty-end");
+        const rendered = render(
+            <LegendList
+                data={[]}
+                estimatedItemSize={100}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll?.contentOffset).toBe(0);
+
+        await act(async () => {
+            setDidLayout((handlerInstances.at(-1) as any).context);
+        });
+        await flushAsync();
+
+        expect(onLoadCalls).toHaveLength(1);
+
+        rendered.unmount();
+    });
+
+    it("sets readyToRender after a non-zero offset-only initial scroll finishes", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const onLoadCalls: number[] = [];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-offset-ready");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollOffset={220}
+                keyExtractor={(item: { id: string }) => item.id}
+                onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        expect(state.initialScroll?.contentOffset).toBe(220);
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+
+        state.scrollingTo = {
+            animated: false,
+            isInitialScroll: true,
+            offset: 220,
+        } as any;
+        state.scroll = 220;
+        state.scrollPending = 220;
+        state.scrollPrev = 220;
+
+        await act(async () => {
+            finishScrollTo(ctx);
+        });
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(onLoadCalls).toHaveLength(1);
+
+        rendered.unmount();
+    });
+
+    it("defaults bottom-aligned initialScrollIndex object viewOffset from paddingBottom", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-view-position-default");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={{ index: 2, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 12 }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.index).toBe(2);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect(state.initialScroll?.viewOffset).toBe(-12);
+
+        rendered.unmount();
+    });
+
+    it("offsets the built-in RefreshControl by contentContainerStyle.paddingTop", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-refresh-padding-top");
+        const rendered = render(
+            <LegendList
+                contentContainerStyle={{ paddingTop: 24 }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onRefresh={() => {}}
+                progressViewOffset={6}
+                recycleItems={false}
+                refreshing={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        expect(lastListProps.refreshControl.props.progressViewOffset).toBe(30);
+
+        rendered.unmount();
+    });
+
+    it("offsets a custom RefreshControl by contentContainerStyle.paddingTop", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-custom-refresh-padding-top");
+        const rendered = render(
+            <LegendList
+                contentContainerStyle={{ paddingTop: 24 }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                refreshControl={<RefreshControl progressViewOffset={6} refreshing={false} />}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        expect(lastListProps.refreshControl.props.progressViewOffset).toBe(30);
+
+        rendered.unmount();
+    });
+
+    it("does not retry a finished initial scroll after the user scrolls away", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-retry");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollIndex={3}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.contentOffset).toBe(300);
+
+        scrollToCalls = [];
+        state.didFinishInitialScroll = true;
+        state.initialScroll = undefined;
+        state.scroll = 120;
+
+        await act(async () => {
+            lastListProps?.onLayout?.({
+                nativeEvent: { layout: { height: 180, width: 320, x: 0, y: 0 } },
+            } as any);
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual([]);
+
+        rendered.unmount();
+    });
+
+    it("does not use the removed post-finish layout retry window for bootstrap initial scroll", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-retry-window");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollIndex={{ index: 3, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const targetOffset = lastListProps.initialContentOffset ?? state.initialScroll?.contentOffset ?? 0;
+
+        scrollToCalls = [];
+        state.didFinishInitialScroll = true;
+        state.initialScroll = undefined;
+        state.scroll = targetOffset;
+
+        await act(async () => {
+            lastListProps?.onLayout?.({
+                nativeEvent: { layout: { height: 180, width: 320, x: 0, y: 0 } },
+            } as any);
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual([]);
+
+        rendered.unmount();
+    });
+
+    it("does not retry a finished offset-only initial scroll after a layout change", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-offset-retry");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollOffset={220}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.contentOffset).toBe(220);
+
+        scrollToCalls = [];
+        state.didFinishInitialScroll = true;
+        state.initialScroll = undefined;
+        state.scroll = 220;
+
+        await act(async () => {
+            lastListProps?.onLayout?.({
+                nativeEvent: { layout: { height: 180, width: 320, x: 0, y: 0 } },
+            } as any);
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual([]);
+
+        rendered.unmount();
+    });
+
+    it("replays offset-only initialScroll with a native scroll after data arrives post-layout", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?props-test-offset-async");
+        const renderList = (data: Array<{ id: string; label: string }>) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollOffset={250}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList([]));
+        await getStateFromRender();
+
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        scrollToCalls = [];
+        await act(async () => {
+            rendered.rerender(
+                renderList(
+                    Array.from({ length: 5 }, (_value, index) => ({
+                        id: `item-${index}`,
+                        label: `Item ${index}`,
+                    })),
+                ),
+            );
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    forceScroll: true,
+                    isInitialScroll: true,
+                    offset: 250,
+                }),
+            ]),
+        );
+
+        rendered.unmount();
+    });
+
+    it("does not adjust padding on mount when scroll is still at the top", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainVisibleContentPosition
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingTop: 40 }}
+            />,
+        );
+
+        await flushAsync();
+
+        expect(requestAdjustCalls).toEqual([]);
+
+        rendered.unmount();
+    });
+
+    it("does not render early items when initialScrollAtEnd is used on a long list", async () => {
+        const data = Array.from({ length: 120 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const observedRenderedIndices = new Set<number>();
+        const longListLayoutEvent = {
+            nativeEvent: { layout: { height: 300, width: 320, x: 0, y: 0 } },
+        };
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test");
+        const rendered = render(
+            <LegendList
+                data={data}
+                drawDistance={200}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item, index }: { item: { label: string }; index: number }) => {
+                    observedRenderedIndices.add(index);
+                    return <Text>{item.label}</Text>;
+                }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        await act(async () => {
+            lastListProps?.onLayout?.(longListLayoutEvent as any);
+        });
+        await waitForTailWindow(state, data.length, observedRenderedIndices, lastListProps?.getRenderedItem);
+
+        const renderedIndices = Array.from(observedRenderedIndices.values());
+
+        expect(renderedIndices).toContain(data.length - 1);
+        expect(renderedIndices).toContain(data.length - 2);
+        expect(renderedIndices).not.toContain(0);
+        expect(renderedIndices).not.toContain(1);
+        expect(state.startBuffered).toBeGreaterThan(1);
+        expect(state.endBuffered).toBe(data.length - 1);
+
+        rendered.unmount();
+    });
+
+    it("warns on web when the outer height is effectively unbounded and virtualization is disabled", async () => {
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
+        const reactNative = await import("react-native");
+        const previousPlatform = reactNative.Platform.OS;
+        reactNative.Platform.OS = "web" as any;
+        const data = Array.from({ length: 120 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?props-test-web-unbounded-warning");
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            const ctx = await getContextFromRender();
+            const state = await getStateFromRender();
+
+            await act(async () => {
+                state.scrollLength = 12000;
+                set$(ctx, "totalSize", 12000);
+                set$(ctx, "numContainers", 120);
+                set$(ctx, "readyToRender", true);
+            });
+            await flushAsync();
+
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] LegendList appears to have an unbounded outer height on web, so virtualization is effectively disabled. Set a bounded height or flex: 1 on the list container, or use useWindowScroll.",
+            );
+
+            rendered.unmount();
+        } finally {
+            reactNative.Platform.OS = previousPlatform;
+            console.warn = originalWarn;
+        }
+    });
+
+    it("does not warn on web when container allocation stays bounded", async () => {
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
+        const reactNative = await import("react-native");
+        const previousPlatform = reactNative.Platform.OS;
+        reactNative.Platform.OS = "web" as any;
+        const data = Array.from({ length: 120 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?props-test-web-bounded-warning");
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            const ctx = await getContextFromRender();
+            const state = await getStateFromRender();
+
+            await act(async () => {
+                state.scrollLength = 800;
+                set$(ctx, "totalSize", 12000);
+                set$(ctx, "numContainers", 18);
+                set$(ctx, "readyToRender", true);
+            });
+            await flushAsync();
+
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
+
+            rendered.unmount();
+        } finally {
+            reactNative.Platform.OS = previousPlatform;
+            console.warn = originalWarn;
+        }
+    });
+
+    it("recalculates for prop-only anchoredEndSpace anchorIndex changes", async () => {
+        const data = Array.from({ length: 20 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-anchored-recalculate");
+        const renderList = (listData = data, anchorIndex = 18) => (
+            <LegendList
+                anchoredEndSpace={{ anchorIndex }}
+                data={listData}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList());
+        const state = await getStateFromRender();
+        const triggerCalculateItemsInView = mock(() => {});
+        state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+
+        await act(async () => {
+            state.scrollForNextCalculateItemsInView = { bottom: 1000, top: -1000 };
+            rendered.rerender(renderList(data, 19));
+        });
+
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(state.scrollForNextCalculateItemsInView).toBeUndefined();
+
+        triggerCalculateItemsInView.mockClear();
+
+        await act(async () => {
+            rendered.rerender(renderList([...data, { id: "item-20", label: "Item 20" }]));
+        });
+
+        expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
+
+        rendered.unmount();
+    });
+
+    it("clears stale precomputed scroll range when viewability is enabled", async () => {
+        const data = Array.from({ length: 20 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const viewabilityConfig = { itemVisiblePercentThreshold: 50 };
+        const { LegendList } = await import("../../src/components/LegendList?props-test-viewability-scroll-range");
+        const renderList = (onViewableItemsChanged?: () => void) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                onViewableItemsChanged={onViewableItemsChanged}
+                recycleItems={false}
+                renderItem={renderItem}
+                viewabilityConfig={viewabilityConfig}
+            />
+        );
+
+        const rendered = render(renderList());
+        const state = await getStateFromRender();
+
+        await act(async () => {
+            state.scrollForNextCalculateItemsInView = { bottom: null, top: 1000 };
+            rendered.rerender(renderList(() => {}));
+        });
+
+        expect(state.enableScrollForNextCalculateItemsInView).toBe(true);
+        expect(state.scrollForNextCalculateItemsInView).toBeUndefined();
+
+        rendered.unmount();
+    });
+});

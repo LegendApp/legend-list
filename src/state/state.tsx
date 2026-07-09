@@ -1,15 +1,16 @@
 import * as React from "react";
-import { Animated, type View } from "react-native";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
+import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
+import type { LooseView } from "@/platform/scrollview-types";
 import type {
     ColumnWrapperStyle,
-    InternalState,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewToken,
-} from "@/types";
+} from "@/types.base";
+import type { InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
 
 // This is an implementation of a simple state management system, inspired by Legend State.
 // It stores values and listeners in Maps, with peek$ and set$ functions to get and set values.
@@ -20,71 +21,124 @@ import type {
 // which saves needing useEffect hooks or managing listeners in a Set.
 
 export type ListenerType =
+    | "activeStickyIndex"
+    | "alignItemsAtEndPadding"
+    | "anchoredEndSpaceSize"
+    | "debugComputedScroll"
+    | "debugRawScroll"
+    | "extraData"
+    | "footerSize"
+    | "headerSize"
+    | "lastItemKeys"
+    | "lastPositionUpdate"
+    | "maintainVisibleContentPosition"
+    | "numColumns"
     | "numContainers"
     | "numContainersPooled"
-    | `containerItemKey${number}`
-    | `containerItemData${number}`
-    | `containerPosition${number}`
-    | `containerColumn${number}`
-    | `containerSticky${number}`
-    | `containerStickyOffset${number}`
-    | "containersDidLayout"
-    | "extraData"
-    | "numColumns"
-    | "lastItemKeys"
-    | "totalSize"
-    | "alignItemsPaddingTop"
-    | "stylePaddingTop"
-    | "scrollAdjust"
-    | "scrollAdjustUserOffset"
-    | "headerSize"
-    | "footerSize"
-    | "maintainVisibleContentPosition"
-    | "debugRawScroll"
-    | "debugComputedScroll"
     | "otherAxisSize"
+    | "readyToRender"
+    | "scrollAdjust"
+    | "scrollAdjustPending"
+    | "scrollAdjustUserOffset"
+    | "scrollSize"
     | "snapToOffsets"
-    | "scrollSize";
+    | "stylePaddingTop"
+    | "totalSize"
+    | "isAtEnd"
+    | "isAtStart"
+    | "isNearEnd"
+    | "isNearStart"
+    | "isWithinMaintainScrollAtEndThreshold"
+    | "adaptiveRender"
+    | `containerColumn${number}`
+    | `containerSpan${number}`
+    | `containerItemData${number}`
+    | `containerItemInfo${number}`
+    | `containerItemKey${number}`
+    | `containerPosition${number}`
+    | `containerSticky${number}`;
+
+export type LegendListListenerType = Extract<
+    ListenerType,
+    | "activeStickyIndex"
+    | "anchoredEndSpaceSize"
+    | "footerSize"
+    | "headerSize"
+    | "isAtEnd"
+    | "isAtStart"
+    | "isNearEnd"
+    | "isNearStart"
+    | "isWithinMaintainScrollAtEndThreshold"
+    | "adaptiveRender"
+    | "lastItemKeys"
+    | "lastPositionUpdate"
+    | "numContainers"
+    | "numContainersPooled"
+    | "otherAxisSize"
+    | "readyToRender"
+    | "snapToOffsets"
+    | "totalSize"
+>;
 
 export type ListenerTypeValueMap = {
+    activeStickyIndex: number;
+    alignItemsAtEndPadding: number;
+    anchoredEndSpaceSize: number;
+    animatedScrollY: any;
+    debugComputedScroll: number;
+    debugRawScroll: number;
+    extraData: any;
+    footerSize: number;
+    headerSize: number;
+    isAtEnd: boolean;
+    isAtStart: boolean;
+    isNearEnd: boolean;
+    isNearStart: boolean;
+    isWithinMaintainScrollAtEndThreshold: boolean;
+    lastItemKeys: string[];
+    lastPositionUpdate: number;
+    maintainVisibleContentPosition: MaintainVisibleContentPositionNormalized;
+    numColumns: number;
     numContainers: number;
     numContainersPooled: number;
-    containersDidLayout: boolean;
-    extraData: any;
-    numColumns: number;
-    lastItemKeys: string[];
-    totalSize: number;
-    alignItemsPaddingTop: number;
-    stylePaddingTop: number;
-    scrollAdjust: number;
-    scrollAdjustUserOffset: number;
-    headerSize: number;
-    footerSize: number;
-    maintainVisibleContentPosition: boolean;
-    debugRawScroll: number;
-    debugComputedScroll: number;
     otherAxisSize: number;
-    snapToOffsets: number[];
+    readyToRender: boolean;
+    scrollAdjust: number;
+    scrollAdjustPending: number;
+    scrollAdjustUserOffset: number;
     scrollSize: { width: number; height: number };
-    animatedScrollY: any;
+    snapToOffsets: number[];
+    stylePaddingTop: number;
+    totalSize: number;
+    adaptiveRender: "normal" | "light";
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {
     [K in ListenerType as K extends `containerItemData${number}` ? K : never]: any;
 } & {
+    [K in ListenerType as K extends `containerItemInfo${number}` ? K : never]: ContainerItemInfo;
+} & {
     [K in ListenerType as K extends `containerPosition${number}` ? K : never]: number;
 } & {
     [K in ListenerType as K extends `containerColumn${number}` ? K : never]: number;
 } & {
-    [K in ListenerType as K extends `containerSticky${number}` ? K : never]: boolean;
+    [K in ListenerType as K extends `containerSpan${number}` ? K : never]: number;
 } & {
-    [K in ListenerType as K extends `containerStickyOffset${number}` ? K : never]: number;
+    [K in ListenerType as K extends `containerSticky${number}` ? K : never]: boolean;
 };
 
+export interface ContainerItemInfo {
+    index: number;
+    itemKey: string;
+    value: any;
+}
+
 export interface StateContext {
-    internalState: InternalState | undefined;
+    animatedScrollY: AnimatedValue;
+    columnWrapperStyle: ColumnWrapperStyle | undefined;
+    containerLayoutTriggers: Map<number, () => void>;
+    contextNum: number; // For debug checking that it's the right context
     listeners: Map<ListenerType, Set<(value: any) => void>>;
-    values: Map<ListenerType, any>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
     mapViewabilityValues: Map<string, ViewToken>;
     mapViewabilityAmountCallbacks: Map<number, ViewabilityAmountCallback>;
@@ -92,39 +146,59 @@ export interface StateContext {
     mapViewabilityConfigStates: Map<
         string,
         {
-            viewableItems: ViewToken[];
-            start: number;
             end: number;
+            endBuffered: number;
             previousStart: number;
             previousEnd: number;
+            start: number;
+            startBuffered: number;
+            viewableItems: ViewToken[];
         }
     >;
-    columnWrapperStyle: ColumnWrapperStyle | undefined;
-    viewRefs: Map<number, React.RefObject<View>>;
-    animatedScrollY: Animated.Value;
+    positionListeners: Map<string, Set<(value: any) => void>>;
+    state: InternalState;
+    scrollAxisGap: number;
+    values: Map<ListenerType, any>;
+    viewRefs: Map<number, React.RefObject<LooseView | null>>;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
+const SIGNAL_NAMES_SEPARATOR = "\0";
+type NonEmptySignalNames = readonly [ListenerType, ...ListenerType[]];
+
+let contextNum = 0;
 
 export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
-        animatedScrollY: new Animated.Value(0),
+        animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
-        internalState: undefined,
+        containerLayoutTriggers: new Map<number, () => void>(),
+        contextNum: contextNum++,
         listeners: new Map(),
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),
         mapViewabilityAmountValues: new Map<number, ViewAmountToken>(),
         mapViewabilityCallbacks: new Map<string, ViewabilityCallback>(),
         mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map<string, ViewToken>(),
+        positionListeners: new Map(),
+        scrollAxisGap: 0,
+        state: undefined as any,
         values: new Map<ListenerType, any>([
-            ["alignItemsPaddingTop", 0],
+            ["alignItemsAtEndPadding", 0],
             ["stylePaddingTop", 0],
             ["headerSize", 0],
             ["numContainers", 0],
+            ["activeStickyIndex", -1],
+            ["isAtEnd", false],
+            ["isAtStart", false],
+            ["isNearEnd", false],
+            ["isNearStart", false],
+            ["isWithinMaintainScrollAtEndThreshold", false],
+            ["adaptiveRender", "normal"],
             ["totalSize", 0],
+            ["scrollAdjustPending", 0],
         ]),
-        viewRefs: new Map<number, React.RefObject<View>>(),
+        viewRefs: new Map<number, React.RefObject<LooseView | null>>(),
     }));
     return <ContextState.Provider value={value}>{children}</ContextState.Provider>;
 }
@@ -133,7 +207,7 @@ export function useStateContext() {
     return React.useContext(ContextState)!;
 }
 
-function createSelectorFunctionsArr(ctx: StateContext, signalNames: ListenerType[]) {
+function createSelectorFunctionsArr(ctx: StateContext, signalNames: readonly ListenerType[]) {
     let lastValues: any[] = [];
     let lastSignalValues: any[] = [];
 
@@ -174,6 +248,14 @@ function createSelectorFunctionsArr(ctx: StateContext, signalNames: ListenerType
             };
         },
     };
+}
+
+function getSignalNamesKey(signalNames: NonEmptySignalNames): string {
+    return signalNames.length === 1 ? signalNames[0] : signalNames.join(SIGNAL_NAMES_SEPARATOR);
+}
+
+function getSignalNamesFromKey(signalNamesKey: string): NonEmptySignalNames {
+    return signalNamesKey.split(SIGNAL_NAMES_SEPARATOR) as unknown as NonEmptySignalNames;
 }
 
 export function listen$<T extends ListenerType>(
@@ -218,13 +300,34 @@ export function set$<T extends ListenerType>(
     }
 }
 
-export function getContentSize(ctx: StateContext) {
-    const { values } = ctx;
-    const stylePaddingTop = values.get("stylePaddingTop") || 0;
-    const headerSize = values.get("headerSize") || 0;
-    const footerSize = values.get("footerSize") || 0;
-    const totalSize = values.get("totalSize");
-    return headerSize + footerSize + totalSize + stylePaddingTop;
+export function listenPosition$<T extends ListenerType>(
+    ctx: StateContext,
+    key: string,
+    cb: (value: ListenerTypeValueMap[T]) => void,
+) {
+    const { positionListeners } = ctx;
+    let setListeners = positionListeners.get(key);
+    if (!setListeners) {
+        setListeners = new Set();
+        positionListeners.set(key, setListeners);
+    }
+    setListeners!.add(cb);
+
+    return () => setListeners!.delete(cb);
+}
+
+export function notifyPosition$<T extends ListenerType>(
+    ctx: StateContext,
+    key: string,
+    value: ListenerTypeValueMap[T] | undefined,
+) {
+    const { positionListeners } = ctx;
+    const setListeners = positionListeners.get(key);
+    if (setListeners) {
+        for (const listener of setListeners) {
+            listener(value);
+        }
+    }
 }
 
 export function useArr$<T extends ListenerType>(signalNames: [T]): [ListenerTypeValueMap[T]];
@@ -314,10 +417,14 @@ export function useArr$<
     ListenerTypeValueMap[T7],
     ListenerTypeValueMap[T8],
 ];
-export function useArr$<T extends ListenerType>(signalNames: T[]): ListenerTypeValueMap[T][] {
+export function useArr$<T extends ListenerType>(signalNames: readonly [T, ...T[]]): ListenerTypeValueMap[T][] {
     const ctx = React.useContext(ContextState)!;
-    const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, signalNames), [ctx, signalNames]);
-    const value = useSyncExternalStore(subscribe, get);
+    const signalNamesKey = getSignalNamesKey(signalNames);
+    const { subscribe, get } = React.useMemo(
+        () => createSelectorFunctionsArr(ctx, getSignalNamesFromKey(signalNamesKey)),
+        [ctx, signalNamesKey],
+    );
+    const value = useSyncExternalStore(subscribe, get, get);
 
     return value;
 }
@@ -327,9 +434,10 @@ export function useSelector$<T extends ListenerType, T2>(
 ): T2 {
     const ctx = React.useContext(ContextState)!;
     const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, [signalName]), [ctx, signalName]);
+    const getSelectedValue = React.useCallback(() => selector(get()[0]), [get, selector]);
 
     // Return a selected value based on the signal name, so it only re-renders when the selected value changes
-    const value = useSyncExternalStore(subscribe, () => selector(get()[0]));
+    const value = useSyncExternalStore(subscribe, getSelectedValue, getSelectedValue);
 
     return value;
 }

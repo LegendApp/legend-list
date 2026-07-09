@@ -1,5 +1,8 @@
-import { unstable_batchedUpdates } from "react-native";
+import * as ReactDOM from "react-dom";
 
-const batchedUpdates = unstable_batchedUpdates || ((callback: () => void) => callback());
+type Batch = (fn: () => void) => void;
 
-export { batchedUpdates };
+const unstableBatchedUpdates = (ReactDOM as { unstable_batchedUpdates?: Batch }).unstable_batchedUpdates;
+
+export const batchedUpdates: Batch =
+    typeof unstableBatchedUpdates === "function" ? unstableBatchedUpdates : (fn) => fn();

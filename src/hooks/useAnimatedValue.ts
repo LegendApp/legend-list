@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useState } from "react";
 import { Animated } from "react-native";
 
 export const useAnimatedValue = (initialValue: number): Animated.Value => {
-    return useRef(new Animated.Value(initialValue)).current;
+    const [animAnimatedValue] = useState(() => new Animated.Value(initialValue));
+    return animAnimatedValue;
 };

@@ -1,42 +1,46 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
-import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
-import { checkAtBottom } from "@/utils/checkAtBottom";
-import { checkAtTop } from "@/utils/checkAtTop";
-import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
+import { checkThresholds } from "@/utils/checkThresholds";
+
+interface CheckResetContainersOptions {
+    didColumnsChange?: boolean;
+}
 
 export function checkResetContainers(
     ctx: StateContext,
-    state: InternalState,
-    isFirst: boolean,
     dataProp: readonly unknown[],
+    { didColumnsChange = false }: CheckResetContainersOptions = {},
 ) {
-    if (state) {
-        // Preserve averages for items that are considered equal before updating data
-        if (!isFirst && state.props.data !== dataProp) {
-            updateAveragesOnDataChange(state, state.props.data, dataProp);
+    const state = ctx.state;
+    const { previousData } = state;
+    const { maintainScrollAtEnd } = state.props;
+
+    if (didColumnsChange) {
+        state.sizes.clear();
+        state.sizesKnown.clear();
+        for (const key in state.averageSizes) {
+            delete state.averageSizes[key];
         }
-        const { maintainScrollAtEnd } = state.props;
-
-        if (!isFirst) {
-            calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
-
-            const shouldMaintainScrollAtEnd =
-                maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
-
-            const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx, state, false);
-
-            // Reset the endReached flag if new data has been added and we didn't
-            // just maintain the scroll at end
-            if (!didMaintainScrollAtEnd && dataProp.length > state.props.data.length) {
-                state.isEndReached = false;
-            }
-
-            if (!didMaintainScrollAtEnd) {
-                checkAtTop(state);
-                checkAtBottom(ctx, state);
-            }
-        }
+        state.minIndexSizeChanged = 0;
+        state.scrollForNextCalculateItemsInView = undefined;
     }
+
+    calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+
+    const shouldMaintainScrollAtEnd = !didColumnsChange && maintainScrollAtEnd?.onDataChange;
+
+    const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx);
+
+    // Reset the endReached flag if new data has been added and we didn't
+    // just maintain the scroll at end
+    if (!didMaintainScrollAtEnd && previousData && dataProp.length > previousData.length) {
+        state.isEndReached = false;
+    }
+
+    if (!didMaintainScrollAtEnd) {
+        checkThresholds(ctx);
+    }
+
+    delete state.previousData;
 }

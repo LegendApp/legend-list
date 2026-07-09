@@ -2,52 +2,52 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { calculateOffsetWithOffsetPosition } from "../../src/core/calculateOffsetWithOffsetPosition";
-import type { InternalState, ScrollIndexWithOffsetPosition } from "../../src/types";
-import { createMockState } from "../__mocks__/createMockState";
+import type { StateContext } from "../../src/state/state";
+import type { ScrollIndexWithOffsetPosition } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
+import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("calculateOffsetWithOffsetPosition", () => {
     let mockState: InternalState;
+    let mockCtx: StateContext;
+    const callCalculateOffset = (offset: number, params: Partial<ScrollIndexWithOffsetPosition>) =>
+        calculateOffsetWithOffsetPosition(mockCtx, offset, params);
 
     beforeEach(() => {
-        // Create mock state with basic setup
-        mockState = createMockState({
-            idCache: [],
-            positions: new Map([
-                ["item_0", 0],
-                ["item_1", 100],
-                ["item_2", 250],
-                ["item_3", 400],
-            ]),
-            props: {
-                data: [
-                    { id: "item1", name: "First" },
-                    { id: "item2", name: "Second" },
-                    { id: "item3", name: "Third" },
-                    { id: "item4", name: "Fourth" },
-                ],
-                estimatedItemSize: 100,
-                keyExtractor: (item: any, index: number) => `item_${index}`,
+        mockCtx = createMockContext(
+            { scrollingTo: undefined },
+            {
+                positions: [0, 100, 250, 400],
+                props: {
+                    data: [
+                        { id: "item1", name: "First" },
+                        { id: "item2", name: "Second" },
+                        { id: "item3", name: "Third" },
+                        { id: "item4", name: "Fourth" },
+                    ],
+                    estimatedItemSize: 100,
+                    keyExtractor: (_item: any, index: number) => `item_${index}`,
+                },
+                scrollLength: 400, // Viewport height/width
+                sizesKnown: new Map([
+                    ["item_0", 80],
+                    ["item_1", 120],
+                    ["item_2", 90],
+                    ["item_3", 110],
+                ]),
             },
-            scrollingTo: undefined,
-            scrollLength: 400, // Viewport height/width
-            sizes: new Map(),
-            sizesKnown: new Map([
-                ["item_0", 80],
-                ["item_1", 120],
-                ["item_2", 90],
-                ["item_3", 110],
-            ]),
-        });
+        );
+        mockState = mockCtx.state;
     });
 
     describe("basic functionality", () => {
         it("should return original offset when no adjustments needed", () => {
-            const result = calculateOffsetWithOffsetPosition(mockState, 100, {});
+            const result = callCalculateOffset(100, {});
             expect(result).toBe(100);
         });
 
         it("should handle empty params object", () => {
-            const result = calculateOffsetWithOffsetPosition(mockState, 250, {});
+            const result = callCalculateOffset(250, {});
             expect(result).toBe(250);
         });
 
@@ -57,33 +57,52 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewOffset: undefined,
                 viewPosition: undefined,
             };
-            const result = calculateOffsetWithOffsetPosition(mockState, 150, params);
+            const result = callCalculateOffset(150, params);
             expect(result).toBe(150);
+        });
+
+        it("should not add headerSize for absolute offsets without index", () => {
+            mockCtx.values.set("headerSize", 40);
+            const result = callCalculateOffset(150, {});
+            expect(result).toBe(150);
+        });
+
+        it("should add headerSize for index-based offsets", () => {
+            mockCtx.values.set("headerSize", 40);
+            const result = callCalculateOffset(150, { index: 1 });
+            expect(result).toBe(190);
+        });
+
+        it("should add stylePaddingTop and headerSize for index-based offsets", () => {
+            mockCtx.values.set("stylePaddingTop", 12);
+            mockCtx.values.set("headerSize", 40);
+            const result = callCalculateOffset(150, { index: 1 });
+            expect(result).toBe(202);
         });
     });
 
     describe("viewOffset handling", () => {
         it("should subtract viewOffset from offset", () => {
             const params = { viewOffset: 50 };
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(150); // 200 - 50
         });
 
         it("should handle zero viewOffset", () => {
             const params = { viewOffset: 0 };
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(200);
         });
 
         it("should handle negative viewOffset", () => {
             const params = { viewOffset: -30 };
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(230); // 200 - (-30)
         });
 
         it("should handle large viewOffset", () => {
             const params = { viewOffset: 1000 };
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(-800); // 200 - 1000
         });
     });
@@ -96,7 +115,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             };
             // scrollLength = 400, item size = 120 (from sizesKnown)
             // adjustment = 0.5 * (400 - 120) = 0.5 * 280 = 140
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(60); // 200 - 140
         });
 
@@ -106,7 +125,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0,
             };
             // adjustment = 0 * (400 - 120) = 0
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(200); // 200 - 0
         });
 
@@ -116,8 +135,32 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 1,
             };
             // adjustment = 1 * (400 - 120) = 280
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(-80); // 200 - 280
+        });
+
+        it("should account for bottom contentInset when aligning to bottom", () => {
+            mockState.props.contentInset = { bottom: 40, left: 0, right: 0, top: 0 };
+            const params = {
+                index: 1,
+                viewPosition: 1,
+            };
+            // adjustment = 1 * (400 - 40 - 120) = 240
+            const result = callCalculateOffset(200, params);
+            expect(result).toBe(-40); // 200 - 240
+        });
+
+        it("should respect right contentInset for horizontal lists", () => {
+            mockState.props.horizontal = true;
+            mockState.props.contentInset = { bottom: 0, left: 0, right: 30, top: 0 };
+
+            const params = {
+                index: 1,
+                viewPosition: 1,
+            };
+            // adjustment = 1 * (400 - 30 - 120) = 250
+            const result = callCalculateOffset(200, params);
+            expect(result).toBe(-50); // 200 - 250
         });
 
         it("should not adjust when viewPosition provided but index is undefined", () => {
@@ -125,7 +168,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.5,
                 // index: undefined
             };
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(200); // No adjustment
         });
 
@@ -134,7 +177,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 index: 1,
                 // viewPosition: undefined
             };
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(200); // No adjustment
         });
     });
@@ -149,7 +192,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             // viewOffset adjustment: -50
             // viewPosition adjustment: -140 (0.5 * (400 - 120))
             // total: 200 - 50 - 140 = 10
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(10);
         });
 
@@ -163,7 +206,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             // item size for index 0 = 80 (from sizesKnown)
             // viewPosition adjustment: -80 (0.25 * (400 - 80))
             // total: 150 + 25 - 80 = 95
-            const result = calculateOffsetWithOffsetPosition(mockState, 150, params);
+            const result = callCalculateOffset(150, params);
             expect(result).toBe(95);
         });
     });
@@ -176,7 +219,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             };
             // Cached size for item_2 is 90
             // adjustment = 0.5 * (400 - 90) = 155
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(45); // 200 - 155
         });
 
@@ -190,7 +233,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             };
             // Should use estimatedItemSize = 100
             // adjustment = 0.5 * (400 - 100) = 150
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(50); // 200 - 150
         });
 
@@ -202,14 +245,14 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.5,
             };
             // adjustment = 0.5 * (400 - 500) = 0.5 * (-100) = -50
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(250); // 200 - (-50)
         });
     });
 
     describe("edge cases and error handling", () => {
         it("should handle null state gracefully", () => {
-            const result = calculateOffsetWithOffsetPosition(null as any, 100, {});
+            const result = calculateOffsetWithOffsetPosition(mockCtx, 100, {});
             expect(result).toBe(100); // No adjustments applied when state is null
         });
 
@@ -219,7 +262,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.5,
             };
             // Should fall back to estimatedItemSize since getItemSize handles this
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(50); // 200 - (0.5 * (400 - 100))
         });
 
@@ -229,7 +272,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.5,
             };
             // Should fall back to estimatedItemSize
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(50); // 200 - (0.5 * (400 - 100))
         });
 
@@ -239,7 +282,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 1.5, // > 1
             };
             // adjustment = 1.5 * (400 - 120) = 420
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(-220); // 200 - 420
         });
 
@@ -249,7 +292,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: -0.5,
             };
             // adjustment = -0.5 * (400 - 120) = -140
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(340); // 200 - (-140)
         });
 
@@ -261,7 +304,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.5,
             };
             // adjustment = 0.5 * (0 - 120) = -60
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(260); // 200 - (-60)
         });
 
@@ -274,7 +317,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             };
             // Should throw when sizesKnown is null
             expect(() => {
-                calculateOffsetWithOffsetPosition(mockState, 200, params);
+                callCalculateOffset(200, params);
             }).toThrow();
         });
 
@@ -287,7 +330,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.5,
             };
             // getItemSize should handle this gracefully
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(typeof result).toBe("number");
         });
     });
@@ -304,7 +347,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             const start = Date.now();
 
             for (let i = 0; i < 100; i++) {
-                calculateOffsetWithOffsetPosition(mockState, 200, {
+                callCalculateOffset(200, {
                     index: i,
                     viewOffset: 25,
                     viewPosition: 0.5,
@@ -319,7 +362,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             const start = Date.now();
 
             for (let i = 0; i < 1000; i++) {
-                calculateOffsetWithOffsetPosition(mockState, i, {
+                callCalculateOffset(i, {
                     index: i % 4,
                     viewOffset: i % 10,
                     viewPosition: (i % 100) / 100,
@@ -341,7 +384,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
             };
             // Item size = 90, scrollLength = 400
             // adjustment = 0.5 * (400 - 90) = 155
-            const result = calculateOffsetWithOffsetPosition(mockState, 250, params);
+            const result = callCalculateOffset(250, params);
             expect(result).toBe(95); // 250 - 155
         });
 
@@ -352,7 +395,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0, // Align to top
             };
             // viewPosition adjustment = 0 * (400 - 120) = 0
-            const result = calculateOffsetWithOffsetPosition(mockState, 100, params);
+            const result = callCalculateOffset(100, params);
             expect(result).toBe(90); // 100 - 10 - 0
         });
 
@@ -363,7 +406,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 1, // Align to bottom
             };
             // Item size = 110, adjustment = 1 * (400 - 110) = 290
-            const result = calculateOffsetWithOffsetPosition(mockState, 400, params);
+            const result = callCalculateOffset(400, params);
             expect(result).toBe(130); // 400 - (-20) - 290
         });
 
@@ -374,7 +417,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewOffset: 0,
                 viewPosition: 1, // Bottom of viewport
             };
-            const result = calculateOffsetWithOffsetPosition(mockState, 400, params);
+            const result = callCalculateOffset(400, params);
             expect(result).toBe(110); // 400 - (1 * (400 - 110))
         });
 
@@ -386,7 +429,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.3, // Specific position in viewport
             };
             // adjustment = 0.3 * (400 - 120) = 84
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBe(66); // 200 - 50 - 84
         });
     });
@@ -398,7 +441,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.333333, // Precise floating point
             };
             // adjustment = 0.333333 * (400 - 120) = 93.33324
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBeCloseTo(106.67, 2); // 200 - 93.33
         });
 
@@ -407,7 +450,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 index: 1,
                 viewPosition: 0.001,
             };
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(result).toBeCloseTo(199.72, 2); // Very small adjustment
         });
     });
@@ -422,7 +465,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.5,
             };
             // Should use estimatedItemSize or getItemSize fallback
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(typeof result).toBe("number");
         });
 
@@ -434,7 +477,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 index: 1,
                 viewPosition: 0.5,
             };
-            const result = calculateOffsetWithOffsetPosition(mockState, 200, params);
+            const result = callCalculateOffset(200, params);
             expect(typeof result).toBe("number");
         });
     });

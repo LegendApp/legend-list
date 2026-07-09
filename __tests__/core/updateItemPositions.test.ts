@@ -3,45 +3,41 @@ import "../setup"; // Import global test setup
 
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import { listen$ } from "../../src/state/state";
+import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
+import {
+    clearLayoutValues,
+    countLayoutValues,
+    getLayoutValue,
+    hasLayoutValue,
+    setLayoutValue,
+} from "../helpers/layoutArrays";
 
 describe("updateItemPositions", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockCtx = createMockContext({
-            numColumns: 1, // Single column by default
-        });
-
-        mockState = createMockState({
-            averageSizes: {},
-            columns: new Map(),
-            dataChangeNeedsScrollUpdate: false,
-            firstFullyOnScreenIndex: undefined,
-            idCache: [],
-            indexByKey: new Map(),
-            positions: new Map(),
-            props: {
-                data: [
-                    { id: "item1", name: "First" },
-                    { id: "item2", name: "Second" },
-                    { id: "item3", name: "Third" },
-                    { id: "item4", name: "Fourth" },
-                    { id: "item5", name: "Fifth" },
-                ],
-                estimatedItemSize: undefined,
-                getEstimatedItemSize: undefined,
-                keyExtractor: (item: any, index: number) => item?.id ?? `item-${index}`,
-                snapToIndices: undefined,
+        mockCtx = createMockContext(
+            {
+                numColumns: 1, // Single column by default
             },
-            scrollHistory: [],
-            scrollingTo: undefined, // Required by getItemSize
-            sizes: new Map(), // Required by getItemSize
-            sizesKnown: new Map(),
-        });
+            {
+                firstFullyOnScreenIndex: undefined,
+                props: {
+                    data: [
+                        { id: "item1", name: "First" },
+                        { id: "item2", name: "Second" },
+                        { id: "item3", name: "Third" },
+                        { id: "item4", name: "Fourth" },
+                        { id: "item5", name: "Fifth" },
+                    ],
+                    keyExtractor: (item: any, index: number) => item?.id ?? `item-${index}`,
+                },
+            },
+        );
+        mockState = mockCtx.state;
     });
 
     describe("basic single-column positioning", () => {
@@ -53,18 +49,18 @@ describe("updateItemPositions", () => {
             mockState.sizesKnown.set("item4", 120);
             mockState.sizesKnown.set("item5", 180);
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Check positions are calculated correctly
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(100);
-            expect(mockState.positions.get("item3")).toBe(250);
-            expect(mockState.positions.get("item4")).toBe(450);
-            expect(mockState.positions.get("item5")).toBe(570);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(100);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(250);
+            expect(getLayoutValue(mockState, "positions", "item4")).toBe(450);
+            expect(getLayoutValue(mockState, "positions", "item5")).toBe(570);
         });
 
         it("should update indexByKey mapping for all items", () => {
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             expect(mockState.indexByKey.get("item1")).toBe(0);
             expect(mockState.indexByKey.get("item2")).toBe(1);
@@ -73,27 +69,53 @@ describe("updateItemPositions", () => {
             expect(mockState.indexByKey.get("item5")).toBe(4);
         });
 
-        it("should set column to 1 for all items in single-column mode", () => {
-            updateItemPositions(mockCtx, mockState, false);
+        it("should skip column and span map writes in single-column mode", () => {
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.columns.get("item1")).toBe(1);
-            expect(mockState.columns.get("item2")).toBe(1);
-            expect(mockState.columns.get("item3")).toBe(1);
-            expect(mockState.columns.get("item4")).toBe(1);
-            expect(mockState.columns.get("item5")).toBe(1);
+            expect(countLayoutValues(mockState.columns)).toBe(0);
+            expect(countLayoutValues(mockState.columnSpans)).toBe(0);
         });
 
         it("should use estimated sizes when sizes are not known", () => {
             mockState.props.estimatedItemSize = 100;
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // All items should be positioned using estimated size
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(100);
-            expect(mockState.positions.get("item3")).toBe(200);
-            expect(mockState.positions.get("item4")).toBe(300);
-            expect(mockState.positions.get("item5")).toBe(400);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(100);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(200);
+            expect(getLayoutValue(mockState, "positions", "item4")).toBe(300);
+            expect(getLayoutValue(mockState, "positions", "item5")).toBe(400);
+        });
+
+        it("includes horizontal gap when positioning fixed-size items", () => {
+            mockCtx.scrollAxisGap = 16;
+            mockState.props.horizontal = true;
+            mockState.props.getFixedItemSize = () => 50;
+
+            updateItemPositions(mockCtx, false);
+
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(66);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(132);
+            expect(mockState.totalSize).toBe(330);
+        });
+
+        it("defers totalSize notifications while caching estimated sizes", () => {
+            mockState.props.estimatedItemSize = 100;
+            mockState.totalSize = 0;
+            mockCtx.values.set("totalSize", 0);
+            const totalSizeUpdates: number[] = [];
+            listen$(mockCtx, "totalSize", (value) => {
+                totalSizeUpdates.push(value);
+            });
+
+            updateItemPositions(mockCtx, false);
+
+            expect(mockState.totalSize).toBe(500);
+            expect(mockCtx.values.get("totalSize")).toBe(500);
+            expect(totalSizeUpdates).toEqual([500]);
         });
     });
 
@@ -108,23 +130,28 @@ describe("updateItemPositions", () => {
         });
 
         it("should position items in columns correctly", () => {
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Row 1: item1 (col 1), item2 (col 2) - max height 120
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(0);
-            expect(mockState.columns.get("item1")).toBe(1);
-            expect(mockState.columns.get("item2")).toBe(2);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(0);
+            expect(getLayoutValue(mockState, "columns", "item1")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item2")).toBe(2);
 
             // Row 2: item3 (col 1), item4 (col 2) - max height 150
-            expect(mockState.positions.get("item3")).toBe(120); // After max height of row 1
-            expect(mockState.positions.get("item4")).toBe(120);
-            expect(mockState.columns.get("item3")).toBe(1);
-            expect(mockState.columns.get("item4")).toBe(2);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(120); // After max height of row 1
+            expect(getLayoutValue(mockState, "positions", "item4")).toBe(120);
+            expect(getLayoutValue(mockState, "columns", "item3")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item4")).toBe(2);
 
             // Row 3: item5 (col 1)
-            expect(mockState.positions.get("item5")).toBe(270); // 120 + 150
-            expect(mockState.columns.get("item5")).toBe(1);
+            expect(getLayoutValue(mockState, "positions", "item5")).toBe(270); // 120 + 150
+            expect(getLayoutValue(mockState, "columns", "item5")).toBe(1);
+            expect(getLayoutValue(mockState, "columnSpans", "item1")).toBe(1);
+            expect(getLayoutValue(mockState, "columnSpans", "item2")).toBe(1);
+            expect(getLayoutValue(mockState, "columnSpans", "item3")).toBe(1);
+            expect(getLayoutValue(mockState, "columnSpans", "item4")).toBe(1);
+            expect(getLayoutValue(mockState, "columnSpans", "item5")).toBe(1);
         });
 
         it("should handle varying column heights correctly", () => {
@@ -134,30 +161,79 @@ describe("updateItemPositions", () => {
             mockState.sizesKnown.set("item3", 100);
             mockState.sizesKnown.set("item4", 60);
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Row 1: max height should be 200 (item2)
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(0);
 
             // Row 2: should start at 200 (max of row 1)
-            expect(mockState.positions.get("item3")).toBe(200);
-            expect(mockState.positions.get("item4")).toBe(200);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(200);
+            expect(getLayoutValue(mockState, "positions", "item4")).toBe(200);
         });
 
         it("should handle 3-column layout", () => {
             mockCtx.values.set("numColumns", 3);
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Row 1: items 1, 2, 3
-            expect(mockState.columns.get("item1")).toBe(1);
-            expect(mockState.columns.get("item2")).toBe(2);
-            expect(mockState.columns.get("item3")).toBe(3);
+            expect(getLayoutValue(mockState, "columns", "item1")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item2")).toBe(2);
+            expect(getLayoutValue(mockState, "columns", "item3")).toBe(3);
 
             // Row 2: items 4, 5
-            expect(mockState.columns.get("item4")).toBe(1);
-            expect(mockState.columns.get("item5")).toBe(2);
+            expect(getLayoutValue(mockState, "columns", "item4")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item5")).toBe(2);
+        });
+
+        it("should respect overrideItemLayout spans in multi-column layout", () => {
+            mockCtx.values.set("numColumns", 3);
+            mockState.props.numColumns = 3;
+            mockState.props.overrideItemLayout = (layout, _item, index) => {
+                if (index === 0) {
+                    layout.span = 2;
+                }
+                if (index === 2) {
+                    layout.span = 3;
+                }
+            };
+
+            mockState.sizesKnown.set("item1", 100);
+            mockState.sizesKnown.set("item2", 120);
+            mockState.sizesKnown.set("item3", 80);
+            mockState.sizesKnown.set("item4", 90);
+            mockState.sizesKnown.set("item5", 110);
+
+            updateItemPositions(mockCtx, false);
+
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(120);
+            expect(getLayoutValue(mockState, "positions", "item4")).toBe(200);
+            expect(getLayoutValue(mockState, "positions", "item5")).toBe(200);
+
+            expect(getLayoutValue(mockState, "columns", "item1")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item2")).toBe(3);
+            expect(getLayoutValue(mockState, "columns", "item3")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item4")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item5")).toBe(2);
+
+            expect(getLayoutValue(mockState, "columnSpans", "item1")).toBe(2);
+            expect(getLayoutValue(mockState, "columnSpans", "item2")).toBe(1);
+            expect(getLayoutValue(mockState, "columnSpans", "item3")).toBe(3);
+        });
+
+        it("clears stale column and span maps when switching back to single-column mode", () => {
+            updateItemPositions(mockCtx, false);
+            expect(countLayoutValues(mockState.columns)).toBeGreaterThan(0);
+            expect(countLayoutValues(mockState.columnSpans)).toBeGreaterThan(0);
+
+            mockCtx.values.set("numColumns", 1);
+            updateItemPositions(mockCtx, false);
+
+            expect(countLayoutValues(mockState.columns)).toBe(0);
+            expect(countLayoutValues(mockState.columnSpans)).toBe(0);
         });
     });
 
@@ -174,9 +250,9 @@ describe("updateItemPositions", () => {
 
             mockState.props.data = extendedData;
 
-            mockState.columns.clear();
+            clearLayoutValues(mockState, "columns");
             mockState.indexByKey.clear();
-            mockState.positions.clear();
+            clearLayoutValues(mockState, "positions");
             mockState.idCache.length = 0;
             mockState.sizes.clear();
             mockState.sizesKnown.clear();
@@ -187,38 +263,46 @@ describe("updateItemPositions", () => {
         });
 
         it("recomputes the previous row when startIndex begins mid-row", () => {
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Increase height of the first item to force downstream rows to shift
             mockState.sizesKnown.set("item1", 150);
 
-            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: 1000, startIndex: 1 });
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 1000,
+                startIndex: 1,
+            });
 
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(0);
-            expect(mockState.positions.get("item3")).toBe(150);
-            expect(mockState.positions.get("item4")).toBe(150);
-            expect(mockState.positions.get("item5")).toBe(240);
-            expect(mockState.positions.get("item6")).toBe(240);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(150);
+            expect(getLayoutValue(mockState, "positions", "item4")).toBe(150);
+            expect(getLayoutValue(mockState, "positions", "item5")).toBe(240);
+            expect(getLayoutValue(mockState, "positions", "item6")).toBe(240);
         });
 
         it("preserves the row baseline when startIndex targets a column-one item", () => {
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Make the first item in the second row taller so later rows need to shift
             mockState.sizesKnown.set("item3", 140);
 
-            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: 1000, startIndex: 2 });
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 1000,
+                startIndex: 2,
+            });
 
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(0);
-            expect(mockState.positions.get("item3")).toBe(100);
-            expect(mockState.positions.get("item4")).toBe(100);
-            expect(mockState.positions.get("item5")).toBe(240);
-            expect(mockState.positions.get("item6")).toBe(240);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(100);
+            expect(getLayoutValue(mockState, "positions", "item4")).toBe(100);
+            expect(getLayoutValue(mockState, "positions", "item5")).toBe(240);
+            expect(getLayoutValue(mockState, "positions", "item6")).toBe(240);
 
-            expect(mockState.columns.get("item3")).toBe(1);
-            expect(mockState.columns.get("item4")).toBe(2);
+            expect(getLayoutValue(mockState, "columns", "item3")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item4")).toBe(2);
         });
 
         it("handles third-row recomputation in 3-column layouts", () => {
@@ -231,9 +315,9 @@ describe("updateItemPositions", () => {
             }));
             mockState.props.data = extendedData;
 
-            mockState.columns.clear();
+            clearLayoutValues(mockState, "columns");
             mockState.indexByKey.clear();
-            mockState.positions.clear();
+            clearLayoutValues(mockState, "positions");
             mockState.idCache.length = 0;
             mockState.sizes.clear();
             mockState.sizesKnown.clear();
@@ -244,21 +328,25 @@ describe("updateItemPositions", () => {
                 mockState.sizesKnown.set(item.id, size);
             });
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             mockState.sizesKnown.set("item7", 140);
 
-            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: 1000, startIndex: 7 });
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 1000,
+                startIndex: 7,
+            });
 
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item4")).toBe(100);
-            expect(mockState.positions.get("item7")).toBe(200);
-            expect(mockState.positions.get("item10")).toBe(340);
-            expect(mockState.positions.get("item13")).toBe(440);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item4")).toBe(100);
+            expect(getLayoutValue(mockState, "positions", "item7")).toBe(200);
+            expect(getLayoutValue(mockState, "positions", "item10")).toBe(340);
+            expect(getLayoutValue(mockState, "positions", "item13")).toBe(440);
 
-            expect(mockState.columns.get("item10")).toBe(1);
-            expect(mockState.columns.get("item11")).toBe(2);
-            expect(mockState.columns.get("item12")).toBe(3);
+            expect(getLayoutValue(mockState, "columns", "item10")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "item11")).toBe(2);
+            expect(getLayoutValue(mockState, "columns", "item12")).toBe(3);
         });
     });
 
@@ -284,16 +372,16 @@ describe("updateItemPositions", () => {
             for (let i = 5; i < 15; i++) {
                 const id = `item${i + 1}`;
                 mockState.idCache[i] = id;
-                mockState.positions.set(id, i * 100);
+                setLayoutValue(mockState, "positions", id, i * 100);
                 mockState.sizesKnown.set(id, 100);
             }
         });
 
         it("recalculates positions from the start when scrolling up", () => {
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(100);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(100);
         });
 
         it("should produce consistent output when not scrolling up", () => {
@@ -304,29 +392,32 @@ describe("updateItemPositions", () => {
                 { scroll: 1000, time: Date.now() },
             ];
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.positions.get("item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
         });
 
         it("should bail out of backwards optimization when positions go too low", () => {
             // Set anchor position very low to trigger bailout
             const anchorId = `item${mockState.firstFullyOnScreenIndex! + 1}`;
-            mockState.positions.set(anchorId, -3000);
+            setLayoutValue(mockState, "positions", anchorId, -3000);
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.positions.get("item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
         });
 
         it("should fall back to regular calculation when anchor position is missing", () => {
             // Clear the anchor position
             const anchorId = `item${mockState.firstFullyOnScreenIndex! + 1}`;
-            mockState.positions.delete(anchorId);
+            const anchorIndex = mockState.idCache.indexOf(anchorId);
+            if (anchorIndex !== -1) {
+                mockState.positions[anchorIndex] = undefined;
+            }
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.positions.get("item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
         });
     });
 
@@ -336,7 +427,7 @@ describe("updateItemPositions", () => {
             mockState.indexByKey.set("old_item", 0);
             mockState.idCache[0] = "old_item";
 
-            updateItemPositions(mockCtx, mockState, true); // dataChanged = true
+            updateItemPositions(mockCtx, true); // dataChanged = true
 
             // Caches should be rebuilt for current data. Implementation may not proactively delete unknown
             // legacy keys from previous datasets, and may reuse idCache entries for existing indices.
@@ -349,7 +440,7 @@ describe("updateItemPositions", () => {
             mockState.indexByKey.set("item1", 0);
             mockState.idCache[0] = "item1";
 
-            updateItemPositions(mockCtx, mockState, false); // dataChanged = false
+            updateItemPositions(mockCtx, false); // dataChanged = false
 
             // Should update indexByKey because size is 0 (needs rebuilding)
             expect(mockState.indexByKey.get("item1")).toBe(0);
@@ -358,7 +449,7 @@ describe("updateItemPositions", () => {
         it("should rebuild indexByKey when it's empty", () => {
             mockState.indexByKey.clear();
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Should rebuild indexByKey
             expect(mockState.indexByKey.get("item1")).toBe(0);
@@ -369,29 +460,27 @@ describe("updateItemPositions", () => {
     describe("average size optimization", () => {
         it("should use average size when available", () => {
             mockState.averageSizes[""] = { avg: 125.5, num: 10 };
-            mockState.props.enableAverages = true;
             mockState.props.estimatedItemSize = undefined;
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Should use rounded average size (125.5 rounds to 125.5 using roundSize)
             const expectedRoundedSize = Math.floor(125.5 * 8) / 8; // 125.5
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(expectedRoundedSize);
-            expect(mockState.positions.get("item3")).toBe(expectedRoundedSize * 2);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(expectedRoundedSize);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(expectedRoundedSize * 2);
         });
 
         it("should prefer known sizes over average sizes", () => {
             mockState.averageSizes[""] = { avg: 200, num: 10 };
             mockState.sizesKnown.set("item2", 100); // Override with known size
-            mockState.props.enableAverages = true;
             mockState.props.estimatedItemSize = undefined;
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(200); // Should use average for item1
-            expect(mockState.positions.get("item3")).toBe(300); // item2 used known size (100)
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(200); // Should use average for item1
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(300); // item2 used known size (100)
         });
     });
 
@@ -399,37 +488,38 @@ describe("updateItemPositions", () => {
         it("should handle empty data array", () => {
             mockState.props.data = [];
 
-            expect(() => updateItemPositions(mockCtx, mockState, false)).not.toThrow();
+            expect(() => updateItemPositions(mockCtx, false)).not.toThrow();
 
-            expect(mockState.positions.size).toBe(0);
+            expect(countLayoutValues(mockState.positions)).toBe(0);
             expect(mockState.indexByKey.size).toBe(0);
         });
 
         it("should handle null data array", () => {
             mockState.props.data = null as any;
 
-            expect(() => updateItemPositions(mockCtx, mockState, false)).toThrow();
+            expect(() => updateItemPositions(mockCtx, false)).toThrow();
         });
 
         it("should handle single item", () => {
             mockState.props.data = [{ id: "single", name: "Single Item" }];
             mockState.sizesKnown.set("single", 150);
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.positions.get("single")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "single")).toBe(0);
             expect(mockState.indexByKey.get("single")).toBe(0);
-            expect(mockState.columns.get("single")).toBe(1);
+            expect(getLayoutValue(mockState, "columns", "single")).toBeUndefined();
+            expect(getLayoutValue(mockState, "columnSpans", "single")).toBeUndefined();
         });
 
         it("should handle items with zero size", () => {
             mockState.sizesKnown.set("item1", 0);
             mockState.sizesKnown.set("item2", 100);
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.get("item2")).toBe(0); // Zero size means no offset
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(0); // Zero size means no offset
         });
 
         it("should handle very large datasets efficiently", () => {
@@ -437,30 +527,40 @@ describe("updateItemPositions", () => {
             mockState.props.data = largeData;
             mockState.props.estimatedItemSize = 50;
 
+            mockState.scrollHistory = [
+                { scroll: 0, time: Date.now() - 16 },
+                { scroll: 2000, time: Date.now() },
+            ];
+
             const start = Date.now();
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: -1,
+                startIndex: 0,
+            });
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(500); // Should be reasonably fast
-            expect(mockState.positions.size).toBeLessThan(200); // Early break should cap the work
-            expect(mockState.positions.size).toBeGreaterThan(0);
-            expect(mockState.positions.get("item0")).toBe(0);
-            expect(mockState.positions.has("item9999")).toBe(false);
+            expect(countLayoutValues(mockState.positions)).toBeLessThan(200); // Early break should cap the work
+            expect(countLayoutValues(mockState.positions)).toBeGreaterThan(0);
+            expect(getLayoutValue(mockState, "positions", "item0")).toBe(0);
+            expect(hasLayoutValue(mockState, "positions", "item9999")).toBe(false);
         });
 
         it("should handle corrupted state gracefully", () => {
             mockState.positions = null as any;
 
-            expect(() => updateItemPositions(mockCtx, mockState, false)).toThrow();
+            expect(() => updateItemPositions(mockCtx, false)).not.toThrow();
         });
 
         it("should handle missing context values", () => {
             mockCtx.values.delete("numColumns");
 
-            expect(() => updateItemPositions(mockCtx, mockState, false)).not.toThrow();
+            expect(() => updateItemPositions(mockCtx, false)).not.toThrow();
 
             // Should default to single column behavior
-            expect(mockState.columns.get("item1")).toBe(1);
+            expect(countLayoutValues(mockState.columns)).toBe(0);
+            expect(countLayoutValues(mockState.columnSpans)).toBe(0);
         });
     });
 
@@ -474,24 +574,33 @@ describe("updateItemPositions", () => {
             mockState.props.data = largeData;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
 
-            mockState.columns = new Map();
+            mockState.columns = [];
             mockState.idCache = [];
             mockState.indexByKey = new Map();
-            mockState.positions = new Map();
+            mockState.positions = [];
             mockState.sizesKnown = new Map();
 
             largeData.forEach((item) => {
                 mockState.sizesKnown.set(item.id, 120);
-                mockState.positions.set(item.id, -1);
+                setLayoutValue(mockState, "positions", item.id, -1);
             });
 
-            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: -900, startIndex: 0 });
+            mockState.scrollHistory = [
+                { scroll: 0, time: Date.now() - 16 },
+                { scroll: 2000, time: Date.now() },
+            ];
+
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: -900,
+                startIndex: 0,
+            });
 
             expect(mockState.indexByKey.size).toBe(13); // 1 row + buffer of ~10 items
             expect(mockState.indexByKey.has("item-12")).toBe(true);
             expect(mockState.indexByKey.has("item-13")).toBe(false);
-            expect(mockState.positions.get("item-12")).toBeGreaterThanOrEqual(0);
-            expect(mockState.positions.get("item-30")).toBe(-1);
+            expect(getLayoutValue(mockState, "positions", "item-12")).toBeGreaterThanOrEqual(0);
+            expect(getLayoutValue(mockState, "positions", "item-30")).toBe(-1);
         });
 
         it("limits work to a small window in multi-column lists", () => {
@@ -505,23 +614,66 @@ describe("updateItemPositions", () => {
             mockState.props.data = largeData;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
 
-            mockState.columns = new Map();
+            mockState.columns = [];
             mockState.idCache = [];
             mockState.indexByKey = new Map();
-            mockState.positions = new Map();
+            mockState.positions = [];
             mockState.sizesKnown = new Map();
 
             largeData.forEach((item) => {
                 mockState.sizesKnown.set(item.id, 120);
-                mockState.positions.set(item.id, -1);
+                setLayoutValue(mockState, "positions", item.id, -1);
             });
 
-            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: -900, startIndex: 0 });
+            mockState.scrollHistory = [
+                { scroll: 0, time: Date.now() - 16 },
+                { scroll: 2000, time: Date.now() },
+            ];
+
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: -900,
+                startIndex: 0,
+            });
 
             expect(mockState.indexByKey.size).toBe(17); // One extra row + buffer beyond the threshold
             expect(mockState.indexByKey.has("item-40")).toBe(false);
-            expect(mockState.columns.get("item-16")).toBeDefined();
-            expect(mockState.positions.get("item-40")).toBe(-1);
+            expect(getLayoutValue(mockState, "columns", "item-16")).toBeDefined();
+            expect(getLayoutValue(mockState, "positions", "item-40")).toBe(-1);
+        });
+
+        it("limits work during stationary multi-column settle recalculations", () => {
+            mockCtx.values.set("numColumns", 3);
+
+            const largeData = Array.from({ length: 90 }, (_, index) => ({
+                id: `item-${index}`,
+                name: `Item ${index}`,
+            }));
+
+            mockState.props.data = largeData;
+            mockState.props.keyExtractor = (item: { id: string }) => item.id;
+            mockState.columns = [];
+            mockState.idCache = [];
+            mockState.indexByKey = new Map();
+            mockState.positions = [];
+            mockState.sizesKnown = new Map();
+            mockState.scrollHistory = [{ scroll: 0, time: Date.now() }];
+
+            largeData.forEach((item) => {
+                mockState.sizesKnown.set(item.id, 120);
+                setLayoutValue(mockState, "positions", item.id, -1);
+            });
+
+            updateItemPositions(mockCtx, false, {
+                doMVCP: true,
+                optimizeForVisibleWindow: true,
+                scrollBottomBuffered: -900,
+                startIndex: 0,
+            });
+
+            expect(mockState.indexByKey.size).toBe(17);
+            expect(mockState.indexByKey.has("item-40")).toBe(false);
+            expect(getLayoutValue(mockState, "positions", "item-40")).toBe(-1);
         });
 
         it("should handle backwards optimization with columns", () => {
@@ -547,12 +699,12 @@ describe("updateItemPositions", () => {
             }
 
             // Set anchor position
-            mockState.positions.set("item8", 400);
+            setLayoutValue(mockState, "positions", "item8", 400);
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Should have used backwards optimization
-            expect(mockState.positions.get("item8")).toBe(400);
+            expect(getLayoutValue(mockState, "positions", "item8")).toBe(400);
         });
 
         it("should maintain scroll velocity calculation integration", () => {
@@ -563,18 +715,33 @@ describe("updateItemPositions", () => {
                 { scroll: 200, time: Date.now() },
             ];
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Function should complete without error and produce valid positions
-            expect(mockState.positions.get("item1")).toBe(0);
-            expect(mockState.positions.size).toBe(5);
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(countLayoutValues(mockState.positions)).toBe(5);
+        });
+
+        it("uses provided scroll velocity for visible-window optimization", () => {
+            mockState.props.data = Array.from({ length: 1000 }, (_, index) => ({ id: `item${index}` }));
+            mockState.props.estimatedItemSize = 10;
+            mockState.scrollHistory = [];
+
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 100,
+                scrollVelocity: 1,
+                startIndex: 0,
+            });
+
+            expect(countLayoutValues(mockState.positions)).toBeLessThan(mockState.props.data.length);
         });
 
         it("should handle rapid consecutive calls", () => {
             const start = Date.now();
 
             for (let i = 0; i < 100; i++) {
-                updateItemPositions(mockCtx, mockState, false);
+                updateItemPositions(mockCtx, false);
             }
 
             const duration = Date.now() - start;
@@ -587,18 +754,18 @@ describe("updateItemPositions", () => {
             mockState.props.snapToIndices = [0, 2, 4];
 
             // Mock updateSnapToOffsets by checking if it would be called
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Function should complete without error
-            expect(mockState.positions.size).toBe(5);
+            expect(countLayoutValues(mockState.positions)).toBe(5);
         });
 
         it("should not call updateSnapToOffsets when snapToIndices is undefined", () => {
             mockState.props.snapToIndices = undefined;
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
-            expect(mockState.positions.size).toBe(5);
+            expect(countLayoutValues(mockState.positions)).toBe(5);
         });
     });
 
@@ -612,13 +779,13 @@ describe("updateItemPositions", () => {
             // Create duplicate key scenario
             mockState.props.keyExtractor = () => "duplicate_key";
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             console.error = originalConsoleError;
 
             // In dev mode, should detect and warn about duplicate keys
             // (The actual detection happens when __DEV__ is true, which may not be set in tests)
-            expect(mockState.positions.size).toBeGreaterThan(0);
+            expect(countLayoutValues(mockState.positions)).toBeGreaterThan(0);
         });
     });
 
@@ -629,7 +796,7 @@ describe("updateItemPositions", () => {
             const largeData = Array.from({ length: 5000 }, (_, i) => ({ id: `item${i}`, name: `Item ${i}` }));
             mockState.props.data = largeData;
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             const finalMemory = process.memoryUsage().heapUsed;
             const memoryIncrease = finalMemory - initialMemory;
@@ -640,13 +807,13 @@ describe("updateItemPositions", () => {
 
         it("should reuse existing map entries when possible", () => {
             // Pre-populate with some entries
-            mockState.positions.set("item1", 100);
+            setLayoutValue(mockState, "positions", "item1", 100);
             mockState.indexByKey.set("item1", 0);
 
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, false);
 
             // Should update existing entries rather than always creating new ones
-            expect(mockState.positions.get("item1")).toBe(0); // Recalculated
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0); // Recalculated
             expect(mockState.indexByKey.get("item1")).toBe(0); // Maintained
         });
     });

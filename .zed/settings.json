@@ -1,0 +1,38 @@
+{
+    "hard_tabs": false,
+    "languages": {
+        "JavaScript": {
+            "auto_indent": "preserve_indent",
+            "formatter": "language_server",
+            "format_on_save": "on",
+            "hard_tabs": false,
+            "tab_size": 4,
+            "use_on_type_format": false
+        },
+        "JSX": {
+            "auto_indent": "preserve_indent",
+            "formatter": "language_server",
+            "format_on_save": "on",
+            "hard_tabs": false,
+            "tab_size": 4,
+            "use_on_type_format": false
+        },
+        "TypeScript": {
+            "auto_indent": "preserve_indent",
+            "formatter": "language_server",
+            "format_on_save": "on",
+            "hard_tabs": false,
+            "tab_size": 4,
+            "use_on_type_format": false
+        },
+        "TSX": {
+            "auto_indent": "preserve_indent",
+            "formatter": "language_server",
+            "format_on_save": "on",
+            "hard_tabs": false,
+            "tab_size": 4,
+            "use_on_type_format": false
+        }
+    },
+    "tab_size": 4
+}

@@ -1,93 +1,166 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from "react-native";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
-import { IsNewArchitecture } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
+import { updateItemSizes } from "@/core/updateItemSizes";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
+import { Platform } from "@/platform/Platform";
+import type { DimensionValue, LayoutRectangle, LooseView, StyleProp, ViewStyle } from "@/platform/scrollview-types";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, typedMemo } from "@/types";
-import { isNullOrUndefined } from "@/utils/helpers";
+import type { ColumnWrapperStyle, StickyHeaderConfig } from "@/types.base";
+import { type GetRenderedItem, typedMemo } from "@/types.internal";
+import { isNullOrUndefined, roundSize } from "@/utils/helpers";
+import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
+import { isHorizontalRTL } from "@/utils/rtl";
 
+export function getContainerPositionStyle({
+    columnWrapperStyle,
+    contentContainerAlignItems,
+    horizontal,
+    hasItemSeparator,
+    isHorizontalRTLList,
+    numColumns,
+    otherAxisPos,
+    otherAxisSize,
+}: {
+    columnWrapperStyle: ColumnWrapperStyle | undefined;
+    contentContainerAlignItems: ViewStyle["alignItems"] | undefined;
+    horizontal: boolean;
+    hasItemSeparator: boolean;
+    isHorizontalRTLList: boolean;
+    numColumns: number;
+    otherAxisPos: DimensionValue | undefined;
+    otherAxisSize: DimensionValue | undefined;
+}): StyleProp<ViewStyle> {
+    let paddingStyles: ViewStyle | undefined;
+    if (columnWrapperStyle) {
+        // Extract gap properties from columnWrapperStyle if available
+        const { columnGap, rowGap, gap } = columnWrapperStyle;
+
+        // Create padding styles for both horizontal and vertical layouts with multiple columns
+        if (horizontal) {
+            paddingStyles = {
+                paddingBottom: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
+                paddingRight: columnGap || gap || undefined,
+                paddingTop: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
+            };
+        } else {
+            paddingStyles = {
+                paddingBottom: rowGap || gap || undefined,
+                paddingLeft: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
+                paddingRight: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
+            };
+        }
+    }
+
+    return horizontal
+        ? {
+              bottom: contentContainerAlignItems === "flex-end" && numColumns === 1 ? 0 : undefined,
+              boxSizing: paddingStyles ? "border-box" : undefined,
+              direction: isHorizontalRTLList && Platform.OS === "web" ? "ltr" : undefined,
+              flexDirection: hasItemSeparator ? "row" : undefined,
+              height: otherAxisSize,
+              left: 0,
+              position: "absolute",
+              top: contentContainerAlignItems === "flex-end" && numColumns === 1 ? undefined : otherAxisPos,
+              ...(paddingStyles || {}),
+          }
+        : {
+              boxSizing: paddingStyles ? "border-box" : undefined,
+              left: otherAxisPos,
+              position: "absolute",
+              right: numColumns > 1 ? null : 0,
+              top: 0,
+              width: otherAxisSize,
+              ...(paddingStyles || {}),
+          };
+}
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Container = typedMemo(function Container<ItemT>({
     id,
+    itemKey,
     recycleItems,
     horizontal,
     getRenderedItem,
-    updateItemSize,
     ItemSeparatorComponent,
+    stickyHeaderConfig,
 }: {
     id: number;
+    itemKey: string;
     recycleItems?: boolean;
     horizontal: boolean;
     getRenderedItem: GetRenderedItem;
-    updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }) {
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
+    const isHorizontalRTLList = isHorizontalRTL(ctx.state);
+    const positionComponentInternal = ctx.state.props.positionComponentInternal;
+    const stickyPositionComponentInternal = ctx.state.props.stickyPositionComponentInternal;
 
-    const [column = 0, data, itemKey, numColumns, extraData, isSticky, stickyOffset] = useArr$([
+    const [column = 0, span = 1, data, numColumns = 1, extraData, isSticky] = useArr$([
         `containerColumn${id}`,
+        `containerSpan${id}`,
         `containerItemData${id}`,
-        `containerItemKey${id}`,
         "numColumns",
         "extraData",
         `containerSticky${id}`,
-        `containerStickyOffset${id}`,
     ]);
 
-    const refLastSize = useRef<{ width: number; height: number }>();
-    const ref = useRef<View>(null);
+    const itemLayoutRef = useRef<{
+        horizontal: boolean;
+        itemKey?: string | undefined;
+        lastSize?: { width: number; height: number };
+        didLayout: boolean;
+        pendingShrinkToken: number;
+    }>({
+        didLayout: false,
+        horizontal,
+        itemKey,
+        pendingShrinkToken: 0,
+    });
+    itemLayoutRef.current.horizontal = horizontal;
+    itemLayoutRef.current.itemKey = itemKey;
+    const ref = useRef<LooseView>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
 
-    const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
-    const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
-    const didLayoutRef = useRef(false);
-
+    const resolvedColumn = column > 0 ? column : 1;
+    const resolvedSpan = Math.min(Math.max(span || 1, 1), numColumns);
+    const otherAxisPos: DimensionValue | undefined =
+        numColumns > 1 ? `${((resolvedColumn - 1) / numColumns) * 100}%` : 0;
+    const otherAxisSize: DimensionValue | undefined =
+        numColumns > 1 ? `${(resolvedSpan / numColumns) * 100}%` : undefined;
     // Style is memoized because it's used as a dependency in PositionView.
     // It's unlikely to change since the position is usually the only style prop that changes.
-    const style: StyleProp<ViewStyle> = useMemo(() => {
-        let paddingStyles: ViewStyle | undefined;
-        if (columnWrapperStyle) {
-            // Extract gap properties from columnWrapperStyle if available
-            const { columnGap, rowGap, gap } = columnWrapperStyle;
-
-            // Create padding styles for both horizontal and vertical layouts with multiple columns
-            if (horizontal) {
-                paddingStyles = {
-                    paddingRight: columnGap || gap || undefined,
-                    paddingVertical: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
-                };
-            } else {
-                paddingStyles = {
-                    paddingBottom: rowGap || gap || undefined,
-                    paddingHorizontal: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
-                };
-            }
-        }
-
-        return horizontal
-            ? {
-                  flexDirection: ItemSeparatorComponent ? "row" : undefined,
-                  height: otherAxisSize,
-                  left: 0,
-                  position: "absolute",
-                  top: otherAxisPos,
-                  ...(paddingStyles || {}),
-              }
-            : {
-                  left: otherAxisPos,
-                  position: "absolute",
-                  right: numColumns > 1 ? null : 0,
-                  top: 0,
-                  width: otherAxisSize,
-                  ...(paddingStyles || {}),
-              };
-    }, [horizontal, otherAxisPos, otherAxisSize, columnWrapperStyle, numColumns]);
+    const style: StyleProp<ViewStyle> = useMemo(
+        () =>
+            getContainerPositionStyle({
+                columnWrapperStyle,
+                contentContainerAlignItems: ctx.state.props.contentContainerAlignItems,
+                hasItemSeparator: !!ItemSeparatorComponent,
+                horizontal,
+                isHorizontalRTLList,
+                numColumns,
+                otherAxisPos,
+                otherAxisSize,
+            }),
+        [
+            horizontal,
+            isHorizontalRTLList,
+            otherAxisPos,
+            otherAxisSize,
+            columnWrapperStyle,
+            ctx.state.props.contentContainerAlignItems,
+            numColumns,
+            ItemSeparatorComponent,
+        ],
+    );
 
     const renderedItemInfo = useMemo(
         () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),
@@ -95,68 +168,130 @@ export const Container = typedMemo(function Container<ItemT>({
     );
     const { index, renderedItem } = renderedItemInfo || {};
 
+    const onLayoutChange = useCallback((rectangle: LayoutRectangle, fromLayoutEffect: boolean) => {
+        const {
+            horizontal: currentHorizontal,
+            itemKey: currentItemKey,
+            lastSize,
+            pendingShrinkToken,
+        } = itemLayoutRef.current;
+
+        if (isNullOrUndefined(currentItemKey)) {
+            return;
+        }
+
+        itemLayoutRef.current.didLayout = true;
+        let layout: { width: number; height: number } = rectangle;
+
+        // Apply a small rounding so we don't run callbacks for tiny changes
+        const axis = currentHorizontal ? "width" : "height";
+        const size = roundSize(rectangle[axis]);
+        const prevSize = lastSize ? roundSize(lastSize[axis]) : undefined;
+
+        const doUpdate = () => {
+            itemLayoutRef.current.lastSize = layout;
+            updateItemSizes(ctx, {
+                containerId: id,
+                fromLayoutEffect,
+                itemKey: currentItemKey,
+                size: layout,
+            });
+            itemLayoutRef.current.didLayout = true;
+        };
+
+        // On web, ResizeObserver can report a brief shrink while images are loading.
+        // Applying that immediately causes MVCP scroll churn, so confirm the shrink next frame.
+        // The token ensures we ignore stale frames if a newer layout arrives first.
+        // During active MVCP we need immediate size updates so anchor math stays in sync.
+        const shouldDeferWebShrinkLayoutUpdate =
+            Platform.OS === "web" && !isInMVCPActiveMode(ctx.state) && prevSize !== undefined && size + 1 < prevSize;
+        if (shouldDeferWebShrinkLayoutUpdate) {
+            const token = pendingShrinkToken + 1;
+            itemLayoutRef.current.pendingShrinkToken = token;
+            requestAnimationFrame(() => {
+                if (itemLayoutRef.current.pendingShrinkToken !== token) {
+                    return;
+                }
+
+                const element = ref.current as unknown as HTMLElement | null;
+                const rect = element?.getBoundingClientRect?.();
+                if (rect) {
+                    layout = { height: rect.height, width: rect.width };
+                }
+
+                doUpdate();
+            });
+            return;
+        }
+
+        if (IsNewArchitecture || size > 0) {
+            doUpdate();
+        } else {
+            // On old architecture, the size can be 0 sometimes, maybe when not fully rendered?
+            // So we need to make sure it's actually rendered and measure it to make sure it's actually 0.
+            ref.current?.measure?.((_x, _y, width, height) => {
+                layout = { height, width };
+                doUpdate();
+            });
+        }
+    }, []);
+
+    const triggerLayout = useCallback(() => {
+        forceLayoutRender((v) => v + 1);
+    }, []);
+
     const contextValue = useMemo<ContextContainerType>(() => {
         ctx.viewRefs.set(id, ref);
         return {
             containerId: id,
-            index: index!,
-            itemKey,
-            triggerLayout: () => {
-                forceLayoutRender((v) => v + 1);
-            },
-            value: data,
+            triggerLayout,
         };
-    }, [id, itemKey, index, data]);
+    }, [id, triggerLayout]);
 
-    // Note: useCallback would be pointless because it would need to have itemKey as a dependency,
-    // so it'll change on every render anyway.
-    const onLayoutChange = (rectangle: LayoutRectangle) => {
-        if (!isNullOrUndefined(itemKey)) {
-            didLayoutRef.current = true;
-            let layout: { width: number; height: number } = rectangle;
-
-            // Apply a small rounding so we don't run callbacks for tiny changes
-            const size = Math.floor(rectangle[horizontal ? "width" : "height"] * 8) / 8;
-
-            const doUpdate = () => {
-                refLastSize.current = { height: layout.height, width: layout.width };
-                updateItemSize(itemKey, layout);
-                didLayoutRef.current = true;
-            };
-
-            if (IsNewArchitecture || size > 0) {
-                doUpdate();
-            } else {
-                // On old architecture, the size can be 0 sometimes, maybe when not fully rendered?
-                // So we need to make sure it's actually rendered and measure it to make sure it's actually 0.
-                ref.current?.measure?.((_x, _y, width, height) => {
-                    layout = { height, width };
-                    doUpdate();
-                });
+    useLayoutEffect(() => {
+        ctx.containerLayoutTriggers.set(id, triggerLayout);
+        return () => {
+            if (ctx.containerLayoutTriggers.get(id) === triggerLayout) {
+                ctx.containerLayoutTriggers.delete(id);
             }
-        }
-    };
+        };
+    }, [ctx, id, triggerLayout]);
 
     const { onLayout } = useOnLayoutSync(
         {
             onLayoutChange,
             ref,
+            webLayoutResync: () => isInMVCPActiveMode(ctx.state),
         },
         [itemKey, layoutRenderCount],
     );
 
     if (!IsNewArchitecture) {
         // Since old architecture cannot use unstable_getBoundingClientRect it needs to ensure that
-        // all containers updateItemSize even if the container did not resize.
+        // all containers update their item size even if the container did not resize.
         useEffect(() => {
             // Catch a bug where a container is reused and is the exact same size as the previous item
             // so it does not fire an onLayout, so we need to trigger it manually.
             // TODO: There must be a better way to do this?
             if (!isNullOrUndefined(itemKey)) {
+                // Reset the didLayoutRef to false so that the item layout will be
+                // updated even if the container is the exact same size as the previous item
+                // because it would not fire an onLayout event.
+                itemLayoutRef.current.didLayout = false;
+
                 const timeout = setTimeout(() => {
-                    if (!didLayoutRef.current && refLastSize.current) {
-                        updateItemSize(itemKey, refLastSize.current);
-                        didLayoutRef.current = true;
+                    if (!itemLayoutRef.current.didLayout) {
+                        const { itemKey: currentItemKey, lastSize } = itemLayoutRef.current;
+
+                        if (lastSize && !isNullOrUndefined(currentItemKey)) {
+                            updateItemSizes(ctx, {
+                                containerId: id,
+                                fromLayoutEffect: false,
+                                itemKey: currentItemKey,
+                                size: lastSize,
+                            });
+                            itemLayoutRef.current.didLayout = true;
+                        }
                     }
                 }, 16);
                 return () => {
@@ -166,7 +301,13 @@ export const Container = typedMemo(function Container<ItemT>({
         }, [itemKey]);
     }
 
-    const PositionComponent = isSticky ? PositionViewSticky : PositionView;
+    const PositionComponent = isSticky
+        ? stickyPositionComponentInternal
+            ? stickyPositionComponentInternal
+            : PositionViewSticky
+        : positionComponentInternal
+          ? positionComponentInternal
+          : PositionView;
 
     return (
         <PositionComponent
@@ -176,9 +317,9 @@ export const Container = typedMemo(function Container<ItemT>({
             index={index!}
             key={recycleItems ? undefined : itemKey}
             onLayout={onLayout}
-            refView={ref}
-            stickyOffset={isSticky ? stickyOffset : undefined}
-            style={style}
+            refView={ref as React.RefObject<any>}
+            stickyHeaderConfig={stickyHeaderConfig}
+            style={style as any}
         >
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}

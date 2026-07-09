@@ -1,39 +1,73 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useCallback, useLayoutEffect } from "react";
-import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
+import { useLayoutEffect } from "react";
 
-import { IsNewArchitecture } from "@/constants";
+import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
+import { createResizeObserver } from "@/hooks/createResizeObserver";
+import type { LayoutChangeEvent, LayoutRectangle, LooseView } from "@/platform/scrollview-types";
 
-export function useOnLayoutSync<T extends View = View>(
+export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLElement>(
     {
         ref,
         onLayoutProp,
         onLayoutChange,
+        webLayoutResync,
     }: {
-        ref: React.RefObject<T>;
+        ref: React.RefObject<T | null>;
         onLayoutProp?: (event: LayoutChangeEvent) => void;
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+        webLayoutResync?: () => boolean;
     },
-    deps: any[] = [],
-) {
-    const onLayout = useCallback(
-        (event: LayoutChangeEvent) => {
-            onLayoutChange(event.nativeEvent.layout, false);
-            onLayoutProp?.(event);
-        },
-        [onLayoutChange],
-    );
+    deps?: any[],
+): { onLayout?: (event: LayoutChangeEvent) => void } {
+    useLayoutEffect(() => {
+        const current = ref.current;
+        const scrollableNode = (current as ScrollViewMethods | null)?.getScrollableNode?.() ?? null;
+        const element = (scrollableNode || current) as HTMLElement | null;
 
-    if (IsNewArchitecture) {
-        useLayoutEffect(() => {
-            if (ref.current) {
-                ref.current.measure((x, y, width, height) => {
-                    onLayoutChange({ height, width, x, y }, true);
-                });
+        if (!element) {
+            return;
+        }
+
+        const emit = (layout: LayoutRectangle, fromLayoutEffect: boolean) => {
+            if (layout.height === 0 && layout.width === 0) {
+                return;
             }
-        }, deps);
+
+            onLayoutChange(layout, fromLayoutEffect);
+            onLayoutProp?.({ nativeEvent: { layout } } as LayoutChangeEvent);
+        };
+
+        const rect = element.getBoundingClientRect();
+        emit(toLayout(rect), true);
+        let prevRect = rect;
+
+        return createResizeObserver(element, (entry) => {
+            const target = entry.target instanceof HTMLElement ? entry.target : undefined;
+            const rectObserved = entry.contentRect ?? target?.getBoundingClientRect();
+            const didSizeChange = rectObserved.width !== prevRect.width || rectObserved.height !== prevRect.height;
+            // MVCP on web can require a fresh onLayout pass even when the observer size is unchanged.
+            const shouldResyncLayout = !!webLayoutResync?.();
+            if (didSizeChange || shouldResyncLayout) {
+                prevRect = rectObserved;
+                emit(toLayout(rectObserved), false);
+            }
+        });
+    }, deps || []);
+
+    return {};
+}
+
+function toLayout(rect: DOMRect | DOMRectReadOnly | undefined): LayoutRectangle {
+    if (!rect) {
+        // In non-DOM environments (e.g. react-native tests) ResizeObserver entries may lack contentRect.
+        return { height: 0, width: 0, x: 0, y: 0 };
     }
 
-    return { onLayout };
+    return {
+        height: rect.height,
+        width: rect.width,
+        x: rect.left,
+        y: rect.top,
+    };
 }

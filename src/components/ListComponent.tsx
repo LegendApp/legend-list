@@ -1,92 +1,87 @@
+// biome-ignore lint/style/useImportType: Required by prebuild to keep TSX React runtime imports explicit.
 import * as React from "react";
-import { useMemo } from "react";
-import {
-    Animated,
-    type LayoutChangeEvent,
-    type LayoutRectangle,
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    type ScrollView,
-    type ScrollViewProps,
-    Text,
-    View,
-    type ViewStyle,
-} from "react-native";
+import { useCallback, useLayoutEffect } from "react";
 
 import { Containers } from "@/components/Containers";
-import { LayoutView } from "@/components/LayoutView";
+import { DevNumbers } from "@/components/DevNumbers";
+import { ListComponentScrollView } from "@/components/ListComponentScrollView";
+import { getAutoOtherAxisStyle } from "@/components/listComponentStyles";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
+import { WebAnchoredEndSpace } from "@/components/WebAnchoredEndSpace";
 import { ENABLE_DEVMODE } from "@/constants";
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import { useValue$ } from "@/hooks/useValue$";
-import { set$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
+import { setFooterSize, setHeaderSize } from "@/core/updateContentMetrics";
+import { useStableRenderComponent } from "@/hooks/useStableRenderComponent";
+import { LayoutView } from "@/platform/LayoutView";
+import { Platform } from "@/platform/Platform";
+import type {
+    LayoutChangeEvent,
+    LayoutRectangle,
+    LooseScrollView,
+    LooseScrollViewProps,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    ViewStyle,
+} from "@/platform/scrollview-types";
+import { View } from "@/platform/ViewComponents";
+import { useArr$, useStateContext } from "@/state/state";
+import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.internal";
+import { IS_DEV } from "@/utils/devEnvironment";
+import { getComponent } from "@/utils/getComponent";
 
 interface ListComponentProps<ItemT>
     extends Omit<
-        LegendListProps<ItemT> & { scrollEventThrottle: number | undefined },
+        LegendListPropsBase<ItemT, LooseScrollViewProps> & { scrollEventThrottle: number | undefined },
         | "data"
         | "estimatedItemSize"
         | "drawDistance"
         | "maintainScrollAtEnd"
         | "maintainScrollAtEndThreshold"
         | "maintainVisibleContentPosition"
+        | "refScrollView"
+        | "renderScrollComponent"
         | "style"
     > {
     horizontal: boolean;
     initialContentOffset: number | undefined;
-    refScrollView: React.Ref<ScrollView>;
+    refScrollView: React.Ref<LooseScrollView | null>;
     getRenderedItem: GetRenderedItem;
-    updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
-    onLayoutHeader: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
-    maintainVisibleContentPosition: boolean;
-    renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
+    onLayoutFooter?: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    renderScrollComponent?: (props: LooseScrollViewProps) => React.ReactElement | null;
     style: ViewStyle;
     canRender: boolean;
     scrollAdjustHandler: ScrollAdjustHandler;
     snapToIndices: number[] | undefined;
-    stickyIndices: number[] | undefined;
+    stickyHeaderIndices: number[] | undefined;
+    useWindowScroll?: boolean;
 }
 
-const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {
-    if (React.isValidElement<any>(Component)) {
-        return Component;
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizontal }: { horizontal: boolean }) {
+    const [alignItemsAtEndPadding = 0] = useArr$(["alignItemsAtEndPadding"]);
+
+    if (alignItemsAtEndPadding <= 0) {
+        return null;
     }
-    if (Component) {
-        return <Component />;
-    }
-    return null;
-};
-
-const Padding = () => {
-    const animPaddingTop = useValue$("alignItemsPaddingTop", { delay: 0 });
-
-    return <Animated.View style={{ paddingTop: animPaddingTop }} />;
-};
-
-const PaddingDevMode = () => {
-    const animPaddingTop = useValue$("alignItemsPaddingTop", { delay: 0 });
 
     return (
-        <>
-            <Animated.View style={{ paddingTop: animPaddingTop }} />
-            <Animated.View
-                style={{
-                    backgroundColor: "green",
-                    height: animPaddingTop,
-                    left: 0,
-                    position: "absolute",
-                    right: 0,
-                    top: 0,
-                }}
-            />
-        </>
+        <View
+            style={
+                horizontal
+                    ? { flexShrink: 0, width: alignItemsAtEndPadding }
+                    : { flexShrink: 0, height: alignItemsAtEndPadding }
+            }
+        >
+            {null}
+        </View>
     );
-};
+});
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
     canRender,
     style,
@@ -95,8 +90,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     initialContentOffset,
     recycleItems,
     ItemSeparatorComponent,
-    alignItemsAtEnd,
-    waitForInitialLayout,
+    alignItemsAtEnd: _alignItemsAtEnd,
     onScroll,
     onLayout,
     ListHeaderComponent,
@@ -105,70 +99,117 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     ListFooterComponentStyle,
     ListEmptyComponent,
     getRenderedItem,
-    updateItemSize,
     refScrollView,
-    maintainVisibleContentPosition,
     renderScrollComponent,
+    onLayoutFooter,
     scrollAdjustHandler,
-    onLayoutHeader,
     snapToIndices,
-    stickyIndices,
+    stickyHeaderConfig,
+    stickyHeaderIndices,
+    useWindowScroll = false,
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
+    const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
+    const [otherAxisSize = 0] = useArr$(["otherAxisSize"]);
+    const shouldRenderAlignItemsAtEndSpacer = ctx.state.props.alignItemsAtEndPaddingEnabled;
+    const autoOtherAxisStyle = getAutoOtherAxisStyle({
+        horizontal,
+        needsOtherAxisSize: ctx.state.needsOtherAxisSize,
+        otherAxisSize,
+    });
+
+    const CustomScrollComponent = useStableRenderComponent<LooseScrollViewProps, LooseScrollViewProps, LooseScrollView>(
+        renderScrollComponent,
+        (props: LooseScrollViewProps, ref) => ({ ...props, ref }) as LooseScrollViewProps,
+    );
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
-    const ScrollComponent = renderScrollComponent
-        ? useMemo(
-              () => React.forwardRef((props, ref) => renderScrollComponent({ ...props, ref } as any)),
-              [renderScrollComponent],
-          )
-        : Animated.ScrollView;
+    const ScrollComponent = renderScrollComponent ? CustomScrollComponent : ListComponentScrollView;
 
-    React.useEffect(() => {
-        if (canRender) {
-            setTimeout(() => {
-                scrollAdjustHandler.setMounted();
-            }, 0);
+    const SnapOrScroll: React.ComponentType<any> = snapToIndices
+        ? SnapWrapper
+        : (ScrollComponent as React.ComponentType<any>);
+
+    const updateFooterSize = useCallback(
+        (size: number, afterSizeUpdate?: () => void) => {
+            const didFooterSizeChange = setFooterSize(ctx, size);
+            afterSizeUpdate?.();
+
+            if (didFooterSizeChange && ctx.state.props.maintainScrollAtEnd?.onFooterLayout) {
+                doMaintainScrollAtEnd(ctx);
+            }
+        },
+        [ctx],
+    );
+
+    useLayoutEffect(() => {
+        // Handle header/footer getting toggled on and off, remove header/footer size when they are not present
+        if (!ListHeaderComponent) {
+            setHeaderSize(ctx, 0);
         }
-    }, [canRender]);
+        if (!ListFooterComponent) {
+            updateFooterSize(0);
+        }
+    }, [ListHeaderComponent, ListFooterComponent, ctx, updateFooterSize]);
 
-    const SnapOrScroll = snapToIndices ? SnapWrapper : ScrollComponent;
+    const onLayoutHeader = useCallback(
+        (rect: LayoutRectangle) => {
+            const size = rect[horizontal ? "width" : "height"];
+            setHeaderSize(ctx, size);
+        },
+        [ctx, horizontal],
+    );
+
+    const onLayoutFooterInternal = useCallback(
+        (rect: LayoutRectangle, fromLayoutEffect: boolean) => {
+            const size = rect[horizontal ? "width" : "height"];
+            updateFooterSize(size, () => {
+                onLayoutFooter?.(rect, fromLayoutEffect);
+            });
+        },
+        [horizontal, onLayoutFooter, updateFooterSize],
+    );
 
     return (
         <SnapOrScroll
             {...rest}
+            {...(ScrollComponent === ListComponentScrollView ? { useWindowScroll } : {})}
             contentContainerStyle={[
-                contentContainerStyle,
                 horizontal
                     ? {
                           height: "100%",
                       }
                     : {},
+                contentContainerStyle,
             ]}
             contentOffset={
-                initialContentOffset
+                initialContentOffset !== undefined
                     ? horizontal
                         ? { x: initialContentOffset, y: 0 }
                         : { x: 0, y: initialContentOffset }
                     : undefined
             }
             horizontal={horizontal}
-            maintainVisibleContentPosition={maintainVisibleContentPosition ? { minIndexForVisible: 0 } : undefined}
+            maintainVisibleContentPosition={
+                maintainVisibleContentPosition.size || maintainVisibleContentPosition.data
+                    ? { minIndexForVisible: 0 }
+                    : undefined
+            }
             onLayout={onLayout}
             onScroll={onScroll}
             ref={refScrollView as any}
             ScrollComponent={snapToIndices ? ScrollComponent : (undefined as any)}
-            style={style}
+            style={autoOtherAxisStyle ? [autoOtherAxisStyle, style] : style}
         >
-            {maintainVisibleContentPosition && <ScrollAdjust />}
-            {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
+            <ScrollAdjust />
             {ListHeaderComponent && (
                 <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
                     {getComponent(ListHeaderComponent)}
                 </LayoutView>
             )}
             {ListEmptyComponent && getComponent(ListEmptyComponent)}
+            {shouldRenderAlignItemsAtEndSpacer && <AlignItemsAtEndSpacer horizontal={horizontal} />}
 
             {canRender && !ListEmptyComponent && (
                 <Containers
@@ -176,41 +217,16 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     horizontal={horizontal!}
                     ItemSeparatorComponent={ItemSeparatorComponent}
                     recycleItems={recycleItems!}
-                    updateItemSize={updateItemSize}
-                    waitForInitialLayout={waitForInitialLayout}
+                    stickyHeaderConfig={stickyHeaderConfig}
                 />
             )}
             {ListFooterComponent && (
-                <LayoutView
-                    onLayoutChange={(layout) => {
-                        const size = layout[horizontal ? "width" : "height"];
-                        set$(ctx, "footerSize", size);
-                    }}
-                    style={ListFooterComponentStyle}
-                >
+                <LayoutView onLayoutChange={onLayoutFooterInternal} style={ListFooterComponentStyle}>
                     {getComponent(ListFooterComponent)}
                 </LayoutView>
             )}
-            {__DEV__ && ENABLE_DEVMODE && <DevNumbers />}
+            {Platform.OS === "web" && <WebAnchoredEndSpace horizontal={horizontal} />}
+            {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>
     );
 });
-
-const DevNumbers: React.FC =
-    (__DEV__ as unknown as any) &&
-    React.memo(function DevNumbers() {
-        return Array.from({ length: 100 }).map((_, index) => (
-            <View
-                key={index}
-                style={{
-                    height: 100,
-                    pointerEvents: "none",
-                    position: "absolute",
-                    top: index * 100,
-                    width: "100%",
-                }}
-            >
-                <Text style={{ color: "red" }}>{index * 100}</Text>
-            </View>
-        ));
-    });

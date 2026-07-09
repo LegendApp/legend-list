@@ -27,6 +27,17 @@
         "plugins": [
             "expo-router",
             [
+                "expo-build-properties",
+                {
+                    "android": {
+                        "reactNativeReleaseLevel": "experimental"
+                    },
+                    "ios": {
+                        "reactNativeReleaseLevel": "experimental"
+                    }
+                }
+            ],
+            [
                 "expo-splash-screen",
                 {
                     "image": "./assets/images/splash-icon.png",
@@ -35,7 +46,8 @@
                     "backgroundColor": "#ffffff"
                 }
             ],
-            "expo-font"
+            "expo-font",
+            "expo-web-browser"
         ],
         "experiments": {
             "typedRoutes": true,

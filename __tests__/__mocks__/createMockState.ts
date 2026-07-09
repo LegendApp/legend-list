@@ -1,53 +1,88 @@
-import type { InternalState } from "../../src/types";
+import type { MaintainScrollAtEndOptions } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
+import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
+
+export const DEFAULT_CONTENT_INSET = { bottom: 0, left: 0, right: 0, top: 0 };
+
+type LayoutArray = Array<number | undefined>;
+type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScrollAtEnd">> & {
+    maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
+};
+
+export type MockState = InternalState;
+
+function toLayoutArray(source: unknown): LayoutArray {
+    return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
+}
 
 export function createMockState(
-    overrides: Partial<Omit<InternalState, "props"> & { props: Partial<InternalState["props"]> }> = {},
-): InternalState {
-    return {
+    overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
+): MockState {
+    const state = {
+        anchoredEndSpaceSize: undefined,
         // Required by UpdateItemPositions
         averageSizes: {},
+        clearPreservedInitialScrollOnNextFinish: undefined,
+        columnSpans: [],
         // Core calculateItemsInView properties
-        columns: new Map(),
-        containerItemKeys: new Set(),
+        columns: [],
+        containerItemKeys: new Map(),
         containerItemTypes: new Map(),
+        contentInsetOverride: undefined,
+        dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
+        didLoad: false,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
         endNoBuffer: 0,
-        endReachedBlockedByTimer: false,
+        endReachedSnapshot: undefined,
         firstFullyOnScreenIndex: 0,
+        hasHadNonEmptyData: false,
         idCache: [],
         idsInView: [],
         ignoreScrollFromMVCP: undefined,
+        ignoreScrollFromMVCPIgnored: false,
         ignoreScrollFromMVCPTimeout: undefined,
         indexByKey: new Map(),
         initialScroll: undefined,
+        initialScrollSession: undefined,
         isAtEnd: false,
         isAtStart: false,
-        isEndReached: false,
-        isStartReached: false,
+        isEndReached: null,
+        isNearEnd: false,
+        isNearStart: false,
+        isStartReached: null,
+        isWithinMaintainScrollAtEndThreshold: false,
         lastBatchingAction: 0,
         lastLayout: undefined,
         // Required by CheckAtBottom and SetDidLayout
         loadStartTime: Date.now(),
-        maintainingScrollAtEnd: false,
+        maintainingScrollAtEnd: undefined,
         minIndexSizeChanged: undefined,
+        nativeContentInset: undefined,
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
-        positions: new Map(),
+        pendingDataComparison: undefined,
+        pendingMaintainScrollAtEnd: false,
+        pendingNativeMVCPAdjust: undefined,
+        positions: [],
         queuedCalculateItemsInView: undefined,
+        queuedFullDrawDistancePrewarm: undefined,
         queuedInitialLayout: false,
-        refScroller: undefined as any,
+        refScroller: { current: null } as InternalState["refScroller"],
+        reprocessCurrentScroll: () => {},
         scroll: 0,
         scrollAdjustHandler: {
+            getAdjust: () => 0,
             requestAdjust: () => {}, // Mock scroll adjust handler
+            setMounted: () => {},
         },
         scrollForNextCalculateItemsInView: undefined,
         scrollHistory: [],
         // Required by PrepareMVCP
-        scrollingTo: undefined,
         scrollLength: 300,
         scrollPending: 0,
         scrollPrev: 0,
@@ -58,52 +93,115 @@ export function createMockState(
         startBuffered: 0,
         startBufferedId: undefined,
         startNoBuffer: 0,
-        startReachedBlockedByTimer: false,
+        startReachedSnapshot: undefined,
+        startReachedSnapshotDataChangeEpoch: undefined,
         // Sticky container setup (empty by default)
         stickyContainerPool: new Set(),
         stickyContainers: new Map(),
+        timeoutPreservedInitialScrollClear: undefined,
         timeoutSetPaddingTop: undefined,
-        timeoutSizeMessage: undefined,
         timeouts: new Set(),
         totalSize: 1000,
+        triggerCalculateItemsInView: () => {},
         viewabilityConfigCallbackPairs: undefined,
         ...overrides,
         props: {
+            adaptiveRender: undefined,
             alignItemsAtEnd: false,
+            alignItemsAtEndPaddingEnabled: false,
+            alwaysRender: undefined,
+            alwaysRenderIndicesArr: [],
+            alwaysRenderIndicesSet: new Set<number>(),
+            anchoredEndSpace: undefined,
+            contentInset: DEFAULT_CONTENT_INSET,
+            contentInsetEndAdjustment: undefined,
             data: [],
+            dataKey: undefined,
             dataVersion: undefined,
-            enableAverages: true,
+            drawDistance: 100,
             estimatedItemSize: undefined,
-            getEstimatedItemSize: undefined,
             getFixedItemSize: undefined,
             getItemType: undefined,
             horizontal: false,
-            initialContainerPoolRatio: 2,
             initialScroll: undefined,
             itemsAreEqual: undefined,
             keyExtractor: (_: any, index: number) => `item_${index}`,
-            maintainScrollAtEnd: false,
+            maintainScrollAtEnd: undefined,
             maintainScrollAtEndThreshold: 0.1,
-            maintainVisibleContentPosition: false,
+            maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(undefined),
             numColumns: 1,
             onEndReached: undefined,
             onEndReachedThreshold: 0.1,
+            onFirstVisibleItemChanged: undefined,
             onItemSizeChanged: undefined,
             onLoad: undefined,
             onScroll: undefined,
             onStartReached: undefined,
             onStartReachedThreshold: 0.1,
+            overrideItemLayout: undefined,
             recycleItems: false,
             renderItem: undefined,
-            scrollBuffer: 100,
+            rtl: undefined,
             snapToIndices: undefined,
-            stickyIndicesArr: [],
+            stickyHeaderIndicesArr: [],
             // Provide empty sticky indices for tests by default
-            stickyIndicesSet: new Set<number>(),
+            stickyHeaderIndicesSet: new Set<number>(),
             stylePaddingBottom: undefined,
+            stylePaddingLeft: undefined,
+            stylePaddingRight: undefined,
             stylePaddingTop: 0,
-            suggestEstimatedItemSize: false,
+            useWindowScroll: false,
             ...(overrides.props ?? {}),
         },
-    } as unknown as InternalState;
+    } as unknown as InternalState & Record<string, unknown>;
+
+    const props = state.props as InternalState["props"] & { maintainScrollAtEnd?: unknown };
+    let maintainScrollAtEnd = normalizeMaintainScrollAtEnd(
+        props.maintainScrollAtEnd as boolean | MaintainScrollAtEndOptions | undefined,
+    );
+
+    Object.defineProperty(props, "maintainScrollAtEnd", {
+        configurable: true,
+        enumerable: true,
+        get: () => maintainScrollAtEnd,
+        set: (value) => {
+            maintainScrollAtEnd = normalizeMaintainScrollAtEnd(
+                value as boolean | MaintainScrollAtEndOptions | undefined,
+            );
+        },
+    });
+
+    let positions = toLayoutArray(state.positions);
+    let columns = toLayoutArray(state.columns);
+    let columnSpans = toLayoutArray(state.columnSpans);
+
+    Object.defineProperty(state, "positions", {
+        configurable: true,
+        enumerable: true,
+        get: () => positions,
+        set: (value) => {
+            if (value === positions) return;
+            positions = toLayoutArray(value);
+        },
+    });
+    Object.defineProperty(state, "columns", {
+        configurable: true,
+        enumerable: true,
+        get: () => columns,
+        set: (value) => {
+            if (value === columns) return;
+            columns = toLayoutArray(value);
+        },
+    });
+    Object.defineProperty(state, "columnSpans", {
+        configurable: true,
+        enumerable: true,
+        get: () => columnSpans,
+        set: (value) => {
+            if (value === columnSpans) return;
+            columnSpans = toLayoutArray(value);
+        },
+    });
+
+    return state as MockState;
 }

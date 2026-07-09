@@ -1,11 +1,7 @@
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types";
 
-export function setPaddingTop(
-    ctx: StateContext,
-    state: InternalState,
-    { stylePaddingTop, alignItemsPaddingTop }: { stylePaddingTop?: number; alignItemsPaddingTop?: number },
-) {
+export function setPaddingTop(ctx: StateContext, { stylePaddingTop }: { stylePaddingTop?: number }) {
+    const state = ctx.state;
     if (stylePaddingTop !== undefined) {
         const prevStylePaddingTop = peek$(ctx, "stylePaddingTop") || 0;
         if (stylePaddingTop < prevStylePaddingTop) {
@@ -23,8 +19,5 @@ export function setPaddingTop(
 
         // Now set the padding
         set$(ctx, "stylePaddingTop", stylePaddingTop);
-    }
-    if (alignItemsPaddingTop !== undefined) {
-        set$(ctx, "alignItemsPaddingTop", alignItemsPaddingTop);
     }
 }

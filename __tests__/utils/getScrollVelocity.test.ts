@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.internal";
 import { getScrollVelocity } from "../../src/utils/getScrollVelocity";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -9,9 +9,7 @@ describe("getScrollVelocity", () => {
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockState = createMockState({
-            scrollHistory: [],
-        });
+        mockState = createMockState();
     });
 
     describe("basic velocity calculation", () => {
@@ -53,7 +51,7 @@ describe("getScrollVelocity", () => {
             expect(velocity).toBe(-2); // -200 pixels / 100ms = -2 pixels/ms
         });
 
-        it("should use oldest entry within time window", () => {
+        it("should weight recent entries within the time window", () => {
             const now = Date.now();
             mockState.scrollHistory = [
                 { scroll: 0, time: now - 500 }, // Oldest within 1000ms window
@@ -64,7 +62,7 @@ describe("getScrollVelocity", () => {
 
             const velocity = getScrollVelocity(mockState);
 
-            expect(velocity).toBe(0.4); // (200 - 0) / (500) = 0.4 pixels/ms
+            expect(velocity).toBeCloseTo(0.417, 3);
         });
     });
 
@@ -98,11 +96,9 @@ describe("getScrollVelocity", () => {
 
             const velocity = getScrollVelocity(mockState);
 
-            // Direction change detection sets start=3 (at scroll=50)
-            // Then finds oldest within time window from that point (scroll=50 at time-200)
-            // Velocity = (250 - 50) / (now - (now-200)) = 200/200 = 1, but due to algorithm details...
-            // Let me check what it actually calculates
-            expect(velocity).toBeCloseTo(0.125, 3);
+            // With the direction-aware rewind we now keep samples in the most recent direction,
+            // so this includes the move from 50 -> 250 over ~200ms.
+            expect(velocity).toBe(1);
         });
 
         it("should handle direction change from positive to negative", () => {
@@ -131,8 +127,8 @@ describe("getScrollVelocity", () => {
 
             const velocity = getScrollVelocity(mockState);
 
-            // Should consider from direction change point (150 -> 200 over 200ms)
-            expect(velocity).toBe(0.25); // (200 - 150) / 200 = 0.25 pixels/ms
+            // Should consider only the newest same-direction chain, with more weight on the latest segment.
+            expect(velocity).toBeCloseTo(0.262, 3);
         });
     });
 
@@ -161,6 +157,18 @@ describe("getScrollVelocity", () => {
             const velocity = getScrollVelocity(mockState);
 
             expect(velocity).toBe(0); // No valid old entry within time window
+        });
+
+        it("should return 0 when the newest entry is stale", () => {
+            const now = Date.now();
+            mockState.scrollHistory = [
+                { scroll: 0, time: now - 1600 },
+                { scroll: 200, time: now - 1500 },
+            ];
+
+            const velocity = getScrollVelocity(mockState);
+
+            expect(velocity).toBe(0);
         });
 
         it("should handle entries at exactly 1000ms boundary", () => {
@@ -265,7 +273,7 @@ describe("getScrollVelocity", () => {
 
             const velocity = getScrollVelocity(mockState);
 
-            expect(velocity).toBe(100); // (5000 - 0) / 50 = 100 pixels/ms
+            expect(velocity).toBeCloseTo(100); // Every same-direction segment is 100 pixels/ms.
         });
 
         it("should handle slow scrolling pattern", () => {
@@ -296,8 +304,8 @@ describe("getScrollVelocity", () => {
 
             const velocity = getScrollVelocity(mockState);
 
-            // Complex stuttering pattern - let's check what it actually calculates
-            expect(velocity).toBeCloseTo(0.278, 3);
+            // Complex stuttering pattern - we only keep the last same-direction chain
+            expect(velocity).toBeCloseTo(1 / 3, 3);
         });
 
         it("should handle deceleration pattern", () => {
@@ -312,7 +320,7 @@ describe("getScrollVelocity", () => {
 
             const velocity = getScrollVelocity(mockState);
 
-            expect(velocity).toBe(0.925); // (185 - 0) / 200 = 0.925 pixels/ms
+            expect(velocity).toBeCloseTo(0.749, 3);
         });
     });
 
@@ -441,6 +449,43 @@ describe("getScrollVelocity", () => {
 
         it("should handle undefined state", () => {
             expect(() => getScrollVelocity(null as any)).toThrow();
+        });
+    });
+
+    describe("regressions", () => {
+        it("returns positive velocity for increasing scroll offsets", () => {
+            const now = Date.now();
+            mockState.scrollHistory = [
+                { scroll: 0, time: now - 40 },
+                { scroll: 20, time: now - 20 },
+                { scroll: 50, time: now - 10 },
+            ];
+
+            expect(getScrollVelocity(mockState)).toBeGreaterThan(0);
+        });
+
+        it("flips to negative velocity when the latest movement is upward, even with a plateau", () => {
+            const now = Date.now();
+            mockState.scrollHistory = [
+                { scroll: 100, time: now - 80 },
+                { scroll: 150, time: now - 60 },
+                { scroll: 150, time: now - 40 }, // zero delta plateau
+                { scroll: 140, time: now - 20 },
+                { scroll: 130, time: now - 10 },
+            ];
+
+            expect(getScrollVelocity(mockState)).toBeLessThan(0);
+        });
+
+        it("returns zero when there is no movement", () => {
+            const now = Date.now();
+            mockState.scrollHistory = [
+                { scroll: 200, time: now - 30 },
+                { scroll: 200, time: now - 20 },
+                { scroll: 200, time: now - 10 },
+            ];
+
+            expect(getScrollVelocity(mockState)).toBe(0);
         });
     });
 });

@@ -1,66 +1,52 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { Animated, type ViewStyle } from "react-native";
+import { useRef } from "react";
 
-import { Container } from "@/components/Container";
-import { IsNewArchitecture } from "@/constants";
-import { useValue$ } from "@/hooks/useValue$";
+import { ContainerSlot } from "@/components/ContainerSlot";
+import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, typedMemo } from "@/types";
+import type { StickyHeaderConfig } from "@/types.base";
+import { type GetRenderedItem, typedMemo } from "@/types.internal";
+import { isHorizontalRTL } from "@/utils/rtl";
 
 interface ContainersProps<ItemT> {
     horizontal: boolean;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-    waitForInitialLayout: boolean | undefined;
-    updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     getRenderedItem: GetRenderedItem;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }
 
-export const Containers = typedMemo(function Containers<ItemT>({
-    horizontal,
-    recycleItems,
-    ItemSeparatorComponent,
-    waitForInitialLayout,
-    updateItemSize,
-    getRenderedItem,
-}: ContainersProps<ItemT>) {
+interface ContainersInnerProps {
+    horizontal: boolean;
+    numColumns: number;
+    children: React.ReactNode;
+}
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColumns, children }: ContainersInnerProps) {
+    const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
-    const animSize = useValue$("totalSize", {
-        // Use a microtask if increasing the size significantly, otherwise use a timeout
-        // If this is the initial scroll, we don't want to delay because we want to update the size immediately
-        delay: (value, prevValue) =>
-            !ctx.internalState?.initialScroll ? (!prevValue || value - prevValue > 20 ? 0 : 200) : undefined,
-    });
+    const isHorizontalRTLList = isHorizontalRTL(ctx.state);
+    const [otherAxisSize, readyToRender, totalSize] = useArr$(["otherAxisSize", "readyToRender", "totalSize"]);
 
-    const animOpacity =
-        waitForInitialLayout && !IsNewArchitecture
-            ? useValue$("containersDidLayout", { getValue: (value) => (value ? 1 : 0) })
-            : undefined;
-    const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
+    // Initialize DOM reordering hook - noop in react namtive
+    useDOMOrder(ref);
 
-    const containers: React.ReactNode[] = [];
-    for (let i = 0; i < numContainers; i++) {
-        containers.push(
-            <Container
-                getRenderedItem={getRenderedItem}
-                horizontal={horizontal}
-                ItemSeparatorComponent={ItemSeparatorComponent}
-                id={i}
-                key={i}
-                recycleItems={recycleItems}
-                // specifying inline separator makes Containers rerender on each data change
-                // should we do memo of ItemSeparatorComponent?
-                updateItemSize={updateItemSize}
-            />,
-        );
+    const style: React.CSSProperties = horizontal
+        ? {
+              direction: isHorizontalRTLList ? "ltr" : undefined,
+              minHeight: otherAxisSize,
+              opacity: readyToRender ? 1 : 0,
+              position: "relative",
+              width: totalSize,
+          }
+        : { height: totalSize, minWidth: otherAxisSize, opacity: readyToRender ? 1 : 0, position: "relative" };
+
+    if (!readyToRender) {
+        style.pointerEvents = "none";
     }
-
-    const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
-        ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
-        : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available
@@ -70,20 +56,55 @@ export const Containers = typedMemo(function Containers<ItemT>({
         const gapY = rowGap || gap || 0;
         if (horizontal) {
             if (gapY) {
-                style.marginVertical = -gapY / 2;
+                style.marginTop = style.marginBottom = -gapY / 2;
             }
             if (gapX) {
                 style.marginRight = -gapX;
             }
         } else {
-            if (gapX) {
-                style.marginHorizontal = -gapX;
-            }
             if (gapY) {
                 style.marginBottom = -gapY;
             }
         }
     }
 
-    return <Animated.View style={style}>{containers}</Animated.View>;
+    return (
+        <div ref={ref} style={style}>
+            {children}
+        </div>
+    );
+});
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+export const Containers = typedMemo(function Containers<ItemT>({
+    horizontal,
+    recycleItems,
+    ItemSeparatorComponent,
+    getRenderedItem,
+    stickyHeaderConfig,
+}: ContainersProps<ItemT>) {
+    const [numContainersPooled, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
+
+    const containers: React.ReactNode[] = [];
+    for (let i = 0; i < numContainersPooled; i++) {
+        containers.push(
+            <ContainerSlot
+                getRenderedItem={getRenderedItem}
+                horizontal={horizontal}
+                ItemSeparatorComponent={ItemSeparatorComponent}
+                id={i}
+                key={i}
+                recycleItems={recycleItems}
+                // specifying inline separator makes Containers rerender on each data change
+                // should we do memo of ItemSeparatorComponent?
+                stickyHeaderConfig={stickyHeaderConfig}
+            />,
+        );
+    }
+
+    return (
+        <ContainersInner horizontal={horizontal} numColumns={numColumns}>
+            {containers}
+        </ContainersInner>
+    );
 });

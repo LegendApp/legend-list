@@ -1,26 +1,66 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { IsNewArchitecture } from "@/constants-platform";
+import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
+import { resolveInitialScrollOffset } from "@/core/initialScroll";
+import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
+import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
+import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
+import { Platform } from "@/platform/Platform";
+import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types";
+import type { InternalState } from "@/types.internal";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { getExpandedContainerPoolSize } from "@/utils/containerPool";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
+import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
+import { getEffectiveDrawDistance } from "@/utils/getEffectiveDrawDistance";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
+import { isNullOrUndefined } from "@/utils/helpers";
+import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
 
+const RENDER_RANGE_PROJECTION_FULL_VELOCITY = 4;
+const RENDER_RANGE_PROJECTION_SETTLE_DELAY = 100;
+
+function getProjectedBufferAdjustment(scrollVelocity: number, trailingBuffer: number) {
+    if (trailingBuffer <= 0) {
+        return 0;
+    }
+
+    const velocityProgress = Math.min(1, Math.abs(scrollVelocity) / RENDER_RANGE_PROJECTION_FULL_VELOCITY);
+    return Math.sign(scrollVelocity) * trailingBuffer * velocityProgress;
+}
+
+function scheduleRenderRangeProjectionSettle(ctx: StateContext) {
+    const state = ctx.state;
+    const previousTimeout = state.timeoutRenderRangeProjectionSettle;
+    if (previousTimeout !== undefined) {
+        clearTimeout(previousTimeout);
+        state.timeouts.delete(previousTimeout);
+    }
+
+    const timeout: any = setTimeout(() => {
+        state.timeoutRenderRangeProjectionSettle = undefined;
+        state.timeouts.delete(timeout);
+        state.scrollHistory.length = 0;
+        state.triggerCalculateItemsInView?.();
+    }, RENDER_RANGE_PROJECTION_SETTLE_DELAY);
+    state.timeoutRenderRangeProjectionSettle = timeout;
+    state.timeouts.add(timeout);
+}
+
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
-    const idCache = state.idCache;
     const positions = state.positions;
     for (let i = stickyArray.length - 1; i >= 0; i--) {
         const stickyIndex = stickyArray[i];
-        const stickyId = idCache[stickyIndex] ?? getId(state, stickyIndex);
-        const stickyPos = stickyId ? positions.get(stickyId) : undefined;
+        const stickyPos = positions[stickyIndex];
         if (stickyPos !== undefined && scroll >= stickyPos) {
             return i;
         }
@@ -28,44 +68,52 @@ function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: In
     return -1;
 }
 
-function getActiveStickyIndices(ctx: StateContext, state: InternalState, stickyIndices: Set<number>): Set<number> {
-    return new Set(
-        Array.from(state.stickyContainerPool)
-            .map((i) => peek$(ctx, `containerItemKey${i}`))
-            .map((key) => (key ? state.indexByKey.get(key) : undefined))
-            .filter((idx): idx is number => idx !== undefined && stickyIndices.has(idx)),
-    );
+function isStickyIndexActive(ctx: StateContext, targetIndex: number): boolean {
+    const state = ctx.state;
+    let isActive = false;
+    for (const containerIndex of state.stickyContainerPool) {
+        const key = peek$(ctx, `containerItemKey${containerIndex}`);
+        const itemIndex = key ? state.indexByKey.get(key) : undefined;
+        if (itemIndex === targetIndex) {
+            isActive = true;
+            break;
+        }
+    }
+
+    return isActive;
 }
 
 function handleStickyActivation(
     ctx: StateContext,
-    state: InternalState,
-    stickyIndices: Set<number>,
     stickyArray: number[],
     currentStickyIdx: number,
     needNewContainers: number[],
+    needNewContainersSet: Set<number>,
     startBuffered: number,
     endBuffered: number,
 ): void {
-    const activeIndices = getActiveStickyIndices(ctx, state, stickyIndices);
+    const state = ctx.state;
 
     // Update activeStickyIndex to the actual data index (not array position)
-    state.activeStickyIndex = currentStickyIdx >= 0 ? stickyArray[currentStickyIdx] : undefined;
+    set$(ctx, "activeStickyIndex", currentStickyIdx >= 0 ? stickyArray[currentStickyIdx] : -1);
 
     // Activate current and previous sticky items, but only if they're not already covered by regular buffered range
     for (let offset = 0; offset <= 1; offset++) {
         const idx = currentStickyIdx - offset;
-        if (idx < 0 || activeIndices.has(stickyArray[idx])) continue;
+        if (idx < 0) continue;
 
         const stickyIndex = stickyArray[idx];
+        if (isStickyIndexActive(ctx, stickyIndex)) continue;
         const stickyId = state.idCache[stickyIndex] ?? getId(state, stickyIndex);
 
         // Only add if it's not already in the regular buffered range and not already in containers
         if (
             stickyId &&
             !state.containerItemKeys.has(stickyId) &&
-            (stickyIndex < startBuffered || stickyIndex > endBuffered)
+            (stickyIndex < startBuffered || stickyIndex > endBuffered) &&
+            !needNewContainersSet.has(stickyIndex)
         ) {
+            needNewContainersSet.add(stickyIndex);
             needNewContainers.push(stickyIndex);
         }
     }
@@ -73,23 +121,24 @@ function handleStickyActivation(
 
 function handleStickyRecycling(
     ctx: StateContext,
-    state: InternalState,
     stickyArray: number[],
     scroll: number,
-    scrollBuffer: number,
+    drawDistance: number,
     currentStickyIdx: number,
     pendingRemoval: number[],
+    isPinnedRenderIndex: (itemIndex: number) => boolean,
 ): void {
+    const state = ctx.state;
     for (const containerIndex of state.stickyContainerPool) {
         const itemKey = peek$(ctx, `containerItemKey${containerIndex}`);
         const itemIndex = itemKey ? state.indexByKey.get(itemKey) : undefined;
         if (itemIndex === undefined) continue;
+        if (isPinnedRenderIndex(itemIndex)) continue;
 
         const arrayIdx = stickyArray.indexOf(itemIndex);
         if (arrayIdx === -1) {
             state.stickyContainerPool.delete(containerIndex);
             set$(ctx, `containerSticky${containerIndex}`, false);
-            set$(ctx, `containerStickyOffset${containerIndex}`, undefined);
             continue;
         }
 
@@ -101,16 +150,15 @@ function handleStickyRecycling(
         let shouldRecycle = false;
 
         if (nextIndex) {
-            const nextId = state.idCache[nextIndex] ?? getId(state, nextIndex);
-            const nextPos = nextId ? state.positions.get(nextId) : undefined;
-            shouldRecycle = nextPos !== undefined && scroll > nextPos + scrollBuffer * 2;
+            const nextPos = state.positions[nextIndex];
+            shouldRecycle = nextPos !== undefined && scroll > nextPos + drawDistance * 2;
         } else {
             const currentId = state.idCache[itemIndex] ?? getId(state, itemIndex);
             if (currentId) {
-                const currentPos = state.positions.get(currentId);
+                const currentPos = state.positions[itemIndex];
                 const currentSize =
-                    state.sizes.get(currentId) ?? getItemSize(state, currentId, itemIndex, state.props.data[itemIndex]);
-                shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + scrollBuffer * 3;
+                    state.sizes.get(currentId) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
+                shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + drawDistance * 3;
             }
         }
 
@@ -120,11 +168,168 @@ function handleStickyRecycling(
     }
 }
 
+interface VisibleRangeState {
+    endNoBuffer: number | null;
+    firstFullyOnScreenIndex: number | undefined;
+    startNoBuffer: number | null;
+}
+
+function trackVisibleRange(
+    range: VisibleRangeState,
+    i: number,
+    top: number,
+    size: number,
+    scroll: number,
+    scrollBottom: number,
+) {
+    let didPassVisibleEnd = false;
+    if (range.startNoBuffer === null && top + size > scroll) {
+        range.startNoBuffer = i;
+    }
+    // Subtract 10px for a little buffer so it can be slightly off screen, but still
+    // require the row to begin within the visible window so we don't anchor to the
+    // next item below an oversized partially visible row.
+    if (range.firstFullyOnScreenIndex === undefined && top >= scroll - 10 && top <= scrollBottom) {
+        range.firstFullyOnScreenIndex = i;
+    }
+    if (range.startNoBuffer !== null) {
+        if (top <= scrollBottom) {
+            range.endNoBuffer = i;
+        } else {
+            didPassVisibleEnd = true;
+        }
+    }
+
+    return didPassVisibleEnd;
+}
+
+function getIdsInVisibleRange(state: InternalState, range: VisibleRangeState) {
+    const idsInView: string[] = [];
+    const firstVisibleAnchorIndex = range.firstFullyOnScreenIndex ?? range.startNoBuffer;
+    if (firstVisibleAnchorIndex !== null && firstVisibleAnchorIndex !== undefined && range.endNoBuffer !== null) {
+        for (let i = firstVisibleAnchorIndex; i <= range.endNoBuffer; i++) {
+            const id = state.idCache[i] ?? getId(state, i);
+            idsInView.push(id);
+        }
+    }
+
+    return idsInView;
+}
+
+function maybeEmitFirstVisibleItemChanged(state: InternalState, index: number | null) {
+    const onFirstVisibleItemChanged = state.props.onFirstVisibleItemChanged;
+    if (!onFirstVisibleItemChanged || index === null || index < 0 || index >= state.props.data.length) {
+        return;
+    }
+
+    const key = state.idCache[index] ?? getId(state, index);
+    const previous = state.lastFirstVisibleItemCallback;
+    if (previous?.index === index && previous.key === key) {
+        return;
+    }
+
+    state.lastFirstVisibleItemCallback = { index, key };
+    onFirstVisibleItemChanged({ index, item: state.props.data[index], key });
+}
+
+function findFirstVisibleIndexInCachedRange(ctx: StateContext, scroll: number) {
+    const state = ctx.state;
+    const {
+        endBuffered,
+        idCache,
+        positions,
+        props: { data },
+        sizes,
+        startBuffered,
+    } = state;
+
+    if (startBuffered === null || endBuffered === null || startBuffered < 0 || endBuffered < startBuffered) {
+        return null;
+    }
+
+    for (let i = startBuffered; i <= endBuffered && i < data.length; i++) {
+        const id = idCache[i] ?? getId(state, i);
+        const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+        const top = positions[i]!;
+        if (top + size > scroll) {
+            return i;
+        }
+    }
+
+    return null;
+}
+
+function updateViewabilityForCachedRange(
+    ctx: StateContext,
+    viewabilityConfigCallbackPairs: NonNullable<InternalState["viewabilityConfigCallbackPairs"]>,
+    scrollLength: number,
+    scroll: number,
+    scrollBottom: number,
+) {
+    const state = ctx.state;
+    const {
+        endBuffered,
+        idCache,
+        positions,
+        props: { data },
+        sizes,
+        startBuffered,
+    } = state;
+
+    if (startBuffered === null || endBuffered === null || startBuffered < 0 || endBuffered < startBuffered) {
+        return;
+    }
+
+    const visibleRange: VisibleRangeState = {
+        endNoBuffer: null,
+        firstFullyOnScreenIndex: undefined,
+        startNoBuffer: null,
+    };
+
+    for (let i = startBuffered; i <= endBuffered && i < data.length; i++) {
+        const id = idCache[i] ?? getId(state, i);
+        const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+        const top = positions[i]!;
+        const didPassVisibleEnd = trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
+        if (didPassVisibleEnd) {
+            break;
+        }
+    }
+
+    Object.assign(state, {
+        endNoBuffer: visibleRange.endNoBuffer,
+        firstFullyOnScreenIndex: visibleRange.firstFullyOnScreenIndex,
+        idsInView: getIdsInVisibleRange(state, visibleRange),
+        startNoBuffer: visibleRange.startNoBuffer,
+    });
+
+    maybeEmitFirstVisibleItemChanged(state, visibleRange.startNoBuffer);
+
+    if (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null) {
+        updateViewableItems(
+            state,
+            ctx,
+            viewabilityConfigCallbackPairs,
+            scrollLength,
+            visibleRange.startNoBuffer,
+            visibleRange.endNoBuffer,
+            startBuffered,
+            endBuffered,
+        );
+    }
+}
+
 export function calculateItemsInView(
     ctx: StateContext,
-    state: InternalState,
-    params: { doMVCP?: boolean; dataChanged?: boolean } = {},
+    params: {
+        doMVCP?: boolean;
+        dataChanged?: boolean;
+        drawDistanceMode?: DrawDistanceMode;
+        forceFullItemPositions?: boolean;
+        scrollVelocity?: number;
+    } = {},
 ) {
+    const state = ctx.state;
     batchedUpdates(() => {
         const {
             columns,
@@ -134,26 +339,30 @@ export function calculateItemsInView(
             indexByKey,
             minIndexSizeChanged,
             positions,
+            props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
             scrollLength,
             sizes,
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
-            props: { getItemType, initialScroll, itemsAreEqual, keyExtractor, onStickyHeaderChange, scrollBuffer },
         } = state;
         const { data } = state.props;
-        const stickyIndicesArr = state.props.stickyIndicesArr || [];
-        const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
+        const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
+        const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
+        const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
+        const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const bootstrapInitialScrollState =
+            state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+        const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
         }
 
-        const totalSize = peek$(ctx, "totalSize");
-        const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
+        let totalSize = getContentSize(ctx);
+        const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "alignItemsAtEndPadding") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
-        const { dataChanged, doMVCP } = params;
-        const speed = getScrollVelocity(state);
+        const speed = params.scrollVelocity ?? getScrollVelocity(state);
 
         ////// Calculate scroll state
         const scrollExtra = 0;
@@ -161,120 +370,244 @@ export function calculateItemsInView(
         // We may need to control speed calculation better, or not have a 5 item history to avoid this issue
         // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
 
-        const { queuedInitialLayout } = state;
-        let { scroll: scrollState } = state;
+        const { initialScroll, queuedInitialLayout } = state;
+        const scrollState = suppressInitialScrollSideEffects
+            ? (bootstrapInitialScrollState?.scroll ?? state.scroll)
+            : !queuedInitialLayout && hasActiveInitialScroll(state) && initialScroll
+              ? // Before the initial layout settles, keep viewport math anchored to the
+                // current initial-scroll target instead of transient native adjustments.
+                resolveInitialScrollOffset(ctx, initialScroll)
+              : state.scroll;
 
-        if (!queuedInitialLayout && initialScroll) {
-            // If this is before the initial layout, and we have an initialScrollIndex,
-            // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
-            // and use the calculated offset of the initialScrollIndex instead.
-            const updatedOffset = calculateOffsetWithOffsetPosition(
-                state,
-                calculateOffsetForIndex(ctx, state, initialScroll.index),
-                initialScroll,
-            );
-            scrollState = updatedOffset;
-        }
-
-        const scrollAdjustPad = -topPad;
-        let scroll = scrollState + scrollExtra + scrollAdjustPad;
-
-        if (scroll + scrollLength > totalSize) {
-            // Sometimes we may have scrolled past the visible area which can make items at the top of the
-            // screen not render. So make sure we clamp scroll to the end.
-            scroll = Math.max(0, totalSize - scrollLength);
-        }
+        let scrollAdjustPending = 0;
+        let scrollAdjustPad = 0;
+        let scroll = 0;
+        let scrollTopBuffered = 0;
+        let scrollBottom = 0;
+        let scrollBottomBuffered = 0;
+        let nativeScrollState = scrollState;
+        const updateScroll = (nextScrollState: number) => {
+            nativeScrollState = nextScrollState;
+            scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
+            scrollAdjustPad = scrollAdjustPending - topPad;
+            // Subtract top padding to put scroll into the coordinate system of the item positions
+            scroll = Math.round(nextScrollState + scrollExtra + scrollAdjustPad);
+            if (scroll + scrollLength > totalSize) {
+                // Sometimes we may have scrolled past the visible area which can make items at the top of the
+                // screen not render. So make sure we clamp scroll to the end.
+                scroll = Math.max(0, totalSize - scrollLength);
+            }
+        };
+        updateScroll(scrollState);
 
         if (ENABLE_DEBUG_VIEW) {
             set$(ctx, "debugRawScroll", scrollState);
             set$(ctx, "debugComputedScroll", scroll);
         }
 
-        const previousStickyIndex = state.activeStickyIndex;
-        const currentStickyIdx =
-            stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
-        const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : undefined;
-        state.activeStickyIndex = nextActiveStickyIndex;
+        const previousStickyIndex = peek$(ctx, "activeStickyIndex");
+        const resolveStickyState = () => {
+            const currentStickyIdx =
+                stickyHeaderIndicesArr.length > 0 ? findCurrentStickyIndex(stickyHeaderIndicesArr, scroll, state) : -1;
+            const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyHeaderIndicesArr[currentStickyIdx] : -1;
+            const stickyIndexDidChange = previousStickyIndex !== nextActiveStickyIndex;
+            if (currentStickyIdx >= 0 || previousStickyIndex >= 0) {
+                set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
+            }
+            const shouldNotifyStickyHeaderChange =
+                !!onStickyHeaderChange && stickyHeaderIndicesArr.length > 0 && stickyIndexDidChange;
+            return {
+                currentStickyIdx,
+                finishCalculateItemsInView: shouldNotifyStickyHeaderChange
+                    ? () => {
+                          const item = data[nextActiveStickyIndex];
+                          if (item !== undefined) {
+                              onStickyHeaderChange?.({ index: nextActiveStickyIndex, item });
+                          }
+                      }
+                    : undefined,
+            };
+        };
+        let stickyState = dataChanged ? undefined : resolveStickyState();
 
-        let scrollBufferTop = scrollBuffer;
-        let scrollBufferBottom = scrollBuffer;
+        let scrollBufferTop = drawDistance;
+        let scrollBufferBottom = drawDistance;
 
-        if (speed > 0 || (speed === 0 && scroll < Math.max(50, scrollBuffer))) {
+        if (speed > 0 || (speed === 0 && scroll < Math.max(50, drawDistance))) {
             // If we're scrolling fast, or we're at the top of the list and not scrolling
-            scrollBufferTop = scrollBuffer * 0.5;
-            scrollBufferBottom = scrollBuffer * 1.5;
+            scrollBufferTop = drawDistance * 0.5;
+            scrollBufferBottom = drawDistance * 1.5;
         } else {
-            scrollBufferTop = scrollBuffer * 1.5;
-            scrollBufferBottom = scrollBuffer * 0.5;
+            scrollBufferTop = drawDistance * 1.5;
+            scrollBufferBottom = drawDistance * 0.5;
         }
 
-        const scrollTopBuffered = scroll - scrollBufferTop;
-        const scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
-        const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
+        const shouldProjectRenderRange =
+            !dataChanged &&
+            !forceFullItemPositions &&
+            !suppressInitialScrollSideEffects &&
+            !hasActiveInitialScroll(state) &&
+            !state.scrollingTo &&
+            !state.pendingNativeMVCPAdjust &&
+            !!peek$(ctx, "readyToRender");
+        const projectedBufferAdjustment = shouldProjectRenderRange
+            ? getProjectedBufferAdjustment(speed, Math.min(scrollBufferTop, scrollBufferBottom))
+            : 0;
+
+        const updateScrollRange = () => {
+            const scrollStart = Math.max(0, scroll);
+            // Preserve a full item-space viewport during native overscroll without
+            // treating header/padding offset as visible item space.
+            const overscrollBeforeContent = Math.max(0, -nativeScrollState);
+            scrollBottom = Math.max(scrollStart, scroll + scrollLength + overscrollBeforeContent);
+            scrollTopBuffered = scrollStart - scrollBufferTop + projectedBufferAdjustment;
+            scrollBottomBuffered = scrollBottom + scrollBufferBottom + projectedBufferAdjustment;
+        };
+        updateScrollRange();
+
+        if (projectedBufferAdjustment !== 0) {
+            scheduleRenderRangeProjectionSettle(ctx);
+        }
 
         // Check precomputed scroll range to see if we can skip this check
-        if (!dataChanged && scrollForNextCalculateItemsInView) {
+        if (
+            enableScrollForNextCalculateItemsInView &&
+            !suppressInitialScrollSideEffects &&
+            !dataChanged &&
+            !forceFullItemPositions &&
+            scrollForNextCalculateItemsInView
+        ) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
-            if (scrollTopBuffered > top && scrollBottomBuffered < bottom) {
-                return;
+            if (top === null && bottom === null) {
+                state.scrollForNextCalculateItemsInView = undefined;
+            } else if (
+                (top === null || scrollTopBuffered > top) &&
+                (bottom === null || scrollBottomBuffered < bottom)
+            ) {
+                // On web, MVCP anchor lock still needs a pass even inside the cached range window.
+                if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
+                    if (viewabilityConfigCallbackPairs) {
+                        updateViewabilityForCachedRange(
+                            ctx,
+                            viewabilityConfigCallbackPairs,
+                            scrollLength,
+                            scroll,
+                            scrollBottom,
+                        );
+                    } else if (state.props.onFirstVisibleItemChanged) {
+                        maybeEmitFirstVisibleItemChanged(state, findFirstVisibleIndexInCachedRange(ctx, scroll));
+                    }
+                    stickyState?.finishCalculateItemsInView?.();
+                    return;
+                }
             }
         }
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP ? prepareMVCP(ctx, state, dataChanged) : undefined;
+        const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
 
         if (dataChanged) {
-            indexByKey.clear();
-            idCache.length = 0;
-            positions.clear();
+            resetLayoutCachesForDataChange(state);
         }
 
         // Update all positions upfront so we can assume they're correct
         // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
-        const startIndex = dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
-        updateItemPositions(ctx, state, dataChanged, { scrollBottomBuffered, startIndex });
+        const startIndex =
+            forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
+        const optimizeForVisibleWindow =
+            !forceFullItemPositions && !dataChanged && numColumns > 1 && minIndexSizeChanged !== undefined;
+
+        updateItemPositions(ctx, dataChanged, {
+            doMVCP,
+            forceFullUpdate: !!forceFullItemPositions,
+            optimizeForVisibleWindow,
+            scrollBottomBuffered,
+            scrollVelocity: speed,
+            startIndex,
+        });
+
+        // Appends can grow content size while the scroll offset is unchanged. Refresh the
+        // cached content size after positions update so the next scroll-range cache reflects
+        // the new tail instead of the pre-update end-of-list.
+        totalSize = getContentSize(ctx);
 
         if (minIndexSizeChanged !== undefined) {
             // Clear minIndexSizeChanged after using it for position updates
             state.minIndexSizeChanged = undefined;
         }
 
+        let protectedContainerKeys: Set<string> | undefined;
+        if (
+            dataChanged &&
+            doMVCP &&
+            state.props.maintainVisibleContentPosition.data &&
+            state.didContainersLayout &&
+            state.idsInView.length > 0
+        ) {
+            const shouldRestorePosition = state.props.maintainVisibleContentPosition.shouldRestorePosition;
+            protectedContainerKeys = new Set();
+            for (const id of state.idsInView) {
+                const index = indexByKey.get(id);
+                if (index === undefined) continue;
+                if (shouldRestorePosition && !shouldRestorePosition(data[index], index, data)) continue;
+                protectedContainerKeys.add(id);
+            }
+        }
+        const scrollBeforeMVCP = state.scroll;
+        const scrollAdjustPendingBeforeMVCP = peek$(ctx, "scrollAdjustPending") ?? 0;
         checkMVCP?.();
+        const didMVCPAdjustScroll =
+            !!checkMVCP &&
+            (state.scroll !== scrollBeforeMVCP ||
+                (peek$(ctx, "scrollAdjustPending") ?? 0) !== scrollAdjustPendingBeforeMVCP);
+        if (didMVCPAdjustScroll && (initialScroll || state.scrollingTo)) {
+            updateScroll(state.scroll);
+            updateScrollRange();
+        }
+
+        if (dataChanged) {
+            stickyState = resolveStickyState();
+        }
 
         ////// Prepare for loop
-        let startNoBuffer: number | null = null;
         let startBuffered: number | null = null;
         let startBufferedId: string | null = null;
-        let endNoBuffer: number | null = null;
         let endBuffered: number | null = null;
 
-        let loopStart: number = !dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0;
+        let loopStart: number =
+            (suppressInitialScrollSideEffects ? bootstrapInitialScrollState?.targetIndexSeed : undefined) ??
+            (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
         // Go backwards from the last start position to find the first item that is in view
         // This is an optimization to avoid looping through all items, which could slow down
         // when scrolling at the end of a long list.
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache[i] ?? getId(state, i);
-            const top = positions.get(id)!;
-            const size = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
+            const top = positions[i]!;
+            const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
             const bottom = top + size;
 
-            if (bottom > scroll - scrollBuffer) {
+            if (bottom > scrollTopBuffered) {
                 loopStart = i;
             } else {
                 break;
             }
         }
 
-        const loopStartMod = loopStart % numColumns;
-        if (loopStartMod > 0) {
-            loopStart -= loopStartMod;
+        if (numColumns > 1) {
+            while (loopStart > 0) {
+                const loopColumn = columns[loopStart];
+                if (loopColumn === 1 || loopColumn === undefined) {
+                    break;
+                }
+                loopStart -= 1;
+            }
         }
 
         let foundEnd = false;
-        let nextTop: number | undefined;
-        let nextBottom: number | undefined;
+        let nextTop: number | undefined | null;
+        let nextBottom: number | undefined | null;
 
         // TODO PERF: Could cache this while looping through numContainers at the end of this function
         // This takes 0.03 ms in an example in the ios simulator
@@ -287,36 +620,39 @@ export function calculateItemsInView(
             }
         }
 
-        let firstFullyOnScreenIndex: number | undefined;
+        const visibleRange: VisibleRangeState = {
+            endNoBuffer: null,
+            firstFullyOnScreenIndex: undefined,
+            startNoBuffer: null,
+        };
 
         // Continue until we've found the end and we've calculated start/end indices of all items in view
         const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
-            const size = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
-            const top = positions.get(id)!;
+            const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const top = positions[i]!;
 
             if (!foundEnd) {
-                if (startNoBuffer === null && top + size > scroll) {
-                    startNoBuffer = i;
-                }
-                // Subtract 10px for a little buffer so it can be slightly off screen
-                if (firstFullyOnScreenIndex === undefined && top >= scroll - 10) {
-                    firstFullyOnScreenIndex = i;
-                }
+                trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
 
                 if (startBuffered === null && top + size > scrollTopBuffered) {
                     startBuffered = i;
                     startBufferedId = id;
-                    nextTop = top;
-                }
-                if (startNoBuffer !== null) {
-                    if (top <= scrollBottom) {
-                        endNoBuffer = i;
+                    if (scrollTopBuffered < 0) {
+                        nextTop = null;
+                    } else {
+                        nextTop = top;
                     }
+                }
+                if (visibleRange.startNoBuffer !== null) {
                     if (top <= scrollBottomBuffered) {
                         endBuffered = i;
-                        nextBottom = top + size;
+                        if (scrollBottomBuffered > totalSize) {
+                            nextBottom = null;
+                        } else {
+                            nextBottom = top + size;
+                        }
                     } else {
                         foundEnd = true;
                     }
@@ -324,35 +660,29 @@ export function calculateItemsInView(
             }
         }
 
-        const idsInView: string[] = [];
-        for (let i = firstFullyOnScreenIndex!; i <= endNoBuffer!; i++) {
-            const id = idCache[i] ?? getId(state, i);
-            idsInView.push(id);
-        }
-
         Object.assign(state, {
             endBuffered,
-            endNoBuffer,
-            firstFullyOnScreenIndex,
-            idsInView,
+            endNoBuffer: visibleRange.endNoBuffer,
+            firstFullyOnScreenIndex: visibleRange.firstFullyOnScreenIndex,
+            idsInView: getIdsInVisibleRange(state, visibleRange),
             startBuffered,
             startBufferedId,
-            startNoBuffer,
+            startNoBuffer: visibleRange.startNoBuffer,
         });
 
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
         if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
             state.scrollForNextCalculateItemsInView =
-                nextTop !== undefined && nextBottom !== undefined
-                    ? {
+                isNullOrUndefined(nextTop) && isNullOrUndefined(nextBottom)
+                    ? undefined
+                    : {
                           bottom: nextBottom,
                           top: nextTop,
-                      }
-                    : undefined;
+                      };
         }
 
-        const numContainers = peek$(ctx, "numContainers");
+        let numContainers = prevNumContainers;
         // Reset containers that aren't used anymore because the data has changed
         const pendingRemoval: number[] = [];
         if (dataChanged) {
@@ -364,57 +694,91 @@ export function calculateItemsInView(
             }
         }
 
+        const scrollTargetPinnedRange = state.scrollTargetPinnedRange;
+        let scrollTargetPinnedStart = 0;
+        let scrollTargetPinnedEnd = -1;
+        if (scrollTargetPinnedRange) {
+            scrollTargetPinnedStart = Math.max(0, Math.min(scrollTargetPinnedRange.start, scrollTargetPinnedRange.end));
+            scrollTargetPinnedEnd = Math.min(
+                dataLength - 1,
+                Math.max(scrollTargetPinnedRange.start, scrollTargetPinnedRange.end),
+            );
+        }
+        const hasScrollTargetPinnedRange = scrollTargetPinnedStart <= scrollTargetPinnedEnd;
+        const isPinnedRenderIndex = (index: number) =>
+            alwaysRenderIndicesSet.has(index) ||
+            (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
+
         // Place newly added items into containers
         if (startBuffered !== null && endBuffered !== null) {
-            let numContainers = prevNumContainers;
             const needNewContainers: number[] = [];
+            const needNewContainersSet = new Set<number>();
+            const addPinnedIndex = (index: number) => {
+                if (index >= 0 && index < dataLength) {
+                    const id = idCache[index] ?? getId(state, index);
+                    const containerIndex = containerItemKeys.get(id);
+                    if (containerIndex !== undefined) {
+                        state.stickyContainerPool.add(containerIndex);
+                    } else if (!isNullOrUndefined(id) && !needNewContainersSet.has(index)) {
+                        needNewContainersSet.add(index);
+                        needNewContainers.push(index);
+                    }
+                }
+            };
 
-            for (let i = startBuffered!; i <= endBuffered; i++) {
+            for (let i = startBuffered; i <= endBuffered; i++) {
                 const id = idCache[i] ?? getId(state, i);
                 if (!containerItemKeys.has(id)) {
+                    needNewContainersSet.add(i);
                     needNewContainers.push(i);
                 }
             }
 
+            for (const index of alwaysRenderIndicesArr) {
+                addPinnedIndex(index);
+            }
+            if (hasScrollTargetPinnedRange) {
+                for (let index = scrollTargetPinnedStart; index <= scrollTargetPinnedEnd; index++) {
+                    addPinnedIndex(index);
+                }
+            }
+
             // Handle sticky item activation
-            if (stickyIndicesArr.length > 0) {
+            if (stickyHeaderIndicesArr.length > 0) {
                 handleStickyActivation(
                     ctx,
-                    state,
-                    stickyIndicesSet,
-                    stickyIndicesArr,
-                    currentStickyIdx,
+                    stickyHeaderIndicesArr,
+                    stickyState?.currentStickyIdx ?? -1,
                     needNewContainers,
+                    needNewContainersSet,
                     startBuffered,
                     endBuffered,
                 );
-            } else {
+            } else if (previousStickyIndex !== -1) {
                 // Clear activeStickyIndex when no sticky indices are configured
-                state.activeStickyIndex = undefined;
+                set$(ctx, "activeStickyIndex", -1);
             }
 
             if (needNewContainers.length > 0) {
-                // Calculate required item types for type-safe container reuse
-                const requiredItemTypes = getItemType
-                    ? needNewContainers.map((i) => {
-                          const itemType = getItemType!(data[i], i);
-                          return itemType ? String(itemType) : "";
-                      })
+                const getRequiredItemType = getItemType
+                    ? (i: number) => {
+                          const itemType = getItemType(data[i], i);
+                          return itemType !== undefined ? String(itemType) : "";
+                      }
                     : undefined;
 
-                const availableContainers = findAvailableContainers(
+                const availableContainerAllocations = findAvailableContainers(
                     ctx,
-                    state,
-                    needNewContainers.length,
+                    needNewContainers,
                     startBuffered,
                     endBuffered,
                     pendingRemoval,
-                    requiredItemTypes,
-                    needNewContainers,
+                    getRequiredItemType,
+                    protectedContainerKeys,
                 );
-                for (let idx = 0; idx < needNewContainers.length; idx++) {
-                    const i = needNewContainers[idx];
-                    const containerIndex = availableContainers[idx];
+                for (const allocation of availableContainerAllocations) {
+                    const i = allocation.itemIndex;
+                    const containerIndex = allocation.containerIndex;
                     const id = idCache[i] ?? getId(state, i);
 
                     // Remove old key from cache
@@ -425,27 +789,46 @@ export function calculateItemsInView(
 
                     set$(ctx, `containerItemKey${containerIndex}`, id);
                     set$(ctx, `containerItemData${containerIndex}`, data[i]);
+                    set$(ctx, `containerItemInfo${containerIndex}`, {
+                        index: i,
+                        itemKey: id,
+                        value: data[i],
+                    });
 
                     // Store item type for type-safe container reuse
-                    if (requiredItemTypes) {
-                        state.containerItemTypes.set(containerIndex, requiredItemTypes[idx]);
+                    if (allocation.itemType !== undefined) {
+                        state.containerItemTypes.set(containerIndex, allocation.itemType);
                     }
 
                     // Update cache when adding new item
-                    containerItemKeys!.add(id);
+                    containerItemKeys!.set(id, containerIndex);
+                    state.userScrollAnchorReset?.keys.add(id);
+                    if (IsNewArchitecture) {
+                        // Fabric reports the replacement item's real size from a layout effect.
+                        // Defer size-driven recalculation until those expected measurements drain,
+                        // otherwise recycled containers can briefly render with stale positions.
+                        state.pendingLayoutEffectMeasurements ??= new Set();
+                        state.pendingLayoutEffectMeasurements.add(id);
+                    }
 
-                    // Mark as sticky if this item is in stickyIndices
-                    if (stickyIndicesSet.has(i)) {
-                        set$(ctx, `containerSticky${containerIndex}`, true);
-                        // Set sticky offset to top padding for proper sticky positioning
-                        const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
-                        set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
+                    const containerSticky = `containerSticky${containerIndex}` as const;
+                    // Mark as sticky if this item is in stickyHeaderIndices
+                    const isSticky = stickyHeaderIndicesSet.has(i);
+                    const isPinnedRender = isPinnedRenderIndex(i);
+                    if (isSticky) {
+                        set$(ctx, containerSticky, true);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
                     } else {
-                        set$(ctx, `containerSticky${containerIndex}`, false);
-                        // Ensure container is not in sticky pool if item is not sticky
-                        state.stickyContainerPool.delete(containerIndex);
+                        if (peek$(ctx, containerSticky)) {
+                            set$(ctx, containerSticky, false);
+                        }
+                        if (isPinnedRender) {
+                            // This pool also protects alwaysRender/internal pin containers from reuse.
+                            state.stickyContainerPool.add(containerIndex);
+                        } else {
+                            state.stickyContainerPool.delete(containerIndex);
+                        }
                     }
 
                     if (containerIndex >= numContainers) {
@@ -456,25 +839,39 @@ export function calculateItemsInView(
                 if (numContainers !== prevNumContainers) {
                     set$(ctx, "numContainers", numContainers);
                     if (numContainers > peek$(ctx, "numContainersPooled")) {
-                        set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
+                        set$(ctx, "numContainersPooled", getExpandedContainerPoolSize(dataLength, numContainers));
                     }
                 }
+            }
+
+            if (state.userScrollAnchorReset?.keys.size === 0) {
+                state.userScrollAnchorReset = undefined;
             }
         }
 
         // Handle sticky container recycling
-        if (stickyIndicesArr.length > 0) {
-            handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, currentStickyIdx, pendingRemoval);
+        if (state.stickyContainerPool.size > 0) {
+            handleStickyRecycling(
+                ctx,
+                stickyHeaderIndicesArr,
+                scroll,
+                drawDistance,
+                stickyState?.currentStickyIdx ?? -1,
+                pendingRemoval,
+                isPinnedRenderIndex,
+            );
         }
 
+        const pendingRemovalSet = pendingRemoval.length > 0 ? new Set(pendingRemoval) : undefined;
+        let didChangePositions = false;
         // Update top positions of all containers
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
 
             // If it's pending removal, then it's not in view anymore
-            if (pendingRemoval.includes(i)) {
+            if (pendingRemovalSet?.has(i)) {
                 // Update cache when removing item
-                if (itemKey) {
+                if (itemKey !== undefined) {
                     containerItemKeys!.delete(itemKey);
                 }
 
@@ -484,73 +881,69 @@ export function calculateItemsInView(
                 // Clear sticky state if this was a sticky container
                 if (state.stickyContainerPool.has(i)) {
                     set$(ctx, `containerSticky${i}`, false);
-                    set$(ctx, `containerStickyOffset${i}`, undefined);
                     // Remove container from sticky pool
                     state.stickyContainerPool.delete(i);
                 }
 
                 set$(ctx, `containerItemKey${i}`, undefined);
                 set$(ctx, `containerItemData${i}`, undefined);
+                set$(ctx, `containerItemInfo${i}`, undefined);
                 set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                 set$(ctx, `containerColumn${i}`, -1);
+                set$(ctx, `containerSpan${i}`, 1);
             } else {
-                const itemIndex = indexByKey.get(itemKey)!;
-                const item = data[itemIndex];
-                if (item !== undefined) {
-                    const id = idCache[itemIndex] ?? getId(state, itemIndex);
-                    const position = positions.get(id);
-
-                    if (position === undefined) {
-                        // This item may have been in view before data changed and positions were reset
-                        // so we need to set it to out of view
-                        set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
-                    } else {
-                        const column = columns.get(id) || 1;
-
-                        const prevPos = peek$(ctx, `containerPosition${i}`);
-                        const prevColumn = peek$(ctx, `containerColumn${i}`);
-                        const prevData = peek$(ctx, `containerItemData${i}`);
-
-                        if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
-                            set$(ctx, `containerPosition${i}`, position);
-                        }
-                        if (column >= 0 && column !== prevColumn) {
-                            set$(ctx, `containerColumn${i}`, column);
-                        }
-
-                        if (
-                            prevData !== item &&
-                            (itemsAreEqual ? !itemsAreEqual(prevData, item, itemIndex, data) : true)
-                        ) {
-                            set$(ctx, `containerItemData${i}`, item);
-                        }
-                    }
+                const itemIndex = indexByKey.get(itemKey);
+                if (itemIndex !== undefined) {
+                    didChangePositions =
+                        syncMountedContainer(ctx, i, itemIndex, {
+                            scrollAdjustPending,
+                            updateLayout: true,
+                        }).didChangePosition || didChangePositions;
                 }
             }
         }
 
-        if (!queuedInitialLayout && endBuffered !== null) {
-            // If waiting for initial layout and all items in view have a known size then
-            // initial layout is complete
-            if (checkAllSizesKnown(state)) {
-                setDidLayout(ctx, state);
-            }
+        if (Platform.OS === "web" && didChangePositions) {
+            set$(ctx, "lastPositionUpdate", Date.now());
         }
 
-        if (viewabilityConfigCallbackPairs) {
-            updateViewableItems(state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer!, endNoBuffer!);
+        if (suppressInitialScrollSideEffects) {
+            evaluateBootstrapInitialScroll(ctx);
+            return;
+        }
+
+        maybeEmitFirstVisibleItemChanged(state, visibleRange.startNoBuffer);
+
+        if (!queuedInitialLayout && !state.didContainersLayout) {
+            const isInitialLayoutReady = hasActiveInitialScroll(state)
+                ? checkAllSizesKnown(state, state.startBuffered, state.endBuffered)
+                : checkAllSizesKnown(state, state.startNoBuffer, state.endNoBuffer) ||
+                  checkAllSizesKnown(state, state.startBuffered, state.endBuffered);
+            if (isInitialLayoutReady) {
+                setDidLayout(ctx);
+                handleInitialScrollLayoutReady(ctx);
+            }
         }
 
         if (
-            onStickyHeaderChange &&
-            stickyIndicesArr.length > 0 &&
-            nextActiveStickyIndex !== undefined &&
-            nextActiveStickyIndex !== previousStickyIndex
+            viewabilityConfigCallbackPairs &&
+            visibleRange.startNoBuffer !== null &&
+            visibleRange.endNoBuffer !== null
         ) {
-            const item = data[nextActiveStickyIndex];
-            if (item !== undefined) {
-                onStickyHeaderChange({ index: nextActiveStickyIndex, item });
+            if (!didMVCPAdjustScroll) {
+                updateViewableItems(
+                    ctx.state,
+                    ctx,
+                    viewabilityConfigCallbackPairs,
+                    scrollLength,
+                    visibleRange.startNoBuffer,
+                    visibleRange.endNoBuffer,
+                    startBuffered ?? visibleRange.startNoBuffer,
+                    endBuffered ?? visibleRange.endNoBuffer,
+                );
             }
         }
+
+        stickyState?.finishCalculateItemsInView?.();
     });
 }

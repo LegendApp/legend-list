@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import {
-    byIndex,
     comparatorDefault,
     extractPadding,
     isArray,
@@ -69,26 +68,18 @@ describe("helpers", () => {
 
     describe("warnDevOnce", () => {
         let originalConsoleWarn: any;
-        let originalDev: any;
         let consoleWarnSpy: any;
 
         beforeEach(() => {
             // Mock console.warn
             originalConsoleWarn = console.warn;
             consoleWarnSpy = spyOn(console, "warn").mockImplementation(() => {});
-
-            // Mock __DEV__ to be true
-            originalDev = (globalThis as any).__DEV__;
-            (globalThis as any).__DEV__ = true;
         });
 
         afterEach(() => {
             // Restore original functions
             if (originalConsoleWarn) {
                 console.warn = originalConsoleWarn;
-            }
-            if (originalDev !== undefined) {
-                (globalThis as any).__DEV__ = originalDev;
             }
         });
 
@@ -114,14 +105,6 @@ describe("helpers", () => {
             expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
             expect(consoleWarnSpy).toHaveBeenNthCalledWith(1, "[legend-list] Message 1");
             expect(consoleWarnSpy).toHaveBeenNthCalledWith(2, "[legend-list] Message 2");
-        });
-
-        it("should not warn when __DEV__ is false", () => {
-            (globalThis as any).__DEV__ = false;
-
-            warnDevOnce("prod-id", "Production warning");
-
-            expect(consoleWarnSpy).not.toHaveBeenCalled();
         });
 
         it("should handle empty strings", () => {
@@ -241,8 +224,8 @@ describe("helpers", () => {
             expect(comparatorDefault(Infinity, 100)).toBe(Infinity);
             expect(comparatorDefault(100, Infinity)).toBe(-Infinity);
             expect(comparatorDefault(Infinity, Infinity)).toBeNaN(); // Infinity - Infinity = NaN
-            expect(isNaN(comparatorDefault(NaN, 5))).toBe(true);
-            expect(isNaN(comparatorDefault(5, NaN))).toBe(true);
+            expect(Number.isNaN(comparatorDefault(NaN, 5))).toBe(true);
+            expect(Number.isNaN(comparatorDefault(5, NaN))).toBe(true);
         });
 
         it("should work with Array.sort", () => {
@@ -250,45 +233,6 @@ describe("helpers", () => {
             const sorted = numbers.sort(comparatorDefault);
 
             expect(sorted).toEqual([1, 1, 2, 3, 4, 5, 6, 9]);
-        });
-    });
-
-    describe("byIndex", () => {
-        it("should extract index property", () => {
-            expect(byIndex({ index: 0 })).toBe(0);
-            expect(byIndex({ index: 5 })).toBe(5);
-            expect(byIndex({ index: -1 })).toBe(-1);
-        });
-
-        it("should handle objects with additional properties", () => {
-            const obj = { data: { foo: "bar" }, index: 42, name: "test" };
-            expect(byIndex(obj)).toBe(42);
-        });
-
-        it("should handle floating point indices", () => {
-            expect(byIndex({ index: 3.14 })).toBe(3.14);
-        });
-
-        it("should work with Array.map", () => {
-            const objects = [
-                { index: 10, value: "a" },
-                { index: 5, value: "b" },
-                { index: 15, value: "c" },
-            ];
-
-            const indices = objects.map(byIndex);
-            expect(indices).toEqual([10, 5, 15]);
-        });
-
-        it("should work for sorting by index", () => {
-            const objects = [
-                { index: 3, value: "c" },
-                { index: 1, value: "a" },
-                { index: 2, value: "b" },
-            ];
-
-            const sorted = objects.sort((a, b) => comparatorDefault(byIndex(a), byIndex(b)));
-            expect(sorted.map(byIndex)).toEqual([1, 2, 3]);
         });
     });
 
@@ -315,12 +259,22 @@ describe("helpers", () => {
             expect(extractPadding(style, contentContainerStyle, "Bottom")).toBe(12);
         });
 
+        it("should use paddingHorizontal fallback", () => {
+            const style = { paddingHorizontal: 8 };
+            const contentContainerStyle = { paddingHorizontal: 4 };
+
+            expect(extractPadding(style, contentContainerStyle, "Left")).toBe(12);
+            expect(extractPadding(style, contentContainerStyle, "Right")).toBe(12);
+        });
+
         it("should use padding fallback", () => {
             const style = { padding: 6 };
             const contentContainerStyle = { padding: 2 };
 
             expect(extractPadding(style, contentContainerStyle, "Top")).toBe(8);
             expect(extractPadding(style, contentContainerStyle, "Bottom")).toBe(8);
+            expect(extractPadding(style, contentContainerStyle, "Left")).toBe(8);
+            expect(extractPadding(style, contentContainerStyle, "Right")).toBe(8);
         });
 
         it("should prioritize specific over general padding", () => {
@@ -328,6 +282,14 @@ describe("helpers", () => {
             const contentContainerStyle = { padding: 3, paddingTop: 15, paddingVertical: 8 };
 
             expect(extractPadding(style, contentContainerStyle, "Top")).toBe(35); // 20 + 15
+        });
+
+        it("should prioritize horizontal specific padding over horizontal fallback", () => {
+            const style = { padding: 5, paddingHorizontal: 10, paddingLeft: 20 };
+            const contentContainerStyle = { padding: 3, paddingHorizontal: 8, paddingRight: 15 };
+
+            expect(extractPadding(style, contentContainerStyle, "Left")).toBe(28); // 20 + 8
+            expect(extractPadding(style, contentContainerStyle, "Right")).toBe(25); // 10 + 15
         });
 
         it("should mix different padding types", () => {
@@ -432,19 +394,6 @@ describe("helpers", () => {
 
             expect(consoleWarnSpy).toHaveBeenCalledTimes(10000);
             console.warn = originalConsoleWarn;
-        });
-
-        it("should handle various object types for byIndex", () => {
-            class TestClass {
-                index = 99;
-                constructor() {}
-            }
-
-            const instance = new TestClass();
-            expect(byIndex(instance)).toBe(99);
-
-            const inherited = Object.create({ index: 88 });
-            expect(byIndex(inherited)).toBe(88);
         });
     });
 

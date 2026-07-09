@@ -39,20 +39,20 @@
             "@/utils/*": [
                 "./src/utils/*"
             ],
-            "@legendapp/list": [
-                "./src/index"
+            "@legendapp/list/react-native": [
+                "./src/react-native"
+            ],
+            "@legendapp/list/react": [
+                "./src/react"
             ],
             "@legendapp/list/animated": [
                 "./src/integrations/animated"
             ],
+            "@legendapp/list/keyboard": [
+                "./src/integrations/keyboard"
+            ],
             "@legendapp/list/reanimated": [
                 "./src/integrations/reanimated"
-            ],
-            "react": [
-                "./node_modules/react"
-            ],
-            "react-native": [
-                "./node_modules/react-native"
             ]
         },
         "resolveJsonModule": true,

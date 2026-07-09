@@ -1,30 +1,40 @@
-import type { LayoutRectangle } from "react-native";
-
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { updateContentMetricsState } from "@/core/updateContentMetricsState";
+import { getWindowSize } from "@/platform/getWindowSize";
+import type { LayoutRectangle } from "@/platform/scrollview-types";
 import { type StateContext, set$ } from "@/state/state";
-import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
-import { checkAtBottom } from "@/utils/checkAtBottom";
-import { checkAtTop } from "@/utils/checkAtTop";
+import { checkThresholds } from "@/utils/checkThresholds";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
-import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function handleLayout(
     ctx: StateContext,
-    state: InternalState,
-    layout: LayoutRectangle,
+    layoutParam: LayoutRectangle,
     setCanRender: (canRender: boolean) => void,
 ) {
-    const { maintainScrollAtEnd } = state.props;
+    const state = ctx.state;
+    const { maintainScrollAtEnd, useWindowScroll } = state.props;
+    const scrollAxis = state.props.horizontal ? "width" : "height";
+    const otherAxis = state.props.horizontal ? "height" : "width";
+
+    let layout = layoutParam;
+
+    if (useWindowScroll) {
+        // In window-scroll mode, keep the scroll axis constrained to the viewport
+        // so scrollLength matches what can actually be visible.
+        const windowScrollAxisLength = getWindowSize()[scrollAxis];
+        layout = windowScrollAxisLength > 0 ? { ...layoutParam, [scrollAxis]: windowScrollAxisLength } : layoutParam;
+    }
 
     // Prefer a positive measured length, but avoid clobbering a previously known
     // non-zero scrollLength with a transient 0 measurement (common on web during
     // initial mount before flex sizing settles).
-    const measuredLength = layout[state.props.horizontal ? "width" : "height"];
+    const measuredLength = layout[scrollAxis];
     const previousLength = state.scrollLength;
     const scrollLength = measuredLength > 0 ? measuredLength : previousLength;
-    const otherAxisSize = layout[state.props.horizontal ? "height" : "width"];
+    const otherAxisSize = layout[otherAxis];
 
     const needsCalculate =
         !state.lastLayout ||
@@ -40,34 +50,36 @@ export function handleLayout(
     if (didChange) {
         state.scrollLength = scrollLength;
         state.otherAxisSize = otherAxisSize;
+        updateContentMetricsState(ctx);
         state.lastBatchingAction = Date.now();
         state.scrollForNextCalculateItemsInView = undefined;
 
         if (scrollLength > 0) {
-            doInitialAllocateContainers(ctx, state);
+            doInitialAllocateContainers(ctx);
         }
 
         if (needsCalculate) {
-            calculateItemsInView(ctx, state, { doMVCP: true });
+            calculateItemsInView(ctx, { doMVCP: true });
         }
         if (didChange || otherAxisSize !== prevOtherAxisSize) {
             set$(ctx, "scrollSize", { height: layout.height, width: layout.width });
         }
 
-        if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onLayout) {
-            doMaintainScrollAtEnd(ctx, state, false);
+        if (maintainScrollAtEnd?.onLayout) {
+            doMaintainScrollAtEnd(ctx);
         }
-        updateAlignItemsPaddingTop(ctx, state);
-        checkAtBottom(ctx, state);
-        checkAtTop(state);
+        checkThresholds(ctx);
 
         if (state) {
-            // If otherAxisSize minus padding is less than 10, we need to set the size of the other axis
-            // from the item height. 10 is just a magic number to account for border/outline or rounding errors.
-            state.needsOtherAxisSize = otherAxisSize - (state.props.stylePaddingTop || 0) < 10;
+            // If the measured cross-axis space only contains padding, derive the other axis from item size.
+            // 10 is just a magic number to account for border/outline or rounding errors.
+            const crossAxisPadding = state.props.horizontal
+                ? (state.props.stylePaddingTop || 0) + (state.props.stylePaddingBottom || 0)
+                : (state.props.stylePaddingLeft || 0) + (state.props.stylePaddingRight || 0);
+            state.needsOtherAxisSize = otherAxisSize - crossAxisPadding < 10;
         }
 
-        if (__DEV__ && measuredLength === 0) {
+        if (IS_DEV && measuredLength === 0) {
             warnDevOnce(
                 "height0",
                 `List ${
@@ -75,7 +87,6 @@ export function handleLayout(
                 } is 0. You may need to set a style or \`flex: \` for the list, because children are absolutely positioned.`,
             );
         }
-
     }
     setCanRender(true);
 }

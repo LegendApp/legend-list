@@ -1,4 +1,5 @@
 // Minimal React Native stub for Bun test environment
+import * as React from "react";
 
 type AnyFunction = (...args: any[]) => any;
 
@@ -15,13 +16,26 @@ export type NativeSyntheticEvent<T> = { nativeEvent: T };
 export const Platform = {
     OS: "ios",
     select<T>(spec: { ios?: T; android?: T; web?: T; default?: T }): T {
-        return (spec as any)["ios"] ?? spec.default!;
+        return (spec as any).ios ?? spec.default!;
     },
+};
+
+export const I18nManager = {
+    doLeftAndRightSwapInRTL: true,
+    forceRTL: (_value: boolean) => {},
+    isRTL: false,
+    swapLeftAndRightInRTL: (_value: boolean) => {},
 };
 
 export const Dimensions = {
     get(_what: "window" | "screen") {
         return { fontScale: 2, height: 667, scale: 2, width: 375 };
+    },
+};
+
+export const PixelRatio = {
+    get() {
+        return 3;
     },
 };
 
@@ -31,7 +45,13 @@ export const StyleSheet = {
     },
     flatten(style: any): any {
         if (Array.isArray(style)) {
-            return style.reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
+            const merged = {};
+            for (const segment of style) {
+                if (segment && typeof segment === "object") {
+                    Object.assign(merged, segment);
+                }
+            }
+            return merged;
         }
         return style || {};
     },
@@ -55,15 +75,29 @@ class AnimatedValue<T = number> {
     }
 }
 
+const createHostComponent = (name: string) =>
+    React.forwardRef((props: any, _ref: any) =>
+        React.createElement(name, props, props?.children),
+    ) as unknown as AnyFunction;
+
+const AnimatedScrollView = createHostComponent("AnimatedScrollView");
+const AnimatedView = createHostComponent("AnimatedView");
+
 export const Animated = {
+    // In tests we simply return the passed component without wrapping
+    createAnimatedComponent<T extends AnyFunction>(Component: T): T {
+        return Component;
+    },
     event(_args: any, config?: { listener?: AnyFunction; useNativeDriver?: boolean }): AnyFunction {
         const listener = config?.listener;
         return (event: any) => listener?.(event);
     },
+    ScrollView: AnimatedScrollView,
     timing(_value: any, _config: any) {
         return { start: (cb?: AnyFunction) => cb?.() };
     },
     Value: AnimatedValue,
+    View: AnimatedView,
 };
 
 // Provide a global requestAnimationFrame fallback for tests that expect it
@@ -73,10 +107,10 @@ if (typeof globalThis.requestAnimationFrame !== "function") {
 }
 
 // Very light component stubs
-export const View = (() => null) as unknown as AnyFunction;
-export const Text = (() => null) as unknown as AnyFunction;
-export const RefreshControl = ((_props: any) => null) as unknown as AnyFunction;
-export const ScrollView = (() => null) as unknown as AnyFunction;
+export const View = createHostComponent("View");
+export const Text = createHostComponent("Text");
+export const RefreshControl = createHostComponent("RefreshControl");
+export const ScrollView = createHostComponent("ScrollView");
 
 export type View = any; // for type-only imports
 export type ScrollView = any; // for type-only imports

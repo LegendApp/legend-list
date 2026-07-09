@@ -1,118 +1,156 @@
+import type { CSSProperties } from "react";
 import * as React from "react";
-import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type ViewStyle } from "react-native";
 
-import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
-import { useValue$ } from "@/hooks/useValue$";
+import { POSITION_OUT_OF_VIEW } from "@/constants";
+import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
-import { typedMemo } from "@/types";
+import type { StickyHeaderConfig } from "@/types.base";
+import { typedMemo } from "@/types.internal";
+import { getComponent } from "@/utils/getComponent";
+import { isArray } from "@/utils/helpers";
 
-const PositionViewState = typedMemo(function PositionView({
+interface ExtraPropsFromRN {
+    animatedScrollY?: unknown;
+    onLayout?: unknown;
+    onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    stickyHeaderConfig?: StickyHeaderConfig;
+    index?: number;
+}
+
+interface PositionViewStateProps {
+    id: number;
+    index: number;
+    horizontal: boolean;
+    style: CSSProperties;
+    refView: React.RefObject<HTMLDivElement | null>;
+    onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayout?: unknown;
+    children: React.ReactNode;
+}
+
+const isRNWeb = typeof document !== "undefined" && !!document.getElementById("react-native-stylesheet");
+const baseCss: CSSProperties = {
+    contain: "paint layout style",
+    ...(isRNWeb
+        ? {
+              display: "flex",
+              flexDirection: "column",
+          }
+        : {}),
+};
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const PositionViewState = typedMemo(function PositionViewState({
     id,
     horizontal,
     style,
     refView,
-    ...rest
+    ...props
+}: PositionViewStateProps) {
+    const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+
+    // Merge to a single CSSProperties object and avoid RN-style transform arrays
+    const composed: CSSProperties = isArray(style)
+        ? (Object.assign({}, ...style) as CSSProperties)
+        : (style as unknown as CSSProperties);
+    const combinedStyle: CSSProperties = horizontal
+        ? ({ ...baseCss, ...composed, left: position } as CSSProperties)
+        : ({ ...baseCss, ...composed, top: position } as CSSProperties);
+
+    const {
+        animatedScrollY: _animatedScrollY,
+        index,
+        onLayout: _onLayout,
+        onLayoutChange: _onLayoutChange,
+        stickyHeaderConfig: _stickyHeaderConfig,
+        ...webProps
+    } = props as PositionViewStateProps & ExtraPropsFromRN;
+
+    return <div data-index={index} ref={refView} {...(webProps as any)} style={combinedStyle} />;
+});
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+export const PositionViewSticky = typedMemo(function PositionViewSticky({
+    id,
+    horizontal,
+    style,
+    refView,
+    index,
+    animatedScrollY: _animatedScrollY,
+    stickyHeaderConfig,
+    onLayout: _onLayout,
+    onLayoutChange: _onLayoutChange,
+    children,
+    ...webProps
 }: {
     id: number;
     horizontal: boolean;
-    style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
-    onLayout: (event: LayoutChangeEvent) => void;
+    style: CSSProperties;
+    refView: React.RefObject<HTMLDivElement | null>;
+    onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    index: number;
+    animatedScrollY?: unknown;
+    stickyHeaderConfig?: StickyHeaderConfig;
+    onLayout?: unknown;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+    const [position = POSITION_OUT_OF_VIEW, activeStickyIndex] = useArr$([
+        `containerPosition${id}`,
+        "activeStickyIndex",
+    ]);
+
+    const composed = React.useMemo(
+        () =>
+            (isArray(style) ? (Object.assign({}, ...style) as CSSProperties) : (style as unknown as CSSProperties)) ??
+            {},
+        [style],
+    );
+
+    const viewStyle = React.useMemo(() => {
+        const styleBase: CSSProperties = { ...baseCss, ...composed };
+        delete styleBase.transform;
+
+        const offset = stickyHeaderConfig?.offset ?? 0;
+        const isActive = activeStickyIndex === index;
+        styleBase.position = isActive ? "sticky" : "absolute";
+        styleBase.zIndex = index + 1000;
+
+        if (horizontal) {
+            styleBase.left = isActive ? offset : position;
+        } else {
+            styleBase.top = isActive ? offset : position;
+        }
+
+        return styleBase;
+    }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
+
+    const renderStickyHeaderBackdrop = React.useMemo(
+        () =>
+            stickyHeaderConfig?.backdropComponent ? (
+                <div
+                    style={{
+                        inset: 0,
+                        pointerEvents: "none",
+                        position: "absolute",
+                    }}
+                >
+                    {getComponent(stickyHeaderConfig.backdropComponent)}
+                </div>
+            ) : null,
+        [stickyHeaderConfig?.backdropComponent],
+    );
+
     return (
-        <View
-            ref={refView}
-            style={[
-                style,
-                horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
-            ]}
-            {...rest}
-        />
+        <div
+            data-index={index}
+            ref={refView as unknown as React.RefObject<HTMLDivElement>}
+            style={viewStyle as any}
+            {...webProps}
+        >
+            {renderStickyHeaderBackdrop}
+            {children}
+        </div>
     );
 });
 
-// The Animated version is better on old arch but worse on new arch.
-// And we don't want to use on new arch because it would make position updates
-// not synchronous with the rest of the state updates.
-const PositionViewAnimated = typedMemo(function PositionView({
-    id,
-    horizontal,
-    style,
-    refView,
-    ...rest
-}: {
-    id: number;
-    horizontal: boolean;
-    style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
-    onLayout: (event: LayoutChangeEvent) => void;
-    children: React.ReactNode;
-}) {
-    const position$ = useValue$(`containerPosition${id}`, {
-        getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
-    });
-
-    let position:
-        | { transform: Array<{ translateX: Animated.Value }> }
-        | { transform: Array<{ translateY: Animated.Value }> }
-        | { left: Animated.Value }
-        | { top: Animated.Value };
-
-    if (Platform.OS === "ios" || Platform.OS === "android") {
-        position = horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] };
-    } else {
-        // react-native-macos seems to not work well with transform here
-        position = horizontal ? { left: position$ } : { top: position$ };
-    }
-
-    return <Animated.View ref={refView} style={[style, position]} {...rest} />;
-});
-
-// The Animated version is better on old arch but worse on new arch.
-// And we don't want to use on new arch because it would make position updates
-// not synchronous with the rest of the state updates.
-const PositionViewSticky = typedMemo(function PositionViewSticky({
-    id,
-    horizontal,
-    style,
-    refView,
-    animatedScrollY,
-    stickyOffset,
-    index,
-    ...rest
-}: {
-    id: number;
-    horizontal: boolean;
-    style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
-    animatedScrollY?: Animated.Value;
-    stickyOffset?: number;
-    onLayout: (event: LayoutChangeEvent) => void;
-    index: number;
-    children: React.ReactNode;
-}) {
-    const [position = POSITION_OUT_OF_VIEW, headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
-
-    // Calculate transform based on sticky state
-    const transform = React.useMemo(() => {
-        if (animatedScrollY && stickyOffset !== undefined) {
-            const stickyPosition = animatedScrollY.interpolate({
-                extrapolateLeft: 'clamp',
-                extrapolateRight: 'extend',
-                inputRange: [position + headerSize, position + 5000 + headerSize],
-                outputRange: [position, position + 5000],
-            });
-
-            return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
-        }
-    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position]);
-
-    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
-
-    return <Animated.View ref={refView} style={viewStyle} {...rest} />;
-});
-
-export const PositionView = IsNewArchitecture ? PositionViewState : PositionViewAnimated;
-export { PositionViewSticky };
+export const PositionView = PositionViewState;

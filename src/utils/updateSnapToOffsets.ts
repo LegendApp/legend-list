@@ -1,18 +1,21 @@
+import { getContentSize } from "@/state/getContentSize";
 import { type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
+import { toNativeHorizontalOffset } from "@/utils/rtl";
 
-export function updateSnapToOffsets(ctx: StateContext, state: InternalState) {
+export function updateSnapToOffsets(ctx: StateContext) {
+    const state = ctx.state;
     const {
-        positions,
         props: { snapToIndices },
     } = state;
 
+    const contentSize = state.props.horizontal ? getContentSize(ctx) : undefined;
     const snapToOffsets: number[] = Array<number>(snapToIndices!.length);
     for (let i = 0; i < snapToIndices!.length; i++) {
         const idx = snapToIndices![i];
-        const key = getId(state, idx);
-        snapToOffsets[i] = positions.get(key)!;
+        getId(state, idx);
+        const logicalOffset = state.positions[idx]!;
+        snapToOffsets[i] = toNativeHorizontalOffset(state, logicalOffset, contentSize);
     }
 
     set$(ctx, "snapToOffsets", snapToOffsets);

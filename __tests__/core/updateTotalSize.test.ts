@@ -3,44 +3,33 @@ import "../setup"; // Import global test setup
 
 import { updateTotalSize } from "../../src/core/updateTotalSize";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
+import { setLayoutValue } from "../helpers/layoutArrays";
 
 describe("updateTotalSize", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockCtx = createMockContext({
-            alignItemsPaddingTop: 0,
-            footerSize: 0,
-            headerSize: 0,
-            stylePaddingTop: 0,
-            totalSize: 0,
-        });
-
-        mockState = createMockState({
-            idCache: [],
-            positions: new Map(),
-            props: {
-                alignItemsAtEnd: false,
-                data: [],
-                keyExtractor: (item: any, index: number) => `item_${index}`,
+        mockCtx = createMockContext(
+            {
+                footerSize: 0,
+                headerSize: 0,
+                stylePaddingTop: 0,
+                totalSize: 0,
             },
-            scrollingTo: undefined,
-            scrollLength: 300,
-            sizes: new Map(),
-            sizesKnown: new Map(),
-            totalSize: 0,
-        });
+            { totalSize: 0 },
+        );
+
+        mockState = mockCtx.state;
     });
 
     describe("empty data handling", () => {
         it("should set totalSize to 0 when data is empty", () => {
             mockState.props.data = [];
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(0);
             expect(mockCtx.values.get("totalSize")).toBe(0);
@@ -50,7 +39,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = null as any;
 
             expect(() => {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
             }).toThrow();
         });
 
@@ -58,7 +47,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = undefined as any;
 
             expect(() => {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
             }).toThrow();
         });
     });
@@ -71,10 +60,10 @@ describe("updateTotalSize", () => {
             // Setup item data
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
+            setLayoutValue(mockState, "positions", itemId, 0);
             mockState.sizes.set(itemId, 50);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(50); // position 0 + size 50
             expect(mockCtx.values.get("totalSize")).toBe(50);
@@ -86,10 +75,10 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
+            setLayoutValue(mockState, "positions", itemId, 0);
             mockState.sizes.set(itemId, 0);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(0);
             expect(mockCtx.values.get("totalSize")).toBe(0);
@@ -101,10 +90,10 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100);
+            setLayoutValue(mockState, "positions", itemId, 100);
             mockState.sizes.set(itemId, 50);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(150); // position 100 + size 50
         });
@@ -119,15 +108,36 @@ describe("updateTotalSize", () => {
             for (let i = 0; i < 5; i++) {
                 const itemId = `item_${i}`;
                 mockState.idCache[i] = itemId;
-                mockState.positions.set(itemId, i * 50);
+                setLayoutValue(mockState, "positions", itemId, i * 50);
                 mockState.sizes.set(itemId, 50);
             }
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             // Last item at position 200 with size 50 = total 250
             expect(mockState.totalSize).toBe(250);
             expect(mockCtx.values.get("totalSize")).toBe(250);
+        });
+
+        it("should use the max size of the last row in multi-column layouts", () => {
+            mockCtx.values.set("numColumns", 2);
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+
+            const sizes = [50, 120, 200, 100];
+            const positions = [0, 0, 120, 120];
+
+            for (let i = 0; i < 4; i++) {
+                const itemId = `item_${i}`;
+                mockState.idCache[i] = itemId;
+                setLayoutValue(mockState, "positions", itemId, positions[i]);
+                mockState.sizes.set(itemId, sizes[i]);
+                setLayoutValue(mockState, "columns", itemId, (i % 2) + 1);
+            }
+
+            updateTotalSize(mockCtx);
+
+            // Last row starts at 120 and has max size 200
+            expect(mockState.totalSize).toBe(320);
         });
 
         it("should handle varying item sizes", () => {
@@ -141,12 +151,12 @@ describe("updateTotalSize", () => {
             for (let i = 0; i < 3; i++) {
                 const itemId = `item_${i}`;
                 mockState.idCache[i] = itemId;
-                mockState.positions.set(itemId, position);
+                setLayoutValue(mockState, "positions", itemId, position);
                 mockState.sizes.set(itemId, sizes[i]);
                 position += sizes[i];
             }
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             // Last item at position 175 with size 150 = total 325
             expect(mockState.totalSize).toBe(325);
@@ -160,11 +170,11 @@ describe("updateTotalSize", () => {
             // Setup last item only (function only checks last item)
             const lastId = `item_${itemCount - 1}`;
             mockState.idCache[itemCount - 1] = lastId;
-            mockState.positions.set(lastId, (itemCount - 1) * 50);
+            setLayoutValue(mockState, "positions", lastId, (itemCount - 1) * 50);
             mockState.sizes.set(lastId, 50);
 
             const start = Date.now();
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(10); // Should be very fast
@@ -179,7 +189,7 @@ describe("updateTotalSize", () => {
 
             // Don't set up idCache - getId will return undefined
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             // Should not crash, totalSize should remain unchanged
             expect(mockState.totalSize).toBe(0);
@@ -194,7 +204,7 @@ describe("updateTotalSize", () => {
             // Don't set position - will be undefined
             mockState.sizes.set(itemId, 50);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             // Should not update totalSize when position is missing
             expect(mockState.totalSize).toBe(0);
@@ -206,79 +216,15 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100);
+            setLayoutValue(mockState, "positions", itemId, 100);
             // Don't set size - getItemSize will try to calculate it
 
             // Need to provide estimatedItemSize for getItemSize fallback
             mockState.props.estimatedItemSize = 50;
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(150); // position 100 + estimated size 50
-        });
-    });
-
-    describe("alignItemsAtEnd integration", () => {
-        it("should trigger align items padding update when alignItemsAtEnd is true", () => {
-            mockState.props.alignItemsAtEnd = true;
-            mockState.props.data = [{ id: 0 }];
-            mockState.scrollLength = 500;
-
-            const itemId = "item_0";
-            mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
-            mockState.sizes.set(itemId, 100);
-
-            // Mock the context values needed for align calculation
-            mockCtx.values.set("headerSize", 0);
-            mockCtx.values.set("footerSize", 0);
-            mockCtx.values.set("stylePaddingTop", 0);
-
-            updateTotalSize(mockCtx, mockState);
-
-            expect(mockState.totalSize).toBe(100);
-            expect(mockCtx.values.get("totalSize")).toBe(100);
-            // Should set alignItemsPaddingTop = max(0, scrollLength - contentSize)
-            // contentSize = headerSize + footerSize + totalSize + stylePaddingTop = 0 + 0 + 100 + 0 = 100
-            // alignItemsPaddingTop = max(0, 500 - 100) = 400
-            expect(mockCtx.values.get("alignItemsPaddingTop")).toBe(400);
-        });
-
-        it("should not trigger align items padding update when alignItemsAtEnd is false", () => {
-            mockState.props.alignItemsAtEnd = false;
-            mockState.props.data = [{ id: 0 }];
-
-            const itemId = "item_0";
-            mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
-            mockState.sizes.set(itemId, 100);
-
-            updateTotalSize(mockCtx, mockState);
-
-            expect(mockState.totalSize).toBe(100);
-            // When alignItemsAtEnd is false, alignItemsPaddingTop should remain at initial value (0)
-            expect(mockCtx.values.get("alignItemsPaddingTop")).toBe(0);
-        });
-
-        it("should handle align items calculation with content larger than scroll area", () => {
-            mockState.props.alignItemsAtEnd = true;
-            mockState.props.data = [{ id: 0 }];
-            mockState.scrollLength = 200; // Smaller than content
-
-            const itemId = "item_0";
-            mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
-            mockState.sizes.set(itemId, 500); // Larger than scroll area
-
-            mockCtx.values.set("headerSize", 0);
-            mockCtx.values.set("footerSize", 0);
-            mockCtx.values.set("stylePaddingTop", 0);
-
-            updateTotalSize(mockCtx, mockState);
-
-            expect(mockState.totalSize).toBe(500);
-            // alignItemsPaddingTop = max(0, 200 - 500) = max(0, -300) = 0
-            expect(mockCtx.values.get("alignItemsPaddingTop")).toBe(0);
         });
     });
 
@@ -289,10 +235,10 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, -50);
+            setLayoutValue(mockState, "positions", itemId, -50);
             mockState.sizes.set(itemId, 100);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(50); // -50 + 100 = 50
         });
@@ -303,10 +249,10 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100);
+            setLayoutValue(mockState, "positions", itemId, 100);
             mockState.sizes.set(itemId, -50);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(50); // 100 + (-50) = 50
         });
@@ -317,10 +263,10 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100.5);
+            setLayoutValue(mockState, "positions", itemId, 100.5);
             mockState.sizes.set(itemId, 49.7);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(150.2);
         });
@@ -331,10 +277,10 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, Number.MAX_SAFE_INTEGER - 1000);
+            setLayoutValue(mockState, "positions", itemId, Number.MAX_SAFE_INTEGER - 1000);
             mockState.sizes.set(itemId, 500);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(Number.MAX_SAFE_INTEGER - 500);
         });
@@ -349,8 +295,8 @@ describe("updateTotalSize", () => {
             mockState.sizes.set(itemId, 50);
 
             expect(() => {
-                updateTotalSize(mockCtx, mockState);
-            }).toThrow();
+                updateTotalSize(mockCtx);
+            }).not.toThrow();
         });
 
         it("should handle corrupted state context", () => {
@@ -368,11 +314,11 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100);
+            setLayoutValue(mockState, "positions", itemId, 100);
             mockState.sizes.set(itemId, 50);
 
             expect(() => {
-                updateTotalSize(corruptedCtx, mockState);
+                updateTotalSize(corruptedCtx);
             }).toThrow(); // Just check that it throws, don't check specific message
         });
     });
@@ -385,12 +331,12 @@ describe("updateTotalSize", () => {
 
             const lastId = `item_${itemCount - 1}`;
             mockState.idCache[itemCount - 1] = lastId;
-            mockState.positions.set(lastId, (itemCount - 1) * 50);
+            setLayoutValue(mockState, "positions", lastId, (itemCount - 1) * 50);
             mockState.sizes.set(lastId, 50);
 
             const start = Date.now();
             for (let i = 0; i < 100; i++) {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
             }
             const duration = Date.now() - start;
 
@@ -404,12 +350,12 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
+            setLayoutValue(mockState, "positions", itemId, 0);
 
             const results: number[] = [];
             for (let i = 0; i < 100; i++) {
                 mockState.sizes.set(itemId, i * 10);
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
                 results.push(mockState.totalSize);
             }
 
@@ -427,13 +373,13 @@ describe("updateTotalSize", () => {
             for (let i = 0; i < 3; i++) {
                 const itemId = `item_${i}`;
                 mockState.idCache[i] = itemId;
-                mockState.positions.set(itemId, i * 100);
+                setLayoutValue(mockState, "positions", itemId, i * 100);
                 mockState.sizes.set(itemId, 100);
             }
 
             // Update multiple times and verify consistency
             for (let i = 0; i < 10; i++) {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
                 expect(mockState.totalSize).toBe(mockCtx.values.get("totalSize"));
                 expect(mockState.totalSize).toBe(300); // Should remain consistent
             }

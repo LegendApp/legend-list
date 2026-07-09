@@ -1,26 +1,26 @@
-import type { InternalState } from "@/types";
+import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
 
-function isNullOrUndefined(value: number | null | undefined) {
-    return value === null || value === undefined;
-}
-
-export function checkAllSizesKnown(state: InternalState) {
-    const { startBuffered, endBuffered, sizesKnown } = state;
-    if (
-        !isNullOrUndefined(endBuffered) &&
-        !isNullOrUndefined(startBuffered) &&
-        startBuffered >= 0 &&
-        endBuffered >= 0
-    ) {
-        // If waiting for initial layout and all items in view have a known size then
-        // initial layout is complete
-        let areAllKnown = true;
-        for (let i = startBuffered!; areAllKnown && i <= endBuffered!; i++) {
-            const key = getId(state, i)!;
-            areAllKnown &&= sizesKnown.has(key);
-        }
-        return areAllKnown;
+export function checkAllSizesKnown(
+    state: InternalState,
+    start: number | null | undefined,
+    end: number | null | undefined,
+) {
+    if (start == null || end == null || start < 0 || end < start) {
+        return false;
     }
-    return false;
+
+    let hasMountedIndex = false;
+    for (const key of state.containerItemKeys.keys()) {
+        const index = state.indexByKey.get(key);
+        if (index !== undefined && index >= start && index <= end) {
+            hasMountedIndex = true;
+            const id = getId(state, index);
+            if (id === undefined || !state.sizesKnown.has(id)) {
+                return false;
+            }
+        }
+    }
+
+    return hasMountedIndex;
 }

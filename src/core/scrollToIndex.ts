@@ -1,33 +1,58 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { scrollTo } from "@/core/scrollTo";
 import type { StateContext } from "@/state/state";
-import type { InternalState, LegendListRef } from "@/types";
+import type { LegendListRef } from "@/types.base";
+import { getItemSizeAtIndex } from "@/utils/getItemSize";
 
 export type ScrollToIndexParams = Parameters<LegendListRef["scrollToIndex"]>[0];
 
-export function scrollToIndex(
-    ctx: StateContext,
-    state: InternalState,
-    { index, viewOffset = 0, animated = true, viewPosition }: ScrollToIndexParams,
-) {
-    if (index >= state.props.data.length) {
-        index = state.props.data.length - 1;
-    } else if (index < 0) {
-        index = 0;
+export function clampScrollIndex(index: number, dataLength: number) {
+    if (dataLength <= 0) {
+        return -1;
     }
 
-    const firstIndexOffset = calculateOffsetForIndex(ctx, state, index);
+    if (index >= dataLength) {
+        return dataLength - 1;
+    }
 
-    const isLast = index === state.props.data.length - 1;
+    if (index < 0) {
+        return 0;
+    }
+
+    return index;
+}
+
+export function scrollToIndex(
+    ctx: StateContext,
+    {
+        index,
+        viewOffset = 0,
+        animated = true,
+        forceScroll,
+        isInitialScroll,
+        viewPosition,
+    }: ScrollToIndexParams & { forceScroll?: boolean; isInitialScroll?: boolean },
+) {
+    const state = ctx.state;
+    const { data } = state.props;
+    index = clampScrollIndex(index, data.length);
+    const itemSize = getItemSizeAtIndex(ctx, index);
+
+    const firstIndexOffset = calculateOffsetForIndex(ctx, index);
+
+    const isLast = index === data.length - 1;
     if (isLast && viewPosition === undefined) {
         viewPosition = 1;
     }
 
     state.scrollForNextCalculateItemsInView = undefined;
 
-    scrollTo(state, {
+    scrollTo(ctx, {
         animated,
+        forceScroll,
         index,
+        isInitialScroll,
+        itemSize,
         offset: firstIndexOffset,
         viewOffset,
         viewPosition: viewPosition ?? 0,

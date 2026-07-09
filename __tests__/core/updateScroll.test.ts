@@ -1,0 +1,654 @@
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import "../setup"; // Import global test setup
+
+import * as doMaintainScrollAtEndModule from "@/core/doMaintainScrollAtEnd";
+import { updateScroll } from "@/core/updateScroll";
+import * as flushSyncModule from "@/platform/flushSync";
+import { Platform } from "@/platform/Platform";
+import type { StateContext } from "@/state/state";
+import { peek$ } from "@/state/state";
+import * as requestAdjustModule from "@/utils/requestAdjust";
+import { createMockContext } from "../__mocks__/createMockContext";
+
+describe("updateScroll large user jumps", () => {
+    let mockCtx: StateContext;
+    let flushSyncSpy: ReturnType<typeof spyOn>;
+    let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
+    let rafCallbacks: Array<(time: number) => void>;
+
+    beforeEach(() => {
+        Platform.OS = "ios";
+        mockCtx = createMockContext({}, { scroll: 0, scrollLength: 100, triggerCalculateItemsInView: () => {} });
+        flushSyncSpy = spyOn(flushSyncModule, "flushSync").mockImplementation((fn: () => void) => {
+            fn();
+        });
+        originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        rafCallbacks = [];
+        globalThis.requestAnimationFrame = (callback: (time: number) => void) => {
+            rafCallbacks.push(callback);
+            return rafCallbacks.length;
+        };
+    });
+
+    afterEach(() => {
+        for (const timeout of mockCtx.state.timeouts) {
+            clearTimeout(timeout);
+        }
+        globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+        flushSyncSpy.mockRestore();
+    });
+
+    it("uses flushSync for large user scroll jumps", () => {
+        Platform.OS = "web";
+
+        updateScroll(mockCtx, 150);
+
+        expect(flushSyncSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("resets MVCP anchoring state for large user scroll jumps on every platform", () => {
+        Platform.OS = "ios";
+        const cancelCalls: number[] = [];
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        globalThis.cancelAnimationFrame = (id: number) => {
+            cancelCalls.push(id);
+        };
+        try {
+            mockCtx.state.mvcpAnchorLock = {
+                expiresAt: Date.now() + 500,
+                id: "item_0",
+                position: 0,
+                quietPasses: 0,
+            };
+            mockCtx.state.queuedMVCPRecalculate = 7;
+            mockCtx.state.pendingNativeMVCPAdjust = {
+                amount: -500,
+                furthestProgressTowardAmount: 0,
+                manualApplied: 0,
+                startScroll: 0,
+            };
+
+            updateScroll(mockCtx, 150);
+
+            expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
+            expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+            expect(mockCtx.state.userScrollAnchorReset?.keys).toEqual(new Set());
+            expect(mockCtx.state.queuedMVCPRecalculate).toBeUndefined();
+            expect(cancelCalls).toEqual([7]);
+        } finally {
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
+    it("does not reset MVCP anchoring state for large programmatic scroll jumps", () => {
+        Platform.OS = "ios";
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        const anchorLock = {
+            expiresAt: Date.now() + 500,
+            id: "item_0",
+            position: 0,
+            quietPasses: 0,
+        };
+        mockCtx.state.mvcpAnchorLock = anchorLock;
+        mockCtx.state.queuedMVCPRecalculate = 7;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: 500,
+            furthestProgressTowardAmount: 0,
+            manualApplied: 0,
+            startScroll: 0,
+        };
+        mockCtx.state.scrollingTo = { offset: 150 } as any;
+
+        updateScroll(mockCtx, 150);
+
+        expect(flushSyncSpy).not.toHaveBeenCalled();
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: true, scrollVelocity: 0 });
+        expect(mockCtx.state.mvcpAnchorLock).toBe(anchorLock);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeDefined();
+        expect(mockCtx.state.userScrollAnchorReset).toBeUndefined();
+        expect(mockCtx.state.queuedMVCPRecalculate).toBe(7);
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("skips flushSync for small web deltas", () => {
+        Platform.OS = "web";
+
+        updateScroll(mockCtx, 50);
+
+        expect(flushSyncSpy).not.toHaveBeenCalled();
+    });
+
+    it("updates adaptive render from the current scroll sample", () => {
+        const originalDateNow = Date.now;
+        const changes: Array<[string, string]> = [];
+        const now = 1000;
+        Date.now = () => now;
+
+        try {
+            mockCtx = createMockContext(
+                {
+                    adaptiveRender: "normal",
+                    readyToRender: true,
+                },
+                {
+                    props: {
+                        adaptiveRender: {
+                            enterVelocity: 1,
+                            onChange: (mode, reason) => changes.push([mode, reason]),
+                        },
+                    },
+                    scroll: 0,
+                    scrollHistory: [{ scroll: 0, time: 900 }],
+                    scrollLength: 1000,
+                    triggerCalculateItemsInView: () => {},
+                },
+            );
+
+            updateScroll(mockCtx, 200);
+
+            expect(peek$(mockCtx, "adaptiveRender")).toBe("light");
+            expect(changes).toEqual([["light", "scroll"]]);
+        } finally {
+            for (const timeout of mockCtx.state.timeouts) {
+                clearTimeout(timeout);
+            }
+            Date.now = originalDateNow;
+        }
+    });
+
+    it("enters adaptive light mode for large user scroll jumps even without velocity", () => {
+        const changes: Array<[string, string]> = [];
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.values.set("adaptiveRender", "normal");
+        mockCtx.values.set("readyToRender", true);
+        mockCtx.state.props.adaptiveRender = {
+            enterVelocity: 10_000,
+            onChange: (mode, reason) => changes.push([mode, reason]),
+        };
+        mockCtx.state.scrollHistory = [];
+
+        updateScroll(mockCtx, 150);
+
+        expect(peek$(mockCtx, "adaptiveRender")).toBe("light");
+        expect(changes).toEqual([["light", "scroll"]]);
+        expect(flushSyncSpy).toHaveBeenCalledTimes(1);
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({
+            doMVCP: false,
+            drawDistanceMode: "visible-first",
+            scrollVelocity: 0,
+        });
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("uses visible-first drawDistance for large user scroll jumps and prewarms the full range", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.props.drawDistance = 1_000;
+
+        updateScroll(mockCtx, 150);
+
+        expect(triggerCalculateItemsInViewSpy.mock.calls[0]).toEqual([
+            {
+                doMVCP: false,
+                drawDistanceMode: "visible-first",
+                scrollVelocity: 0,
+            },
+        ]);
+        expect(rafCallbacks).toHaveLength(1);
+        expect(mockCtx.state.queuedFullDrawDistancePrewarm).toBe(1);
+
+        rafCallbacks[0](Date.now());
+
+        expect(triggerCalculateItemsInViewSpy.mock.calls[1]).toEqual([]);
+        expect(mockCtx.state.queuedFullDrawDistancePrewarm).toBeUndefined();
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("dedupes full drawDistance prewarm passes across repeated large user scroll jumps", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.props.drawDistance = 1_000;
+
+        updateScroll(mockCtx, 150);
+        updateScroll(mockCtx, 300);
+
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledTimes(2);
+        expect(triggerCalculateItemsInViewSpy.mock.calls).toEqual([
+            [
+                {
+                    doMVCP: false,
+                    drawDistanceMode: "visible-first",
+                    scrollVelocity: 0,
+                },
+            ],
+            [
+                {
+                    doMVCP: false,
+                    drawDistanceMode: "visible-first",
+                    scrollVelocity: 0,
+                },
+            ],
+        ]);
+        expect(rafCallbacks).toHaveLength(1);
+        expect(mockCtx.state.queuedFullDrawDistancePrewarm).toBe(1);
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("does not force adaptive light mode for large programmatic scroll jumps", () => {
+        const changes: string[] = [];
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.values.set("adaptiveRender", "normal");
+        mockCtx.values.set("readyToRender", true);
+        mockCtx.state.props.adaptiveRender = {
+            enterVelocity: 10_000,
+            onChange: (mode) => changes.push(mode),
+        };
+        mockCtx.state.scrollingTo = { offset: 150 } as any;
+        mockCtx.state.scrollHistory = [];
+
+        updateScroll(mockCtx, 150);
+
+        expect(peek$(mockCtx, "adaptiveRender")).toBe("normal");
+        expect(changes).toEqual([]);
+        expect(flushSyncSpy).not.toHaveBeenCalled();
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: true, scrollVelocity: 0 });
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("uses flushSync for large non-web user scroll jumps", () => {
+        Platform.OS = "ios";
+
+        updateScroll(mockCtx, 150);
+
+        expect(flushSyncSpy).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("updateScroll mvcp active mode", () => {
+    let mockCtx: StateContext;
+    let doMaintainScrollAtEndSpy: ReturnType<typeof spyOn>;
+
+    beforeEach(() => {
+        Platform.OS = "ios";
+        mockCtx = createMockContext({}, { scroll: 100, scrollLastCalculate: 100, scrollLength: 100 });
+        doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+            () => false,
+        );
+    });
+
+    afterEach(() => {
+        doMaintainScrollAtEndSpy.mockRestore();
+    });
+
+    it("forces recalculation while an mvcp anchor lock is active", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.mvcpAnchorLock = {
+            expiresAt: Date.now() + 500,
+            id: "item-1",
+            position: 100,
+            quietPasses: 0,
+        };
+
+        updateScroll(mockCtx, 101);
+
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: false, scrollVelocity: 0 });
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("expires stale mvcp anchor locks before deciding active mode", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.mvcpAnchorLock = {
+            expiresAt: Date.now() - 1,
+            id: "item-1",
+            position: 100,
+            quietPasses: 0,
+        };
+
+        updateScroll(mockCtx, 101);
+
+        expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
+        expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("applies only the remaining native mvcp remainder after partial end shrink scroll", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            furthestProgressTowardAmount: 0,
+            manualApplied: 0,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 300);
+
+        updateScroll(mockCtx, 200);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("abandons a queued native mvcp remainder when scroll events move in the wrong direction", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            furthestProgressTowardAmount: 0,
+            manualApplied: 0,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 300);
+
+        updateScroll(mockCtx, 430);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("keeps the queued native mvcp remainder across intermediate clamp frames", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            furthestProgressTowardAmount: 0,
+            manualApplied: 0,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 220);
+
+        updateScroll(mockCtx, 300);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toEqual(
+            expect.objectContaining({
+                amount: -300,
+                furthestProgressTowardAmount: 120,
+                manualApplied: 0,
+                startScroll: 420,
+            }),
+        );
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("drops the queued native mvcp remainder when native already consumed the full delta", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            furthestProgressTowardAmount: 0,
+            manualApplied: 0,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 220);
+
+        updateScroll(mockCtx, 120);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("waits at the predicted target until native moves beyond the manual pre-adjust", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            furthestProgressTowardAmount: 0,
+            manualApplied: -80,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 220);
+
+        updateScroll(mockCtx, 340);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toEqual(
+            expect.objectContaining({
+                amount: -300,
+                furthestProgressTowardAmount: 0,
+                manualApplied: -80,
+                startScroll: 420,
+            }),
+        );
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("applies only the remaining remainder after a predicted pre-adjust and partial native clamp", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            furthestProgressTowardAmount: 0,
+            manualApplied: -80,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 300);
+
+        updateScroll(mockCtx, 200);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("requests a positive correction when native over-consumes after a predicted pre-adjust", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            furthestProgressTowardAmount: 0,
+            manualApplied: -80,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 200);
+
+        updateScroll(mockCtx, 100);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("drops the queued native mvcp remainder when native reverses away after approaching the clamp", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            furthestProgressTowardAmount: 120,
+            manualApplied: 0,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 220);
+
+        updateScroll(mockCtx, 340);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("hands off to maintainScrollAtEnd after a pending native mvcp settle on data change", () => {
+        mockCtx = createMockContext(
+            { totalSize: 180 },
+            {
+                didContainersLayout: true,
+                isWithinMaintainScrollAtEndThreshold: true,
+                pendingNativeMVCPAdjust: {
+                    amount: -20,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: 0,
+                    startScroll: 100,
+                },
+                props: {
+                    maintainScrollAtEnd: { animated: true, on: { dataChange: true } },
+                },
+                queuedInitialLayout: true,
+                refScroller: {
+                    current: {
+                        scrollToEnd: () => undefined,
+                    } as any,
+                },
+                scroll: 100,
+                scrollLastCalculate: 100,
+                scrollLength: 100,
+            },
+        );
+        doMaintainScrollAtEndSpy.mockRestore();
+        doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+            () => true,
+        );
+
+        updateScroll(mockCtx, 80);
+
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+    });
+
+    it("settles once native consumes the queued remainder even before reaching the computed clamp", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx = createMockContext(
+            { totalSize: 1589 },
+            {
+                didContainersLayout: true,
+                isWithinMaintainScrollAtEndThreshold: true,
+                pendingMaintainScrollAtEnd: true,
+                pendingNativeMVCPAdjust: {
+                    amount: -92.25,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: -37.91664632161462,
+                    startScroll: 984.6666666666666,
+                },
+                props: {
+                    maintainScrollAtEnd: { animated: true, on: { dataChange: true } },
+                },
+                queuedInitialLayout: true,
+                refScroller: {
+                    current: {
+                        scrollToEnd: () => undefined,
+                    } as any,
+                },
+                scroll: 946.750020345052,
+                scrollLastCalculate: 946.750020345052,
+                scrollLength: 658.6666870117188,
+            },
+        );
+        doMaintainScrollAtEndSpy.mockRestore();
+        doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+            () => true,
+        );
+
+        updateScroll(mockCtx, 892.3333333333334);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("hands off to maintainScrollAtEnd when native stops short but remains inside the end threshold", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx = createMockContext(
+            { totalSize: 2410.5 },
+            {
+                didContainersLayout: true,
+                isWithinMaintainScrollAtEndThreshold: true,
+                pendingMaintainScrollAtEnd: true,
+                pendingNativeMVCPAdjust: {
+                    amount: -100,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: -38.16664632161451,
+                    startScroll: 1813.6666666666667,
+                },
+                props: {
+                    maintainScrollAtEnd: { animated: true, on: { dataChange: true } },
+                },
+                queuedInitialLayout: true,
+                refScroller: {
+                    current: {
+                        scrollToEnd: () => undefined,
+                    } as any,
+                },
+                scroll: 1775.5000203450522,
+                scrollLastCalculate: 1775.5000203450522,
+                scrollLength: 658.6666870117188,
+            },
+        );
+        doMaintainScrollAtEndSpy.mockRestore();
+        doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+            () => true,
+        );
+
+        updateScroll(mockCtx, 1714);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -0.33333333333325754, true);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("hands off to maintainScrollAtEnd after a pending native mvcp settle that was originally queued by layout/item triggers", () => {
+        mockCtx = createMockContext(
+            { totalSize: 180 },
+            {
+                didContainersLayout: true,
+                isWithinMaintainScrollAtEndThreshold: true,
+                pendingMaintainScrollAtEnd: true,
+                pendingNativeMVCPAdjust: {
+                    amount: -20,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: 0,
+                    startScroll: 100,
+                },
+                props: {
+                    maintainScrollAtEnd: { animated: true, on: { layout: true } },
+                },
+                queuedInitialLayout: true,
+                refScroller: {
+                    current: {
+                        scrollToEnd: () => undefined,
+                    } as any,
+                },
+                scroll: 100,
+                scrollLastCalculate: 100,
+                scrollLength: 100,
+            },
+        );
+        doMaintainScrollAtEndSpy.mockRestore();
+        doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+            () => true,
+        );
+
+        updateScroll(mockCtx, 80);
+
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+    });
+});

@@ -1,526 +1,283 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
-import "../setup"; // Import global test setup
+import { describe, expect, it } from "bun:test";
+import "../setup";
 
-import type { StateContext } from "../../src/state/state";
-import * as stateModule from "../../src/state/state";
-import type { InternalState } from "../../src/types";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
-import * as checkThresholdModule from "../../src/utils/checkThreshold";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAtBottom", () => {
-    let mockCtx: StateContext;
-    let mockState: InternalState;
-    let getContentSizeSpy: any;
-    let checkThresholdSpy: any;
-    let onEndReachedMock: any;
+    it("returns early when state is null or undefined", () => {
+        const ctx = createMockContext();
+        ctx.state = null as any;
+        expect(() => checkAtBottom(ctx)).not.toThrow();
+        ctx.state = undefined as any;
+        expect(() => checkAtBottom(ctx)).not.toThrow();
+    });
 
-    beforeEach(() => {
-        mockCtx = createMockContext();
-        mockState = createMockState({
-            endReachedBlockedByTimer: false,
-            hasScrolled: false,
-            idCache: [],
-            idsInView: [],
-            ignoreScrollFromMVCP: undefined,
-            ignoreScrollFromMVCPTimeout: undefined,
-            indexByKey: new Map(),
-            isAtEnd: false,
-            isEndReached: false,
-            lastBatchingAction: 0,
-            maintainingScrollAtEnd: false,
-            positions: new Map(),
+    it("does not fire on initial mount when content is shorter than the viewport", () => {
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 200 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            initialScroll: { index: 0, viewOffset: 0 },
+            isEndReached: null,
             props: {
-                data: [
-                    { id: 0, text: "Item 0" },
-                    { id: 1, text: "Item 1" },
-                    { id: 2, text: "Item 2" },
-                ],
-                keyExtractor: (item: any) => `item-${item.id}`,
-                maintainScrollAtEndThreshold: 0.1, // 10%
-                onEndReached: undefined,
-                onEndReachedThreshold: 0.2, // 20%
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2,
             },
             queuedInitialLayout: true,
-            scroll: 100,
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollingTo: undefined,
-            scrollLength: 500,
-            scrollPending: 0,
-            scrollPrev: 90,
-            scrollPrevTime: 0,
-            scrollTime: 0,
-            sizes: new Map(),
-            timeouts: new Set(),
+            scroll: 0,
+            scrollLength: 300,
         });
 
-        // Reset and recreate spies to avoid cross-test interference
-        if (getContentSizeSpy) getContentSizeSpy.mockRestore?.();
-        if (checkThresholdSpy) checkThresholdSpy.mockRestore?.();
+        ctx.state = state;
 
-        // Spy on dependencies
-        getContentSizeSpy = spyOn(stateModule, "getContentSize").mockReturnValue(1000);
-        checkThresholdSpy = spyOn(checkThresholdModule, "checkThreshold").mockReturnValue(false);
+        checkAtBottom(ctx);
 
-        // Create a mock function for onEndReached
-        onEndReachedMock = spyOn({ fn: () => {} }, "fn");
-        mockState.props.onEndReached = onEndReachedMock;
+        expect(state.isEndReached).toBeNull();
+        expect(state.endReachedSnapshot).toBeUndefined();
+        expect(calls).toEqual([]);
     });
 
-    describe("basic functionality", () => {
-        it("should return early when state is null/undefined", () => {
-            checkAtBottom(mockCtx, null as any);
-            checkAtBottom(mockCtx, undefined as any);
-
-            expect(getContentSizeSpy).not.toHaveBeenCalled();
+    it("allows end checks after initial scroll finished even if the target is preserved", () => {
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            initialScroll: { index: 5, viewPosition: 1 },
+            isEndReached: null,
+            props: {
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2,
+            },
+            queuedInitialLayout: true,
+            scroll: 650,
+            scrollLength: 300,
         });
 
-        it("should return early when contentSize is 0", () => {
-            getContentSizeSpy.mockReturnValue(0);
+        ctx.state = state;
 
-            checkAtBottom(mockCtx, mockState);
+        checkAtBottom(ctx);
 
-            expect(checkThresholdSpy).not.toHaveBeenCalled();
-            expect(mockState.isAtEnd).toBe(false);
-        });
-
-        it("should return early when queuedInitialLayout is false", () => {
-            mockState.queuedInitialLayout = false;
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(checkThresholdSpy).not.toHaveBeenCalled();
-            expect(mockState.isAtEnd).toBe(false);
-        });
-
-        it("should return early when maintainingScrollAtEnd is true", () => {
-            mockState.maintainingScrollAtEnd = true;
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(checkThresholdSpy).not.toHaveBeenCalled();
-        });
-
-        it("should proceed when all conditions are met", () => {
-            checkAtBottom(mockCtx, mockState);
-
-            expect(checkThresholdSpy).toHaveBeenCalled();
-        });
+        expect(state.isEndReached).toBe(true);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
     });
 
-    describe("isAtEnd calculation", () => {
-        it("should set isAtEnd to true when content is less than scroll length", () => {
-            getContentSizeSpy.mockReturnValue(400); // Less than scrollLength (500)
-            mockState.scroll = 100;
-            mockState.scrollLength = 500;
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(mockState.isAtEnd).toBe(true);
+    it("returns early when queuedInitialLayout is false", () => {
+        const ctx = createMockContext({ totalSize: 1000 });
+        const state = createMockState({
+            isEndReached: null,
+            queuedInitialLayout: false,
         });
 
-        it("should set isAtEnd to true when within maintainScrollAtEndThreshold", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 540; // Distance from end: 1000 - 540 - 500 = -40 (negative means past end)
-            mockState.scrollLength = 500;
-            mockState.props.maintainScrollAtEndThreshold = 0.1; // 10% = 50px
+        ctx.state = state;
 
-            checkAtBottom(mockCtx, mockState);
+        checkAtBottom(ctx);
 
-            expect(mockState.isAtEnd).toBe(true);
+        expect(state.isEndReached).toBeNull();
+        expect(state.endReachedSnapshot).toBeUndefined();
+    });
+
+    it("returns early when maintainingScrollAtEnd is active", () => {
+        const ctx = createMockContext({ totalSize: 1000 });
+        const state = createMockState({
+            isEndReached: null,
+            maintainingScrollAtEnd: "animated",
+            queuedInitialLayout: true,
         });
 
-        it("should set isAtEnd to true when exactly at maintainScrollAtEndThreshold", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 450; // Distance from end: 1000 - 450 - 500 = 50
-            mockState.scrollLength = 500;
-            mockState.props.maintainScrollAtEndThreshold = 0.1; // 10% = 50px
+        ctx.state = state;
 
-            checkAtBottom(mockCtx, mockState);
+        checkAtBottom(ctx);
 
-            expect(mockState.isAtEnd).toBe(false); // 50 <= 50 is false for strict less than
+        expect(state.isEndReached).toBeNull();
+        expect(state.endReachedSnapshot).toBeUndefined();
+    });
+
+    it("fires after leaving and re-entering the threshold window", () => {
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 0,
+            scrollLength: 300,
         });
 
-        it("should set isAtEnd to false when beyond maintainScrollAtEndThreshold", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 400; // Distance from end: 1000 - 400 - 500 = 100
-            mockState.scrollLength = 500;
-            mockState.props.maintainScrollAtEndThreshold = 0.1; // 10% = 50px
+        ctx.state = state;
 
-            checkAtBottom(mockCtx, mockState);
+        // Outside threshold; establishes eligibility
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
-            expect(mockState.isAtEnd).toBe(false); // 100 > 50
-        });
+        // Re-enter threshold
+        state.scroll = 650; // distanceFromEnd = 50
+        checkAtBottom(ctx);
 
-        it("should handle zero maintainScrollAtEndThreshold", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 500; // Distance from end: 1000 - 500 - 500 = 0
-            mockState.scrollLength = 500;
-            mockState.props.maintainScrollAtEndThreshold = 0;
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(mockState.isAtEnd).toBe(false); // 0 < 0 is false
-        });
-
-        it("should handle large maintainScrollAtEndThreshold", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 200; // Distance from end: 1000 - 200 - 500 = 300
-            mockState.scrollLength = 500;
-            mockState.props.maintainScrollAtEndThreshold = 1; // 100% = 500px
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(mockState.isAtEnd).toBe(true); // 300 < 500
+        expect(state.isEndReached).toBe(true);
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
+        expect(state.endReachedSnapshot).toMatchObject({
+            atThreshold: false,
+            dataLength: state.props.data.length,
+            scrollPosition: 650,
         });
     });
 
-    describe("checkThreshold integration", () => {
-        it("should call checkThreshold with correct parameters", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 400; // Distance from end: 1000 - 400 - 500 = 100
-            mockState.scrollLength = 500;
-            mockState.props.onEndReachedThreshold = 0.2; // 20%
-            mockState.isEndReached = false;
-            mockState.endReachedBlockedByTimer = false;
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(checkThresholdSpy).toHaveBeenCalledWith(
-                100, // distanceFromEnd
-                false, // isContentLess
-                100, // threshold: 0.2 * 500
-                false, // isEndReached
-                false, // endReachedBlockedByTimer
-                expect.any(Function), // onReached callback
-                expect.any(Function), // onBlock callback
-            );
+    it("accounts for contentInset when calculating distance from end", () => {
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                contentInset: { bottom: 100, left: 0, right: 0, top: 0 },
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 0,
+            scrollLength: 300,
         });
 
-        it("should handle negative distance from end", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 600; // Distance from end: 1000 - 600 - 500 = -100
-            mockState.scrollLength = 500;
-            mockState.props.onEndReachedThreshold = 0.2;
+        ctx.state = state;
 
-            checkAtBottom(mockCtx, mockState);
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
-            expect(checkThresholdSpy).toHaveBeenCalledWith(
-                -100, // negative distance
-                false,
-                100,
-                false,
-                false,
-                expect.any(Function),
-                expect.any(Function),
-            );
+        state.scroll = 700;
+        checkAtBottom(ctx);
+
+        expect(calls).toEqual([{ distanceFromEnd: 0 }]);
+        expect(state.isEndReached).toBe(true);
+        expect(ctx.values.get("isAtEnd")).toBe(true);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+    });
+
+    it("resets after leaving hysteresis band", () => {
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 500, // distanceFromEnd = 200
+            scrollLength: 300,
         });
 
-        it("should update isEndReached based on checkThreshold return value", () => {
-            checkThresholdSpy.mockReturnValue(true);
+        ctx.state = state;
 
-            checkAtBottom(mockCtx, mockState);
+        checkAtBottom(ctx); // outside -> false
+        expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
-            expect(mockState.isEndReached).toBe(true);
+        state.scroll = 700; // distanceFromEnd = 0 -> inside -> true
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(true);
+        expect(state.endReachedSnapshot).toBeDefined();
+        expect(ctx.values.get("isAtEnd")).toBe(true);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+
+        state.scroll = 300; // distanceFromEnd = 400 -> beyond hysteresis
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(false);
+        expect(state.endReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
+    });
+
+    it("re-fires inside threshold when content/data changes", () => {
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                data: [{ id: 1 }],
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 400, // distanceFromEnd = 300 (outside)
+            scrollLength: 300,
         });
 
-        it("should preserve isEndReached when checkThreshold returns false", () => {
-            mockState.isEndReached = true;
-            checkThresholdSpy.mockReturnValue(false);
+        ctx.state = state;
 
-            checkAtBottom(mockCtx, mockState);
+        // Outside threshold; mark eligible
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(false);
 
-            expect(mockState.isEndReached).toBe(false);
+        // Stay within threshold, no changes -> no fire
+        state.scroll = 650; // distanceFromEnd = 50
+        checkAtBottom(ctx);
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        calls.length = 0;
+
+        // Change content size and data length inside window -> re-fire
+        ctx.values.set("totalSize", 1400);
+        state.props.data = [{ id: 1 }, { id: 2 }];
+        state.scroll = 1100; // distanceFromEnd = 0 (inside)
+        checkAtBottom(ctx);
+
+        expect(calls).toEqual([{ distanceFromEnd: 0 }]);
+        expect(state.endReachedSnapshot).toMatchObject({
+            contentSize: 1400,
+            dataLength: 2,
         });
     });
 
-    describe("onEndReached callback handling", () => {
-        it("should call onEndReached when threshold callback is executed", () => {
-            let capturedCallback: any;
-            checkThresholdSpy.mockImplementation((_: any, __: any, ___: any, ____: any, _____: any, onReached: any) => {
-                capturedCallback = onReached;
-                return false;
-            });
-
-            checkAtBottom(mockCtx, mockState);
-
-            // Execute the captured callback
-            capturedCallback(50);
-
-            expect(onEndReachedMock).toHaveBeenCalledWith({ distanceFromEnd: 50 });
+    it("re-fires inside threshold when a conditional footer is removed", () => {
+        const ctx = createMockContext({ footerSize: 40, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                data: [{ id: 1 }],
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 400, // outside threshold
+            scrollLength: 300,
         });
 
-        it("should handle undefined onEndReached gracefully", () => {
-            mockState.props.onEndReached = undefined;
-            let capturedCallback: any;
-            checkThresholdSpy.mockImplementation((_: any, __: any, ___: any, ____: any, _____: any, onReached: any) => {
-                capturedCallback = onReached;
-                return false;
-            });
-
-            checkAtBottom(mockCtx, mockState);
-
-            // Execute the captured callback - should not throw
-            expect(() => capturedCallback(50)).not.toThrow();
-        });
-
-        it("should update endReachedBlockedByTimer via callback", () => {
-            let capturedBlockCallback: any;
-            checkThresholdSpy.mockImplementation(
-                (_: any, __: any, ___: any, ____: any, _____: any, ______: any, onBlock: any) => {
-                    capturedBlockCallback = onBlock;
-                    return false;
-                },
-            );
-
-            checkAtBottom(mockCtx, mockState);
-
-            // Execute the captured block callback
-            capturedBlockCallback(true);
-
-            expect(mockState.endReachedBlockedByTimer).toBe(true);
-        });
-    });
-
-    describe("edge cases and error handling", () => {
-        it("should handle very small content size", () => {
-            getContentSizeSpy.mockReturnValue(1);
-            mockState.scrollLength = 500;
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(mockState.isAtEnd).toBe(true); // Content is less than scroll length
-        });
-
-        it("should handle very large content size", () => {
-            getContentSizeSpy.mockReturnValue(Number.MAX_SAFE_INTEGER);
-            mockState.scroll = 100;
-            mockState.scrollLength = 500;
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(mockState.isAtEnd).toBe(false);
-        });
-
-        it("should handle zero scroll position", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 0;
-            mockState.scrollLength = 500;
-
-            checkAtBottom(mockCtx, mockState);
-
-            // Distance from end: 1000 - 0 - 500 = 500
-            expect(mockState.isAtEnd).toBe(false); // 500 > 50 (10% of 500)
-        });
-
-        it("should handle zero scroll length", () => {
-            getContentSizeSpy.mockReturnValue(1000);
-            mockState.scroll = 100;
-            mockState.scrollLength = 0;
-
-            checkAtBottom(mockCtx, mockState);
-
-            // This is an edge case - scroll length of 0 doesn't make sense
-            // But the function should handle it gracefully
-        });
-
-        it("should handle undefined thresholds", () => {
-            mockState.props.maintainScrollAtEndThreshold = undefined as any;
-            mockState.props.onEndReachedThreshold = undefined as any;
-
-            expect(() => {
-                checkAtBottom(mockCtx, mockState);
-            }).not.toThrow();
-        });
-
-        it("should handle negative content size", () => {
-            getContentSizeSpy.mockReturnValue(-100);
-
-            checkAtBottom(mockCtx, mockState);
-
-            // Function should return early since contentSize <= 0
-            expect(checkThresholdSpy).not.toHaveBeenCalled();
-        });
-
-        it("should handle NaN values", () => {
-            getContentSizeSpy.mockReturnValue(NaN);
-
-            checkAtBottom(mockCtx, mockState);
-
-            // NaN > 0 is false, so should return early
-            expect(checkThresholdSpy).not.toHaveBeenCalled();
-        });
-
-        it("should handle Infinity values", () => {
-            getContentSizeSpy.mockReturnValue(Infinity);
-            mockState.scroll = 100;
-            mockState.scrollLength = 500;
-
-            checkAtBottom(mockCtx, mockState);
-
-            expect(mockState.isAtEnd).toBe(false); // Infinity - 100 - 500 > any threshold
-        });
-    });
-
-    describe("complex scenarios", () => {
-        it("should handle rapid state changes", () => {
-            // Simulate rapid scroll position changes
-            const scrollPositions = [100, 200, 300, 400, 500, 450, 480, 490];
-
-            scrollPositions.forEach((scroll) => {
-                mockState.scroll = scroll;
-                checkAtBottom(mockCtx, mockState);
-            });
-
-            // Note: checkThresholdSpy may be called in previous tests, so we verify it was called
-            expect(checkThresholdSpy).toHaveBeenCalled();
-        });
-
-        it("should handle content size changes", () => {
-            const contentSizes = [500, 1000, 2000, 1500, 800];
-
-            contentSizes.forEach((size) => {
-                getContentSizeSpy.mockReturnValue(size);
-                checkAtBottom(mockCtx, mockState);
-            });
-
-            // Note: checkThresholdSpy may be called in previous tests, so we verify it was called
-            expect(checkThresholdSpy).toHaveBeenCalled();
-        });
-
-        it("should handle threshold configuration changes", () => {
-            mockState.props.onEndReachedThreshold = 0.1;
-            checkAtBottom(mockCtx, mockState);
-
-            mockState.props.onEndReachedThreshold = 0.5;
-            checkAtBottom(mockCtx, mockState);
-
-            // Note: checkThresholdSpy may be called in previous tests, so we verify it was called
-            expect(checkThresholdSpy).toHaveBeenCalled();
-
-            // Verify different threshold values were used
-            const firstCall = checkThresholdSpy.mock.calls[0];
-            const secondCall = checkThresholdSpy.mock.calls[1];
-
-            expect(firstCall[2]).toBe(50); // 0.1 * 500
-            expect(secondCall[2]).toBe(250); // 0.5 * 500
-        });
-
-        it("should handle isEndReached state transitions", () => {
-            // Start with not reached
-            mockState.isEndReached = false;
-            checkThresholdSpy.mockReturnValue(true);
-
-            checkAtBottom(mockCtx, mockState);
-            expect(mockState.isEndReached).toBe(true);
-
-            // Transition back
-            checkThresholdSpy.mockReturnValue(false);
-
-            checkAtBottom(mockCtx, mockState);
-            expect(mockState.isEndReached).toBe(false);
-        });
-
-        it("should handle blocked timer state changes", () => {
-            let capturedBlockCallback: any;
-            checkThresholdSpy.mockImplementation(
-                (_: any, __: any, ___: any, ____: any, _____: any, ______: any, onBlock: any) => {
-                    capturedBlockCallback = onBlock;
-                    return false;
-                },
-            );
-
-            checkAtBottom(mockCtx, mockState);
-
-            // Initially not blocked
-            expect(mockState.endReachedBlockedByTimer).toBe(false);
-
-            // Block via callback
-            capturedBlockCallback(true);
-            expect(mockState.endReachedBlockedByTimer).toBe(true);
-
-            // Unblock via callback
-            capturedBlockCallback(false);
-            expect(mockState.endReachedBlockedByTimer).toBe(false);
-        });
-    });
-
-    describe("performance considerations", () => {
-        it("should handle many successive calls efficiently", () => {
-            const start = performance.now();
-
-            for (let i = 0; i < 1000; i++) {
-                mockState.scroll = i;
-                checkAtBottom(mockCtx, mockState);
-            }
-
-            const duration = performance.now() - start;
-            expect(duration).toBeLessThan(50); // Should be fast
-        });
-
-        it("should not accumulate state incorrectly", () => {
-            // Ensure state doesn't accumulate unintended side effects
-            const initialState = { ...mockState };
-
-            for (let i = 0; i < 100; i++) {
-                checkAtBottom(mockCtx, mockState);
-            }
-
-            // Only expected state should have changed
-            expect(mockState.scroll).toBe(initialState.scroll);
-            expect(mockState.scrollLength).toBe(initialState.scrollLength);
-        });
-    });
-
-    describe("integration patterns", () => {
-        it("should work correctly with different content/scroll ratios", () => {
-            const scenarios = [
-                { content: 250, expected: true, scroll: 100, scrollLength: 300 }, // content < scrollLength
-                { content: 1000, expected: true, scroll: 460, scrollLength: 500 }, // near end - distance: 1000-460-500=40, threshold: 500*0.1=50, 40<50 is true
-                { content: 2000, expected: false, scroll: 100, scrollLength: 500 }, // far from end
-                { content: 1000, expected: true, scroll: 500, scrollLength: 500 }, // exactly at end - distance: 1000-500-500=0, 0<50 is true
-            ];
-
-            scenarios.forEach(({ content, scroll, scrollLength, expected }) => {
-                getContentSizeSpy.mockReturnValue(content);
-                mockState.scroll = scroll;
-                mockState.scrollLength = scrollLength;
-                mockState.props.maintainScrollAtEndThreshold = 0.1; // Ensure consistent threshold
-
-                checkAtBottom(mockCtx, mockState);
-
-                expect(mockState.isAtEnd).toBe(expected);
-            });
-        });
-
-        it("should handle infinite scroll patterns", () => {
-            // Simulate approaching end and triggering onEndReached
-            let endReachedCount = 0;
-            mockState.props.onEndReached = () => {
-                endReachedCount++;
-            };
-
-            let capturedCallback: any;
-            checkThresholdSpy.mockImplementation(
-                (distance: any, _: any, threshold: any, __: any, ___: any, onReached: any) => {
-                    capturedCallback = onReached;
-                    return distance < threshold;
-                },
-            );
-
-            // Scroll near end
-            mockState.scroll = 400; // Distance: 1000 - 400 - 500 = 100
-            mockState.props.onEndReachedThreshold = 0.3; // 30% = 150px
-
-            checkAtBottom(mockCtx, mockState);
-
-            if (capturedCallback) {
-                capturedCallback(100);
-            }
-
-            expect(endReachedCount).toBe(1);
+        ctx.state = state;
+
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(false);
+
+        state.scroll = 690; // contentSize = 1040, distanceFromEnd = 50
+        checkAtBottom(ctx);
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        calls.length = 0;
+
+        ctx.values.set("footerSize", 0);
+        state.scroll = 650; // contentSize = 1000, distanceFromEnd = 50
+        checkAtBottom(ctx);
+
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        expect(state.endReachedSnapshot).toMatchObject({
+            contentSize: 1000,
+            dataLength: 1,
         });
     });
 });

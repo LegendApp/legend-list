@@ -1,0 +1,38 @@
+// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
+import * as React from "react";
+import { type CSSProperties, forwardRef, type Ref } from "react";
+
+import type { LooseView, ViewStyle } from "@/platform/scrollview-types";
+
+interface AnimatedViewPropsDOM {
+    style: CSSProperties;
+}
+interface AnimatedViewProps extends Omit<AnimatedViewPropsDOM, "style"> {
+    style: CSSProperties | ViewStyle;
+}
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+export const AnimatedView = forwardRef(function AnimatedView(
+    props: AnimatedViewProps,
+    ref: Ref<HTMLDivElement | LooseView>,
+) {
+    return <div ref={ref as Ref<HTMLDivElement>} {...(props as AnimatedViewPropsDOM)} />;
+});
+
+interface ViewPropsDOM {
+    style: CSSProperties;
+    children: React.ReactNode;
+    onLayout?: (event: { nativeEvent: { layout: { x: number; y: number; width: number; height: number } } }) => void;
+}
+
+interface ViewProps extends Omit<ViewPropsDOM, "style"> {
+    style?: CSSProperties | ViewStyle;
+    pointerEvents?: "auto" | "none" | "box-none" | "box-only";
+}
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+export const View = forwardRef(function View(props: ViewProps, ref: Ref<HTMLDivElement>) {
+    return <div ref={ref} {...(props as ViewPropsDOM)} />;
+});
+
+export const Text = View;

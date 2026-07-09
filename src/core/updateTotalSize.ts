@@ -1,56 +1,50 @@
-import { type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types";
+import { addTotalSize } from "@/core/addTotalSize";
+import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
-export function updateTotalSize(ctx: StateContext, state: InternalState) {
+export function updateTotalSize(ctx: StateContext) {
+    const state = ctx.state;
     const {
         positions,
         props: { data },
     } = state;
+    const numColumns = peek$(ctx, "numColumns") ?? 1;
 
     if (data.length === 0) {
-        addTotalSize(ctx, state, null, 0);
+        addTotalSize(ctx, null, 0);
     } else {
-        const lastId = getId(state, data.length - 1);
-        if (lastId !== undefined) {
-            const lastPosition = positions.get(lastId);
-            if (lastPosition !== undefined) {
-                const lastSize = getItemSize(state, lastId, data.length - 1, data[data.length - 1]);
-                // TODO: This is likely incorrect for columns with rows having different heights, need to get max size of the last row
+        const lastIndex = data.length - 1;
+        const lastId = getId(state, lastIndex);
+        const lastPosition = positions[lastIndex];
+        if (lastId !== undefined && lastPosition !== undefined) {
+            if (numColumns > 1) {
+                let rowStart = lastIndex;
+                while (rowStart > 0) {
+                    const column = state.columns[rowStart];
+                    if (column === 1 || column === undefined) {
+                        break;
+                    }
+                    rowStart -= 1;
+                }
+
+                let maxSize = 0;
+                for (let i = rowStart; i <= lastIndex; i++) {
+                    const rowId = state.idCache[i] ?? getId(state, i);
+                    const size = getItemSize(ctx, rowId, i, data[i]);
+                    if (size > maxSize) {
+                        maxSize = size;
+                    }
+                }
+
+                addTotalSize(ctx, null, lastPosition + maxSize);
+            } else {
+                const lastSize = getItemSize(ctx, lastId, lastIndex, data[lastIndex]);
                 if (lastSize !== undefined) {
                     const totalSize = lastPosition + lastSize;
-                    addTotalSize(ctx, state, null, totalSize);
+                    addTotalSize(ctx, null, totalSize);
                 }
             }
-        }
-    }
-}
-
-export function addTotalSize(ctx: StateContext, state: InternalState, key: string | null, add: number) {
-    const { alignItemsAtEnd } = state.props;
-
-    const prevTotalSize = state.totalSize;
-
-    if (key === null) {
-        state.totalSize = add;
-
-        // If a setPaddingTop timeout is queued to revert the totalSize
-        // it would set size incorrectly, so cancel it
-        if (state.timeoutSetPaddingTop) {
-            clearTimeout(state.timeoutSetPaddingTop);
-            state.timeoutSetPaddingTop = undefined;
-        }
-    } else {
-        state.totalSize += add;
-    }
-
-    if (prevTotalSize !== state.totalSize) {
-        set$(ctx, "totalSize", state.totalSize);
-
-        if (alignItemsAtEnd) {
-            updateAlignItemsPaddingTop(ctx, state);
         }
     }
 }

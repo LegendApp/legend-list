@@ -5,139 +5,223 @@ import {
     useCallback,
     useContext,
     useEffect,
+    useLayoutEffect,
     useRef,
     useState,
 } from "react";
 
-import { IsNewArchitecture } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { useInit } from "@/hooks/useInit";
-import { useArr$, useSelector$, useStateContext } from "@/state/state";
-import type { LegendListRecyclingState, ViewabilityAmountCallback, ViewabilityCallback } from "@/types";
-import { isFunction } from "@/utils/helpers";
+import { type ContainerItemInfo, listen$, peek$, useArr$, useSelector$, useStateContext } from "@/state/state";
+import type {
+    AdaptiveRender,
+    LegendListRecyclingState,
+    ViewabilityAmountCallback,
+    ViewabilityCallback,
+} from "@/types.base";
+import { isFunction, isNullOrUndefined } from "@/utils/helpers";
 
 export interface ContextContainerType {
     containerId: number;
-    itemKey: string;
-    index: number;
-    value: any;
     triggerLayout: () => void;
 }
 
-export const ContextContainer = createContext<ContextContainerType>(null as any);
+export const ContextContainer = createContext<ContextContainerType | null>(null);
+const NO_CONTAINER_ID = -1;
+
+function useContextContainer(): ContextContainerType | null {
+    return useContext(ContextContainer);
+}
+
+function useContainerItemInfo(containerContext: ContextContainerType | null): ContainerItemInfo | undefined {
+    const containerId = containerContext?.containerId ?? NO_CONTAINER_ID;
+    const [itemInfo] = useArr$([`containerItemInfo${containerId}`]);
+
+    return containerContext ? itemInfo : undefined;
+}
+
+function useContainerItemKey(containerContext: ContextContainerType | null) {
+    const containerId = containerContext?.containerId ?? NO_CONTAINER_ID;
+    const [itemKey] = useArr$([`containerItemKey${containerId}`]);
+
+    return containerContext ? (itemKey as string | undefined) : undefined;
+}
+
+export function useAdaptiveRender(): AdaptiveRender {
+    const [mode] = useArr$(["adaptiveRender"]);
+    return mode;
+}
+
+export function useAdaptiveRenderChange(callback: (mode: AdaptiveRender) => void) {
+    const ctx = useStateContext();
+    const callbackRef = useRef(callback);
+    callbackRef.current = callback;
+
+    useLayoutEffect(() => {
+        let mode = peek$(ctx, "adaptiveRender");
+        return listen$(ctx, "adaptiveRender", (nextMode) => {
+            if (mode !== nextMode) {
+                mode = nextMode;
+                callbackRef.current(nextMode);
+            }
+        });
+    }, [ctx]);
+}
 
 export function useViewability<ItemT = any>(callback: ViewabilityCallback<ItemT>, configId?: string) {
     const ctx = useStateContext();
-    const { containerId } = useContext(ContextContainer);
-
-    const key = containerId + (configId ?? "");
+    const containerContext = useContextContainer();
 
     useInit(() => {
+        // Fail gracefully if used outside context
+        if (!containerContext) {
+            return;
+        }
+
+        const { containerId } = containerContext;
+        const key = containerId + (configId ?? "");
         const value = ctx.mapViewabilityValues.get(key);
         if (value) {
             callback(value);
         }
     });
 
-    ctx.mapViewabilityCallbacks.set(key, callback);
+    useEffect(() => {
+        // Fail gracefully if used outside context
+        if (!containerContext) {
+            return;
+        }
 
-    useEffect(
-        () => () => {
+        const { containerId } = containerContext;
+        const key = containerId + (configId ?? "");
+        ctx.mapViewabilityCallbacks.set(key, callback);
+
+        return () => {
             ctx.mapViewabilityCallbacks.delete(key);
-        },
-        [],
-    );
+        };
+    }, [ctx, callback, configId, containerContext]);
 }
 
 export function useViewabilityAmount<ItemT = any>(callback: ViewabilityAmountCallback<ItemT>) {
     const ctx = useStateContext();
-    const { containerId } = useContext(ContextContainer);
+    const containerContext = useContextContainer();
 
     useInit(() => {
+        // Fail gracefully if used outside context
+        if (!containerContext) {
+            return;
+        }
+
+        const { containerId } = containerContext;
         const value = ctx.mapViewabilityAmountValues.get(containerId);
         if (value) {
             callback(value);
         }
     });
 
-    ctx.mapViewabilityAmountCallbacks.set(containerId, callback);
+    useEffect(() => {
+        // Fail gracefully if used outside context
+        if (!containerContext) {
+            return;
+        }
 
-    useEffect(
-        () => () => {
+        const { containerId } = containerContext;
+        ctx.mapViewabilityAmountCallbacks.set(containerId, callback);
+
+        return () => {
             ctx.mapViewabilityAmountCallbacks.delete(containerId);
-        },
-        [],
-    );
+        };
+    }, [ctx, callback, containerContext]);
 }
 
 export function useRecyclingEffect(effect: (info: LegendListRecyclingState<unknown>) => void | (() => void)) {
-    const { index, value } = useContext(ContextContainer);
-    const prevValues = useRef<{ prevIndex: number | undefined; prevItem: any }>({
-        prevIndex: undefined,
-        prevItem: undefined,
-    });
+    const containerContext = useContextContainer();
+    const itemInfo = useContainerItemInfo(containerContext);
+    const prevInfo = useRef<ContainerItemInfo | undefined>(undefined);
 
     useEffect(() => {
+        if (!itemInfo) {
+            return;
+        }
+
         let ret: void | (() => void);
-        // Only run effect if there's a previous value
-        if (prevValues.current.prevIndex !== undefined && prevValues.current.prevItem !== undefined) {
+        if (prevInfo.current) {
             ret = effect({
-                index,
-                item: value,
-                prevIndex: prevValues.current.prevIndex,
-                prevItem: prevValues.current.prevItem,
+                index: itemInfo.index,
+                item: itemInfo.value,
+                prevIndex: prevInfo.current.index,
+                prevItem: prevInfo.current.value,
             });
         }
 
-        // Update refs for next render
-        prevValues.current = {
-            prevIndex: index,
-            prevItem: value,
-        };
+        prevInfo.current = itemInfo;
 
         return ret!;
-    }, [index, value, effect]);
+    }, [effect, itemInfo]);
 }
 
 export function useRecyclingState<ItemT>(valueOrFun: ((info: LegendListRecyclingState<ItemT>) => ItemT) | ItemT) {
-    const { index, value, itemKey, triggerLayout } = useContext(ContextContainer);
-    const refState = useRef<{ itemKey: string | null; value: ItemT | null }>({
-        itemKey: null,
-        value: null,
-    });
-    const [_, setRenderNum] = useState(0);
-    const state = refState.current;
+    const containerContext = useContextContainer();
+    const itemInfo = useContainerItemInfo(containerContext);
+    const computeValue = (info: ContainerItemInfo | undefined) => {
+        if (isFunction(valueOrFun)) {
+            const initializer = valueOrFun as (recyclingInfo: LegendListRecyclingState<ItemT>) => ItemT;
+            return info
+                ? initializer({
+                      index: info.index,
+                      item: info.value,
+                      prevIndex: undefined,
+                      prevItem: undefined,
+                  })
+                : (initializer as () => ItemT)();
+        }
+        return valueOrFun;
+    };
 
-    if (state.itemKey !== itemKey) {
-        state.itemKey = itemKey;
-        // Reset local state in ref
-        state.value = isFunction(valueOrFun)
-            ? valueOrFun({
-                  index,
-                  item: value,
-                  prevIndex: undefined,
-                  prevItem: undefined,
-              })
-            : valueOrFun;
+    const [stateValue, setStateValue] = useState<ItemT>(() => {
+        return computeValue(itemInfo);
+    });
+    const prevItemKeyRef = useRef<string | null>(itemInfo?.itemKey ?? null);
+
+    // Reset state when the recycled item changes (synchronously to avoid extra renders)
+    if (itemInfo && prevItemKeyRef.current !== itemInfo.itemKey) {
+        prevItemKeyRef.current = itemInfo.itemKey;
+        setStateValue(computeValue(itemInfo));
     }
 
+    const triggerLayout = containerContext?.triggerLayout;
     const setState: Dispatch<SetStateAction<ItemT>> = useCallback(
         (newState: SetStateAction<ItemT>) => {
-            // Update local state in ref
-            state.value = isFunction(newState) ? (newState as (prevState: ItemT) => ItemT)(state.value!) : newState;
-            // Trigger item to re-render
-            setRenderNum((v) => v + 1);
+            // Fail gracefully if used outside context
+            if (!triggerLayout) {
+                return;
+            }
+
+            // Update state using setState
+            setStateValue((prevValue) => {
+                return isFunction(newState) ? (newState as (prevState: ItemT) => ItemT)(prevValue) : newState;
+            });
             // Trigger container to re-render to update item size
             triggerLayout();
         },
-        [triggerLayout, state],
+        [triggerLayout],
     );
 
-    return [state.value, setState] as const;
+    return [stateValue, setState] as const;
 }
 
 export function useIsLastItem(): boolean {
-    const { itemKey } = useContext(ContextContainer);
-    const isLast = useSelector$("lastItemKeys", (lastItemKeys) => lastItemKeys?.includes(itemKey) || false);
+    const containerContext = useContextContainer();
+    const itemKey = useContainerItemKey(containerContext);
+
+    const isLast = useSelector$("lastItemKeys", (lastItemKeys) => {
+        // Fail gracefully if used outside context
+        if (containerContext && !isNullOrUndefined(itemKey)) {
+            return lastItemKeys?.includes(itemKey) || false;
+        }
+        return false;
+    });
+
     return isLast;
 }
 
@@ -148,13 +232,6 @@ export function useListScrollSize(): { width: number; height: number } {
 
 const noop = () => {};
 export function useSyncLayout() {
-    if (IsNewArchitecture) {
-        const { triggerLayout: syncLayout } = useContext(ContextContainer);
-
-        return syncLayout;
-    } else {
-        // Old architecture doesn't support sync layout so there's no point in triggering
-        // a state update for no reason
-        return noop;
-    }
+    const containerContext = useContextContainer();
+    return IsNewArchitecture && containerContext ? containerContext.triggerLayout : noop;
 }
