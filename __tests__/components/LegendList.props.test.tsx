@@ -242,6 +242,57 @@ describe("LegendList props behavior", () => {
         expect(second.unsubscribe).toHaveBeenCalledTimes(1);
     });
 
+    it("moves materialized source identities and known sizes directly on prepend", async () => {
+        let keys = ["a", "b", "c"];
+        let revision = 0;
+        let listener: ((batch: DataSourceMutationBatch) => void) | undefined;
+        const getKey = mock((index: number) => keys[index]!);
+        const source: LegendListDataSource<{ id: string }> = {
+            getItem: (index) => (keys[index] ? { id: keys[index] } : undefined),
+            getKey,
+            getLength: () => keys.length,
+            getRevision: () => revision,
+            subscribe: (nextListener) => {
+                listener = nextListener;
+                return () => {};
+            },
+        };
+        const { LegendList } = await import("../../src/components/LegendList?props-test-data-source-prepend");
+        render(
+            <LegendList
+                dataSource={source}
+                estimatedItemSize={20}
+                recycleItems={false}
+                renderItem={({ item }) => <Text>{item?.id}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        state.idCache[2] = "c";
+        state.indexByKey.set("c", 2);
+        state.sizes.set("c", 77);
+        state.sizesKnown.set("c", 77);
+        state.layoutStoreRuntime?.store.replaceKnownSizeEntries([{ index: 2, size: 77, type: "measured" }]);
+        const keyCallsBeforeMutation = getKey.mock.calls.length;
+
+        act(() => {
+            keys = ["x", ...keys];
+            revision = 1;
+            listener?.({
+                length: 4,
+                operations: [{ deleteCount: 0, index: 0, insertCount: 1, type: "splice" }],
+                previousLength: 3,
+                previousRevision: 0,
+                revision: 1,
+            });
+        });
+        await flushAsync();
+
+        expect(state.indexByKey.get("c")).toBe(3);
+        expect(state.layoutStoreRuntime?.store.getSize(3)).toBe(77);
+        expect(getKey.mock.calls.length - keyCallsBeforeMutation).toBeLessThan(10);
+    });
+
     it("does not scan fixed-size hints on initial top-of-list mount", async () => {
         const data = Array.from({ length: 1000 }, (_, index) => ({ id: `item-${index}` }));
         const getFixedItemSize = mock(() => 64);

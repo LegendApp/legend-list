@@ -180,6 +180,8 @@ export interface InternalState {
     handledDataChangeEpoch: number;
     handledFreshDataTransitionEpoch: number;
     dataSourceNeedsReset?: boolean;
+    dataSourceAnchorPositions?: Map<string, number>;
+    dataSourceMutationApplied?: boolean;
     dataSourcePreviousLength?: number;
     dataSourceResetReason?: string;
     deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;

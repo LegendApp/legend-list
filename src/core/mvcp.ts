@@ -300,7 +300,7 @@ export function prepareMVCP(
                 const id = idsInView[i];
                 const index = indexByKey.get(id);
                 if (index !== undefined) {
-                    const position = getLayoutOffset(ctx, index);
+                    const position = state.dataSourceAnchorPositions?.get(id) ?? getLayoutOffset(ctx, index);
                     if (position !== undefined) {
                         idsInViewWithPositions.push({ id, position });
                     }
@@ -311,7 +311,7 @@ export function prepareMVCP(
         if (targetId !== undefined && prevPosition === undefined) {
             const targetIndex = indexByKey.get(targetId);
             if (targetIndex !== undefined) {
-                prevPosition = getLayoutOffset(ctx, targetIndex);
+                prevPosition = state.dataSourceAnchorPositions?.get(targetId) ?? getLayoutOffset(ctx, targetIndex);
             }
         }
 

@@ -321,6 +321,28 @@ export function reconcileLayoutStoreDataChange(
     return didReconcile;
 }
 
+export function reconcileLayoutStoreDataSourceMutation(ctx: StateContext) {
+    const state = ctx.state;
+    const store = getActiveLayoutStore(ctx);
+    let didReconcile = false;
+    if (store) {
+        const sizeEntries: LayoutStoreSizeEntry[] = [];
+        for (const [key, index] of state.indexByKey) {
+            const measuredSize = state.sizesKnown.get(key);
+            const cachedSize = measuredSize === undefined ? state.sizes.get(key) : undefined;
+            if (measuredSize !== undefined) {
+                sizeEntries.push({ index, size: measuredSize, type: "measured" });
+            } else if (cachedSize !== undefined) {
+                sizeEntries.push({ index, size: cachedSize, type: "cached" });
+            }
+        }
+        store.replaceKnownSizeEntries(sizeEntries);
+        resetLayoutStoreRuntimeState(state);
+        didReconcile = true;
+    }
+    return didReconcile;
+}
+
 export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
     const state = ctx.state;
     const runtime = getActiveLayoutStoreRuntime(ctx);

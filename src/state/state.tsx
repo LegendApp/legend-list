@@ -54,6 +54,7 @@ export type ListenerType =
     | "isWithinMaintainScrollAtEndThreshold"
     | "adaptiveRender"
     | `containerColumn${number}`
+    | `containerDataVersion${number}`
     | `containerSpan${number}`
     | `containerItemData${number}`
     | `containerItemIndex${number}`
@@ -116,6 +117,8 @@ export type ListenerTypeValueMap = {
     stylePaddingTop: number;
     totalSize: number;
     adaptiveRender: "normal" | "light";
+} & {
+    [K in ListenerType as K extends `containerDataVersion${number}` ? K : never]: number;
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {
