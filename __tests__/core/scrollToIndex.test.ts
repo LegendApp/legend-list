@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import * as doScrollToModule from "@/core/doScrollTo";
+import { syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
 import { Platform } from "@/platform/Platform";
 import { scrollToIndex } from "../../src/core/scrollToIndex";
 import { getContentSize } from "../../src/state/getContentSize";
@@ -148,6 +149,36 @@ describe("scrollToIndex", () => {
 
             expect(mockScrollCalls.length).toBe(1);
             expect(mockScrollCalls[0].y).toBe(300);
+        });
+
+        it("materializes only the destination viewport for a distant variable fixed-size jump", () => {
+            const fixedSizeIndexes: number[] = [];
+            const ctx = createMockContext(
+                {},
+                {
+                    props: {
+                        data: Array.from({ length: 1_000_000 }, (_, index) => index),
+                        estimatedItemSize: 100,
+                        getFixedItemSize: (_item, index) => {
+                            fixedSizeIndexes.push(index);
+                            return 10;
+                        },
+                    },
+                    refScroller: mockState.refScroller,
+                    scrollLength: 1000,
+                },
+            );
+            syncLayoutStoreStructure(ctx);
+
+            scrollToIndex(ctx, { animated: false, index: 900_000, viewPosition: 0 });
+
+            expect(ctx.state.scrollingTo?.offset).toBe(90_000_000);
+            expect(Math.min(...fixedSizeIndexes)).toBe(900_000);
+            expect(Math.max(...fixedSizeIndexes)).toBeLessThan(900_200);
+            expect(fixedSizeIndexes.length).toBeLessThan(200);
+            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBeLessThan(200);
+            expect(ctx.state.idCache[899_999]).toBeUndefined();
+            expect(Object.keys(ctx.state.idCache)).toHaveLength(1);
         });
     });
 

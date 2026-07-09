@@ -267,8 +267,10 @@ export function setLayoutStoreMeasuredSize(ctx: StateContext, index: number | un
     const store = getActiveLayoutStore(ctx);
     let didSet = false;
     if (store?.hasIndex(index)) {
-        store.setMeasuredSize(index, size);
-        syncLayoutStoreState(ctx);
+        const didChange = store.setMeasuredSize(index, size);
+        if (didChange) {
+            syncLayoutStoreState(ctx);
+        }
         didSet = true;
     }
     return didSet;
