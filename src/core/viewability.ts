@@ -1,3 +1,4 @@
+import { getIndexedData, type IndexedData } from "@/core/IndexedData";
 import { getLayoutOffset, getLayoutSize, type LayoutAccess } from "@/core/layoutAccessors";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
@@ -82,10 +83,8 @@ export function updateViewableItems(
     layout?: LayoutAccess,
 ) {
     const state = ctx.state;
-    const {
-        timeouts,
-        props: { data },
-    } = state;
+    const { timeouts } = state;
+    const indexedData = getIndexedData(state);
     for (const viewabilityConfigCallbackPair of viewabilityConfigCallbackPairs) {
         const viewabilityState = ensureViewabilityState(ctx, viewabilityConfigCallbackPair.viewabilityConfig.id!);
         viewabilityState.start = start;
@@ -95,17 +94,17 @@ export function updateViewableItems(
         if (viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime) {
             const timer: any = setTimeout(() => {
                 timeouts.delete(timer);
-                updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize);
+                updateViewableItemsWithConfig(indexedData, viewabilityConfigCallbackPair, state, ctx, scrollSize);
             }, viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime);
             timeouts.add(timer);
         } else {
-            updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize, layout);
+            updateViewableItemsWithConfig(indexedData, viewabilityConfigCallbackPair, state, ctx, scrollSize, layout);
         }
     }
 }
 
 function updateViewableItemsWithConfig(
-    data: readonly any[],
+    data: IndexedData<any>,
     viewabilityConfigCallbackPair: ViewabilityConfigCallbackPair<any>,
     state: InternalState,
     ctx: StateContext,
@@ -163,8 +162,8 @@ function updateViewableItemsWithConfig(
     const viewableItems: ViewToken[] = [];
 
     for (let i = start; i <= end; i++) {
-        const item = data[i];
-        if (item) {
+        const item = data.getItem(i);
+        if (item !== undefined || data.kind === "dataSource") {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
             if (checkIsViewable(state, ctx, layout, viewabilityConfig, containerId, key, scrollSize, item, i)) {

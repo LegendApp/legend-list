@@ -1,3 +1,4 @@
+import { getDataLength, getIndexedData } from "@/core/IndexedData";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import { clearLayoutStoreKnownSizes, rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
@@ -61,7 +62,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
 
     const isScrollToIndexReady = (targetIndex: number, allowEmpty = false) => {
         const props = state.props;
-        const dataLength = props.data.length;
+        const dataLength = getDataLength(state);
         const anchorIndex = props.anchoredEndSpace?.anchorIndex;
 
         if (targetIndex < 0) {
@@ -153,7 +154,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
                     pendingScroll.token,
                     pendingScroll.resolve,
                     () => scrollToEnd(ctx, pendingScroll.options),
-                    () => isScrollToIndexReady(state.props.data.length - 1, true),
+                    () => isScrollToIndexReady(getDataLength(state) - 1, true),
                 );
             }
         }
@@ -219,7 +220,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         getState: () => ({
             activeStickyIndex: peek$(ctx, "activeStickyIndex"),
             contentLength: getContentSize(ctx),
-            data: state.props.data,
+            data: getIndexedData(state).getLegacyData() ?? [],
             elementAtIndex: (index: number) => ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
             end: state.endNoBuffer as number,
             endBuffered: state.endBuffered,
@@ -257,8 +258,14 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         scrollIndexIntoView: (options) => runScrollWithPromise(() => scrollIndexIntoView(options)),
         scrollItemIntoView: ({ item, ...props }) =>
             runScrollWithPromise(() => {
-                const data = state.props.data;
-                const index = data.indexOf(item);
+                const data = getIndexedData(state);
+                let index = -1;
+                for (let itemIndex = 0; itemIndex < data.getLength(); itemIndex++) {
+                    if (data.getItem(itemIndex) === item) {
+                        index = itemIndex;
+                        break;
+                    }
+                }
                 if (index !== -1) {
                     scrollIndexIntoView({ index, ...props });
                     return true;
@@ -291,8 +298,14 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         },
         scrollToItem: ({ item, ...props }) =>
             runScrollWithPromise(() => {
-                const data = state.props.data;
-                const index = data.indexOf(item);
+                const data = getIndexedData(state);
+                let index = -1;
+                for (let itemIndex = 0; itemIndex < data.getLength(); itemIndex++) {
+                    if (data.getItem(itemIndex) === item) {
+                        index = itemIndex;
+                        break;
+                    }
+                }
                 if (index !== -1) {
                     scrollToIndex(ctx, { index, ...props });
                     return true;

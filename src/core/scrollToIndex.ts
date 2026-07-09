@@ -1,5 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { materializeFixedLayoutStoreIndex } from "@/core/fixedLayoutMaterialization";
+import { getDataLength } from "@/core/IndexedData";
 import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import type { StateContext } from "@/state/state";
@@ -36,8 +37,8 @@ export function scrollToIndex(
     }: ScrollToIndexParams & { forceScroll?: boolean; isInitialScroll?: boolean },
 ) {
     const state = ctx.state;
-    const { data } = state.props;
-    index = clampScrollIndex(index, data.length);
+    const dataLength = getDataLength(state);
+    index = clampScrollIndex(index, dataLength);
     const itemSize = getItemSizeAtIndex(ctx, index);
     if (materializeFixedLayoutStoreIndex(ctx, index)) {
         syncLayoutStoreState(ctx);
@@ -45,7 +46,7 @@ export function scrollToIndex(
 
     const firstIndexOffset = calculateOffsetForIndex(ctx, index);
 
-    const isLast = index === data.length - 1;
+    const isLast = index === dataLength - 1;
     if (isLast && viewPosition === undefined) {
         viewPosition = 1;
     }

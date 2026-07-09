@@ -1,3 +1,4 @@
+import { getDataKey, getDataLength } from "@/core/IndexedData";
 import type { InternalState } from "@/types.internal";
 
 /**
@@ -8,14 +9,11 @@ import type { InternalState } from "@/types.internal";
  * @returns The unique ID for the item, or empty string if data is not available
  */
 export function getId(state: InternalState, index: number): string {
-    const { data, keyExtractor } = state.props;
-    if (!data) {
+    if (!state.props.dataSource && !state.props.data) {
         return "";
     }
 
-    // Generate and cache the ID
-    const ret = index < data.length ? (keyExtractor ? keyExtractor(data[index], index) : index) : null;
-    const id = ret as string;
+    const id = (index < getDataLength(state) ? getDataKey(state, index) : null) as string;
     state.idCache[index] = id;
     return id;
 }

@@ -1,11 +1,11 @@
+import { getDataLength } from "@/core/IndexedData";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollToEndOptions } from "@/types.base";
 
 export function scrollToEnd(ctx: StateContext, options?: ScrollToEndOptions) {
     const state = ctx.state;
-    const data = state.props.data;
-    const index = data.length - 1;
+    const index = getDataLength(state) - 1;
     if (index === -1) {
         return false;
     }

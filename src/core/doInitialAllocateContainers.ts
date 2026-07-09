@@ -1,6 +1,7 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { getDataItem, getDataLength } from "@/core/IndexedData";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getInitialContainerPoolSize } from "@/utils/containerPool";
 import { getEffectiveDrawDistance } from "@/utils/getEffectiveDrawDistance";
@@ -11,19 +12,20 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
     const state = ctx.state;
     const {
         scrollLength,
-        props: { data, getFixedItemSize, numColumns, estimatedItemSize },
+        props: { getFixedItemSize, numColumns, estimatedItemSize },
     } = state;
+    const dataLength = getDataLength(state);
     const drawDistance = getEffectiveDrawDistance(ctx);
 
     const hasContainers = peek$(ctx, "numContainers");
 
-    if (scrollLength > 0 && data.length > 0 && !hasContainers) {
+    if (scrollLength > 0 && dataLength > 0 && !hasContainers) {
         let averageItemSize: number;
         if (getFixedItemSize) {
             let totalSize = 0;
-            const num = Math.min(20, data.length);
+            const num = Math.min(20, dataLength);
             for (let i = 0; i < num; i++) {
-                const item = data[i];
+                const item = getDataItem(state, i);
                 if (item !== undefined) {
                     totalSize += getFixedItemLayoutSize(ctx, i, item) ?? estimatedItemSize! + ctx.scrollAxisGap;
                 }
@@ -44,7 +46,7 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         }
 
         set$(ctx, "numContainers", numContainers);
-        set$(ctx, "numContainersPooled", getInitialContainerPoolSize(data.length, numContainers));
+        set$(ctx, "numContainersPooled", getInitialContainerPoolSize(dataLength, numContainers));
 
         if (!IsNewArchitecture || state.lastLayout) {
             if (state.initialScroll) {

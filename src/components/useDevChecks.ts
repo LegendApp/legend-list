@@ -1,9 +1,9 @@
 import { type ReactElement, useEffect } from "react";
 
+import { getDataLength } from "@/core/IndexedData";
 import { Platform } from "@/platform/Platform";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { listen$, peek$, useStateContext } from "@/state/state";
-import type { LegendListPropsBase } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 
@@ -11,13 +11,14 @@ const WEB_UNBOUNDED_HEIGHT_MIN_DATA_LENGTH = 100;
 const WEB_UNBOUNDED_HEIGHT_CONTAINER_RATIO = 0.9;
 const WEB_UNBOUNDED_HEIGHT_VIEWPORT_RATIO = 0.9;
 
-type LegendListDevProps<T> = LegendListPropsBase<T, LooseScrollViewProps> & {
+type LegendListDevProps = {
     childrenMode?: boolean;
+    keyExtractor?: unknown;
     renderScrollComponent?: ((props: LooseScrollViewProps) => ReactElement | null) | undefined;
     useWindowScroll?: boolean | undefined;
 };
 
-function useDevChecksImpl(props: LegendListDevProps<any>) {
+function useDevChecksImpl(props: LegendListDevProps) {
     const ctx = useStateContext();
     const { childrenMode, keyExtractor, renderScrollComponent, useWindowScroll } = props;
 
@@ -41,7 +42,7 @@ function useDevChecksImpl(props: LegendListDevProps<any>) {
 
     useEffect(() => {
         const state = ctx.state;
-        const dataLength = state.props.data.length;
+        const dataLength = getDataLength(state);
         const useWindowScrollResolved = state.props.useWindowScroll;
 
         if (Platform.OS !== "web" || useWindowScrollResolved || dataLength < WEB_UNBOUNDED_HEIGHT_MIN_DATA_LENGTH) {
@@ -86,6 +87,6 @@ function useDevChecksImpl(props: LegendListDevProps<any>) {
     }, [ctx]);
 }
 
-function useDevChecksNoop(_props: LegendListDevProps<any>) {}
+function useDevChecksNoop(_props: LegendListDevProps) {}
 
 export const useDevChecks = IS_DEV ? useDevChecksImpl : useDevChecksNoop;

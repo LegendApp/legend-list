@@ -1,4 +1,5 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
+import { getDataLength } from "@/core/IndexedData";
 import { type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
@@ -12,7 +13,7 @@ export function checkAtTop(ctx: StateContext) {
     const {
         dataChangeEpoch,
         isStartReached,
-        props: { data, onStartReachedThreshold },
+        props: { onStartReachedThreshold },
         scroll,
         scrollLength,
         startReachedSnapshot,
@@ -20,7 +21,7 @@ export function checkAtTop(ctx: StateContext) {
         totalSize,
     } = state;
 
-    const dataLength = data.length;
+    const dataLength = getDataLength(state);
     const threshold = onStartReachedThreshold! * scrollLength;
     const dataChanged = startReachedSnapshotDataChangeEpoch !== dataChangeEpoch;
     const withinThreshold = threshold > 0 && Math.abs(scroll) <= threshold;

@@ -1,5 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
+import { getDataLength } from "@/core/IndexedData";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -30,13 +31,13 @@ export function finishScrollTo(ctx: StateContext) {
             const shouldPreserveResizeTarget =
                 !!scrollingTo.isInitialScroll &&
                 !state.clearPreservedInitialScrollOnNextFinish &&
-                state.props.data.length > 0 &&
+                getDataLength(state) > 0 &&
                 state.initialScroll?.viewPosition === 1;
             finishInitialScroll(ctx, {
                 onFinished: () => {
                     resolvePendingScroll?.();
                 },
-                preserveTarget: (isOffsetSession && state.props.data.length === 0) || shouldPreserveResizeTarget,
+                preserveTarget: (isOffsetSession && getDataLength(state) === 0) || shouldPreserveResizeTarget,
                 recalculateItems: true,
                 schedulePreservedTargetClear: shouldPreserveResizeTarget,
                 syncObservedOffset: isOffsetSession,

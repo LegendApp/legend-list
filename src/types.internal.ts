@@ -1,6 +1,7 @@
 import type { Key } from "react";
 import * as React from "react";
 
+import type { IndexedData } from "@/core/IndexedData";
 import type { LayoutStoreRuntime } from "@/core/LayoutStoreRuntime";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type {
@@ -8,8 +9,8 @@ import type {
     AnchoredEndSpaceConfig,
     Insets,
     LayoutRectangle,
+    LegendListDataSource,
     LegendListPropsBase,
-    LegendListRenderItemProps,
     NativeScrollEvent,
     NativeSyntheticEvent,
     ScrollIndexWithOffsetAndContentOffset,
@@ -125,7 +126,7 @@ type InternalInitialScrollSession = OffsetInitialScrollSession | BootstrapOwnedI
 
 type LegendListPropsInternal = LegendListPropsBase<any, Record<string, any>, string | undefined> & {
     data: readonly any[];
-    renderItem: (props: LegendListRenderItemProps<any, string | undefined>) => React.ReactNode;
+    renderItem: (props: any) => React.ReactNode;
 };
 
 export interface PendingDataComparison {
@@ -165,6 +166,7 @@ export interface InternalState {
     hasHadNonEmptyData: boolean;
     hasScrolled?: boolean;
     idCache: string[];
+    indexedData?: IndexedData<any>;
     idsInView: string[];
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
     ignoreScrollFromMVCPIgnored?: boolean;
@@ -275,6 +277,7 @@ export interface InternalState {
         alwaysRenderIndicesSet: Set<number>;
         contentInset: Insets | undefined;
         data: readonly any[];
+        dataSource?: LegendListDataSource<any>;
         dataKey: Key | undefined;
         dataVersion: Key | undefined;
         drawDistance: number;

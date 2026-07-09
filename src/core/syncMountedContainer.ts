@@ -1,4 +1,5 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
+import { getDataItem, getIndexedData } from "@/core/IndexedData";
 import {
     getLayoutColumn,
     getLayoutOffset,
@@ -19,10 +20,12 @@ export function syncMountedContainer(
 ) {
     const state = ctx.state;
     const {
-        props: { data, itemsAreEqual, keyExtractor },
+        props: { itemsAreEqual, keyExtractor },
     } = state;
-    const item = data[itemIndex];
-    if (item === undefined) {
+    const indexedData = getIndexedData(state);
+    const data = indexedData.getLegacyData();
+    const item = getDataItem(state, itemIndex);
+    if (item === undefined && indexedData.kind === "array") {
         return { didChangePosition: false, didRefreshData: false };
     }
     const itemKey = state.idCache[itemIndex] ?? getId(state, itemIndex);
@@ -72,7 +75,7 @@ export function syncMountedContainer(
                 : undefined;
         const cachedComparison = pendingDataComparison?.byIndex[itemIndex] ?? 0;
 
-        if (cachedComparison === 2) {
+        if (indexedData.kind === "dataSource" || cachedComparison === 2) {
             set$(ctx, `containerItemData${containerIndex}`, item);
             didRefreshData = true;
         } else if (cachedComparison !== 1) {
@@ -85,7 +88,7 @@ export function syncMountedContainer(
                 set$(ctx, `containerItemData${containerIndex}`, item);
                 didRefreshData = true;
             } else {
-                const isEqual = itemsAreEqual(prevData, item, itemIndex, data);
+                const isEqual = itemsAreEqual(prevData, item, itemIndex, data!);
 
                 if (
                     !state.pendingDataComparison ||
@@ -95,7 +98,7 @@ export function syncMountedContainer(
                     if (state.previousData) {
                         state.pendingDataComparison = {
                             byIndex: [],
-                            nextData: data,
+                            nextData: data!,
                             previousData: state.previousData,
                         };
                     }

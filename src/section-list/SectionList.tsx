@@ -62,6 +62,7 @@ export type SectionListGetFixedItemSize<ItemT, SectionT extends SectionBase<Item
 type SectionListLegendProps<ItemT, SectionT extends SectionBase<ItemT>> = Omit<
     LegendListProps<SectionListFlatItem<ItemT, SectionT>>,
     | "data"
+    | "dataSource"
     | "children"
     | "renderItem"
     | "keyExtractor"

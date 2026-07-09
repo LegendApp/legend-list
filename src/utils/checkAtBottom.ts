@@ -1,4 +1,5 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
+import { getDataLength } from "@/core/IndexedData";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import { type StateContext, set$ } from "@/state/state";
@@ -41,7 +42,7 @@ export function checkAtBottom(ctx: StateContext) {
                 state.endReachedSnapshot,
                 {
                     contentSize,
-                    dataLength: state.props.data?.length,
+                    dataLength: getDataLength(state),
                     scrollPosition: scroll,
                 },
                 (distance) => state.props.onEndReached?.({ distanceFromEnd: distance }),
