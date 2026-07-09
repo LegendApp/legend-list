@@ -255,6 +255,19 @@ export function applyDataSourceMutationBatches(
         return { applied: false, materializedCount: entries.size, resetReason };
     }
 
+    const layoutStore = state.layoutStoreRuntime?.store;
+    if (layoutStore) {
+        for (const operation of operations) {
+            if (operation.type === "splice") {
+                layoutStore.splice(operation.index, operation.deleteCount, operation.insertCount);
+            } else if (operation.type === "move") {
+                layoutStore.move(operation.from, operation.to, operation.count);
+            } else if (operation.type === "update" && operation.layout === "invalidate") {
+                layoutStore.invalidateRange(operation.index, operation.count);
+            }
+        }
+    }
+
     state.dataSourceAnchorPositions ??= anchorPositions;
     state.idCache.length = 0;
     state.indexByKey.clear();

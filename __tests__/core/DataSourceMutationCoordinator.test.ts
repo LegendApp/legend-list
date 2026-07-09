@@ -4,7 +4,6 @@ import "../setup";
 import { applyDataSourceMutationBatches, transformDataSourceIndex } from "../../src/core/DataSourceMutationCoordinator";
 import { DataSourceAdapter } from "../../src/core/IndexedData";
 import { LayoutStoreRuntime } from "../../src/core/LayoutStoreRuntime";
-import { reconcileLayoutStoreDataSourceMutation } from "../../src/core/layoutStoreLifecycle";
 import { PrefixLayoutStore } from "../../src/core/PrefixLayoutStore";
 import type { DataSourceMutationBatch, LegendListDataSource } from "../../src/types.base";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -105,8 +104,7 @@ describe("DataSourceMutationCoordinator", () => {
         expect(ctx.state.scrollingTo?.index).toBe(5);
         expect(ctx.mapViewabilityConfigStates.get("default")?.viewableItems[0]?.index).toBe(3);
 
-        store.resize(6);
-        expect(reconcileLayoutStoreDataSourceMutation(ctx)).toBe(true);
+        expect(store.length).toBe(6);
         expect(store.getSize(3)).toBe(30);
         expect(store.getSize(5)).toBe(50);
     });
