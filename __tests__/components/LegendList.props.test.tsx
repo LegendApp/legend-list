@@ -14,7 +14,7 @@ import { getDataLength } from "../../src/core/IndexedData";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { type StateContext, set$ } from "../../src/state/state";
-import type { LegendListDataSource } from "../../src/types.base";
+import type { DataSourceMutationBatch, LegendListDataSource } from "../../src/types.base";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 import { setLayoutValue } from "../helpers/layoutStore";
@@ -182,6 +182,64 @@ describe("LegendList props behavior", () => {
         expect(state.layoutStoreRuntime?.store.length).toBe(1_000_000);
         expect(getItemCalls).toBeLessThan(20);
         expect(getKeyCalls).toBeLessThan(20);
+    });
+
+    it("subscribes to data-source mutations and cleans up source replacements", async () => {
+        function createSource(initialLength: number) {
+            let length = initialLength;
+            let revision = 0;
+            let listener: ((batch: DataSourceMutationBatch) => void) | undefined;
+            const unsubscribe = mock(() => {});
+            const source: LegendListDataSource<{ id: string }> = {
+                getItem: (index) => ({ id: `item-${index}` }),
+                getKey: (index) => `item-${index}`,
+                getLength: () => length,
+                getRevision: () => revision,
+                subscribe: (nextListener) => {
+                    listener = nextListener;
+                    return unsubscribe;
+                },
+            };
+            return {
+                emit(batch: DataSourceMutationBatch) {
+                    length = batch.length;
+                    revision = batch.revision;
+                    listener?.(batch);
+                },
+                source,
+                unsubscribe,
+            };
+        }
+
+        const first = createSource(3);
+        const second = createSource(5);
+        const renderItem = ({ item }: { item: { id: string } | undefined }) => <Text>{item?.id ?? "loading"}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-data-source-lifecycle");
+        const rendered = render(<LegendList dataSource={first.source} recycleItems={false} renderItem={renderItem} />);
+
+        const state = await getStateFromRender();
+        act(() => {
+            first.emit({
+                length: 4,
+                operations: [{ deleteCount: 0, index: 3, insertCount: 1, type: "splice" }],
+                previousLength: 3,
+                previousRevision: 0,
+                revision: 1,
+            });
+        });
+        await flushAsync();
+
+        expect(state.layoutStoreRuntime?.store.length).toBe(4);
+        expect(state.pendingDataSourceBatches).toBeUndefined();
+
+        rendered.rerender(<LegendList dataSource={second.source} recycleItems={false} renderItem={renderItem} />);
+        await flushAsync();
+
+        expect(first.unsubscribe).toHaveBeenCalledTimes(1);
+        expect(getDataLength(state)).toBe(5);
+
+        rendered.unmount();
+        expect(second.unsubscribe).toHaveBeenCalledTimes(1);
     });
 
     it("does not scan fixed-size hints on initial top-of-list mount", async () => {
