@@ -1,6 +1,7 @@
 import { doScrollTo } from "@/core/doScrollTo";
 import { getEndAlignedViewOffset, isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
+import { getDataLength } from "@/core/IndexedData";
 import {
     advanceCurrentInitialScrollSession,
     dispatchInitialScroll,
@@ -319,8 +320,8 @@ function getPreservedEndAnchorOffsetDiff(ctx: StateContext) {
         state.isDragging ||
         !initialScroll ||
         initialScroll.viewPosition !== 1 ||
-        state.props.data.length === 0 ||
-        (initialScroll.index !== undefined && initialScroll.index >= state.props.data.length) ||
+        getDataLength(state) === 0 ||
+        (initialScroll.index !== undefined && initialScroll.index >= getDataLength(state)) ||
         isOffsetInitialScrollSession(state)
     ) {
         return;
@@ -402,7 +403,7 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateC
             // Downgrade footer targets so later header/layout changes can still retarget them.
             if (initialScroll.preserveForFooterLayout) {
                 clearPendingInitialScrollFooterLayout(ctx, {
-                    dataLength: state.props.data.length,
+                    dataLength: getDataLength(state),
                     stylePaddingEnd: getStylePaddingEnd(state.props),
                     target: initialScroll,
                 });
@@ -430,7 +431,7 @@ export function startBootstrapInitialScrollOnMount(
         (isOffsetInitialScrollSession(state)
             ? Math.abs(target.contentOffset ?? 0) <= 1
             : target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1);
-    const shouldFinishWithPreservedTarget = state.props.data.length === 0 && target.index !== undefined;
+    const shouldFinishWithPreservedTarget = getDataLength(state) === 0 && target.index !== undefined;
 
     if (shouldFinishAtOrigin || shouldFinishWithPreservedTarget) {
         clearBootstrapInitialScrollSession(state);
@@ -656,7 +657,7 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
      */
     if (
         initialScroll &&
-        state.props.data.length > 0 &&
+        getDataLength(state) > 0 &&
         !isOffsetInitialScrollSession(state) &&
         (bootstrapInitialScroll || initialScroll.viewPosition === 1)
     ) {
@@ -722,14 +723,13 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
     const areMountedBufferedIndicesMeasured = checkAllSizesKnown(state, state.startBuffered, state.endBuffered);
     const didResolvedOffsetChange = Math.abs(bootstrapInitialScroll.scroll - resolvedOffset) > 1;
-    const { data } = state.props;
     /*
      * Mounted-buffered measurement is necessary but not sufficient on web with
      * variable row heights. We also require the resolved viewport slice itself
      * to stop changing before dispatching the final corrective scroll.
      */
     const visibleIndices = getBootstrapRevealVisibleIndices({
-        dataLength: data.length,
+        dataLength: getDataLength(state),
         getPosition: (index) => getLayoutOffset(ctx, index),
         getSize: (index) => getKnownOrFixedItemSize(ctx, index) ?? getLayoutSize(ctx, index),
         offset: resolvedOffset,
@@ -802,7 +802,7 @@ function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOf
     clearBootstrapInitialScrollSession(state);
     const shouldPreserveResizeTarget =
         !state.clearPreservedInitialScrollOnNextFinish &&
-        state.props.data.length > 0 &&
+        getDataLength(state) > 0 &&
         state.initialScroll?.viewPosition === 1;
     finishInitialScroll(ctx, {
         preserveTarget: shouldPreserveResizeTarget,

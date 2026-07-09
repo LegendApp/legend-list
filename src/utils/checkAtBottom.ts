@@ -1,4 +1,5 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
+import { getDataLength, getLegacyData } from "@/core/IndexedData";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
@@ -23,15 +24,16 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
         props: { maintainScrollAtEndThreshold, onEndReachedThreshold },
     } = state;
 
+    const dataLength = getDataLength(state);
     const contentSize = getContentSize(ctx);
     const distanceFromEnd = contentSize - scroll - scrollLength;
     // Empty results can leave padding or other content at the end; estimates and alignment runway do not count.
     const allowEmptyDataChange =
-        state.props.data.length === 0 &&
+        dataLength === 0 &&
         !!state.endReachedSnapshot?.dataLength &&
         contentSize - (peek$(ctx, "alignItemsAtEndPadding") || 0) > (state.pendingTotalSize ?? state.totalSize);
     resetSharedEdgeGateIfOutsideHysteresis(ctx);
-    if (state.props.data.length === 0 && scrollLength > 0 && contentSize <= scrollLength && !allowEmptyDataChange) {
+    if (dataLength === 0 && scrollLength > 0 && contentSize <= scrollLength && !allowEmptyDataChange) {
         set$(ctx, "isAtEnd", true);
         set$(ctx, "isNearEnd", true);
         set$(ctx, "isWithinMaintainScrollAtEndThreshold", true);
@@ -69,7 +71,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
                 onEndReachedThreshold! * scrollLength,
                 state.isEndReached,
                 state.endReachedSnapshot,
-                { contentSize, data: state.props.data, dataLength: state.props.data.length, scroll },
+                { contentSize, data: getLegacyData(state), dataLength, scroll },
                 (distance) => {
                     if (
                         state.props.onEndReached &&

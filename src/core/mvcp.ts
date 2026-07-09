@@ -4,6 +4,7 @@ import { getContentInsetTop, getScrollRangeEnd } from "@/core/clampScrollOffset"
 import { hasNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
+import { getDataItem, getDataLength, getLegacyData } from "@/core/IndexedData";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
@@ -279,8 +280,8 @@ export function prepareMVCP(
     const scrollingToViewPosition = scrollingTo?.viewPosition;
     const isEndAnchoredScrollTarget =
         scrollTarget !== undefined &&
-        state.props.data.length > 0 &&
-        scrollTarget >= state.props.data.length - 1 &&
+        getDataLength(state) > 0 &&
+        scrollTarget >= getDataLength(state) - 1 &&
         (scrollingToViewPosition ?? 0) > 0;
 
     if (dataChanged && state.visibleContentAnchor?.sizeOnly) {
@@ -349,7 +350,7 @@ export function prepareMVCP(
             let anchorIdForLock = anchorLock?.id;
             let anchorPositionForLock: number | undefined;
             let skipTargetAnchor = false;
-            const data = state.props.data;
+            const data = getLegacyData(state) ?? [];
 
             // Respect shouldRestorePosition for locked anchors when data changes invalidate the old target.
             const shouldValidateLockedAnchor =
@@ -363,7 +364,7 @@ export function prepareMVCP(
             if (shouldValidateLockedAnchor && targetId !== undefined) {
                 const index = indexByKey.get(targetId);
                 if (index !== undefined) {
-                    const item = data[index];
+                    const item = getDataItem(state, index);
                     skipTargetAnchor = item === undefined || !shouldRestorePosition(item, index, data);
                     if (skipTargetAnchor && anchorLock?.id === targetId) {
                         state.mvcpAnchorLock = undefined;
@@ -389,7 +390,7 @@ export function prepareMVCP(
                     const { id, position } = idsInViewWithPositions[i];
                     const index = indexByKey.get(id);
                     if (index !== undefined && shouldRestorePosition) {
-                        const item = data[index];
+                        const item = getDataItem(state, index);
                         if (item === undefined || !shouldRestorePosition(item, index, data)) {
                             continue;
                         }
@@ -443,7 +444,7 @@ export function prepareMVCP(
             ) {
                 const targetIndex = scrollingTo.index!;
                 // Position rebuilding can retarget an end request after targetId was captured.
-                const newSize = getItemSize(ctx, getId(state, targetIndex), targetIndex, state.props.data[targetIndex]);
+                const newSize = getItemSize(ctx, getId(state, targetIndex), targetIndex, getDataItem(state, targetIndex));
                 const prevSize = scrollingTo.itemSize;
                 if (prevSize !== undefined && newSize !== prevSize) {
                     if (scrollingTo.viewPositionFallback) {

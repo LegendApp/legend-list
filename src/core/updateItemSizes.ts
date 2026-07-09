@@ -2,6 +2,7 @@ import { schedulePreservedEndAnchorCorrection } from "@/core/bootstrapInitialScr
 import { calculateItemsInView, schedulePendingDataChangeLayout } from "@/core/calculateItemsInView";
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { getDataItem } from "@/core/IndexedData";
 import {
     getActiveLayoutStore,
     maybeFlushInitialLayoutStoreEstimate,
@@ -241,16 +242,16 @@ function applyItemSize(
     const {
         didContainersLayout,
         sizesKnown,
-        props: { getFixedItemSize, getItemType, horizontal, onItemSizeChanged, data, maintainScrollAtEnd },
+        props: { getFixedItemSize, getItemType, horizontal, onItemSizeChanged, maintainScrollAtEnd },
     } = state;
-    if (!data) return { didMeasureUserScrollAnchorResetItem };
+    if (!state.props.dataSource && !state.props.data) return { didMeasureUserScrollAnchorResetItem };
 
     const index = state.indexByKey.get(itemKey)!;
     if (getFixedItemSize) {
         if (index === undefined) {
             return { didMeasureUserScrollAnchorResetItem };
         }
-        const itemData = state.props.data[index];
+        const itemData = getDataItem(state, index);
         if (itemData === undefined) {
             return { didMeasureUserScrollAnchorResetItem };
         }
@@ -288,7 +289,7 @@ function applyItemSize(
         // Call onItemSizeChanged callback
         onItemSizeChanged?.({
             index,
-            itemData: state.props.data[index],
+            itemData: getDataItem(state, index),
             itemKey,
             previous: size - diff,
             size,
@@ -330,9 +331,9 @@ export function updateOneItemSize(
         indexByKey,
         sizesKnown,
         averageSizes,
-        props: { data, horizontal, getItemType, getFixedItemSize },
+        props: { horizontal, getItemType, getFixedItemSize },
     } = state;
-    if (!data) return 0;
+    if (!state.props.dataSource && !state.props.data) return 0;
 
     const index = indexByKey.get(itemKey);
     const layoutStore = getActiveLayoutStore(ctx);
@@ -341,7 +342,7 @@ export function updateOneItemSize(
     }
 
     const itemIndex = index as number;
-    const itemData = data[itemIndex];
+    const itemData = getDataItem(state, itemIndex);
     let itemType = resolvedMeasurementItem?.itemType;
     let fixedItemSize = resolvedMeasurementItem?.fixedItemSize;
     if (getFixedItemSize && !resolvedMeasurementItem?.didResolveFixedItemSize) {

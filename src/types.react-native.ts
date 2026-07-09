@@ -61,7 +61,9 @@ export type {
     ViewToken,
 } from "@/types.base";
 
-type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = DistributiveOmit<
     LegendListPropsBase<ItemT, ScrollViewProps, TItemType>,
     | "anchoredEndSpace"
     | "contentInsetEndAdjustment"

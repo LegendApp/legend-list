@@ -1,3 +1,4 @@
+import { getDataItem } from "@/core/IndexedData";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
@@ -44,7 +45,7 @@ export function findAvailableContainers(
     const numContainers = peek$(ctx, "numContainers");
     const state = ctx.state;
     const { containerItemMetadata, stickyContainerPool } = state;
-    const { data, getItemType } = state.props;
+    const { getItemType } = state.props;
     const hasItemTypes = !!getItemType;
     const shouldAvoidAssignedContainerReuse = state.props.recycleItems && !!state.props.hasItemLayoutAnimationInternal;
     const pendingRemovalSet = pendingRemoval.length > 0 ? new Set(pendingRemoval) : undefined;
@@ -57,7 +58,8 @@ export function findAvailableContainers(
     const stickyRequests: RequestedContainer[] = [];
     for (let order = 0; order < numNeeded; order++) {
         const itemIndex = needNewContainers[order];
-        const itemType = getItemType?.(data[itemIndex], itemIndex);
+        const item = getDataItem(state, itemIndex);
+        const itemType = item !== undefined ? getItemType?.(item, itemIndex) : undefined;
         const request: RequestedContainer = {
             isBuffered: itemIndex >= startBuffered && itemIndex <= endBuffered,
             isSticky: state.props.stickyHeaderIndicesSet.has(itemIndex),

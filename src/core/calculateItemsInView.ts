@@ -7,6 +7,7 @@ import {
     materializeFixedLayoutStoreRangeAtOffsets,
 } from "@/core/fixedLayoutMaterialization";
 import { getItemSpaceOffset, getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
+import { getDataItem, getDataLength, getIndexedData } from "@/core/IndexedData";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
@@ -181,7 +182,7 @@ function handleStickyRecycling(
             if (currentId) {
                 const currentPos = layout.getOffset(itemIndex);
                 const currentSize =
-                    layout.getSize(itemIndex) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
+                    layout.getSize(itemIndex) ?? getItemSize(ctx, currentId, itemIndex, getDataItem(state, itemIndex));
                 shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + drawDistance * 3;
             }
         }
@@ -251,7 +252,7 @@ function getVisibleLoopItemSize(
     return (
         (preferKnownOrFixedSize ? getKnownOrFixedItemSize(ctx, index) : undefined) ??
         layout.getSize(index) ??
-        getItemSize(ctx, id, index, state.props.data[index])
+        getItemSize(ctx, id, index, getDataItem(state, index))
     );
 }
 
@@ -323,7 +324,7 @@ function clearUnsafeSizeCaches(state: InternalState) {
 
 function maybeEmitFirstVisibleItemChanged(state: InternalState, index: number | null) {
     const onFirstVisibleItemChanged = state.props.onFirstVisibleItemChanged;
-    if (!onFirstVisibleItemChanged || index === null || index < 0 || index >= state.props.data.length) {
+    if (!onFirstVisibleItemChanged || index === null || index < 0 || index >= getDataLength(state)) {
         return;
     }
 
@@ -334,7 +335,7 @@ function maybeEmitFirstVisibleItemChanged(state: InternalState, index: number | 
     }
 
     state.lastFirstVisibleItemCallback = { index, key };
-    onFirstVisibleItemChanged({ index, item: state.props.data[index], key });
+    onFirstVisibleItemChanged({ index, item: getDataItem(state, index), key });
 }
 
 function updateVisibleRangeForCachedRange(
@@ -346,12 +347,8 @@ function updateVisibleRangeForCachedRange(
     scrollBottom: number,
 ) {
     const state = ctx.state;
-    const {
-        endBuffered,
-        idCache,
-        props: { data },
-        startBuffered,
-    } = state;
+    const { endBuffered, idCache, startBuffered } = state;
+    const dataLength = getDataLength(state);
 
     if (startBuffered === null || endBuffered === null || startBuffered < 0 || endBuffered < startBuffered) {
         return;
@@ -363,7 +360,7 @@ function updateVisibleRangeForCachedRange(
         startNoBuffer: null,
     };
 
-    for (let i = startBuffered; i <= endBuffered && i < data.length; i++) {
+    for (let i = startBuffered; i <= endBuffered && i < dataLength; i++) {
         const id = idCache[i] ?? getId(state, i);
         const top = layout.getOffset(i);
         if (top !== undefined) {
@@ -447,7 +444,8 @@ export function calculateItemsInView(
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
         } = state;
-        const { data } = state.props;
+        const indexedData = getIndexedData(state);
+        const legacyData = indexedData.getLegacyData();
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || EMPTY_INDEX_SET;
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
@@ -459,10 +457,10 @@ export function calculateItemsInView(
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
-        if (!data || scrollLength === 0 || !prevNumContainers) {
+        if (scrollLength === 0 || !prevNumContainers) {
             return;
         }
-        const dataLength = data.length;
+        const dataLength = indexedData.getLength();
         syncLayoutStoreStructure(ctx);
         const scrollTargetPinnedRange = state.scrollTargetPinnedRange;
         let scrollTargetPinnedStart = 0;
@@ -551,7 +549,7 @@ export function calculateItemsInView(
                 currentStickyIdx,
                 finishCalculateItemsInView: shouldNotifyStickyHeaderChange
                     ? () => {
-                          const item = data[nextActiveStickyIndex];
+                          const item = indexedData.getItem(nextActiveStickyIndex);
                           if (item !== undefined) {
                               onStickyHeaderChange?.({ index: nextActiveStickyIndex, item });
                           }
@@ -740,7 +738,11 @@ export function calculateItemsInView(
             for (const id of state.idsInView) {
                 const index = indexByKey.get(id);
                 if (index === undefined) continue;
-                if (shouldRestorePosition && !shouldRestorePosition(data[index], index, data)) continue;
+                if (
+                    shouldRestorePosition &&
+                    !shouldRestorePosition(indexedData.getItem(index), index, legacyData ?? [])
+                )
+                    continue;
                 protectedContainerKeys.add(id);
             }
         }
@@ -1016,7 +1018,7 @@ export function calculateItemsInView(
                     // The allocated type also seeds fixed-size resolution without calling getItemType again.
                     state.containerItemMetadata.set(
                         containerIndex,
-                        createContainerItemMetadata(state, i, data[i], allocation.itemType),
+                        createContainerItemMetadata(state, i, indexedData.getItem(i), allocation.itemType),
                     );
 
                     if (oldKey !== id) {
@@ -1038,7 +1040,7 @@ export function calculateItemsInView(
                             // we would otherwise hide.
                             const isLayoutReady =
                                 state.sizesKnown.has(id) ||
-                                resolveContainerItemMetadata(state, containerIndex, i, data[i]).fixedItemSize !==
+                                resolveContainerItemMetadata(state, containerIndex, i, indexedData.getItem(i)).fixedItemSize !==
                                     undefined;
                             set$(ctx, `containerLayoutReady${containerIndex}`, isLayoutReady, deferred);
                         }
@@ -1046,7 +1048,7 @@ export function calculateItemsInView(
 
                     set$(ctx, `containerItemKey${containerIndex}`, id, deferred);
                     set$(ctx, `containerItemIndex${containerIndex}`, i, deferred);
-                    set$(ctx, `containerItemData${containerIndex}`, data[i], deferred);
+                    set$(ctx, `containerItemData${containerIndex}`, indexedData.getItem(i), deferred);
 
                     // Update cache when adding new item
                     containerItemKeys!.set(id, containerIndex);

@@ -36,6 +36,7 @@ import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { handleLayout } from "@/core/handleLayout";
+import { ArrayDataAdapter, DataSourceAdapter, getDataLength } from "@/core/IndexedData";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { restoreItemSizeEstimates, saveItemSizeEstimates } from "@/core/itemSizeCache";
@@ -71,13 +72,8 @@ import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { getContentSize } from "@/state/getContentSize";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
-import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
-import type {
-    AnchoredEndSpaceOwner,
-    InternalState,
-    LegendListPropsBase,
-    LegendListScrollerRef,
-} from "@/types.internal";
+import type { LegendListDataSource, LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
+import type { AnchoredEndSpaceOwner, InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
 import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -105,19 +101,21 @@ export const LegendList = typedMemo(
         forwardedRef: ForwardedRef<LegendListRef>,
     ) {
         // Handle children mode - convert children to data array at the top level
-        const { children, data: dataProp, renderItem: renderItemProp, ...restProps } = props;
-        const isChildrenMode = children !== undefined && dataProp === undefined;
+        const { children, data: dataProp, dataSource, renderItem: renderItemProp, ...restProps } = props;
+        const isChildrenMode = children !== undefined && dataProp === undefined && dataSource === undefined;
 
         const processedProps = isChildrenMode
             ? {
                   ...restProps,
                   childrenMode: true,
                   data: (isArray(children) ? children : React.Children.toArray(children)).flat(1) as T[],
+                  dataSource: undefined,
                   renderItem: ({ item }: { item: T }) => item as React.ReactNode,
               }
             : {
                   ...restProps,
                   data: dataProp || [],
+                  dataSource,
                   renderItem: renderItemProp!,
               };
 
@@ -133,7 +131,8 @@ type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>
     scrollElement?: HTMLElement | null;
     childrenMode?: boolean;
     data: ReadonlyArray<T>;
-    renderItem: (props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode;
+    dataSource?: LegendListDataSource<T>;
+    renderItem: (props: any) => React.ReactNode;
 };
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -156,6 +155,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         contentContainerStyle: contentContainerStyleProp,
         contentInset,
         data: dataProp = [],
+        dataSource,
         dataKey,
         dataVersion,
         drawDistance = 250,
@@ -223,6 +223,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
     const numColumnsProp = normalizeNumColumnsProp(numColumnsPropRaw);
 
+    const indexedData = useMemo(
+        () => (dataSource ? new DataSourceAdapter(dataSource) : new ArrayDataAdapter(dataProp, keyExtractorProp)),
+        [dataProp, dataSource, keyExtractorProp],
+    );
+    const dataLength = indexedData.getLength();
+
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
     const {
         anchoredEndSpaceOwnerInternal,
@@ -243,7 +249,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const contentContainerStyleBase = StyleSheet.flatten(contentContainerStyleProp) as ViewStyle | undefined;
     const useAlignItemsAtEndPadding =
-        alignItemsAtEnd && !horizontal && contentContainerStyleBase?.minHeight == null && dataProp.length > 0;
+        alignItemsAtEnd && !horizontal && contentContainerStyleBase?.minHeight == null && dataLength > 0;
     const shouldFlexGrow =
         alignItemsAtEnd &&
         !useAlignItemsAtEndPadding &&
@@ -299,11 +305,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const shouldBottomAlignNumericInitialScrollIndex =
         typeof initialScrollIndexProp === "number" &&
         !hasInitialScrollOffset &&
-        dataProp.length > 1 &&
-        initialScrollIndexProp >= dataProp.length - 1;
+        dataLength > 1 &&
+        initialScrollIndexProp >= dataLength - 1;
     const initialScrollProp: InternalState["initialScroll"] = initialScrollAtEnd
         ? {
-              index: Math.max(0, dataProp.length - 1),
+              index: Math.max(0, dataLength - 1),
               preserveForBottomPadding: true,
               viewOffset: getEndAlignedViewOffset(stylePaddingEndState),
               viewPosition: 1,
@@ -357,12 +363,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const refScroller = useRef<LooseScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
-    const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
+    const keyExtractor = dataSource
+        ? (_item: T, index: number) => indexedData.getKey(index)
+        : (keyExtractorProp ?? ((_item: T, index: number) => index.toString()));
     const stickyHeaderIndices = stickyHeaderIndicesProp;
     const contentInsetEndAdjustmentResolved = Platform.OS === "web" ? contentInsetEndAdjustment : undefined;
     const previousContentInsetEndAdjustmentRef = useRef(contentInsetEndAdjustmentResolved);
     const alwaysRenderIndices = useMemo(() => {
-        const indices = getAlwaysRenderIndices(alwaysRender, dataProp, keyExtractor, anchoredEndSpace?.anchorIndex);
+        const indices = getAlwaysRenderIndices(alwaysRender, indexedData, keyExtractor, anchoredEndSpace?.anchorIndex);
         return { arr: indices, set: new Set(indices) };
     }, [
         anchoredEndSpace?.anchorIndex,
@@ -371,6 +379,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         alwaysRender?.indices?.join(","),
         alwaysRender?.keys?.join(","),
         dataProp,
+        indexedData,
         dataKey,
         dataVersion,
         keyExtractor,
@@ -423,15 +432,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 handledDataChangeEpoch: 0,
                 handledFreshDataTransitionEpoch: 0,
                 hasEstimatedInitialLayout,
-                hasHadNonEmptyData: dataProp.length > 0,
+                hasHadNonEmptyData: dataLength > 0,
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
+                indexedData,
                 initialScroll: initialScrollProp,
                 initialScrollSession: initialScrollProp
                     ? {
                           kind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
-                          previousDataLength: dataProp.length,
+                          previousDataLength: dataLength,
                       }
                     : undefined,
                 isEndReached: null,
@@ -493,6 +503,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const state = refState.current!;
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture || !!state.hasEstimatedInitialLayout);
     const isFirstLocal = state.isFirst;
+    const previousDataLength = state.props.data !== undefined || state.props.dataSource ? getDataLength(state) : 0;
+    state.indexedData = indexedData;
     const previousAdaptiveRender = state.props.adaptiveRender;
     const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
     const didScrollAxisChange = !isFirstLocal && state.props.horizontal !== !!horizontal;
@@ -504,15 +516,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     ctx.scrollAxisGap = nextScrollAxisGap;
     state.didColumnsChange = numColumnsProp !== committedNumColumns || didScrollAxisChange || didScrollAxisGapChange;
-    const previousDataLength = state.props.data?.length ?? 0;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
+    const didDataSourceChangeLocal = state.props.dataSource !== dataSource;
     const didDataKeyChangeLocal = state.props.dataKey !== dataKey;
     const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
     const didKeyExtractorChange =
-        state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
-        (!!keyExtractorProp && state.props.keyExtractor !== wrappedKeyExtractor);
+        state.props.hasReliableKeyExtractor !== (!!dataSource || !!keyExtractorProp) ||
+        (!dataSource && !!keyExtractorProp && state.props.keyExtractor !== wrappedKeyExtractor);
     const didDataChangeLocal =
         didDataKeyChangeLocal ||
+        didDataSourceChangeLocal ||
         didDataVersionChangeLocal ||
         (didDataReferenceChangeLocal && checkStructuralDataChange(state, dataProp, state.props.data));
     if (IS_DEV && didKeyExtractorChange && !didDataChangeLocal && !!state.props.hasReliableKeyExtractor) {
@@ -526,13 +539,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         didDataChangeLocal &&
         state.hasHadNonEmptyData &&
         (didDataKeyChangeLocal || previousDataLength === 0) &&
-        dataProp.length > 0;
+        dataLength > 0;
     if (
         didDataChangeLocal &&
         !initialScrollAtEnd &&
         state.didFinishInitialScroll &&
         state.initialScroll?.viewPosition === 1 &&
-        state.props.data.length > 0
+        previousDataLength > 0
     ) {
         clearPreservedInitialScrollTarget(state);
     }
@@ -589,6 +602,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
         data: dataProp,
         dataKey,
+        dataSource,
         dataVersion,
         drawDistance,
         estimatedItemSize,
@@ -597,7 +611,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         hasExternalScroll,
         hasItemLayoutAnimationInternal,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
-        hasReliableKeyExtractor: !!keyExtractorProp,
+        hasReliableKeyExtractor: !!dataSource || !!keyExtractorProp,
         horizontal: !!horizontal,
         itemsAreEqual,
         keyExtractor: wrappedKeyExtractor,
@@ -662,11 +676,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         resetContainerLayoutReady(ctx);
     }
     const memoizedLastItemKeys = useMemo(() => {
-        if (!dataProp.length) return [];
-        return Array.from({ length: Math.min(numColumnsProp, dataProp.length) }, (_, i) =>
-            getId(state, dataProp.length - 1 - i),
-        );
-    }, [dataProp, dataKey, dataVersion, numColumnsProp]);
+        if (!dataLength) return [];
+        return Array.from({ length: Math.min(numColumnsProp, dataLength) }, (_, i) => getId(state, dataLength - 1 - i));
+    }, [dataLength, dataProp, dataKey, dataSource, dataVersion, numColumnsProp]);
 
     // Run first time and whenever data changes
     const initializeStateVars = (shouldAdjustPadding: boolean) => {
@@ -742,7 +754,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         initializeInitialScrollOnMount(ctx, {
             alwaysDispatchInitialScroll: shouldInitializeHorizontalRTL,
-            dataLength: dataProp.length,
+            dataLength: dataLength,
             hasFooterComponent: !!ListFooterComponent,
             initialContentOffset,
             initialScrollAtEnd,
@@ -792,7 +804,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             );
         }
         handleInitialScrollDataChange(ctx, {
-            dataLength: dataProp.length,
+            dataLength: dataLength,
             didDataChange,
             didStartFreshData,
             initialScrollAtEnd,
@@ -802,7 +814,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
         });
     }, [
-        dataProp.length,
+        dataLength,
         dataKey,
         dataChangeEpoch,
         freshDataTransitionEpoch,
@@ -850,13 +862,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
 
             handleBootstrapInitialScrollFooterLayout(ctx, {
-                dataLength: dataProp.length,
+                dataLength: dataLength,
                 footerSize: layout[horizontal ? "width" : "height"],
                 initialScrollAtEnd,
                 stylePaddingEnd: stylePaddingEndState,
             });
         },
-        [dataProp.length, initialScrollAtEnd, horizontal, stylePaddingEndState, usesBootstrapInitialScroll],
+        [dataLength, initialScrollAtEnd, horizontal, stylePaddingEndState, usesBootstrapInitialScroll],
     );
 
     const onLayoutChange = useCallback(
@@ -881,7 +893,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             advanceCurrentInitialScrollSession(ctx);
         },
-        [dataProp.length, initialScrollAtEnd, stylePaddingEndState, usesBootstrapInitialScroll],
+        [dataLength, initialScrollAtEnd, stylePaddingEndState, usesBootstrapInitialScroll],
     );
 
     const { onLayout } = useOnLayoutSync({
@@ -973,7 +985,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             isFirst,
             props: { data },
         } = state;
-        const didAllocateContainers = data.length > 0 && doInitialAllocateContainers(ctx);
+        const didAllocateContainers = getDataLength(state) > 0 && doInitialAllocateContainers(ctx);
         if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
             checkResetContainers(ctx, data, { didColumnsChange });
         }
@@ -990,7 +1002,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didColumnsChange = false;
         state.didDataChange = false;
         state.isFirst = false;
-    }, [dataProp, dataKey, dataVersion, horizontal, numColumnsProp, nextScrollAxisGap, alwaysRenderIndices.arr.join(",")]);
+    }, [dataProp, dataKey, dataSource, dataVersion, horizontal, numColumnsProp, nextScrollAxisGap, alwaysRenderIndices.arr.join(",")]);
 
     const previousGetFixedItemSize = useRef(getFixedItemSize);
     useLayoutEffect(() => {
@@ -999,7 +1011,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (!isFirstLocal && (getFixedItemSize || hadFixedItemSize)) {
             // Re-resolve fixed sizes while preserving measured sizes and rendered estimates.
             invalidateFixedItemSizes(state);
-            state.positionsAreCurrent = false;
             state.positionRecalculationStartIndex = 0;
             state.scrollForNextCalculateItemsInView = undefined;
             state.triggerCalculateItemsInView?.({ doMVCP: true, forceFullItemPositions: true });
@@ -1148,7 +1159,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 getRenderedItem={fns.getRenderedItem}
                 horizontal={horizontal!}
                 initialContentOffset={initialContentOffset}
-                ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
+                ListEmptyComponent={dataLength === 0 ? ListEmptyComponent : undefined}
                 ListFooterComponent={ListFooterComponent}
                 ListFooterComponentStyle={ListFooterComponentStyle}
                 ListHeaderComponent={ListHeaderComponent}

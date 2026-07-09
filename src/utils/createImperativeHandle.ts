@@ -7,6 +7,7 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { armAppScrollRearm, interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
+import { getDataLength, getIndexedData } from "@/core/IndexedData";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { clearItemSizeEstimates } from "@/core/itemSizeCache";
 import { getObservedScrollOffset } from "@/core/observedScroll";
@@ -85,7 +86,7 @@ export function createImperativeHandle(
 
     const isScrollToIndexReady = (targetIndex: number, allowEmpty = false) => {
         const props = state.props;
-        const dataLength = props.data.length;
+        const dataLength = getDataLength(state);
         const anchorIndex = props.anchoredEndSpace?.anchorIndex;
 
         if (targetIndex < 0) {
@@ -104,7 +105,7 @@ export function createImperativeHandle(
     const getIndexForKey = (key: string) => {
         if (state.props.keyExtractor) return state.indexByKey.get(key);
         const index = Number(key);
-        return Number.isInteger(index) && String(index) === key && index >= 0 && index < state.props.data.length
+        return Number.isInteger(index) && String(index) === key && index >= 0 && index < getDataLength(state)
             ? index
             : undefined;
     };
@@ -164,8 +165,8 @@ export function createImperativeHandle(
                 runScrollRequest(
                     pendingScroll.token,
                     state.pendingScrollResolve!,
-                    () => (state.props.data.length === 0 ? "unreachable" : scrollToEnd(ctx, pendingScroll.options)),
-                    () => isScrollToIndexReady(state.props.data.length - 1, true),
+                    () => (getDataLength(state) === 0 ? "unreachable" : scrollToEnd(ctx, pendingScroll.options)),
+                    () => isScrollToIndexReady(getDataLength(state) - 1, true),
                 );
             }
         }
@@ -175,7 +176,7 @@ export function createImperativeHandle(
         options: Parameters<LegendListRef["scrollIndexIntoView"]>[0],
     ): boolean | "unreachable" => {
         const { index, itemOffset, itemLength, viewportMargin, ...rest } = options;
-        if (index < 0 || index >= state.props.data.length) return "unreachable";
+        if (index < 0 || index >= getDataLength(state)) return "unreachable";
         const hasRegion = itemOffset !== undefined || itemLength !== undefined;
         const observed = getObservedScrollOffset(ctx);
         const position = calculateOffsetForIndex(ctx, index) + getStartOffsetAdjustment(ctx) + (itemOffset ?? 0);
@@ -304,7 +305,7 @@ export function createImperativeHandle(
         getState: () => ({
             activeStickyIndex: peek$(ctx, "activeStickyIndex"),
             contentLength: getContentSize(ctx),
-            data: state.props.data,
+            data: getIndexedData(state).getLegacyData() ?? [],
             dataKey: state.props.dataKey,
             distanceFromEnd: Math.max(0, getContentSize(ctx) - getObservedScrollOffset(ctx) - state.scrollLength),
             elementAtIndex: (index: number) => ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
@@ -364,7 +365,14 @@ export function createImperativeHandle(
         scrollIndexIntoView: (options) => runScrollWithPromise(() => scrollIndexIntoView(options)),
         scrollItemIntoView: ({ item, ...props }) =>
             runScrollWithPromise(() => {
-                const index = state.props.data.indexOf(item);
+                const data = getIndexedData(state);
+                let index = -1;
+                for (let itemIndex = 0; itemIndex < data.getLength(); itemIndex++) {
+                    if (data.getItem(itemIndex) === item) {
+                        index = itemIndex;
+                        break;
+                    }
+                }
                 if (index !== -1) {
                     const result = scrollIndexIntoView({ index, ...props });
                     if (result === true && state.scrollingTo && state.props.keyExtractor)
@@ -396,7 +404,7 @@ export function createImperativeHandle(
         scrollToIndex: (params) =>
             runScrollWithPromise(
                 () => {
-                    if (state.props.data.length === 0) return "unreachable";
+                    if (getDataLength(state) === 0) return "unreachable";
                     scrollToIndex(ctx, params);
                     return true;
                 },
@@ -404,7 +412,14 @@ export function createImperativeHandle(
             ),
         scrollToItem: ({ item, ...props }) =>
             runScrollWithPromise(() => {
-                const index = state.props.data.indexOf(item);
+                const data = getIndexedData(state);
+                let index = -1;
+                for (let itemIndex = 0; itemIndex < data.getLength(); itemIndex++) {
+                    if (data.getItem(itemIndex) === item) {
+                        index = itemIndex;
+                        break;
+                    }
+                }
                 if (index !== -1) {
                     scrollToIndex(ctx, { index, ...props });
                     if (state.scrollingTo && state.props.keyExtractor) state.scrollingTo.key = getId(state, index);

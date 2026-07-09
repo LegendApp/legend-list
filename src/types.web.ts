@@ -73,7 +73,9 @@ type ScrollViewPropsWeb = Omit<
         onLayout?: (event: LooseLayoutChangeEvent) => void;
     };
 
-type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = DistributiveOmit<
     LegendListPropsBase<ItemT, ScrollViewPropsWeb, TItemType>,
     | "anchoredEndSpace"
     | "refScrollView"

@@ -4,6 +4,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { materializeFixedLayoutStoreIndex } from "@/core/fixedLayoutMaterialization";
+import { getDataLength } from "@/core/IndexedData";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { getObservedScrollOffset } from "@/core/observedScroll";
@@ -28,8 +29,7 @@ export function dispatchInitialScroll(
 ) {
     const { forceScroll, resolvedOffset, target, waitForCompletionFrame } = params;
     const requestedIndex = target.index;
-    const index =
-        requestedIndex !== undefined ? clampScrollIndex(requestedIndex, ctx.state.props.data.length) : undefined;
+    const index = requestedIndex !== undefined ? clampScrollIndex(requestedIndex, getDataLength(ctx.state)) : undefined;
     const itemSize = getItemSizeAtIndex(ctx, index);
 
     scrollTo(ctx, {

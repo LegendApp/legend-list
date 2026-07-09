@@ -1,4 +1,5 @@
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
+import { getIndexedData } from "@/core/IndexedData";
 import { getLayoutOffset, getLayoutSize, type LayoutAccess } from "@/core/layoutAccessors";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import type { StateContext } from "@/state/state";
@@ -140,7 +141,7 @@ function updateViewableItemsWithConfig(
 ) {
     // Always read the latest data, range and pair: a minimumViewTime timer runs this
     // after data or props may have changed since it was scheduled.
-    const data = state.props.data;
+    const data = getIndexedData(state);
     const { viewabilityConfig, onViewableItemsChanged } = viewabilityState.pair!;
     const scrollSize = viewabilityState.scrollSize!;
     const configId = viewabilityConfig.id!;
@@ -185,7 +186,7 @@ function updateViewableItemsWithConfig(
         for (const viewToken of previousViewableItems) {
             previousViewableKeys.add(viewToken.key);
             const currentIndex = state.indexByKey.get(viewToken.key);
-            const currentItem = currentIndex !== undefined ? data[currentIndex] : undefined;
+            const currentItem = currentIndex !== undefined ? data.getItem(currentIndex) : undefined;
             const containerId = findContainerId(ctx, viewToken.key);
             let isStillViewable = false;
             if (currentIndex !== undefined && currentItem !== undefined) {
@@ -215,8 +216,8 @@ function updateViewableItemsWithConfig(
     const viewableItems: ViewToken[] = [];
 
     for (let i = start; i <= end; i++) {
-        const item = data[i];
-        if (item) {
+        const item = data.getItem(i);
+        if (item !== undefined || data.kind === "dataSource") {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
             if (checkIsViewable(state, ctx, layout, viewabilityConfig, containerId, key, scrollSize, item, i)) {

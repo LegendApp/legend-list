@@ -1,4 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { getDataItem, getDataLength, getIndexedData } from "@/core/IndexedData";
 import type { LayoutStoreSizeEntry } from "@/core/LayoutStore";
 import { type ActiveLayoutStore, LayoutStoreRuntime, type RowSpanCacheInput } from "@/core/LayoutStoreRuntime";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
@@ -202,7 +203,7 @@ function shouldDeferPeriodicEstimateFlush(state: InternalState) {
 }
 
 function getEstimateFlushAnchorIndex(state: InternalState) {
-    const dataLength = state.props.data.length;
+    const dataLength = getDataLength(state);
     let anchorIndex: number | undefined;
     if (typeof state.firstFullyOnScreenIndex === "number" && state.firstFullyOnScreenIndex >= 0) {
         anchorIndex = state.firstFullyOnScreenIndex;
@@ -324,7 +325,8 @@ export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
     const state = ctx.state;
     const runtime = getActiveLayoutStoreRuntime(ctx);
     const store = runtime?.store;
-    const { data, numColumns, overrideItemLayout } = state.props;
+    const { numColumns, overrideItemLayout } = state.props;
+    const dataLength = getDataLength(state);
     let didSync = false;
 
     if (runtime && store instanceof RowLayoutStore && overrideItemLayout && numColumns > 1) {
@@ -333,15 +335,15 @@ export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
         const cachedSpans = runtime.getCachedRowSpans(cacheInput);
         if (!cachedSpans) {
             const layoutConfig = { span: 1 };
-            const spans = new Array<number | undefined>(data.length);
+            const spans = new Array<number | undefined>(dataLength);
 
-            for (let index = 0; index < data.length; index++) {
+            for (let index = 0; index < dataLength; index++) {
                 layoutConfig.span = 1;
-                overrideItemLayout(layoutConfig, data[index], index, numColumns, extraData);
+                overrideItemLayout(layoutConfig, getDataItem(state, index), index, numColumns, extraData);
                 spans[index] = layoutConfig.span;
             }
 
-            store.resize(data.length, spans, numColumns);
+            store.resize(dataLength, spans, numColumns);
             runtime.setCachedRowSpans(cacheInput, spans);
             didSync = true;
         }
@@ -355,13 +357,14 @@ export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
 export function syncLayoutStoreStructure(ctx: StateContext) {
     const state = ctx.state;
     const estimatedSize = getLayoutStorePropEstimatedSize(ctx);
+    const dataLength = getDataLength(state);
     const nextStoreKind = getLayoutStoreKind(state);
     let runtime = state.layoutStoreRuntime;
     if (runtime && getLayoutStoreKindForStore(runtime.store) === nextStoreKind) {
         if (runtime.store instanceof RowLayoutStore) {
-            runtime.store.resize(state.props.data.length, getReusableRowSpans(ctx, runtime), state.props.numColumns);
+            runtime.store.resize(dataLength, getReusableRowSpans(ctx, runtime), state.props.numColumns);
         } else {
-            runtime.store.resize(state.props.data.length);
+            runtime.store.resize(dataLength);
         }
         if (estimatedSize !== runtime.propEstimatedSize) {
             runtime.store.setEstimatedSize(estimatedSize);
@@ -371,10 +374,10 @@ export function syncLayoutStoreStructure(ctx: StateContext) {
             nextStoreKind === "row"
                 ? new RowLayoutStore({
                       estimatedSize,
-                      length: state.props.data.length,
+                      length: dataLength,
                       numColumns: state.props.numColumns,
                   })
-                : new PrefixLayoutStore(state.props.data.length, estimatedSize);
+                : new PrefixLayoutStore(dataLength, estimatedSize);
         runtime = new LayoutStoreRuntime(store, estimatedSize);
         state.layoutStoreRuntime = runtime;
         if (canSeedLayoutStore(state)) {
@@ -388,9 +391,9 @@ export function syncLayoutStoreStructure(ctx: StateContext) {
 }
 
 function getRowSpanCacheInput(state: InternalState, extraData: unknown): RowSpanCacheInput {
-    const { data, dataKey, dataVersion, numColumns, overrideItemLayout } = state.props;
+    const { dataKey, dataVersion, numColumns, overrideItemLayout } = state.props;
     return {
-        data,
+        data: getIndexedData(state),
         dataKey,
         dataVersion,
         extraData,
@@ -483,6 +486,7 @@ function getLayoutStorePropEstimatedSize(ctx: StateContext) {
 function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions = { mode: "seed" }): LayoutStoreSeed {
     const state = ctx.state;
     const { data, estimatedItemSize } = state.props;
+    const dataLength = getDataLength(state);
     const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
     const sizeEntries: LayoutStoreSeed["sizeEntries"] = [];
     const canSeedKnownSizes = state.sizesKnown.size > 0;
@@ -500,17 +504,17 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
         statePendingDataComparison.nextData === data
             ? statePendingDataComparison
             : undefined;
-    const fallbackTotalSize = data.length * fallbackSize;
+    const fallbackTotalSize = dataLength * fallbackSize;
     let hasDuplicateKey = false;
     let measuredCount = 0;
     let measuredTotalSize = 0;
-    const dataLengthDelta = previousData ? data.length - previousData.length : 0;
+    const dataLengthDelta = previousData ? dataLength - previousData.length : 0;
 
     const materializedIndices =
         options.mode === "reconcile" ? options.previousIdCache?.keys() : getSparseIdCacheSnapshot(state).keys();
 
     for (const index of materializedIndices ?? []) {
-        const isIndexInRange = index >= 0 && index < data.length;
+        const isIndexInRange = index >= 0 && index < dataLength;
         if (!isIndexInRange && options.mode !== "reconcile") {
             continue;
         }
@@ -521,7 +525,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
             !options.didKeyExtractorChange &&
             previousKey !== undefined &&
             previousData !== undefined &&
-            (previousData[index] === data[index] || pendingDataComparison?.byIndex[index] !== undefined);
+            (previousData[index] === getDataItem(state, index) || pendingDataComparison?.byIndex[index] !== undefined);
         let shouldSeedKey = isIndexInRange;
         let targetIndex = index;
         let key = canReusePreviousKey ? previousKey : isIndexInRange ? getId(state, index) : previousKey;
@@ -535,7 +539,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
             shouldSeedKey = dataLengthDelta === 0 && isIndexInRange;
             if (dataLengthDelta !== 0) {
                 const shiftedIndex = index + dataLengthDelta;
-                if (shiftedIndex >= 0 && shiftedIndex < data.length) {
+                if (shiftedIndex >= 0 && shiftedIndex < dataLength) {
                     const shiftedKey = state.idCache[shiftedIndex] ?? getId(state, shiftedIndex);
                     if (shiftedKey === previousKey) {
                         shouldSeedKey = true;
@@ -583,7 +587,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
 
     return {
         estimatedSize: getLayoutStoreSeedEstimate({
-            dataLength: data.length,
+            dataLength,
             fallbackSize,
             fallbackTotalSize,
             measuredCount,

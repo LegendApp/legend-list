@@ -6,6 +6,7 @@ import {
 import { cancelImperativeScroll, syncScrollActive } from "@/core/cancelImperativeScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
+import { getDataLength } from "@/core/IndexedData";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
@@ -24,7 +25,7 @@ export function retargetActiveInitialScrollAtEnd(ctx: StateContext) {
         !initialScroll ||
         state.initialScrollSession?.kind === "offset" ||
         initialScroll.viewPosition !== 1 ||
-        state.props.data.length === 0
+        getDataLength(state) === 0
     ) {
         return false;
     }

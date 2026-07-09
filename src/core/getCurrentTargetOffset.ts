@@ -1,6 +1,8 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { getDataLength } from "@/core/IndexedData";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { clampScrollIndex } from "@/utils/clampScrollIndex";
@@ -9,7 +11,7 @@ type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 
 export function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     return (
-        (scrollingTo.isScrollToEnd || scrollingTo.index === ctx.state.props.data.length - 1) &&
+        (scrollingTo.isScrollToEnd || scrollingTo.index === getDataLength(ctx.state) - 1) &&
         scrollingTo.viewPosition === 1
     );
 }
@@ -44,17 +46,17 @@ export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScr
     if (committedEnd !== undefined) return committedEnd;
 
     const index = scrollingTo.isScrollToEnd
-        ? ctx.state.props.data.length - 1
+        ? getDataLength(ctx.state) - 1
         : scrollingTo.index === undefined
           ? undefined
-          : clampScrollIndex(scrollingTo.index, ctx.state.props.data.length);
+          : clampScrollIndex(scrollingTo.index, getDataLength(ctx.state));
     // Index requests, including initial placement at an index, follow measured positions and sizes on every
     // platform. An initial offset keeps its own completion policy.
     const followsIndex = isIndexScrollTarget(ctx, scrollingTo);
     const isRetargetingWebScroll = Platform.OS === "web" && followsIndex;
     const requestedTargetOffset =
         index !== undefined &&
-        ctx.state.positions[index] !== undefined &&
+        getLayoutOffset(ctx, index) !== undefined &&
         (followsIndex || isEndAlignedLastItemTarget(ctx, scrollingTo))
             ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), { ...scrollingTo, index })
             : isRetargetingWebScroll

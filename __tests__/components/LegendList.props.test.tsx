@@ -18,6 +18,7 @@ import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrol
 import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
+import { getDataLength } from "../../src/core/IndexedData";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
@@ -26,6 +27,7 @@ import { Platform } from "../../src/platform/Platform";
 import * as screenReader from "../../src/platform/screenReader";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
 import { getKnownOrFixedItemSize } from "../../src/utils/getItemSize";
+import type { LegendListDataSource } from "../../src/types.base";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 import { skipLayoutInvariants } from "../helpers/layoutInvariantHarness";
@@ -514,6 +516,40 @@ describe("LegendList props behavior", () => {
         expect(ctx.state.positions).toEqual([0, 150, 250]);
         expect(ctx.state.totalSize).toBe(350);
         rendered.unmount();
+    });
+
+    it("mounts from an indexed data source without materializing its logical collection", async () => {
+        let getItemCalls = 0;
+        let getKeyCalls = 0;
+        const dataSource: LegendListDataSource<{ id: string }> = {
+            getItem: (index) => {
+                getItemCalls++;
+                return { id: `item-${index}` };
+            },
+            getKey: (index) => {
+                getKeyCalls++;
+                return `item-${index}`;
+            },
+            getLength: () => 1_000_000,
+            getRevision: () => 0,
+            subscribe: () => () => {},
+        };
+        const { LegendList } = await import("../../src/components/LegendList?props-test-indexed-data-source");
+
+        render(
+            <LegendList
+                dataSource={dataSource}
+                estimatedItemSize={20}
+                recycleItems={false}
+                renderItem={({ item }) => <Text>{item?.id ?? "loading"}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(getDataLength(state)).toBe(1_000_000);
+        expect(state.layoutStoreRuntime?.store.length).toBe(1_000_000);
+        expect(getItemCalls).toBeLessThan(20);
+        expect(getKeyCalls).toBeLessThan(20);
     });
 
     it("does not scan fixed-size hints on initial top-of-list mount", async () => {

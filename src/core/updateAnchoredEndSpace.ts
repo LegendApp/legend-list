@@ -1,4 +1,5 @@
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
+import { getDataLength } from "@/core/IndexedData";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
@@ -22,14 +23,14 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
 
     if (anchoredEndSpace) {
         const { anchorIndex, anchorMaxSize, anchorOffset = 0 } = anchoredEndSpace;
-        const { data } = state.props;
+        const dataLength = getDataLength(state);
 
-        if (anchorIndex >= 0 && anchorIndex < data.length && state.scrollLength > 0) {
+        if (anchorIndex >= 0 && anchorIndex < dataLength && state.scrollLength > 0) {
             nextAnchorKey = getId(state, anchorIndex);
             let contentBelowAnchor = 0;
             let hasUnknownTailSize = false;
 
-            for (let index = anchorIndex; index < data.length; index++) {
+            for (let index = anchorIndex; index < dataLength; index++) {
                 const size = getKnownOrFixedItemSize(ctx, index);
                 const effectiveSize =
                     index === anchorIndex && anchorMaxSize !== undefined

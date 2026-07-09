@@ -1,3 +1,4 @@
+import { getDataItem } from "@/core/IndexedData";
 import type { StateContext } from "@/state/state";
 import { getFixedItemLayoutSize } from "@/utils/getItemSize";
 
@@ -12,7 +13,7 @@ export function materializeFixedLayoutStoreRange(ctx: StateContext, startIndex: 
         for (let index = start; index <= end; index++) {
             const existingKey = state.idCache[index];
             const knownSize = existingKey !== undefined ? state.sizesKnown.get(existingKey) : undefined;
-            const fixedSize = knownSize ?? getFixedItemLayoutSize(ctx, index, state.props.data[index]);
+            const fixedSize = knownSize ?? getFixedItemLayoutSize(ctx, index, getDataItem(state, index));
             if (fixedSize !== undefined) {
                 didChange = store.setMeasuredSize(index, fixedSize) || didChange;
                 if (existingKey !== undefined) {

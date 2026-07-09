@@ -4,7 +4,7 @@ import type { RowLayoutStore } from "@/core/RowLayoutStore";
 export type ActiveLayoutStore = PrefixLayoutStore | RowLayoutStore;
 
 export interface RowSpanCacheInput {
-    data: readonly unknown[];
+    data: unknown;
     dataKey: unknown;
     dataVersion: unknown;
     extraData: unknown;

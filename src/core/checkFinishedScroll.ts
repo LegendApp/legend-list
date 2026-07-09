@@ -4,6 +4,8 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { getCurrentTargetOffset, isEndAlignedLastItemTarget, isIndexScrollTarget } from "@/core/getCurrentTargetOffset";
+import { getDataLength } from "@/core/IndexedData";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { Platform } from "@/platform/Platform";
@@ -80,7 +82,7 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     const { state } = ctx;
     return (
         !!state.scrollingTo?.isInitialScroll &&
-        state.props.data.length > 0 &&
+        getDataLength(state) > 0 &&
         getContentSize(ctx) <= state.scrollLength &&
         state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
     );
@@ -91,7 +93,7 @@ function isMeasuredIndexTarget(ctx: StateContext, scrollingTo: ActiveScrollTarge
     return (
         isIndexScrollTarget(ctx, scrollingTo) &&
         scrollingTo.index !== undefined &&
-        ctx.state.positions[scrollingTo.index] !== undefined
+        getLayoutOffset(ctx, scrollingTo.index) !== undefined
     );
 }
 

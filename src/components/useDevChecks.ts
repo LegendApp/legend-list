@@ -1,9 +1,9 @@
 import { type ReactElement, useEffect } from "react";
 
+import { getDataLength } from "@/core/IndexedData";
 import { Platform } from "@/platform/Platform";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { listen$, peek$, type StateContext, useStateContext } from "@/state/state";
-import type { LegendListPropsBase } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 
@@ -15,14 +15,17 @@ type DevHookGlobal = typeof globalThis & {
     __LEGEND_LIST_DEV_HOOK__?: (ctx: StateContext) => (() => void) | undefined;
 };
 
-type LegendListDevProps<T> = LegendListPropsBase<T, LooseScrollViewProps> & {
+type LegendListDevProps = {
+    anchoredEndSpace?: unknown;
+    numColumns?: number;
     scrollElement?: HTMLElement | null;
     childrenMode?: boolean;
+    keyExtractor?: unknown;
     renderScrollComponent?: ((props: LooseScrollViewProps) => ReactElement | null) | undefined;
     useWindowScroll?: boolean | undefined;
 };
 
-function useDevChecksImpl(props: LegendListDevProps<any>) {
+function useDevChecksImpl(props: LegendListDevProps) {
     const ctx = useStateContext();
     const {
         anchoredEndSpace,
@@ -67,7 +70,7 @@ function useDevChecksImpl(props: LegendListDevProps<any>) {
 
     useEffect(() => {
         const state = ctx.state;
-        const dataLength = state.props.data.length;
+        const dataLength = getDataLength(state);
         const usesExternalScroll = state.props.hasExternalScroll;
 
         if (Platform.OS !== "web" || usesExternalScroll || dataLength < WEB_UNBOUNDED_HEIGHT_MIN_DATA_LENGTH) {
@@ -112,6 +115,6 @@ function useDevChecksImpl(props: LegendListDevProps<any>) {
     }, [ctx]);
 }
 
-function useDevChecksNoop(_props: LegendListDevProps<any>) {}
+function useDevChecksNoop(_props: LegendListDevProps) {}
 
 export const useDevChecks = IS_DEV ? useDevChecksImpl : useDevChecksNoop;
