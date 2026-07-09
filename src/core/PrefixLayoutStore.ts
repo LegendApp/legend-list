@@ -42,18 +42,7 @@ export class PrefixLayoutStore implements LayoutStore {
     findIndexAtOffset(offset: number) {
         let index: number | undefined;
         if (this.length > 0 && !Number.isNaN(offset)) {
-            let low = 0;
-            let high = this.length - 1;
-            while (low <= high) {
-                const mid = low + Math.floor((high - low) / 2);
-                const end = this.getItemEnd(mid);
-                if (!isLessThanOrEqualOffset(end, offset)) {
-                    index = mid;
-                    high = mid - 1;
-                } else {
-                    low = mid + 1;
-                }
-            }
+            index = findIndexAtOffsetInRange(this.root, 0, this.length, 0, offset, this.estimatedSize);
         }
         return index;
     }
@@ -165,11 +154,13 @@ export class PrefixLayoutStore implements LayoutStore {
 
     setMeasuredSize(index: number, size: number) {
         this.assertIndex(index);
-        this.root = upsertNode(this.root, index, normalizeSize(size), SIZE_MEASURED);
-    }
-
-    private getItemEnd(index: number) {
-        return this.getOffset(index) + this.getSize(index);
+        const normalizedSize = normalizeSize(size);
+        const existing = findNode(this.root, index);
+        const didChange = (existing?.size ?? this.estimatedSize) !== normalizedSize;
+        if (!existing || existing.size !== normalizedSize || existing.kind !== SIZE_MEASURED) {
+            this.root = upsertNode(this.root, index, normalizedSize, SIZE_MEASURED);
+        }
+        return didChange;
     }
 
     private assertIndex(index: number) {
@@ -177,6 +168,81 @@ export class PrefixLayoutStore implements LayoutStore {
             throw new RangeError(`PrefixLayoutStore index ${index} is out of bounds for length ${this.length}`);
         }
     }
+}
+
+function findIndexAtOffsetInRange(
+    node: KnownSizeNode | undefined,
+    rangeStart: number,
+    rangeEnd: number,
+    prefixSize: number,
+    offset: number,
+    estimatedSize: number,
+): number | undefined {
+    let index: number | undefined;
+    if (rangeStart < rangeEnd) {
+        if (node) {
+            const unknownCountBeforeNode = node.index - rangeStart - getNodeKnownCount(node.left);
+            const sizeBeforeNode = getNodeSizeTotal(node.left) + unknownCountBeforeNode * estimatedSize;
+            const nodeOffset = prefixSize + sizeBeforeNode;
+            if (!isLessThanOrEqualOffset(nodeOffset, offset)) {
+                index =
+                    rangeStart < node.index
+                        ? findIndexAtOffsetInRange(node.left, rangeStart, node.index, prefixSize, offset, estimatedSize)
+                        : node.index;
+            } else {
+                const nodeEnd = nodeOffset + node.size;
+                if (!isLessThanOrEqualOffset(nodeEnd, offset)) {
+                    index = node.index;
+                } else {
+                    index = findIndexAtOffsetInRange(
+                        node.right,
+                        node.index + 1,
+                        rangeEnd,
+                        nodeEnd,
+                        offset,
+                        estimatedSize,
+                    );
+                }
+            }
+        } else {
+            index = findEstimatedIndexAtOffset(rangeStart, rangeEnd, prefixSize, offset, estimatedSize);
+        }
+    }
+    return index;
+}
+
+function findEstimatedIndexAtOffset(
+    rangeStart: number,
+    rangeEnd: number,
+    prefixSize: number,
+    offset: number,
+    estimatedSize: number,
+) {
+    let index: number | undefined;
+    if (estimatedSize === 0) {
+        if (!isLessThanOrEqualOffset(prefixSize, offset)) {
+            index = rangeStart;
+        }
+    } else {
+        const estimatedIndex = rangeStart + Math.floor((offset - prefixSize) / estimatedSize);
+        let candidate = Math.max(rangeStart, Math.min(rangeEnd - 1, estimatedIndex));
+        while (
+            candidate < rangeEnd &&
+            isLessThanOrEqualOffset(prefixSize + (candidate - rangeStart + 1) * estimatedSize, offset)
+        ) {
+            candidate++;
+        }
+        while (
+            candidate > rangeStart &&
+            !isLessThanOrEqualOffset(prefixSize + (candidate - rangeStart) * estimatedSize, offset)
+        ) {
+            candidate--;
+        }
+        if (candidate < rangeEnd) {
+            index = candidate;
+        }
+    }
+    return index;
 }
 
 function createNode(index: number, size: number, kind: SizeKind): KnownSizeNode {

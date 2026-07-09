@@ -2,10 +2,11 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
+import { materializeFixedLayoutStoreRangeAtOffsets } from "@/core/fixedLayoutMaterialization";
 import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
-import { getActiveLayoutStore } from "@/core/layoutStoreLifecycle";
+import { getActiveLayoutStore, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { cancelNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -72,16 +73,15 @@ export function findVisibleItemIndex(ctx: StateContext, viewportStart: number, v
 }
 
 function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number) {
-    const store = getActiveLayoutStore(ctx);
-    let range: { end: number; start: number } | undefined;
-    if (store) {
-        const itemOffset = getItemSpaceOffset(ctx, targetOffset);
-        const viewportStart = Math.max(0, itemOffset);
-        const viewportEnd = Math.max(viewportStart, itemOffset + ctx.state.scrollLength);
-        range = store.findIndexRangeAtOffsets(viewportStart, viewportEnd);
+    const itemOffset = getItemSpaceOffset(ctx, targetOffset);
+    const viewportStart = Math.max(0, itemOffset);
+    const viewportEnd = Math.max(viewportStart, itemOffset + ctx.state.scrollLength);
+    const materialized = materializeFixedLayoutStoreRangeAtOffsets(ctx, viewportStart, viewportEnd);
+    if (materialized.didChange) {
+        syncLayoutStoreState(ctx);
     }
-    if (range) {
-        ctx.state.scrollTargetPinnedRange = range;
+    if (materialized.range) {
+        ctx.state.scrollTargetPinnedRange = materialized.range;
         ctx.state.scrollForNextCalculateItemsInView = undefined;
     } else {
         ctx.state.scrollTargetPinnedRange = undefined;

@@ -2,6 +2,10 @@ import { describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import {
+    materializeFixedLayoutStoreRange,
+    materializeFixedLayoutStoreRangeAtOffsets,
+} from "../../src/core/fixedLayoutMaterialization";
+import {
     getActiveLayoutStore,
     materializeLayoutStoreRange,
     maybeFlushInitialLayoutStoreEstimate,
@@ -210,6 +214,56 @@ describe("layout store lifecycle", () => {
         expect(getFixedItemSize).not.toHaveBeenCalled();
     });
 
+    it("materializes only the requested sparse fixed-size range", () => {
+        const ctx = createLayoutStoreContext(1_000_000);
+        const getFixedItemSize = mock(() => 10);
+        ctx.state.props.getFixedItemSize = getFixedItemSize;
+        const store = syncLayoutStoreStructure(ctx)!;
+
+        expect(materializeFixedLayoutStoreRange(ctx, 999_990, 999_999)).toBe(true);
+        expect(store.getOffset(999_990)).toBe(99_999_000);
+        expect(store.getSize(999_990)).toBe(10);
+        expect(store.getMeasuredCount()).toBe(10);
+        expect(getFixedItemSize).toHaveBeenCalledTimes(10);
+        expect(ctx.state.indexByKey.size).toBe(0);
+        expect(Object.keys(ctx.state.idCache)).toHaveLength(0);
+    });
+
+    it("expands exact fixed-size work only until the requested offset range is covered", () => {
+        const ctx = createLayoutStoreContext(1_000_000);
+        const getFixedItemSize = mock(() => 10);
+        ctx.state.props.getFixedItemSize = getFixedItemSize;
+        syncLayoutStoreStructure(ctx);
+
+        const result = materializeFixedLayoutStoreRangeAtOffsets(ctx, 99_999_000, 99_999_500);
+
+        expect(result.didChange).toBe(true);
+        expect(result.range).toEqual({ end: 999_999, start: 999_990 });
+        expect(getFixedItemSize).toHaveBeenCalledTimes(10);
+        expect(ctx.state.indexByKey.size).toBe(0);
+    });
+
+    it("refreshes sparse fixed sizes when the data changes", () => {
+        const ctx = createLayoutStoreContext(3);
+        ctx.state.props.data = [
+            { fixed: 10, id: "item-0" },
+            { fixed: 10, id: "item-1" },
+            { fixed: 10, id: "item-2" },
+        ];
+        ctx.state.props.getFixedItemSize = (item: { fixed: number }) => item.fixed;
+        const store = syncLayoutStoreStructure(ctx)!;
+        materializeFixedLayoutStoreRange(ctx, 0, 2);
+        expect(store.getTotalSize()).toBe(30);
+
+        ctx.state.props.data = [
+            { fixed: 20, id: "item-0" },
+            { fixed: 20, id: "item-1" },
+            { fixed: 20, id: "item-2" },
+        ];
+        materializeFixedLayoutStoreRange(ctx, 0, 2);
+        expect(store.getTotalSize()).toBe(60);
+    });
+
     it("leaves fixed-size hints estimate-backed until rows are materialized", () => {
         const ctx = createLayoutStoreContext();
         const getFixedItemSize = mock((_item, index) => {
@@ -245,15 +299,11 @@ describe("layout store lifecycle", () => {
         expect(store?.getMeasuredCount()).toBe(2);
     });
 
-    it("keeps variable fixed offsets estimated until target rows are materialized", () => {
-        const ctx = createLayoutStoreContext(30);
+    it("keeps distant variable fixed snap targets sparse and estimate-backed", () => {
+        const ctx = createLayoutStoreContext(1_000_000);
         const getFixedItemSize = mock((_item, index) => (index === 0 ? 300 : 60));
-        ctx.state.initialScroll = {
-            index: 29,
-            viewPosition: 1,
-        };
         ctx.state.props.getFixedItemSize = getFixedItemSize;
-        ctx.state.props.snapToIndices = [0, 1, 20, 29];
+        ctx.state.props.snapToIndices = [0, 1, 900_000, 999_999];
 
         const store = rebuildLayoutStoreExact(ctx);
         syncLayoutStoreState(ctx);
@@ -261,9 +311,8 @@ describe("layout store lifecycle", () => {
         expect(store?.getEstimatedSize()).toBe(100);
         expect(store?.getMeasuredCount()).toBe(0);
         expect(store?.getSize(0)).toBe(100);
-        expect(store?.getSize(29)).toBe(100);
-        expect(store?.getOffset(20)).toBe(2000);
-        expect(ctx.values.get("snapToOffsets")).toEqual([0, 100, 2000, 2900]);
+        expect(store?.getSize(999_999)).toBe(100);
+        expect(ctx.values.get("snapToOffsets")).toEqual([0, 100, 90_000_000, 99_999_900]);
         expect(getFixedItemSize).not.toHaveBeenCalled();
         expect(countLayoutValues(ctx.state, "positions")).toBe(0);
     });
