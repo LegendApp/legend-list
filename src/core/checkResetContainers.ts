@@ -1,6 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { getDataLength } from "@/core/IndexedData";
 import { clearLayoutStoreKnownSizes } from "@/core/layoutStoreLifecycle";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
 import type { StateContext } from "@/state/state";
@@ -9,12 +10,13 @@ import { getId } from "@/utils/getId";
 
 interface CheckResetContainersOptions {
     didColumnsChange?: boolean;
+    previousDataLength?: number;
 }
 
 export function checkResetContainers(
     ctx: StateContext,
     dataProp: readonly unknown[],
-    { didColumnsChange = false }: CheckResetContainersOptions = {},
+    { didColumnsChange = false, previousDataLength }: CheckResetContainersOptions = {},
 ) {
     const state = ctx.state;
     const { previousData } = state;
@@ -32,8 +34,6 @@ export function checkResetContainers(
         state.scrollForNextCalculateItemsInView = undefined;
     }
 
-    // Keep data invalidated if calculation must wait for the first viewport.
-    state.positionsAreCurrent = false;
     if (state.props.maintainVisibleContentPosition.data) {
         // New data is anchored below; a reset left over from an earlier scroll jump would let its rows move the view.
         state.userScrollAnchorReset = undefined;
