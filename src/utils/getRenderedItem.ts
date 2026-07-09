@@ -1,5 +1,6 @@
 import type React from "react";
 
+import { getDataItem } from "@/core/IndexedData";
 import { peek$, type StateContext } from "@/state/state";
 import { isNullOrUndefined } from "@/utils/helpers";
 
@@ -8,13 +9,16 @@ export function getRenderedItem(ctx: StateContext, key: string, containerId: num
     if (!state) {
         return null;
     }
+    if (!state.props.dataSource && !state.props.data) {
+        throw new TypeError("LegendList data is unavailable");
+    }
 
     const metadata = state.containerItemMetadata.get(containerId);
 
     const useAssignedGeneration = metadata && metadata.dataChangeEpoch !== state.dataChangeEpoch;
     const {
         indexByKey,
-        props: { data: currentData, getItemType, renderItem },
+        props: { data: currentData, dataSource: currentDataSource, getItemType, renderItem },
     } = state;
     const data = useAssignedGeneration ? metadata.data : currentData;
     const index = metadata?.itemIndex ?? indexByKey.get(key);
@@ -27,19 +31,22 @@ export function getRenderedItem(ctx: StateContext, key: string, containerId: num
 
     const extraData = peek$(ctx, "extraData");
 
-    const item = useAssignedGeneration ? metadata.itemData : data[index];
-    if (renderItem && !isNullOrUndefined(item)) {
-        const itemProps = {
-            data,
+    const dataSource = useAssignedGeneration ? metadata.dataSource : currentDataSource;
+    const item = useAssignedGeneration ? metadata.itemData : getDataItem(state, index);
+    const shouldRender = !!dataSource || !isNullOrUndefined(item);
+    if (renderItem && shouldRender) {
+        const sharedItemProps = {
             extraData,
             index,
             item,
             type: useAssignedGeneration
                 ? (metadata.itemType ?? "")
-                : getItemType
-                  ? (getItemType(item, index) ?? "")
-                  : "",
+                : item !== undefined && getItemType ? (getItemType(item, index) ?? "") : "",
         };
+        const itemProps =
+            dataSource
+                ? { ...sharedItemProps, dataSource: dataSource! }
+                : { ...sharedItemProps, data };
 
         renderedItem = renderItem(itemProps) as React.ReactNode;
     }

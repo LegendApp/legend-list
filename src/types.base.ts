@@ -537,7 +537,7 @@ export type LegendListPropsBase<
     TItemType extends string | undefined = string | undefined,
 > = BaseScrollViewProps<TScrollViewProps> &
     LegendListSpecificProps<ItemT, TItemType> &
-    (LegendListArrayDataModeProps<ItemT, TItemType> | ChildrenModeProps);
+    (LegendListDataMode<ItemT, TItemType> | ChildrenModeProps);
 
 export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;

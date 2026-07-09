@@ -8,6 +8,7 @@ export function createContainerItemMetadata(
 ): ContainerItemMetadata {
     return {
         data: state.props.data,
+        dataSource: state.props.dataSource,
         dataChangeEpoch: state.dataChangeEpoch,
         getFixedItemSize: state.props.getFixedItemSize,
         getItemType: state.props.getItemType,
@@ -35,7 +36,7 @@ export function updateContainerItemMetadata(
         return previousMetadata;
     }
 
-    const resolvedItemType = itemType ?? (getItemType ? (getItemType(itemData, itemIndex) ?? "") : undefined);
+    const resolvedItemType = itemType ?? (itemData !== undefined && getItemType ? (getItemType(itemData, itemIndex) ?? "") : undefined);
     const metadata = createContainerItemMetadata(state, itemIndex, itemData, resolvedItemType);
     state.containerItemMetadata.set(containerId, metadata);
     return metadata;
@@ -55,7 +56,7 @@ export function resolveContainerItemMetadata(
         metadata.fixedItemSize = undefined;
         metadata.getFixedItemSize = getFixedItemSize;
     }
-    if (getFixedItemSize && !metadata.didResolveFixedItemSize) {
+    if (itemData !== undefined && getFixedItemSize && !metadata.didResolveFixedItemSize) {
         // The flag also caches an intentional undefined result for dynamic items.
         metadata.fixedItemSize = getFixedItemSize(itemData, itemIndex, metadata.itemType ?? "");
         metadata.didResolveFixedItemSize = true;

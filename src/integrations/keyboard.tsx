@@ -33,7 +33,9 @@ type KeyboardChatScrollViewPropsUnique = Omit<
     | "offset"
 >;
 
-type KeyboardAwareLegendListProps<ItemT> = Omit<
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+type KeyboardAwareLegendListProps<ItemT> = DistributiveOmit<
     AnimatedLegendListProps<ItemT>,
     "anchoredEndSpace" | "contentInsetEndAdjustment" | "renderScrollComponent"
 > &

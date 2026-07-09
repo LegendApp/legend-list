@@ -1,4 +1,5 @@
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
+import { getDataLength } from "@/core/IndexedData";
 import { getLayoutSize } from "@/core/layoutAccessors";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import type { StateContext } from "@/state/state";
@@ -39,7 +40,7 @@ export function calculateOffsetWithOffsetPosition(
     }
 
     if (viewPosition !== undefined && index !== undefined) {
-        const dataLength = state.props.data.length;
+        const dataLength = getDataLength(state);
         if (dataLength === 0) {
             return offset;
         }

@@ -4,6 +4,7 @@ import type {
     LegendListDataMode,
     LegendListDataSource,
     LegendListDataSourceModeProps,
+    LegendListProps,
 } from "../../src/types.web";
 
 interface Item {
@@ -26,6 +27,8 @@ const dataSourceMode: LegendListDataSourceModeProps<Item, undefined> = {
     dataSource: source,
     renderItem: ({ dataSource, index, item }) => item?.label ?? `Loading ${dataSource.getKey(index)}`,
 };
+
+const dataSourceListProps: LegendListProps<Item, undefined> = dataSourceMode;
 
 const mutationBatch: DataSourceMutationBatch = {
     length: 11,
@@ -55,3 +58,4 @@ type _BothModesAreRejected = Expect<Not<IsAssignable<BothModes, LegendListDataMo
 type _MissingModesAreRejected = Expect<Not<IsAssignable<MissingModes, LegendListDataMode<Item, undefined>>>>;
 
 void mutationBatch;
+void dataSourceListProps;
