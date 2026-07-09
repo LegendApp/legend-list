@@ -345,7 +345,7 @@ export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
                 spans[index] = layoutConfig.span;
             }
 
-            store.resize(dataLength, spans, numColumns, spanInvalidationIndex !== undefined);
+            store.resize(dataLength, spans, numColumns, spanInvalidationIndex);
             runtime.setCachedRowSpans(cacheInput, spans);
             state.dataSourceSpanInvalidationIndex = undefined;
             didSync = true;
