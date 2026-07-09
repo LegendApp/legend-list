@@ -1,5 +1,4 @@
 import type { LayoutStore } from "@/core/LayoutStore";
-import { getActiveLayoutStore } from "@/core/layoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
 
 export interface LayoutAccess {
@@ -27,22 +26,22 @@ export function createLayoutAccess(_ctx: StateContext, store: LayoutStore | unde
 }
 
 export function getLayoutColumn(ctx: StateContext, index: number | undefined) {
-    const store = getActiveLayoutStore(ctx);
+    const store = ctx.state.layoutStoreRuntime?.store;
     return getLayoutColumnForStore(store, index);
 }
 
 export function getLayoutOffset(ctx: StateContext, index: number | undefined) {
-    const store = getActiveLayoutStore(ctx);
+    const store = ctx.state.layoutStoreRuntime?.store;
     return getLayoutOffsetForStore(store, index);
 }
 
 export function getLayoutSize(ctx: StateContext, index: number | undefined) {
-    const store = getActiveLayoutStore(ctx);
+    const store = ctx.state.layoutStoreRuntime?.store;
     return getLayoutSizeForStore(store, index);
 }
 
 export function getLayoutSpan(ctx: StateContext, index: number | undefined) {
-    const store = getActiveLayoutStore(ctx);
+    const store = ctx.state.layoutStoreRuntime?.store;
     return getLayoutSpanForStore(store, index);
 }
 
