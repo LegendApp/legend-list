@@ -443,6 +443,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.dataSourceMutationApplied = false;
         state.dataSourcePreviousLength = undefined;
         state.dataSourceResetReason = undefined;
+        state.dataSourceSpanInvalidationIndex = undefined;
         state.pendingDataSourceBatches = undefined;
     }
     const previousDataLength = isFirstLocal ? 0 : (state.dataSourcePreviousLength ?? getDataLength(state));
@@ -590,11 +591,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                             if (!state.layoutStoreRuntime) {
                                 syncLayoutStoreStructure(ctx);
                             }
-                            syncLayoutStoreState(ctx);
+                            if (state.dataSourceSpanInvalidationIndex === undefined) {
+                                syncLayoutStoreState(ctx);
+                            }
                         }
                         if (result.resetReason) {
                             state.dataSourceNeedsReset = true;
                             state.dataSourceResetReason = result.resetReason;
+                            state.dataSourceSpanInvalidationIndex = 0;
+                            state.layoutStoreRuntime?.clearRowSpanCache();
                             if (result.resetReason !== "the data source requested a reset") {
                                 warnDevOnce(
                                     "data-source-key-reset",
@@ -611,6 +616,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     state.dataSourcePreviousLength ??= batch.previousLength;
                     state.dataSourceNeedsReset = true;
                     state.dataSourceResetReason = reason;
+                    state.dataSourceSpanInvalidationIndex = 0;
+                    state.layoutStoreRuntime?.clearRowSpanCache();
                     warnDevOnce("data-source-safe-reset", `Resetting data-source state because ${reason}.`);
                     scheduleDataSourceCommit();
                 },
