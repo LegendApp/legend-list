@@ -110,6 +110,23 @@ export default LegendListExample
 
 ```
 
+### Mutation-aware data sources
+
+For very large, sparse, or editor-style collections, pass a stable `dataSource` instead of rebuilding an array. The source provides indexed reads and emits the exact splice, move, or update it already knows:
+
+```tsx
+<LegendList
+    dataSource={documentLines}
+    estimatedItemSize={24}
+    recycleItems
+    renderItem={({ item, index }) =>
+        item ? <Line line={item} /> : <UnloadedLine index={index} />
+    }
+/>
+```
+
+This path keeps ordinary mount, distant jumps, and precise edits proportional to visible, buffered, changed, or previously materialized state rather than total logical length. See the [data-source guide](docs/data-source.md) for the interface, mutation ordering rules, sparse-item behavior, migration examples, and performance boundaries.
+
 ---
 
 ## How to Build

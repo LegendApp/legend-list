@@ -78,17 +78,26 @@ export type BaseScrollViewProps<TScrollView> = Omit<
 >;
 
 export type DataSourceOperation =
+    /** Removes and inserts logical items at `index`. Inserted items begin with estimated layout. */
     | { type: "splice"; index: number; deleteCount: number; insertCount: number }
+    /** Moves a retained range to `to`, where `to` is evaluated after removing the range. */
     | { type: "move"; from: number; to: number; count: number }
+    /** Rerenders a retained range and optionally invalidates its known scroll-axis geometry. */
     | { type: "update"; index: number; count: number; layout: "preserve" | "invalidate" }
+    /** Requests full safe reconciliation when a precise incremental description is unavailable. */
     | { type: "reset" };
 
 export interface DataSourceMutationBatch {
-    previousRevision: number;
-    revision: number;
-    previousLength: number;
+    /** Source length after every operation in this batch has been applied. */
     length: number;
+    /** Ordered operations whose indexes refer to the result of each preceding operation. */
     operations: DataSourceOperation[];
+    /** Source length before this atomic batch. */
+    previousLength: number;
+    /** Revision observed before this atomic batch. */
+    previousRevision: number;
+    /** Current monotonic source revision after this atomic batch. */
+    revision: number;
 }
 
 export interface LegendListDataSource<ItemT> {
@@ -104,7 +113,10 @@ export interface LegendListDataSource<ItemT> {
     /** Returns the monotonically increasing revision represented by the current readable source state. */
     getRevision(): number;
 
-    /** Subscribes to atomic, ordered mutation batches emitted after the source reaches its new readable state. */
+    /**
+     * Subscribes to atomic, ordered mutation batches emitted after the source reaches its new readable state.
+     * Returns a cleanup callback that releases the listener.
+     */
     subscribe(listener: (batch: DataSourceMutationBatch) => void): () => void;
 }
 
