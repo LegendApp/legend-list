@@ -126,6 +126,37 @@ describe("mvcp helpers", () => {
         }
     });
 
+    it("uses the pre-mutation anchor snapshot after sparse identities move", () => {
+        const mockCtx = createMockContext(
+            { totalSize: 400 },
+            {
+                dataSourceAnchorPositions: new Map([["c", 20]]),
+                didContainersLayout: true,
+                idCache: Object.assign([], { 3: "c" }),
+                idsInView: ["c"],
+                indexByKey: new Map([["c", 3]]),
+                positions: [0, 10, 20, 30],
+                props: {
+                    data: [{ id: "x" }, { id: "a" }, { id: "b" }, { id: "c" }],
+                    keyExtractor: (item: { id: string }) => item.id,
+                    maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(true),
+                },
+            },
+        );
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+
+        try {
+            const adjustFunction = prepareMVCP(mockCtx, true);
+            setLayoutValue(mockCtx.state, "positions", 3, 40);
+
+            adjustFunction?.();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true);
+        } finally {
+            requestAdjustSpy.mockRestore();
+        }
+    });
+
     it("syncs scroll state to maxScroll instead of anchor-adjusting when an end target is clamped by shrink", () => {
         // Mirrors an Android end-aligned chat mount where measured rows above the target shrink total content.
         const mockCtx = createMockContext(

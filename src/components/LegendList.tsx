@@ -24,6 +24,7 @@ import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
+import { applyDataSourceMutationBatches } from "@/core/DataSourceMutationCoordinator";
 import { DataSourceObserver } from "@/core/DataSourceObserver";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
@@ -34,6 +35,7 @@ import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@
 import {
     clearLayoutStoreKnownSizes,
     rebuildLayoutStoreExact,
+    reconcileLayoutStoreDataSourceMutation,
     syncLayoutStoreState,
     syncLayoutStoreStructure,
 } from "@/core/layoutStoreLifecycle";
@@ -438,6 +440,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didDataSourceChangeLocal = state.props.dataSource !== dataSource;
     if (didDataSourceChangeLocal) {
         state.dataSourceNeedsReset = false;
+        state.dataSourceAnchorPositions = undefined;
+        state.dataSourceMutationApplied = false;
         state.dataSourcePreviousLength = undefined;
         state.dataSourceResetReason = undefined;
         state.pendingDataSourceBatches = undefined;
@@ -580,6 +584,25 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     state.pendingDataSourceBatches ??= [];
                     state.pendingDataSourceBatches.push(batch);
                     state.dataSourcePreviousLength ??= batch.previousLength;
+                    if (!state.dataSourceNeedsReset) {
+                        const result = applyDataSourceMutationBatches(ctx, dataSource, [batch]);
+                        state.dataSourceMutationApplied = state.dataSourceMutationApplied || result.applied;
+                        if (result.applied) {
+                            syncLayoutStoreStructure(ctx);
+                            reconcileLayoutStoreDataSourceMutation(ctx);
+                            syncLayoutStoreState(ctx);
+                        }
+                        if (result.resetReason) {
+                            state.dataSourceNeedsReset = true;
+                            state.dataSourceResetReason = result.resetReason;
+                            if (result.resetReason !== "the data source requested a reset") {
+                                warnDevOnce(
+                                    "data-source-key-reset",
+                                    `Resetting data-source state because ${result.resetReason}.`,
+                                );
+                            }
+                        }
+                    }
                     scheduleDataSourceCommit();
                 },
                 onReset: ({ batch, reason }) => {
@@ -678,7 +701,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     if (isFirstLocal || didDataChangeLocal || state.didColumnsChange) {
         refState.current.lastBatchingAction = Date.now();
-        if (!keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
+        if (!dataSource && !keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset.
             refState.current.sizes.clear();
             refState.current.sizesKnown.clear();
@@ -831,6 +854,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (didDataChange) {
             state.dataChangeKeyExtractorChanged = false;
             state.dataSourceNeedsReset = false;
+            state.dataSourceAnchorPositions = undefined;
+            state.dataSourceMutationApplied = false;
             state.dataSourcePreviousLength = undefined;
             state.dataSourceResetReason = undefined;
             state.pendingDataComparison = undefined;
