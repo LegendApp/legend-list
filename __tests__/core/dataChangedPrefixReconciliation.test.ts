@@ -184,13 +184,13 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
         });
 
-        it("keeps fixed item sizes estimate-backed until rows are materialized", () => {
+        it("uses fixed sizes for rows materialized by the viewport", () => {
             const ctx = createDataChangeContext([{ fixed: 10, id: "a" }, { id: "b" }, { fixed: 30, id: "c" }], {
                 estimatedItemSize: 50,
                 fixedSizes: true,
             });
 
-            expect(runDataChange(ctx)).toBe(150);
+            expect(runDataChange(ctx)).toBe(90);
             expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(50);
             expect(ctx.state.sizesKnown.get("a")).toBeUndefined();
             expect(ctx.state.sizesKnown.get("c")).toBeUndefined();
@@ -237,7 +237,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
         });
 
-        it("uses estimates for inserted and prepended new keys until rows are materialized", () => {
+        it("combines materialized fixed sizes with estimates for dynamic rows", () => {
             const ctx = createDataChangeContext([{ fixed: 15, id: "x" }, { id: "a" }, { id: "b" }, { id: "y" }], {
                 estimatedItemSize: 25,
                 fixedSizes: true,
@@ -247,7 +247,7 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             });
 
-            expect(runDataChange(ctx)).toBe(100);
+            expect(runDataChange(ctx)).toBe(90);
             expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(25);
         });
 

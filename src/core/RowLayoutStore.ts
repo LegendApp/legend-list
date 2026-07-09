@@ -25,6 +25,7 @@ export class RowLayoutStore implements LayoutStore {
     private rowHeightTree = new FenwickTree(0);
     private rowStartIndexes: number[] = [];
     private sizeKinds: Uint8Array;
+    private spanInput?: ArrayLike<number | undefined>;
     private spans: Uint16Array;
 
     constructor(options: RowLayoutStoreOptions) {
@@ -36,6 +37,7 @@ export class RowLayoutStore implements LayoutStore {
         this.knownSizes = new Float64Array(length);
         this.sizeKinds = new Uint8Array(length);
         this.spans = new Uint16Array(length);
+        this.spanInput = options.spans;
         this.repack(options.spans);
     }
 
@@ -151,7 +153,9 @@ export class RowLayoutStore implements LayoutStore {
     resize(length: number, spans?: ArrayLike<number | undefined>, numColumns = this.numColumns) {
         const normalizedLength = normalizeLength(length);
         const normalizedNumColumns = normalizeNumColumns(numColumns);
-        if (normalizedLength !== this.length) {
+        const didLengthChange = normalizedLength !== this.length;
+        const shouldRepack = didLengthChange || normalizedNumColumns !== this.numColumns || spans !== this.spanInput;
+        if (didLengthChange) {
             const previousKinds = this.sizeKinds;
             const previousSizes = this.knownSizes;
 
@@ -165,13 +169,19 @@ export class RowLayoutStore implements LayoutStore {
             this.knownSizes.set(previousSizes.subarray(0, copyLength));
             this.sizeKinds.set(previousKinds.subarray(0, copyLength));
         }
-        this.numColumns = normalizedNumColumns;
-        this.repack(spans);
+        if (shouldRepack) {
+            this.numColumns = normalizedNumColumns;
+            this.spanInput = spans;
+            this.repack(spans);
+        }
     }
 
     setEstimatedSize(estimatedSize: number) {
-        this.estimatedSize = normalizeSize(estimatedSize);
-        this.rebuildRowsAndTotals();
+        const normalizedSize = normalizeSize(estimatedSize);
+        if (normalizedSize !== this.estimatedSize) {
+            this.estimatedSize = normalizedSize;
+            this.rebuildRowsAndTotals();
+        }
     }
 
     setMeasuredSize(index: number, size: number) {
@@ -179,20 +189,24 @@ export class RowLayoutStore implements LayoutStore {
         const normalizedSize = normalizeSize(size);
         const previousKind = this.sizeKinds[index];
         const previousSize = this.knownSizes[index];
+        const didChange = this.getItemSize(index) !== normalizedSize;
 
-        if (previousKind === SIZE_CACHED) {
-            this.measuredCount++;
-            this.measuredSizeTotal += normalizedSize;
-        } else if (previousKind === SIZE_MEASURED) {
-            this.measuredSizeTotal += normalizedSize - previousSize;
-        } else {
-            this.measuredCount++;
-            this.measuredSizeTotal += normalizedSize;
+        if (previousKind !== SIZE_MEASURED || previousSize !== normalizedSize) {
+            if (previousKind === SIZE_CACHED) {
+                this.measuredCount++;
+                this.measuredSizeTotal += normalizedSize;
+            } else if (previousKind === SIZE_MEASURED) {
+                this.measuredSizeTotal += normalizedSize - previousSize;
+            } else {
+                this.measuredCount++;
+                this.measuredSizeTotal += normalizedSize;
+            }
+
+            this.sizeKinds[index] = SIZE_MEASURED;
+            this.knownSizes[index] = normalizedSize;
+            this.updateRowHeight(this.itemRowIndexes[index]!);
         }
-
-        this.sizeKinds[index] = SIZE_MEASURED;
-        this.knownSizes[index] = normalizedSize;
-        this.updateRowHeight(this.itemRowIndexes[index]!);
+        return didChange;
     }
 
     private findRowIndexAtOffset(offset: number) {

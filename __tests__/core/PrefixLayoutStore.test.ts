@@ -325,6 +325,37 @@ describe("PrefixLayoutStore", () => {
         expect(store.findIndexAtOffset(10_000_025)).toBeUndefined();
     });
 
+    it("finds offsets directly through large sparse gaps", () => {
+        const store = new PrefixLayoutStore(1_000_000, 10);
+
+        store.replaceKnownSizeEntries([
+            { index: 10, size: 20, type: "measured" },
+            { index: 500_000, size: 5, type: "cached" },
+            { index: 999_999, size: 30, type: "measured" },
+        ]);
+
+        expect(store.findIndexAtOffset(-1)).toBe(0);
+        expect(store.findIndexAtOffset(5_000_009)).toBe(499_999);
+        expect(store.findIndexAtOffset(5_000_010)).toBe(500_000);
+        expect(store.findIndexAtOffset(5_000_014)).toBe(500_000);
+        expect(store.findIndexAtOffset(5_000_015)).toBe(500_001);
+        expect(store.findIndexAtOffset(10_000_025)).toBeUndefined();
+    });
+
+    it("does not probe per-index offsets during sparse inverse lookup", () => {
+        const store = new PrefixLayoutStore(1_000_000, 10);
+        store.replaceKnownSizeEntries([
+            { index: 10, size: 20, type: "measured" },
+            { index: 500_000, size: 5, type: "cached" },
+            { index: 999_999, size: 30, type: "measured" },
+        ]);
+        store.getOffset = () => {
+            throw new Error("findIndexAtOffset should traverse aggregates directly");
+        };
+
+        expect(store.findIndexAtOffset(5_000_010)).toBe(500_000);
+    });
+
     it("drops only out-of-range sparse sizes when a huge layout is truncated", () => {
         const store = new PrefixLayoutStore(1_000_000, 10);
 
