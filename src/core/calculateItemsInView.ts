@@ -630,6 +630,7 @@ export function calculateItemsInView(
             didDataChange &&
             !state.isFirst &&
             hasActiveLayoutStore &&
+            !state.dataSourceNeedsReset &&
             state.props.hasReliableKeyExtractor;
         const previousIdCache = shouldReconcileLayoutStoreDataChange ? getSparseIdCacheSnapshot(state) : undefined;
         if (didDataChange) {

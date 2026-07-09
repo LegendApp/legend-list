@@ -8,6 +8,7 @@ import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type {
     AlwaysRenderConfig,
     AnchoredEndSpaceConfig,
+    DataSourceMutationBatch,
     Insets,
     LayoutRectangle,
     LegendListDataSource,
@@ -164,6 +165,9 @@ export interface InternalState {
     dataChangeKeyExtractorChanged?: boolean;
     dataChangeNeedsScrollUpdate: boolean;
     freshDataTransitionEpoch: number;
+    dataSourceNeedsReset?: boolean;
+    dataSourcePreviousLength?: number;
+    dataSourceResetReason?: string;
     deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
@@ -223,6 +227,8 @@ export interface InternalState {
     };
     pendingMaintainScrollAtEnd?: boolean;
     pendingDataComparison?: PendingDataComparison;
+    pendingDataSourceBatches?: DataSourceMutationBatch[];
+    pendingLayoutEffectMeasurements?: Set<string>;
     pendingScrollToEnd?: {
         options?: ScrollToEndOptions;
         resolve: () => void;

@@ -1,18 +1,20 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { getDataLength } from "@/core/IndexedData";
 import { clearLayoutStoreKnownSizes } from "@/core/layoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 
 interface CheckResetContainersOptions {
     didColumnsChange?: boolean;
+    previousDataLength?: number;
 }
 
 export function checkResetContainers(
     ctx: StateContext,
     dataProp: readonly unknown[],
-    { didColumnsChange = false }: CheckResetContainersOptions = {},
+    { didColumnsChange = false, previousDataLength }: CheckResetContainersOptions = {},
 ) {
     const state = ctx.state;
     const { previousData } = state;
@@ -38,7 +40,9 @@ export function checkResetContainers(
 
     // Reset the endReached flag if new data has been added and we didn't
     // just maintain the scroll at end
-    if (!didMaintainScrollAtEnd && previousData && dataProp.length > previousData.length) {
+    const previousLength = previousData?.length ?? previousDataLength;
+    const currentLength = state.props.dataSource ? getDataLength(state) : dataProp.length;
+    if (!didMaintainScrollAtEnd && previousLength !== undefined && currentLength > previousLength) {
         state.isEndReached = false;
     }
 
