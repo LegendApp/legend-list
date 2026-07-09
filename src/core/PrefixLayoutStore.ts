@@ -64,6 +64,16 @@ export class PrefixLayoutStore implements LayoutStore {
         this.root = undefined;
     }
 
+    clearKnownSize(index: number) {
+        this.assertIndex(index);
+        const existing = findNode(this.root, index);
+        const didChange = existing !== undefined && existing.size !== this.estimatedSize;
+        if (existing) {
+            this.root = removeNode(this.root, index);
+        }
+        return didChange;
+    }
+
     setEstimatedSize(estimatedSize: number) {
         this.estimatedSize = normalizeSize(estimatedSize);
     }
@@ -325,6 +335,38 @@ function pruneFromIndex(node: KnownSizeNode | undefined, length: number): KnownS
         } else {
             node.right = pruneFromIndex(node.right, length);
             nextNode = updateNode(node);
+        }
+    }
+    return nextNode;
+}
+
+function mergeNodes(left: KnownSizeNode | undefined, right: KnownSizeNode | undefined): KnownSizeNode | undefined {
+    let node: KnownSizeNode | undefined;
+    if (!left) {
+        node = right;
+    } else if (!right) {
+        node = left;
+    } else if (left.priority < right.priority) {
+        left.right = mergeNodes(left.right, right);
+        node = updateNode(left);
+    } else {
+        right.left = mergeNodes(left, right.left);
+        node = updateNode(right);
+    }
+    return node;
+}
+
+function removeNode(node: KnownSizeNode | undefined, index: number): KnownSizeNode | undefined {
+    let nextNode = node;
+    if (node) {
+        if (index < node.index) {
+            node.left = removeNode(node.left, index);
+            nextNode = updateNode(node);
+        } else if (index > node.index) {
+            node.right = removeNode(node.right, index);
+            nextNode = updateNode(node);
+        } else {
+            nextNode = mergeNodes(node.left, node.right);
         }
     }
     return nextNode;
