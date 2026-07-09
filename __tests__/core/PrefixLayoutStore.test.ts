@@ -392,6 +392,19 @@ describe("PrefixLayoutStore", () => {
         expect(store.getMeasuredCount()).toBe(0);
     });
 
+    it("clears one sparse known size back to the estimate", () => {
+        const store = new PrefixLayoutStore(1_000_000, 100);
+        store.setMeasuredSize(10, 150);
+        store.setMeasuredSize(900_000, 250);
+        store.setMeasuredSize(999_999, 50);
+
+        expect(store.clearKnownSize(900_000)).toBe(true);
+        expect(store.getSize(900_000)).toBe(100);
+        expect(store.getOffset(900_001)).toBe(90_000_150);
+        expect(store.getMeasuredCount()).toBe(2);
+        expect(store.clearKnownSize(900_000)).toBe(false);
+    });
+
     it("throws for invalid sizes and indexes", () => {
         const store = new PrefixLayoutStore(1, 100);
 

@@ -1,9 +1,23 @@
-import { FenwickTree } from "@/core/FenwickTree";
 import type { LayoutIndexRange, LayoutStore, LayoutStoreSizeEntry } from "@/core/LayoutStore";
+import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 
-const SIZE_UNKNOWN = 0;
 const SIZE_CACHED = 1;
 const SIZE_MEASURED = 2;
+
+type SizeKind = typeof SIZE_CACHED | typeof SIZE_MEASURED;
+
+interface KnownItemSize {
+    kind: SizeKind;
+    size: number;
+}
+
+interface SpanTopology {
+    columns: Uint16Array;
+    itemRowIndexes: Uint32Array;
+    rowEndIndexes: number[];
+    rowStartIndexes: number[];
+    spans: Uint16Array;
+}
 
 export interface RowLayoutStoreOptions {
     estimatedSize: number;
@@ -13,57 +27,44 @@ export interface RowLayoutStoreOptions {
 }
 
 export class RowLayoutStore implements LayoutStore {
-    private columns: Uint16Array;
     private estimatedSize: number;
-    private itemRowIndexes: Uint32Array;
-    private knownSizes: Float64Array;
+    private knownSizes = new Map<number, KnownItemSize>();
+    private lengthValue: number;
     private measuredCount = 0;
     private measuredSizeTotal = 0;
     private numColumns: number;
-    private rowEndIndexes: number[] = [];
-    private rowHeights = new Float64Array(0);
-    private rowHeightTree = new FenwickTree(0);
-    private rowStartIndexes: number[] = [];
-    private sizeKinds: Uint8Array;
+    private rowLayout: PrefixLayoutStore;
     private spanInput?: ArrayLike<number | undefined>;
-    private spans: Uint16Array;
+    private spanTopology?: SpanTopology;
 
     constructor(options: RowLayoutStoreOptions) {
-        const length = normalizeLength(options.length);
+        this.lengthValue = normalizeLength(options.length);
         this.estimatedSize = normalizeSize(options.estimatedSize);
         this.numColumns = normalizeNumColumns(options.numColumns);
-        this.columns = new Uint16Array(length);
-        this.itemRowIndexes = new Uint32Array(length);
-        this.knownSizes = new Float64Array(length);
-        this.sizeKinds = new Uint8Array(length);
-        this.spans = new Uint16Array(length);
         this.spanInput = options.spans;
-        this.repack(options.spans);
+        this.spanTopology = options.spans ? createSpanTopology(this.length, this.numColumns, options.spans) : undefined;
+        this.rowLayout = new PrefixLayoutStore(this.getRowCount(), this.estimatedSize);
     }
 
     get length() {
-        return this.knownSizes.length;
+        return this.lengthValue;
     }
 
     clearKnownSizes() {
-        this.knownSizes.fill(0);
-        this.sizeKinds.fill(SIZE_UNKNOWN);
-        this.rebuildRowsAndTotals();
+        this.knownSizes.clear();
+        this.measuredCount = 0;
+        this.measuredSizeTotal = 0;
+        this.rowLayout = new PrefixLayoutStore(this.getRowCount(), this.estimatedSize);
     }
 
     findIndexRangeAtOffsets(startOffset: number, endOffset: number): LayoutIndexRange | undefined {
-        let range: LayoutIndexRange | undefined;
-        if (this.length > 0) {
-            const startRow = this.findRowIndexAtOffset(startOffset) ?? this.rowStartIndexes.length - 1;
-            const endRow = this.findRowIndexAtOffset(endOffset) ?? this.rowStartIndexes.length - 1;
-            const clampedStartRow = Math.min(startRow, endRow);
-            const clampedEndRow = Math.max(startRow, endRow);
-            range = {
-                end: this.rowEndIndexes[clampedEndRow]!,
-                start: this.rowStartIndexes[clampedStartRow]!,
-            };
-        }
-        return range;
+        const rowRange = this.rowLayout.findIndexRangeAtOffsets(startOffset, endOffset);
+        return rowRange
+            ? {
+                  end: this.getRowEndIndex(rowRange.end),
+                  start: this.getRowStartIndex(rowRange.start),
+              }
+            : undefined;
     }
 
     forEachLayout(
@@ -78,9 +79,9 @@ export class RowLayoutStore implements LayoutStore {
             let previousRowIndex = -1;
             let offset = 0;
             for (let index = start; index <= end; index++) {
-                const rowIndex = this.itemRowIndexes[index]!;
+                const rowIndex = this.getRowIndex(index);
                 if (rowIndex !== previousRowIndex) {
-                    offset = this.rowHeightTree.sumBefore(rowIndex);
+                    offset = this.rowLayout.getOffset(rowIndex);
                     previousRowIndex = rowIndex;
                 }
                 callback(index, offset, this.getSize(index));
@@ -90,26 +91,26 @@ export class RowLayoutStore implements LayoutStore {
 
     getColumn(index: number) {
         this.assertIndex(index);
-        return this.columns[index] || 1;
+        return this.spanTopology?.columns[index] || (index % this.numColumns) + 1;
     }
 
     getOffset(index: number) {
         this.assertIndex(index);
-        return this.rowHeightTree.sumBefore(this.itemRowIndexes[index]!);
+        return this.rowLayout.getOffset(this.getRowIndex(index));
     }
 
     getSize(index: number) {
         this.assertIndex(index);
-        return this.getItemSize(index);
+        return this.knownSizes.get(index)?.size ?? this.estimatedSize;
     }
 
     getSpan(index: number) {
         this.assertIndex(index);
-        return this.spans[index] || 1;
+        return this.spanTopology?.spans[index] || 1;
     }
 
     getTotalSize() {
-        return this.rowHeightTree.total();
+        return this.rowLayout.getTotalSize();
     }
 
     getMeasuredAverageSize() {
@@ -134,45 +135,32 @@ export class RowLayoutStore implements LayoutStore {
             normalizeSize(entry.size);
         }
 
-        this.knownSizes.fill(0);
-        this.sizeKinds.fill(SIZE_UNKNOWN);
-
+        const knownSizes = new Map<number, KnownItemSize>();
         for (const entry of entries) {
+            const existing = knownSizes.get(entry.index);
             if (entry.type === "measured") {
-                this.sizeKinds[entry.index] = SIZE_MEASURED;
-                this.knownSizes[entry.index] = entry.size;
-            } else if (this.sizeKinds[entry.index] !== SIZE_MEASURED) {
-                this.sizeKinds[entry.index] = SIZE_CACHED;
-                this.knownSizes[entry.index] = entry.size;
+                knownSizes.set(entry.index, { kind: SIZE_MEASURED, size: entry.size });
+            } else if (existing?.kind !== SIZE_MEASURED) {
+                knownSizes.set(entry.index, { kind: SIZE_CACHED, size: entry.size });
             }
         }
-
+        this.knownSizes = knownSizes;
         this.rebuildRowsAndTotals();
     }
 
     resize(length: number, spans?: ArrayLike<number | undefined>, numColumns = this.numColumns) {
         const normalizedLength = normalizeLength(length);
         const normalizedNumColumns = normalizeNumColumns(numColumns);
-        const didLengthChange = normalizedLength !== this.length;
-        const shouldRepack = didLengthChange || normalizedNumColumns !== this.numColumns || spans !== this.spanInput;
-        if (didLengthChange) {
-            const previousKinds = this.sizeKinds;
-            const previousSizes = this.knownSizes;
+        const didTopologyChange =
+            normalizedLength !== this.length || normalizedNumColumns !== this.numColumns || spans !== this.spanInput;
 
-            this.columns = new Uint16Array(normalizedLength);
-            this.itemRowIndexes = new Uint32Array(normalizedLength);
-            this.knownSizes = new Float64Array(normalizedLength);
-            this.sizeKinds = new Uint8Array(normalizedLength);
-            this.spans = new Uint16Array(normalizedLength);
-
-            const copyLength = Math.min(previousSizes.length, normalizedLength);
-            this.knownSizes.set(previousSizes.subarray(0, copyLength));
-            this.sizeKinds.set(previousKinds.subarray(0, copyLength));
-        }
-        if (shouldRepack) {
+        if (didTopologyChange) {
+            this.lengthValue = normalizedLength;
             this.numColumns = normalizedNumColumns;
             this.spanInput = spans;
-            this.repack(spans);
+            this.spanTopology = spans ? createSpanTopology(this.length, this.numColumns, spans) : undefined;
+            this.pruneKnownSizes();
+            this.rebuildRowsAndTotals();
         }
     }
 
@@ -187,109 +175,23 @@ export class RowLayoutStore implements LayoutStore {
     setMeasuredSize(index: number, size: number) {
         this.assertIndex(index);
         const normalizedSize = normalizeSize(size);
-        const previousKind = this.sizeKinds[index];
-        const previousSize = this.knownSizes[index];
-        const didChange = this.getItemSize(index) !== normalizedSize;
+        const rowIndex = this.getRowIndex(index);
+        const previousRowHeight = this.rowLayout.getSize(rowIndex);
+        const previous = this.knownSizes.get(index);
 
-        if (previousKind !== SIZE_MEASURED || previousSize !== normalizedSize) {
-            if (previousKind === SIZE_CACHED) {
-                this.measuredCount++;
-                this.measuredSizeTotal += normalizedSize;
-            } else if (previousKind === SIZE_MEASURED) {
-                this.measuredSizeTotal += normalizedSize - previousSize;
-            } else {
-                this.measuredCount++;
-                this.measuredSizeTotal += normalizedSize;
-            }
-
-            this.sizeKinds[index] = SIZE_MEASURED;
-            this.knownSizes[index] = normalizedSize;
-            this.updateRowHeight(this.itemRowIndexes[index]!);
-        }
-        return didChange;
-    }
-
-    private findRowIndexAtOffset(offset: number) {
-        return this.rowHeightTree.findFirstPrefixGreaterThan(offset);
-    }
-
-    private getItemSize(index: number) {
-        return this.sizeKinds[index] ? this.knownSizes[index]! : this.estimatedSize;
-    }
-
-    private getRowHeight(rowIndex: number) {
-        let height = 0;
-        const start = this.rowStartIndexes[rowIndex]!;
-        const end = this.rowEndIndexes[rowIndex]!;
-
-        for (let index = start; index <= end; index++) {
-            const size = this.getItemSize(index);
-            if (size > height) {
-                height = size;
-            }
-        }
-        return height;
-    }
-
-    private rebuildRowsAndTotals() {
-        this.measuredCount = 0;
-        this.measuredSizeTotal = 0;
-        this.rowHeights = new Float64Array(this.rowStartIndexes.length);
-
-        for (let rowIndex = 0; rowIndex < this.rowStartIndexes.length; rowIndex++) {
-            this.rowHeights[rowIndex] = this.getRowHeight(rowIndex);
-        }
-        for (let index = 0; index < this.length; index++) {
-            if (this.sizeKinds[index] === SIZE_MEASURED) {
-                this.measuredCount++;
-                this.measuredSizeTotal += this.knownSizes[index]!;
-            }
+        if (previous?.kind === SIZE_CACHED) {
+            this.measuredCount++;
+            this.measuredSizeTotal += normalizedSize;
+        } else if (previous?.kind === SIZE_MEASURED) {
+            this.measuredSizeTotal += normalizedSize - previous.size;
+        } else {
+            this.measuredCount++;
+            this.measuredSizeTotal += normalizedSize;
         }
 
-        this.rowHeightTree = new FenwickTree(this.rowHeights.length);
-        this.rowHeightTree.replaceValues(this.rowHeights);
-    }
-
-    private repack(inputSpans?: ArrayLike<number | undefined>) {
-        this.rowStartIndexes = [];
-        this.rowEndIndexes = [];
-        this.columns.fill(1);
-        this.spans.fill(1);
-
-        let column = 1;
-        let rowIndex = -1;
-
-        for (let index = 0; index < this.length; index++) {
-            const span = normalizeSpan(inputSpans?.[index], this.numColumns);
-            if (column + span - 1 > this.numColumns) {
-                column = 1;
-            }
-            if (column === 1) {
-                rowIndex++;
-                this.rowStartIndexes[rowIndex] = index;
-            }
-
-            this.columns[index] = column;
-            this.itemRowIndexes[index] = rowIndex;
-            this.rowEndIndexes[rowIndex] = index;
-            this.spans[index] = span;
-
-            column += span;
-            if (column > this.numColumns) {
-                column = 1;
-            }
-        }
-
-        this.rebuildRowsAndTotals();
-    }
-
-    private updateRowHeight(rowIndex: number) {
-        const previousHeight = this.rowHeights[rowIndex]!;
-        const nextHeight = this.getRowHeight(rowIndex);
-        if (previousHeight !== nextHeight) {
-            this.rowHeights[rowIndex] = nextHeight;
-            this.rowHeightTree.add(rowIndex, nextHeight - previousHeight);
-        }
+        this.knownSizes.set(index, { kind: SIZE_MEASURED, size: normalizedSize });
+        this.syncRowHeight(rowIndex);
+        return previousRowHeight !== this.rowLayout.getSize(rowIndex);
     }
 
     private assertIndex(index: number) {
@@ -297,6 +199,119 @@ export class RowLayoutStore implements LayoutStore {
             throw new RangeError(`RowLayoutStore index ${index} is out of bounds for length ${this.length}`);
         }
     }
+
+    private getRowCount() {
+        return this.spanTopology?.rowStartIndexes.length ?? Math.ceil(this.length / this.numColumns);
+    }
+
+    private getRowEndIndex(rowIndex: number) {
+        return (
+            this.spanTopology?.rowEndIndexes[rowIndex] ??
+            Math.min(this.length - 1, (rowIndex + 1) * this.numColumns - 1)
+        );
+    }
+
+    private getRowIndex(index: number) {
+        return this.spanTopology?.itemRowIndexes[index] ?? Math.floor(index / this.numColumns);
+    }
+
+    private getRowStartIndex(rowIndex: number) {
+        return this.spanTopology?.rowStartIndexes[rowIndex] ?? rowIndex * this.numColumns;
+    }
+
+    private pruneKnownSizes() {
+        for (const index of this.knownSizes.keys()) {
+            if (index >= this.length) {
+                this.knownSizes.delete(index);
+            }
+        }
+    }
+
+    private rebuildRowsAndTotals() {
+        this.measuredCount = 0;
+        this.measuredSizeTotal = 0;
+        this.rowLayout = new PrefixLayoutStore(this.getRowCount(), this.estimatedSize);
+        const knownRows = new Set<number>();
+
+        for (const [index, entry] of this.knownSizes) {
+            knownRows.add(this.getRowIndex(index));
+            if (entry.kind === SIZE_MEASURED) {
+                this.measuredCount++;
+                this.measuredSizeTotal += entry.size;
+            }
+        }
+        for (const rowIndex of knownRows) {
+            this.syncRowHeight(rowIndex);
+        }
+    }
+
+    private syncRowHeight(rowIndex: number) {
+        const start = this.getRowStartIndex(rowIndex);
+        const end = this.getRowEndIndex(rowIndex);
+        let knownCount = 0;
+        let maxKnownSize = 0;
+
+        for (let index = start; index <= end; index++) {
+            const knownSize = this.knownSizes.get(index)?.size;
+            if (knownSize !== undefined) {
+                knownCount++;
+                maxKnownSize = Math.max(maxKnownSize, knownSize);
+            }
+        }
+
+        const itemCount = end - start + 1;
+        if (knownCount === itemCount || maxKnownSize > this.estimatedSize) {
+            this.rowLayout.setMeasuredSize(
+                rowIndex,
+                Math.max(maxKnownSize, knownCount < itemCount ? this.estimatedSize : 0),
+            );
+        } else {
+            this.rowLayout.clearKnownSize(rowIndex);
+        }
+    }
+}
+
+function createSpanTopology(
+    length: number,
+    numColumns: number,
+    inputSpans: ArrayLike<number | undefined>,
+): SpanTopology {
+    const columns = new Uint16Array(length);
+    const itemRowIndexes = new Uint32Array(length);
+    const rowEndIndexes: number[] = [];
+    const rowStartIndexes: number[] = [];
+    const spans = new Uint16Array(length);
+    let column = 1;
+    let rowIndex = -1;
+
+    for (let index = 0; index < length; index++) {
+        const span = normalizeSpan(inputSpans[index], numColumns);
+        if (column + span - 1 > numColumns) {
+            column = 1;
+        }
+        if (column === 1) {
+            rowIndex++;
+            rowStartIndexes[rowIndex] = index;
+        }
+
+        columns[index] = column;
+        itemRowIndexes[index] = rowIndex;
+        rowEndIndexes[rowIndex] = index;
+        spans[index] = span;
+
+        column += span;
+        if (column > numColumns) {
+            column = 1;
+        }
+    }
+
+    return {
+        columns,
+        itemRowIndexes,
+        rowEndIndexes,
+        rowStartIndexes,
+        spans,
+    };
 }
 
 function normalizeLength(length: number) {
