@@ -60,6 +60,21 @@ describe("MutationDataSource fixture", () => {
         ]);
     });
 
+    it("reports each adjacent insertion independently after piece compaction", () => {
+        const source = createSource();
+        const listener = mock(() => {});
+        source.subscribe(listener);
+
+        source.splice(0, 0, [{ item: { id: "first", value: "First" }, key: "first" }]);
+        source.splice(0, 0, [{ item: { id: "second", value: "Second" }, key: "second" }]);
+
+        expect(source.getLength()).toBe(7);
+        expect(listener.mock.calls.map(([batch]) => batch.operations[0])).toEqual([
+            { deleteCount: 0, index: 0, insertCount: 1, type: "splice" },
+            { deleteCount: 0, index: 0, insertCount: 1, type: "splice" },
+        ]);
+    });
+
     it("keeps a million logical rows virtual until an item is requested", () => {
         const factory = mock((index: number) => ({ id: `line-${index}`, value: `Line ${index}` }));
         const source = new MutationDataSource<Item>({
