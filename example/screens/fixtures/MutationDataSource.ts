@@ -80,9 +80,10 @@ export class MutationDataSource<ItemT extends object> implements LegendListDataS
             this.itemByKey.set(key, item);
             return key;
         });
+        const insertCount = insertedKeys.length;
         const inserted: Piece[] = insertedKeys.length > 0 ? [{ keys: insertedKeys, kind: "items" }] : [];
         this.pieces = compactPieces([...before, ...inserted, ...after]);
-        this.emit(previousLength, [{ deleteCount, index, insertCount: insertedKeys.length, type: "splice" }]);
+        this.emit(previousLength, [{ deleteCount, index, insertCount, type: "splice" }]);
     }
 
     subscribe(listener: (batch: DataSourceMutationBatch) => void) {
