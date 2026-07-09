@@ -333,18 +333,21 @@ export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
         const extraData = peek$(ctx, "extraData");
         const cacheInput = getRowSpanCacheInput(state, extraData);
         const cachedSpans = runtime.getCachedRowSpans(cacheInput);
-        if (!cachedSpans) {
+        const spanInvalidationIndex = state.dataSourceSpanInvalidationIndex;
+        if (!cachedSpans || spanInvalidationIndex !== undefined) {
             const layoutConfig = { span: 1 };
-            const spans = new Array<number | undefined>(dataLength);
+            const spans = cachedSpans ?? new Array<number | undefined>(dataLength);
+            const startIndex = cachedSpans ? Math.max(0, Math.min(spanInvalidationIndex ?? 0, dataLength)) : 0;
 
-            for (let index = 0; index < dataLength; index++) {
+            for (let index = startIndex; index < dataLength; index++) {
                 layoutConfig.span = 1;
                 overrideItemLayout(layoutConfig, getDataItem(state, index), index, numColumns, extraData);
                 spans[index] = layoutConfig.span;
             }
 
-            store.resize(dataLength, spans, numColumns);
+            store.resize(dataLength, spans, numColumns, spanInvalidationIndex !== undefined);
             runtime.setCachedRowSpans(cacheInput, spans);
+            state.dataSourceSpanInvalidationIndex = undefined;
             didSync = true;
         }
     } else {

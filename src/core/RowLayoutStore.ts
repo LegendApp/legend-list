@@ -180,11 +180,19 @@ export class RowLayoutStore implements MutableLayoutStore {
         }
     }
 
-    resize(length: number, spans?: ArrayLike<number | undefined>, numColumns = this.numColumns) {
+    resize(
+        length: number,
+        spans?: ArrayLike<number | undefined>,
+        numColumns = this.numColumns,
+        forceTopologyRebuild = false,
+    ) {
         const normalizedLength = normalizeLength(length);
         const normalizedNumColumns = normalizeNumColumns(numColumns);
         const didTopologyChange =
-            normalizedLength !== this.length || normalizedNumColumns !== this.numColumns || spans !== this.spanInput;
+            forceTopologyRebuild ||
+            normalizedLength !== this.length ||
+            normalizedNumColumns !== this.numColumns ||
+            spans !== this.spanInput;
 
         if (didTopologyChange) {
             this.lengthValue = normalizedLength;

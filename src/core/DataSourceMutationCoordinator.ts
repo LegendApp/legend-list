@@ -268,6 +268,25 @@ export function applyDataSourceMutationBatches(
         }
     }
 
+    if (state.props.overrideItemLayout && state.props.numColumns > 1) {
+        let spanInvalidationIndex = state.dataSourceSpanInvalidationIndex;
+        for (const operation of operations) {
+            let operationIndex: number | undefined;
+            if (operation.type === "splice") {
+                operationIndex = operation.index;
+            } else if (operation.type === "move") {
+                operationIndex = Math.min(operation.from, operation.to);
+            } else if (operation.type === "update" && operation.layout === "invalidate") {
+                operationIndex = operation.index;
+            }
+            if (operationIndex !== undefined) {
+                spanInvalidationIndex = Math.min(spanInvalidationIndex ?? operationIndex, operationIndex);
+            }
+        }
+        state.dataSourceSpanInvalidationIndex = spanInvalidationIndex;
+        state.layoutStoreRuntime?.transformCachedRowSpans(operations);
+    }
+
     state.dataSourceAnchorPositions ??= anchorPositions;
     state.idCache.length = 0;
     state.indexByKey.clear();
@@ -340,7 +359,6 @@ export function applyDataSourceMutationBatches(
     state.firstFullyOnScreenIndex =
         state.firstFullyOnScreenIndex === undefined ? undefined : transformClampedIndex(state.firstFullyOnScreenIndex);
     state.scrollForNextCalculateItemsInView = undefined;
-    state.layoutStoreRuntime?.clearRowSpanCache();
 
     return { applied: true, materializedCount: entries.size };
 }

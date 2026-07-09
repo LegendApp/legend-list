@@ -219,6 +219,7 @@ export interface InternalState {
     dataSourceMutationApplied?: boolean;
     dataSourcePreviousLength?: number;
     dataSourceResetReason?: string;
+    dataSourceSpanInvalidationIndex?: number;
     deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
