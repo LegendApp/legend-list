@@ -100,11 +100,12 @@ export const Container = typedMemo(function Container<ItemT>({
     const positionComponentInternal = ctx.state.props.positionComponentInternal;
     const stickyPositionComponentInternal = ctx.state.props.stickyPositionComponentInternal;
 
-    const [column = 0, span = 1, data, itemIndex, numColumns = 1, extraData, isSticky] = useArr$([
+    const [column = 0, span = 1, data, itemIndex, dataVersion, numColumns = 1, extraData, isSticky] = useArr$([
         `containerColumn${id}`,
         `containerSpan${id}`,
         `containerItemData${id}`,
         `containerItemIndex${id}`,
+        `containerDataVersion${id}`,
         "numColumns",
         "extraData",
         `containerSticky${id}`,
@@ -155,7 +156,7 @@ export const Container = typedMemo(function Container<ItemT>({
     // does not itself invalidate the row on the next layout-only commit.
     const renderCache = useMemo(
         () => ({ readsIndex: false, value: undefined as ReturnType<GetRenderedItem> | undefined }),
-        [itemKey, data, extraData],
+        [itemKey, data, dataVersion, extraData],
     );
     const cached = renderCache.value;
     const getItemType = ctx.state.props.getItemType;
