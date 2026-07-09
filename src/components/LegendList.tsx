@@ -39,6 +39,7 @@ import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
+import { useInfiniteMode } from "@/hooks/useInfiniteMode";
 import { useInit } from "@/hooks/useInit";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { getWindowSize } from "@/platform/getWindowSize";
@@ -76,7 +77,7 @@ export const LegendList = typedMemo(
         forwardedRef: ForwardedRef<LegendListRef>,
     ) {
         // Handle children mode - convert children to data array at the top level
-        const { children, data: dataProp, renderItem: renderItemProp, ...restProps } = props;
+        const { children, data: dataProp, renderItem: renderItemProp, infiniteMode, ...restProps } = props;
         const isChildrenMode = children !== undefined && dataProp === undefined;
 
         const processedProps = isChildrenMode
@@ -92,9 +93,15 @@ export const LegendList = typedMemo(
                   renderItem: renderItemProp!,
               };
 
+        const { props: finalProps, refTarget } = useInfiniteMode<T, typeof processedProps>(
+            processedProps,
+            infiniteMode,
+            forwardedRef,
+        );
+
         return (
             <StateProvider>
-                <LegendListInner {...processedProps} ref={forwardedRef} />
+                <LegendListInner {...finalProps} ref={refTarget} />
             </StateProvider>
         );
     }),

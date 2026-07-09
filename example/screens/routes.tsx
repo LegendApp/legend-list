@@ -46,6 +46,8 @@ import ExtraDataFixture from "~/screens/fixtures/extra-data";
 import FilterElementsFixture from "~/screens/fixtures/filter-elements";
 import HorizontalAlignItemsFixture from "~/screens/fixtures/horizontal-align-items";
 import HorizontalCrossAxisFixture from "~/screens/fixtures/horizontal-cross-axis";
+import InfiniteCarouselFixture from "~/screens/fixtures/infinite-carousel";
+import InfiniteCarouselStateFixture from "~/screens/fixtures/infinite-carousel-state";
 import InitialScrollAtEndEmptyFixture from "~/screens/fixtures/initial-scroll-at-end-empty";
 import InitialScrollIndexFixture from "~/screens/fixtures/initial-scroll-index";
 import InitialScrollIndexFreeHeightFixture from "~/screens/fixtures/initial-scroll-index-free-height";
@@ -545,6 +547,25 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "product-shelf-fixture",
         title: "Product Shelf Fixture",
+    },
+    {
+        component: InfiniteCarouselFixture,
+        description:
+            "Circular carousel powered by infiniteMode with snap, progress animations, and wrap-around scrollToIndex.",
+        groupKey: "comparison",
+        groupTitle: "Comparisons & Media",
+        kind: "fixture",
+        slug: "infinite-carousel",
+        title: "Infinite Carousel",
+    },
+    {
+        component: InfiniteCarouselStateFixture,
+        description: "Shows how per-item state should be stored in an infinite recycled carousel.",
+        groupKey: "comparison",
+        groupTitle: "Comparisons & Media",
+        kind: "fixture",
+        slug: "infinite-carousel-state",
+        title: "Infinite Carousel State",
     },
     {
         component: RTLHorizontalFixture,

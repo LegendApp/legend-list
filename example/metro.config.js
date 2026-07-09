@@ -15,6 +15,7 @@ config.watchFolders = [listRoot, sharedExamplesRoot];
 config.resolver.nodeModulesPaths = [path.resolve(projectRoot, 'node_modules'), path.resolve(listRoot, 'node_modules')];
 const defaultResolveRequest = config.resolver.resolveRequest;
 const listEntrypoints = {
+    '@legendapp/list/infinite': path.join(listRoot, 'integrations/infinite'),
     '@legendapp/list/keyboard': path.join(listRoot, 'integrations/keyboard'),
     '@legendapp/list/react': path.join(listRoot, 'react'),
     '@legendapp/list/react-native': path.join(listRoot, 'react-native'),
