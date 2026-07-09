@@ -150,6 +150,8 @@ export interface InternalState {
     dataChangeKeyExtractorChanged?: boolean;
     dataChangeNeedsScrollUpdate: boolean;
     dataSourceNeedsReset?: boolean;
+    dataSourceAnchorPositions?: Map<string, number>;
+    dataSourceMutationApplied?: boolean;
     dataSourcePreviousLength?: number;
     dataSourceResetReason?: string;
     deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;

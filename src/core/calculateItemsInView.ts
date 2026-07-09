@@ -628,21 +628,27 @@ export function calculateItemsInView(
         const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, didDataChange) : undefined;
 
         const hasActiveLayoutStore = !!getActiveLayoutStore(ctx);
+        const didApplyDataSourceMutation = !!state.dataSourceMutationApplied && !state.dataSourceNeedsReset;
         const shouldReconcileLayoutStoreDataChange =
             !forceFullItemPositions &&
             didDataChange &&
             !state.isFirst &&
             hasActiveLayoutStore &&
             !state.dataSourceNeedsReset &&
+            !didApplyDataSourceMutation &&
             state.props.hasReliableKeyExtractor;
         const previousIdCache = shouldReconcileLayoutStoreDataChange ? getSparseIdCacheSnapshot(state) : undefined;
-        if (didDataChange) {
+        if (didDataChange && !didApplyDataSourceMutation) {
             resetLayoutCachesForDataChange(state, {
                 includeLayoutStoreMeasurements: !shouldReconcileLayoutStoreDataChange,
             });
         }
 
-        const shouldMaterializeLayoutStoreRange = hasActiveLayoutStore && !didDataChange;
+        if (didApplyDataSourceMutation) {
+            layout = createLayoutAccess(ctx, getActiveLayoutStore(ctx));
+        }
+        const shouldMaterializeLayoutStoreRange =
+            hasActiveLayoutStore && (!didDataChange || didApplyDataSourceMutation);
         let layoutStoreMaterializedRange = shouldMaterializeLayoutStoreRange
             ? materializeLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
             : undefined;
@@ -663,7 +669,7 @@ export function calculateItemsInView(
             }
         }
 
-        if (!layoutStoreMaterializedRange && didDataChange && hasActiveLayoutStore) {
+        if (!layoutStoreMaterializedRange && didDataChange && hasActiveLayoutStore && !didApplyDataSourceMutation) {
             const didFailReliableReconcile = shouldReconcileLayoutStoreDataChange && !didReconcileLayoutStoreDataChange;
             if (didFailReliableReconcile || !state.props.hasReliableKeyExtractor) {
                 clearUnsafeSizeCaches(state);
