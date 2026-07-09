@@ -184,21 +184,37 @@ export class RowLayoutStore implements MutableLayoutStore {
         length: number,
         spans?: ArrayLike<number | undefined>,
         numColumns = this.numColumns,
-        forceTopologyRebuild = false,
+        topologyInvalidationIndex?: number,
     ) {
         const normalizedLength = normalizeLength(length);
         const normalizedNumColumns = normalizeNumColumns(numColumns);
         const didTopologyChange =
-            forceTopologyRebuild ||
+            topologyInvalidationIndex !== undefined ||
             normalizedLength !== this.length ||
             normalizedNumColumns !== this.numColumns ||
             spans !== this.spanInput;
 
         if (didTopologyChange) {
+            const canUpdateTopologyTail =
+                topologyInvalidationIndex !== undefined &&
+                normalizedLength === this.length &&
+                normalizedNumColumns === this.numColumns &&
+                spans !== undefined &&
+                this.spanTopology !== undefined;
             this.lengthValue = normalizedLength;
             this.numColumns = normalizedNumColumns;
             this.spanInput = spans;
-            this.spanTopology = spans ? createSpanTopology(this.length, this.numColumns, spans) : undefined;
+            if (canUpdateTopologyTail) {
+                updateSpanTopologyTail(
+                    this.spanTopology!,
+                    this.length,
+                    this.numColumns,
+                    spans,
+                    topologyInvalidationIndex,
+                );
+            } else {
+                this.spanTopology = spans ? createSpanTopology(this.length, this.numColumns, spans) : undefined;
+            }
             this.pruneKnownSizes();
             this.rebuildRowsAndTotals();
         }
@@ -411,6 +427,43 @@ function createSpanTopology(
         rowStartIndexes,
         spans,
     };
+}
+
+function updateSpanTopologyTail(
+    topology: SpanTopology,
+    length: number,
+    numColumns: number,
+    inputSpans: ArrayLike<number | undefined>,
+    invalidationIndex: number,
+) {
+    const boundedIndex = Math.max(0, Math.min(length - 1, invalidationIndex));
+    const firstRowIndex = topology.itemRowIndexes[boundedIndex] ?? 0;
+    const startIndex = topology.rowStartIndexes[firstRowIndex] ?? 0;
+    topology.rowStartIndexes.length = firstRowIndex;
+    topology.rowEndIndexes.length = firstRowIndex;
+    let column = 1;
+    let rowIndex = firstRowIndex - 1;
+
+    for (let index = startIndex; index < length; index++) {
+        const span = normalizeSpan(inputSpans[index], numColumns);
+        if (column + span - 1 > numColumns) {
+            column = 1;
+        }
+        if (column === 1) {
+            rowIndex++;
+            topology.rowStartIndexes[rowIndex] = index;
+        }
+
+        topology.columns[index] = column;
+        topology.itemRowIndexes[index] = rowIndex;
+        topology.rowEndIndexes[rowIndex] = index;
+        topology.spans[index] = span;
+
+        column += span;
+        if (column > numColumns) {
+            column = 1;
+        }
+    }
 }
 
 function normalizeLength(length: number) {
