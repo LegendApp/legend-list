@@ -10,6 +10,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { isHorizontalRTL } from "@/utils/rtl";
 
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
@@ -525,6 +526,12 @@ export function startBootstrapInitialScrollOnMount(
     const shouldFinishAtOrigin =
         offset === 0 &&
         !initialScrollAtEnd &&
+        // For a horizontal RTL list a logical offset of 0 is NOT the native origin:
+        // the native ScrollView rests at the opposite (max-offset) edge, so finishing
+        // "at origin" without scrolling leaves the list on the mirror end and the
+        // target index (e.g. initialScrollIndex 0) renders blank. Let the bootstrap
+        // dispatch run so the offset is converted to native RTL coordinates.
+        !isHorizontalRTL(state) &&
         (isOffsetInitialScrollSession(state)
             ? Math.abs(target.contentOffset ?? 0) <= 1
             : target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1);
