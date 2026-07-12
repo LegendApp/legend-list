@@ -179,19 +179,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
 
     /**
-     * Experimental: Loops the data circularly so the list can be used as an infinite carousel.
-     * The data is repeated into a large virtual scroll space, scroll starts at the middle copy,
-     * and the scroll offset is seamlessly recentered as the user moves so the list never hits an edge.
-     * `renderItem`, viewability callbacks and ref scroll methods all receive/accept real data indices;
-     * `renderItem` additionally receives `infiniteIndex`, the item's index in the virtual scroll space.
-     * Works best with fixed-size items (`getFixedItemSize`) combined with `snapToInterval` or
-     * `pagingEnabled` for carousel snapping. Not supported with `numColumns > 1`,
-     * `onStartReached`/`onEndReached`, or header/footer components.
-     * @default undefined
-     */
-    infiniteMode?: boolean | InfiniteModeConfig;
-
-    /**
      * When true, the list initializes scrolled to the last item.
      * Overrides `initialScrollIndex` and `initialScrollOffset` when data is available.
      * @default false
@@ -466,15 +453,6 @@ export type LegendListPropsBase<
     LegendListSpecificProps<ItemT, TItemType> &
     (DataModeProps<ItemT, TItemType> | ChildrenModeProps);
 
-export interface InfiniteModeConfig {
-    /**
-     * How many times the data is repeated to create the virtual scroll space.
-     * Odd values keep a well-defined center copy. Defaults to at least 9 copies,
-     * scaled up automatically for very short datasets.
-     */
-    copies?: number;
-}
-
 export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;
     size?: boolean;
@@ -568,12 +546,6 @@ export interface LegendListRenderItemProps<
     index: number;
     item: ItemT;
     type: TItemType;
-    /**
-     * Only set when `infiniteMode` is enabled: the item's index in the virtual (repeated) scroll
-     * space. Use it together with the scroll offset to drive carousel progress animations, while
-     * `index` stays the item's index in the real data array.
-     */
-    infiniteIndex?: number;
 }
 
 export type LegendListState = {

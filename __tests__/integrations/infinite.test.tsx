@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { useInfiniteMode } from "../../src/hooks/useInfiniteMode";
+import { useInfiniteMode } from "../../src/integrations/infinite";
 import type { LegendListRenderItemProps, OnViewableItemsChangedInfo, ViewToken } from "../../src/types.base";
 import TestRenderer, { act } from "../helpers/testRenderer";
 import "../setup";
