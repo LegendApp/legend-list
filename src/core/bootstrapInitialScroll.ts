@@ -950,6 +950,12 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     if (
         Platform.OS !== "web" &&
         Platform.OS !== "android" &&
+        // For a horizontal RTL list the mount seed and observed offset are logical 0,
+        // but the native origin is the opposite (max-offset) edge — so "already at the
+        // resolved offset" is a false positive and finishing without a scroll leaves
+        // index 0 blank. Always dispatch for horizontal RTL (which converts logical 0
+        // to the native RTL coordinate). Mirrors the shouldFinishAtOrigin guard above.
+        !isHorizontalRTL(state) &&
         Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1 &&
         Math.abs(getObservedBootstrapInitialScrollOffset(state) - resolvedOffset) <= 1
     ) {
