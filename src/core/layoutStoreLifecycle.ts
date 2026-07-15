@@ -170,10 +170,12 @@ export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext) {
         }
 
         if (areAllVisibleSizesKnown && measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS) {
-            runtime.didFlushInitialEstimate = true;
-            runtime.lastFlushedEstimateMeasurementCount = store.getMeasuredCount();
             const nextEstimate = totalMeasuredSize / measuredCount;
-            didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer);
+            if (!state.scrollingTo) {
+                runtime.didFlushInitialEstimate = true;
+                runtime.lastFlushedEstimateMeasurementCount = store.getMeasuredCount();
+                didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer);
+            }
         }
     }
 
