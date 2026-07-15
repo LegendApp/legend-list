@@ -492,15 +492,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
 
-    if (!isFirstLocal && previousAdaptiveRender && !experimental_adaptiveRender) {
-        resetAdaptiveRender(ctx);
-    }
-    if (shouldResetFreshDataLayout) {
-        resetInitialRenderState(ctx, {
-            resetInitialScroll: !!initialScrollProp,
-            resetLayout: true,
-        });
-    }
+    useLayoutEffect(() => {
+        if (!isFirstLocal && previousAdaptiveRender && !experimental_adaptiveRender) {
+            resetAdaptiveRender(ctx);
+        }
+        if (shouldResetFreshDataLayout) {
+            resetInitialRenderState(ctx, {
+                resetInitialScroll: !!initialScrollProp,
+                resetLayout: true,
+            });
+        }
+    }, [isFirstLocal, previousAdaptiveRender, experimental_adaptiveRender, shouldResetFreshDataLayout, initialScrollProp]);
 
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataProp.length) return [];
