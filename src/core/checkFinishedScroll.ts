@@ -63,12 +63,22 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
         return false;
     }
 
-    if (state.initialScrollSession?.kind === "bootstrap") {
+    // On iOS an unanimated initial scrollTo/contentOffset does NOT emit a
+    // scroll event, so gating completion on observing native scroll progress
+    // deadlocks: the fallback loop re-issues scrollTo to the same offset
+    // (which again emits nothing) until the watchdog gives up seconds later —
+    // all while the list is held at opacity 0. When state.scroll and
+    // state.scrollPending already match the target (checked below), the
+    // unanimated dispatch has been applied synchronously and it is safe to
+    // finish without native progress. Other platforms emit the event and keep
+    // the stricter gate.
+    if (Platform.OS !== "ios" && state.initialScrollSession?.kind === "bootstrap") {
         return false;
     }
 
     const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
     if (
+        Platform.OS !== "ios" &&
         initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset) &&
         initialScrollCompletion.didDispatchNativeScroll(state) &&
         !state.hasScrolled
