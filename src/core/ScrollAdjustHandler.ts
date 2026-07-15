@@ -60,7 +60,7 @@ export class ScrollAdjustHandler {
                     targetScroll = clampScrollOffset(this.ctx, state.scroll + pending);
                 }
 
-                const adjustment = targetScroll - state.scroll;
+                const adjustment = targetScroll - state.scrollPending;
 
                 if (Math.abs(adjustment) > 0.1 || Math.abs(pending) > 0.1) {
                     this.appliedAdjust += adjustment;
