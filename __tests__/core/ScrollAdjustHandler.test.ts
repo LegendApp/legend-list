@@ -83,6 +83,38 @@ describe("ScrollAdjustHandler", () => {
         });
     });
 
+    describe("commitPendingAdjust", () => {
+        it("commits a late indexed adjustment relative to the native offset", () => {
+            mockCtx = createMockContext(
+                { scrollAdjust: 0 },
+                {
+                    positions: [151],
+                    props: { data: [0] },
+                    scroll: 100,
+                    scrollPending: 100,
+                    totalSize: 1000,
+                },
+            );
+            handler = new ScrollAdjustHandler(mockCtx);
+            mockCtx.state.scrollAdjustHandler = handler;
+            const scrollTarget = {
+                animated: true,
+                index: 0,
+                offset: 100,
+            };
+            mockCtx.state.scrollingTo = scrollTarget;
+
+            handler.requestAdjust(51);
+            mockCtx.state.scroll = 151;
+            handler.commitPendingAdjust(scrollTarget);
+
+            expect((handler as any).appliedAdjust).toBe(51);
+            expect(mockCtx.values.get("scrollAdjust")).toBe(51);
+            expect(mockCtx.values.get("scrollAdjustPending")).toBe(0);
+            expect(mockCtx.state.scroll).toBe(151);
+        });
+    });
+
     describe("edge cases and error handling", () => {
         it("should handle undefined scrollAdjust in context", () => {
             mockCtx.values.delete("scrollAdjust");
