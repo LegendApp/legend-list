@@ -25,7 +25,7 @@ import { prepareMVCP } from "@/core/mvcp";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
-import { updateViewableItems } from "@/core/viewability";
+import { getViewabilityStartOffset, hasViewabilityConsumers, updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
@@ -196,6 +196,7 @@ function handleStickyRecycling(
 interface VisibleRangeState {
     endNoBuffer: number | null;
     firstFullyOnScreenIndex: number | undefined;
+    firstVisibleIndex: number | null;
     startNoBuffer: number | null;
 }
 
@@ -206,10 +207,14 @@ function trackVisibleRange(
     size: number,
     scroll: number,
     scrollBottom: number,
+    firstVisibleScroll: number | null | undefined,
 ) {
     let didPassVisibleEnd = false;
     if (range.startNoBuffer === null && top + size > scroll && top <= scrollBottom) {
         range.startNoBuffer = i;
+    }
+    if (typeof firstVisibleScroll === "number" && range.firstVisibleIndex === null && top + size > firstVisibleScroll) {
+        range.firstVisibleIndex = i;
     }
     // Subtract 10px for a little buffer so it can be slightly off screen, but still
     // require the row to begin within the visible window so we don't anchor to the
@@ -357,15 +362,26 @@ function updateVisibleRangeForCachedRange(
     const visibleRange: VisibleRangeState = {
         endNoBuffer: null,
         firstFullyOnScreenIndex: undefined,
+        firstVisibleIndex: null,
         startNoBuffer: null,
     };
+    const startOffset = getViewabilityStartOffset(state.props.viewabilityConfig);
+    const firstVisibleScroll = startOffset >= scrollLength ? null : startOffset > 0 ? scroll + startOffset : undefined;
 
     for (let i = startBuffered; i <= endBuffered && i < dataLength; i++) {
         const id = idCache[i] ?? getId(state, i);
         const top = layout.getOffset(i);
         if (top !== undefined) {
             const size = getVisibleLoopItemSize(ctx, state, layout, i, id, false);
-            const didPassVisibleEnd = trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
+            const didPassVisibleEnd = trackVisibleRange(
+                visibleRange,
+                i,
+                top,
+                size,
+                scroll,
+                scrollBottom,
+                firstVisibleScroll,
+            );
             if (didPassVisibleEnd) {
                 break;
             }
@@ -378,7 +394,10 @@ function updateVisibleRangeForCachedRange(
         idsInView: getIdsInVisibleRange(state, visibleRange),
     });
 
-    maybeEmitFirstVisibleItemChanged(state, visibleRange.startNoBuffer);
+    maybeEmitFirstVisibleItemChanged(
+        state,
+        firstVisibleScroll === undefined ? visibleRange.startNoBuffer : visibleRange.firstVisibleIndex,
+    );
 
     if (viewabilityConfigCallbackPairs) {
         updateViewableItems(
@@ -442,8 +461,11 @@ export function calculateItemsInView(
             scrollForNextCalculateItemsInView,
             scrollLength,
             startBufferedId: startBufferedIdOrig,
-            viewabilityConfigCallbackPairs,
+            viewabilityConfigCallbackPairs: configuredViewabilityConfigCallbackPairs,
         } = state;
+        const viewabilityConfigCallbackPairs = hasViewabilityConsumers(ctx, configuredViewabilityConfigCallbackPairs)
+            ? configuredViewabilityConfigCallbackPairs
+            : undefined;
         const indexedData = getIndexedData(state);
         const legacyData = indexedData.getLegacyData();
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
@@ -608,6 +630,13 @@ export function calculateItemsInView(
             }
         };
         updateScrollRange();
+        const firstVisibleItemStartOffset = getViewabilityStartOffset(state.props.viewabilityConfig);
+        let firstVisibleScroll =
+            firstVisibleItemStartOffset >= scrollLength
+                ? null
+                : firstVisibleItemStartOffset > 0
+                  ? scroll + firstVisibleItemStartOffset
+                  : undefined;
 
         if (projectedBufferAdjustment !== 0) {
             scheduleRenderRangeProjectionSettle(ctx);
@@ -763,6 +792,12 @@ export function calculateItemsInView(
         if (didMVCPAdjustScroll) {
             updateScroll(state.scroll);
             updateScrollRange();
+            firstVisibleScroll =
+                firstVisibleItemStartOffset >= scrollLength
+                    ? null
+                    : firstVisibleItemStartOffset > 0
+                      ? scroll + firstVisibleItemStartOffset
+                      : undefined;
         }
 
         if (didDataChange) {
@@ -835,6 +870,7 @@ export function calculateItemsInView(
         const visibleRange: VisibleRangeState = {
             endNoBuffer: null,
             firstFullyOnScreenIndex: undefined,
+            firstVisibleIndex: null,
             startNoBuffer: null,
         };
 
@@ -858,7 +894,7 @@ export function calculateItemsInView(
             );
 
             if (!foundEnd) {
-                trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
+                trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom, firstVisibleScroll);
 
                 if (startBuffered === null && top + size > scrollTopBuffered) {
                     startBuffered = i;
@@ -1203,7 +1239,10 @@ export function calculateItemsInView(
             return;
         }
 
-        maybeEmitFirstVisibleItemChanged(state, visibleRange.startNoBuffer);
+        maybeEmitFirstVisibleItemChanged(
+            state,
+            firstVisibleScroll === undefined ? visibleRange.startNoBuffer : visibleRange.firstVisibleIndex,
+        );
 
         if (!queuedInitialLayout && !state.didContainersLayout) {
             const isInitialLayoutReady = hasActiveInitialScroll(state)
