@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import { setupViewability, updateViewableItems } from "../../src/core/viewability";
+import { hasViewabilityConsumers, setupViewability, updateViewableItems } from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type {
     OnViewableItemsChangedInfo,
@@ -66,10 +66,25 @@ function updateMockViewableItems(
 
 describe("viewability system", () => {
     describe("setupViewability", () => {
-        it("should return undefined when no viewability config provided", () => {
+        it("should create an inactive default config when no viewability props are provided", () => {
             const props = {};
             const result = setupViewability(props);
-            expect(result).toBeUndefined();
+            const ctx = createMockContext();
+            expect(result).toHaveLength(1);
+            expect(result[0].viewabilityConfig).toMatchObject({ id: "", viewAreaCoveragePercentThreshold: 0 });
+            expect(hasViewabilityConsumers(ctx, result)).toBe(false);
+        });
+
+        it("should keep a config without callbacks on the cheap viewability path", () => {
+            const result = setupViewability({ viewabilityConfig: { startOffset: 40 } });
+            const ctx = createMockContext();
+
+            expect(result[0].viewabilityConfig).toMatchObject({
+                id: "",
+                startOffset: 40,
+                viewAreaCoveragePercentThreshold: 0,
+            });
+            expect(hasViewabilityConsumers(ctx, result)).toBe(false);
         });
 
         it("should create viewability config from viewabilityConfig and onViewableItemsChanged", () => {
@@ -133,7 +148,9 @@ describe("viewability system", () => {
 
             const props = { viewabilityConfigCallbackPairs: pairs };
             const result = setupViewability(props);
-            expect(result).toBe(pairs);
+            expect(result).toHaveLength(2);
+            expect(result[0]).toEqual(pairs[0]);
+            expect(result[1].viewabilityConfig.id).toBe("");
         });
 
         it("should handle edge case with missing viewabilityConfig id", () => {
@@ -212,6 +229,44 @@ describe("viewability system", () => {
                 start: 0,
                 startBuffered: 0,
             });
+        });
+
+        it("should exclude startOffset from the effective viewability viewport", () => {
+            const calls: OnViewableItemsChangedInfo<any>[] = [];
+            const pairs: ViewabilityConfigCallbackPair[] = [
+                {
+                    onViewableItemsChanged: (info) => calls.push(info),
+                    viewabilityConfig: { id: "offset", startOffset: 100, viewAreaCoveragePercentThreshold: 0 },
+                },
+            ];
+
+            updateMockViewableItems(mockState, mockCtx, pairs, 200, 0, 1);
+
+            expect(calls).toHaveLength(1);
+            expect(calls[0].viewableItems.map((token) => token.index)).toEqual([1]);
+            expect(mockCtx.mapViewabilityAmountValues.get(1)).toMatchObject({
+                index: 1,
+                scrollSize: 100,
+                sizeVisible: 100,
+            });
+        });
+
+        it("should apply each callback pair's own startOffset", () => {
+            const calls: number[][] = [];
+            const pairs: ViewabilityConfigCallbackPair[] = [
+                {
+                    onViewableItemsChanged: (info) => calls.push(info.viewableItems.map((token) => token.index)),
+                    viewabilityConfig: { id: "full", startOffset: 0, viewAreaCoveragePercentThreshold: 0 },
+                },
+                {
+                    onViewableItemsChanged: (info) => calls.push(info.viewableItems.map((token) => token.index)),
+                    viewabilityConfig: { id: "offset", startOffset: 100, viewAreaCoveragePercentThreshold: 0 },
+                },
+            ];
+
+            updateMockViewableItems(mockState, mockCtx, pairs, 200, 0, 1);
+
+            expect(calls).toEqual([[0, 1], [1]]);
         });
 
         it("should delay updates when minimumViewTime is set", async () => {

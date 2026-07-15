@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { IsNewArchitecture } from "@/constants-platform";
+import { hasViewabilityConsumers, requestViewabilityRecalculation } from "@/core/viewability";
 import { useInit } from "@/hooks/useInit";
 import { listen$, peek$, useArr$, useSelector$, useStateContext } from "@/state/state";
 import type {
@@ -130,10 +131,14 @@ export function useViewability<ItemT = any>(callback: ViewabilityCallback<ItemT>
 
         const { containerId } = containerContext;
         const key = containerId + (configId ?? "");
+        const hadConsumers = hasViewabilityConsumers(ctx);
         ctx.mapViewabilityCallbacks.set(key, callback);
         const cancelConfigWarning = IS_DEV
             ? scheduleViewabilityConfigWarning(ctx, "useViewability", configId)
             : undefined;
+        if (!hadConsumers) {
+            requestViewabilityRecalculation(ctx);
+        }
 
         return () => {
             cancelConfigWarning?.();
@@ -166,8 +171,12 @@ export function useViewabilityAmount<ItemT = any>(callback: ViewabilityAmountCal
         }
 
         const { containerId } = containerContext;
+        const hadConsumers = hasViewabilityConsumers(ctx);
         ctx.mapViewabilityAmountCallbacks.set(containerId, callback);
         const cancelConfigWarning = IS_DEV ? scheduleViewabilityConfigWarning(ctx, "useViewabilityAmount") : undefined;
+        if (!hadConsumers) {
+            requestViewabilityRecalculation(ctx);
+        }
 
         return () => {
             cancelConfigWarning?.();
