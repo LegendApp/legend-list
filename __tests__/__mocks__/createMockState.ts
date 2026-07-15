@@ -145,6 +145,7 @@ export function createMockState(
             stylePaddingRight: undefined,
             stylePaddingTop: 0,
             useWindowScroll: false,
+            viewabilityConfig: undefined,
             ...(overrides.props ?? {}),
         },
     } as unknown as InternalState & Record<string, unknown>;

@@ -45,7 +45,7 @@ import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdj
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
-import { setupViewability } from "@/core/viewability";
+import { hasViewabilityConsumers, requestViewabilityRecalculation, setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
@@ -57,7 +57,13 @@ import { StyleSheet } from "@/platform/StyleSheet";
 import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from "@/platform/scrollview-types";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
-import type { LegendListDataSource, LegendListMetrics, LegendListRef } from "@/types.base";
+import type {
+    LegendListDataSource,
+    LegendListMetrics,
+    LegendListRef,
+    ViewabilityConfig,
+    ViewabilityConfigCallbackPairs,
+} from "@/types.base";
 import type { InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
 import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -116,6 +122,28 @@ type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>
     dataSource?: LegendListDataSource<T>;
     renderItem: (props: any) => React.ReactNode;
 };
+
+function areViewabilityConfigsEqual(a: ViewabilityConfig | undefined, b: ViewabilityConfig | undefined) {
+    return (
+        a?.id === b?.id &&
+        a?.itemVisiblePercentThreshold === b?.itemVisiblePercentThreshold &&
+        a?.minimumViewTime === b?.minimumViewTime &&
+        a?.startOffset === b?.startOffset &&
+        a?.viewAreaCoveragePercentThreshold === b?.viewAreaCoveragePercentThreshold &&
+        a?.waitForInteraction === b?.waitForInteraction
+    );
+}
+
+function areViewabilityConfigPairsEqual(
+    a: ViewabilityConfigCallbackPairs<any> | undefined,
+    b: ViewabilityConfigCallbackPairs<any> | undefined,
+) {
+    return (
+        a?.length === b?.length &&
+        (a === b ||
+            a?.every((pair, index) => areViewabilityConfigsEqual(pair.viewabilityConfig, b?.[index].viewabilityConfig)))
+    );
+}
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const LegendListInner = typedForwardRef(function LegendListInner<T>(
@@ -417,6 +445,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const state = refState.current!;
+    const previousViewabilityConfigRef = useRef(viewabilityConfig);
+    const previousViewabilityConfigPairsRef = useRef(viewabilityConfigCallbackPairs);
     const isFirstLocal = state.isFirst;
     const didDataSourceChangeLocal = state.props.dataSource !== dataSource;
     if (didDataSourceChangeLocal) {
@@ -548,6 +578,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingRight: stylePaddingRightState,
         stylePaddingTop: stylePaddingTopState,
         useWindowScroll: useWindowScrollResolved,
+        viewabilityConfig,
     };
 
     useLayoutEffect(() => {
@@ -892,6 +923,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [ctx, onMetricsChange]);
 
     useEffect(() => {
+        const hadViewabilityConsumers = hasViewabilityConsumers(ctx);
+        const didViewabilityConfigChange =
+            !areViewabilityConfigsEqual(previousViewabilityConfigRef.current, viewabilityConfig) ||
+            !areViewabilityConfigPairsEqual(previousViewabilityConfigPairsRef.current, viewabilityConfigCallbackPairs);
+        previousViewabilityConfigRef.current = viewabilityConfig;
+        previousViewabilityConfigPairsRef.current = viewabilityConfigCallbackPairs;
         const viewability = setupViewability({
             onViewableItemsChanged,
             viewabilityConfig,
@@ -899,8 +936,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
         state.viewabilityConfigCallbackPairs = viewability;
         state.enableScrollForNextCalculateItemsInView = true;
-        if (viewability) {
-            state.scrollForNextCalculateItemsInView = undefined;
+        state.scrollForNextCalculateItemsInView = undefined;
+        const hasViewabilityConsumersNow = hasViewabilityConsumers(ctx, viewability);
+        if (
+            (!hadViewabilityConsumers && hasViewabilityConsumersNow) ||
+            (didViewabilityConfigChange && (onFirstVisibleItemChanged || hasViewabilityConsumersNow))
+        ) {
+            requestViewabilityRecalculation(ctx);
         }
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
 
