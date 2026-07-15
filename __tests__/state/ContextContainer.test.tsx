@@ -195,6 +195,34 @@ describe("ContextContainer hooks", () => {
     });
 
     describe("useViewability", () => {
+        it("should request a calculation when the first viewability consumer mounts", async () => {
+            const contextValue = createMockContextValue();
+            let calculations = 0;
+
+            const TestComponent = () => {
+                const ctx = useStateContext();
+                ctx.state = {
+                    enableScrollForNextCalculateItemsInView: false,
+                    scrollForNextCalculateItemsInView: { bottom: 100, top: 0 },
+                    triggerCalculateItemsInView: () => calculations++,
+                    viewabilityConfigCallbackPairs: [],
+                } as any;
+                useViewability(() => {});
+                return <Text>Test</Text>;
+            };
+
+            render(
+                <StateProvider>
+                    <ContextContainer.Provider value={contextValue}>
+                        <TestComponent />
+                    </ContextContainer.Provider>
+                </StateProvider>,
+            );
+            await flushAsync();
+
+            expect(calculations).toBe(1);
+        });
+
         it("should register callback when used inside context", async () => {
             const callback = (token: ViewToken) => {
                 expect(token).toBeDefined();

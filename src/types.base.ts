@@ -833,6 +833,14 @@ export interface ViewabilityConfig {
     minimumViewTime?: number | undefined;
 
     /**
+     * Distance in pixels from the viewport's start edge to exclude from viewability calculations.
+     * This changes viewability callbacks only; it does not affect rendering, scrolling, padding,
+     * or content insets. Negative and non-finite values are treated as 0.
+     * @default 0
+     */
+    startOffset?: number | undefined;
+
+    /**
      * Percent of viewport that must be covered for a partially occluded item to count as
      * "viewable", 0-100. Fully visible items are always considered viewable. A value of 0 means
      * that a single pixel in the viewport makes the item viewable, and a value of 100 means that

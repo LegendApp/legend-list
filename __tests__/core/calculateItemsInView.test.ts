@@ -177,6 +177,33 @@ describe("calculateItemsInView", () => {
             ]);
         });
 
+        it("uses viewabilityConfig.startOffset for the first visible item callback", () => {
+            const calls: Array<{ index: number; item: { id: number }; key: string }> = [];
+            mockState.props.onFirstVisibleItemChanged = (info) => calls.push(info);
+            mockState.props.viewabilityConfig = { startOffset: 50 };
+            setupFixedSizeItems(10, 50);
+            mockState.scroll = 50;
+            mockState.scrollLength = 100;
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(1);
+            expect(calls).toEqual([{ index: 2, item: { id: 2 }, key: "item_2" }]);
+        });
+
+        it("does not treat contentInset as a viewability startOffset", () => {
+            const calls: Array<{ index: number; item: { id: number }; key: string }> = [];
+            mockState.props.onFirstVisibleItemChanged = (info) => calls.push(info);
+            mockState.props.contentInset = { bottom: 0, left: 0, right: 0, top: 50 };
+            setupFixedSizeItems(10, 50);
+            mockState.scroll = 50;
+            mockState.scrollLength = 100;
+
+            calculateItemsInView(mockCtx);
+
+            expect(calls).toEqual([{ index: 1, item: { id: 1 }, key: "item_1" }]);
+        });
+
         it("tracks replacement container keys after a web user scroll anchor reset", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";

@@ -325,6 +325,7 @@ export interface InternalState {
         onStartReachedThreshold: number | null | undefined;
         onStickyHeaderChange: LegendListPropsInternal["onStickyHeaderChange"];
         onFirstVisibleItemChanged: LegendListPropsInternal["onFirstVisibleItemChanged"];
+        viewabilityConfig: LegendListPropsInternal["viewabilityConfig"];
         overrideItemLayout: LegendListPropsInternal["overrideItemLayout"];
         recycleItems: boolean;
         renderItem: LegendListPropsInternal["renderItem"];
