@@ -44,6 +44,7 @@ interface ListComponentProps<ItemT>
         | "renderScrollComponent"
         | "style"
     > {
+    activeItemKeys: ReadonlySet<string>;
     horizontal: boolean;
     initialContentOffset: number | undefined;
     refScrollView: React.Ref<LooseScrollView | null>;
@@ -83,6 +84,7 @@ const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizon
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
+    activeItemKeys,
     canRender,
     style,
     contentContainerStyle,
@@ -213,6 +215,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 
             {canRender && !ListEmptyComponent && (
                 <Containers
+                    activeItemKeys={activeItemKeys}
                     getRenderedItem={getRenderedItem}
                     horizontal={horizontal!}
                     ItemSeparatorComponent={ItemSeparatorComponent}

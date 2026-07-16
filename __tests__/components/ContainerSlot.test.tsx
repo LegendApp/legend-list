@@ -21,9 +21,11 @@ function Setup({ children, itemKey }: { children: React.ReactNode; itemKey?: str
 }
 
 function renderSlot({
+    activeItemKeys,
     itemKey,
     onContainerRender,
 }: {
+    activeItemKeys?: ReadonlySet<string>;
     itemKey?: string;
     onContainerRender: (props: ContainerComponentProps<unknown>) => void;
 }) {
@@ -40,6 +42,7 @@ function renderSlot({
             <StateProvider>
                 <Setup itemKey={itemKey}>
                     <ContainerSlotBase
+                        activeItemKeys={activeItemKeys ?? new Set(["item-0", "item-1"])}
                         ContainerComponent={MockContainer}
                         getRenderedItem={() => null}
                         horizontal={false}
@@ -135,6 +138,52 @@ describe("ContainerSlot", () => {
 
         act(() => {
             renderer.unmount();
+        });
+    });
+
+    it("unmounts a Container whose assigned item key is absent from the latest data", () => {
+        const renderedProps: ContainerComponentProps<unknown>[] = [];
+        const onContainerRender = (props: ContainerComponentProps<unknown>) => renderedProps.push(props);
+        const itemKey = "item-0";
+
+        function MockContainer(props: ContainerComponentProps<unknown>) {
+            onContainerRender(props);
+            return React.createElement("mock-container", { itemKey: props.itemKey });
+        }
+
+        const render = (activeItemKeys: ReadonlySet<string>) => (
+            <StateProvider>
+                <Setup itemKey={itemKey}>
+                    <ContainerSlotBase
+                        activeItemKeys={activeItemKeys}
+                        ContainerComponent={MockContainer}
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        id={0}
+                        recycleItems={false}
+                    />
+                </Setup>
+            </StateProvider>
+        );
+
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        act(() => {
+            renderer = TestRenderer.create(render(new Set([itemKey])));
+        });
+
+        expect(renderer!.toJSON()).toMatchObject({
+            props: { itemKey },
+        });
+
+        act(() => {
+            renderer!.update(render(new Set()));
+        });
+
+        expect(renderer!.toJSON()).toBeNull();
+        expect(renderedProps).toHaveLength(1);
+
+        act(() => {
+            renderer!.unmount();
         });
     });
 });

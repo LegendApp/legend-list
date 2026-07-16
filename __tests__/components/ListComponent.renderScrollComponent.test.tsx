@@ -75,6 +75,7 @@ function ListComponentHarness({
 
     return (
         <ListComponent
+            activeItemKeys={new Set()}
             canRender={false}
             drawDistance={0}
             estimatedItemSize={100}

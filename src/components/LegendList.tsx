@@ -279,6 +279,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const refScroller = useRef<LooseScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
+    const activeItemKeys = useMemo(() => {
+        const extractKey = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
+        return new Set(dataProp.map((item, index) => extractKey(item, index)));
+    }, [dataProp, dataKey, dataVersion, keyExtractorProp]);
     const stickyHeaderIndices = stickyHeaderIndicesProp;
     const contentInsetEndAdjustmentResolved = Platform.OS === "web" ? contentInsetEndAdjustment : undefined;
     const previousContentInsetEndAdjustmentRef = useRef(contentInsetEndAdjustmentResolved);
@@ -827,6 +831,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         <>
             <ListComponent
                 {...restProps}
+                activeItemKeys={activeItemKeys}
                 alignItemsAtEnd={alignItemsAtEnd}
                 canRender={canRender}
                 contentContainerStyle={contentContainerStyle}
