@@ -20,6 +20,7 @@ export function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
 ): MockState {
     const state = {
+        activeItemKeys: new Set<string>(),
         anchoredEndSpaceSize: undefined,
         // Required by UpdateItemPositions
         averageSizes: {},

@@ -136,6 +136,7 @@ export interface PendingDataComparison {
 export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export interface InternalState {
+    activeItemKeys: ReadonlySet<string>;
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
     anchoredEndSpaceReadyAnchorIndex?: number;

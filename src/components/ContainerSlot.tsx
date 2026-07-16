@@ -17,10 +17,12 @@ export interface ContainerComponentProps<ItemT> {
 }
 
 export interface ContainerSlotProps<ItemT> extends Omit<ContainerComponentProps<ItemT>, "itemKey"> {
+    activeItemKeys: ReadonlySet<string>;
     ContainerComponent?: React.ComponentType<ContainerComponentProps<ItemT>>;
 }
 
 export function ContainerSlotBase<ItemT>({
+    activeItemKeys,
     id,
     horizontal,
     recycleItems,
@@ -31,7 +33,7 @@ export function ContainerSlotBase<ItemT>({
 }: ContainerSlotProps<ItemT>) {
     const [itemKey] = useArr$([`containerItemKey${id}`]);
 
-    if (itemKey === undefined) {
+    if (itemKey === undefined || !activeItemKeys.has(itemKey)) {
         return null;
     }
 

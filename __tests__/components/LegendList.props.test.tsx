@@ -123,6 +123,69 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("updates active item keys only when the accepted data generation changes", async () => {
+        const firstItem = { id: "item-1", label: "Alpha" };
+        const secondItem = { id: "item-2", label: "Beta" };
+        const initialData = [firstItem, secondItem];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-active-item-keys");
+        const renderList = (data: typeof initialData, keyExtractor: (item: (typeof initialData)[number]) => string) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList(initialData, (item) => item.id));
+        await getStateFromRender();
+
+        const initialActiveItemKeys = lastListProps.activeItemKeys as ReadonlySet<string>;
+        expect([...initialActiveItemKeys]).toEqual(["item-1", "item-2"]);
+
+        rendered.rerender(renderList([...initialData], (item) => item.id));
+
+        expect(lastListProps.activeItemKeys).toBe(initialActiveItemKeys);
+
+        rendered.rerender(renderList([firstItem], (item) => item.id));
+
+        expect(lastListProps.activeItemKeys).not.toBe(initialActiveItemKeys);
+        expect([...lastListProps.activeItemKeys]).toEqual(["item-1"]);
+
+        rendered.unmount();
+    });
+
+    it("keeps active item keys in the allocated key domain when only keyExtractor changes", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-key-extractor-generation");
+        const renderList = (keyExtractor: (item: (typeof data)[number]) => string) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList((item) => item.id));
+        await getStateFromRender();
+
+        const allocatedKeyDomain = lastListProps.activeItemKeys as ReadonlySet<string>;
+        rendered.rerender(renderList((item) => `new-${item.id}`));
+
+        expect(lastListProps.activeItemKeys).toBe(allocatedKeyDomain);
+        expect([...lastListProps.activeItemKeys]).toEqual(["item-1", "item-2"]);
+
+        rendered.unmount();
+    });
+
     it("clears tracked timeouts on unmount", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;

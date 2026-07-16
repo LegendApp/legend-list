@@ -46,6 +46,7 @@ async function renderContainers(horizontal: boolean, readyToRender = true) {
                         readyToRender,
                     },
                     React.createElement(Containers, {
+                        activeItemKeys: new Set(),
                         getRenderedItem: () => null,
                         horizontal,
                         recycleItems: true,

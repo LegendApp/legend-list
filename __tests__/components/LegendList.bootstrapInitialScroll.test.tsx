@@ -26,6 +26,7 @@ function registerLegendListBootstrapMocks() {
             const Containers = WebContainers;
             return Containers ? (
                 <Containers
+                    activeItemKeys={props.activeItemKeys}
                     getRenderedItem={props.getRenderedItem}
                     horizontal={props.horizontal}
                     ItemSeparatorComponent={props.ItemSeparatorComponent}

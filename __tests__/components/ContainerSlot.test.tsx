@@ -21,9 +21,11 @@ function Setup({ children, itemKey }: { children: React.ReactNode; itemKey?: str
 }
 
 function renderSlot({
+    activeItemKeys,
     itemKey,
     onContainerRender,
 }: {
+    activeItemKeys?: ReadonlySet<string>;
     itemKey?: string;
     onContainerRender: (props: ContainerComponentProps<unknown>) => void;
 }) {
@@ -40,6 +42,7 @@ function renderSlot({
             <StateProvider>
                 <Setup itemKey={itemKey}>
                     <ContainerSlotBase
+                        activeItemKeys={activeItemKeys ?? new Set(["item-0", "item-1"])}
                         ContainerComponent={MockContainer}
                         getRenderedItem={() => null}
                         horizontal={false}
@@ -135,6 +138,78 @@ describe("ContainerSlot", () => {
 
         act(() => {
             renderer.unmount();
+        });
+    });
+
+    it("does not render a container after its assigned key leaves the active data generation", () => {
+        const renderedProps: ContainerComponentProps<unknown>[] = [];
+        const renderer = renderSlot({
+            activeItemKeys: new Set(),
+            itemKey: "item-0",
+            onContainerRender: (props) => renderedProps.push(props),
+        });
+
+        expect(renderer.toJSON()).toBeNull();
+        expect(renderedProps).toHaveLength(0);
+
+        act(() => {
+            renderer.unmount();
+        });
+    });
+
+    it("stops rendering a removed row before its external record is deleted in the same update", () => {
+        const records = new Map([["item-0", { label: "Alpha" }]]);
+        let removeItem: (() => void) | undefined;
+        let containerRenderCount = 0;
+
+        function MockContainer(props: ContainerComponentProps<unknown>) {
+            containerRenderCount += 1;
+            const record = records.get(props.itemKey);
+            if (!record) {
+                throw new Error(`Missing external record for ${props.itemKey}`);
+            }
+            return React.createElement("mock-container", { label: record.label });
+        }
+
+        function Harness() {
+            const [activeItemKeys, setActiveItemKeys] = React.useState<ReadonlySet<string>>(new Set(["item-0"]));
+            removeItem = () => {
+                records.delete("item-0");
+                setActiveItemKeys(new Set());
+            };
+
+            return (
+                <StateProvider>
+                    <Setup itemKey="item-0">
+                        <ContainerSlotBase
+                            activeItemKeys={activeItemKeys}
+                            ContainerComponent={MockContainer}
+                            getRenderedItem={() => null}
+                            horizontal={false}
+                            id={0}
+                            recycleItems={false}
+                        />
+                    </Setup>
+                </StateProvider>
+            );
+        }
+
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        act(() => {
+            renderer = TestRenderer.create(<Harness />);
+        });
+
+        expect(containerRenderCount).toBe(1);
+
+        act(() => {
+            removeItem?.();
+        });
+
+        expect(renderer!.toJSON()).toBeNull();
+        expect(containerRenderCount).toBe(1);
+
+        act(() => {
+            renderer!.unmount();
         });
     });
 });

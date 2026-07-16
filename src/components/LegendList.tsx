@@ -312,6 +312,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             ctx.values.set("adaptiveRender", experimental_adaptiveRender?.initialMode ?? "normal");
 
             ctx.state = {
+                activeItemKeys: new Set(dataProp.map((item, index) => keyExtractor(item, index))),
                 averageSizes: {},
                 columnSpans: [],
                 columns: [],
@@ -425,6 +426,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         clearPreservedInitialScrollTarget(state);
     }
     if (didDataChangeLocal) {
+        state.activeItemKeys = new Set(dataProp.map((item, index) => keyExtractor(item, index)));
         state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;
         state.didDataChange = true;
@@ -827,6 +829,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         <>
             <ListComponent
                 {...restProps}
+                activeItemKeys={state.activeItemKeys}
                 alignItemsAtEnd={alignItemsAtEnd}
                 canRender={canRender}
                 contentContainerStyle={contentContainerStyle}
