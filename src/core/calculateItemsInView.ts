@@ -1017,6 +1017,9 @@ export function calculateItemsInView(
                     }
 
                     const item = indexedData.getItem(i);
+                    // Container subscriptions can render synchronously when the key is published.
+                    // Make the reverse lookup available first so getRenderedItem can resolve it.
+                    indexByKey.set(id, i);
                     set$(ctx, `containerItemKey${containerIndex}`, id);
                     set$(ctx, `containerItemIndex${containerIndex}`, i);
                     set$(ctx, `containerItemData${containerIndex}`, item);

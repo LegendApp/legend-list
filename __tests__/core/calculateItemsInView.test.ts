@@ -1439,6 +1439,52 @@ describe("calculateItemsInView", () => {
             expect(mockState.idsInView).toEqual(["item_2", "item_3", "item_4", "item_5"]);
         });
 
+        it("publishes container indexes after MVCP moves beyond the materialized range", () => {
+            const itemCount = 100;
+            mockState.props.data = Array.from({ length: itemCount }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.scrollingTo = {
+                animated: false,
+                index: 50,
+                itemSize: 100,
+                offset: 5000,
+                viewPosition: 0,
+            };
+            mockCtx.values.set("numContainers", 10);
+            mockCtx.values.set("totalSize", itemCount * 100);
+            mockState.totalSize = itemCount * 100;
+            syncLayoutStoreStructure(mockCtx);
+
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP").mockImplementation(() => () => {
+                mockState.scroll = 5000;
+            });
+            let indexWhenContainerKeyPublished: number | undefined;
+            for (let containerIndex = 0; containerIndex < 10; containerIndex++) {
+                mockCtx.listeners.set(
+                    `containerItemKey${containerIndex}`,
+                    new Set([
+                        (itemKey) => {
+                            if (itemKey === "item_50") {
+                                indexWhenContainerKeyPublished = mockState.indexByKey.get(itemKey);
+                            }
+                        },
+                    ]),
+                );
+            }
+
+            try {
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(indexWhenContainerKeyPublished).toBe(50);
+            } finally {
+                prepareMVCPSpy.mockRestore();
+            }
+        });
+
         it("reconciles only the buffered range on first mount when the prefix layout store is active", () => {
             const itemCount = 10000;
             mockState.isFirst = true;
