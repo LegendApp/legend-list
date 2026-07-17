@@ -30,6 +30,7 @@ import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
+import { isHorizontalRTL } from "@/utils/rtl";
 
 interface ListComponentProps<ItemT>
     extends Omit<
@@ -208,7 +209,18 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             onScroll={onScroll}
             ref={refScrollView as any}
             ScrollComponent={snapToIndices ? ScrollComponent : (undefined as any)}
-            style={autoOtherAxisStyle ? [autoOtherAxisStyle, style] : style}
+            // RTL is emulated in logical (LTR) coordinates with item positions mirrored
+            // in JS, so the scroll container must stay LTR. On web that's done per-item
+            // (Container.tsx); on native the container itself also flips under
+            // I18nManager.isRTL, and the double flip renders the list blank — so
+            // neutralize the native flip here too. See #477. Keep this array flat: the
+            // web scroll view flattens it shallowly, so a nested array would drop the
+            // measured cross-axis size.
+            style={[
+                isHorizontalRTL(ctx.state) && Platform.OS !== "web" ? { direction: "ltr" } : null,
+                autoOtherAxisStyle,
+                style,
+            ]}
         >
             <ScrollAdjust />
             {ListHeaderComponent && (
