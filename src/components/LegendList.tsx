@@ -557,7 +557,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
-        return usesBootstrapInitialScroll && state.initialScrollSession?.kind === "bootstrap" && Platform.OS === "web"
+        // For a horizontal RTL *bootstrap* scroll (initialScrollIndex / initialScrollAtEnd),
+        // this seed is a logical (LTR) offset; feeding it to the native `contentOffset`
+        // unconverted lands on the RTL mirror. Skip the seed and let the bootstrap
+        // dispatch (which converts) position the list. Scoped to bootstrap sessions so
+        // offset-only initial scrolls still apply their offset.
+        return usesBootstrapInitialScroll &&
+            ((state.initialScrollSession?.kind === "bootstrap" && Platform.OS === "web") ||
+                isHorizontalRTLProps({ horizontal, rtl }))
             ? undefined
             : resolvedOffset;
     }, [usesBootstrapInitialScroll]);
