@@ -110,6 +110,26 @@ export default LegendListExample
 
 ```
 
+### Masonry layout
+
+Import `MasonryLegendList` from the optional masonry entrypoint to place each item in the shortest available column without adding the masonry implementation to the core bundle.
+
+```tsx
+import { MasonryLegendList } from "@legendapp/list/masonry"
+
+<MasonryLegendList
+    contentContainerStyle={{ columnGap: 12, rowGap: 12 }}
+    data={photos}
+    estimatedItemSize={180}
+    keyExtractor={(photo) => photo.id}
+    numColumns={2}
+    recycleItems
+    renderItem={({ item }) => <PhotoCard photo={item} />}
+/>
+```
+
+Masonry lists are vertical and support dynamically measured or fixed-size items. Column spans and `overrideItemLayout` are not supported.
+
 ---
 
 ## How to Build
@@ -132,7 +152,7 @@ There's not a ton of code so hopefully it's easy to contribute. If you want to a
 - [] Column spans
 - [] overrideItemLayout
 - [] Sticky headers
-- [] Masonry layout
+- [x] Masonry layout
 - [] getItemType
 - [] React DOM implementation
 

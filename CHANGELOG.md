@@ -1,5 +1,6 @@
 ## 3.3.3
 
+- Feat: Add `MasonryLegendList` at `@legendapp/list/masonry` for vertically balancing dynamic items across columns without bundling the masonry implementation into the core entrypoint.
 - Fix: Row measurements are applied together in a batch, so item positions don't sometimes move after rendering.
 - Fix: `onStartReached` and `onEndReached` no longer bounce between opposite edges during the same scroll gesture after data changes, MVCP adjustments, or residual scroll events.
 - Fix: Prepending items with `maintainVisibleContentPosition` was sometimes flashing the wrong items for one frame

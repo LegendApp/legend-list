@@ -187,11 +187,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
 
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
+    const layoutStrategyInternal = (props as any)
+        .layoutStrategyInternal as InternalState["props"]["layoutStrategyInternal"];
     const positionComponentInternal = (props as any).positionComponentInternal as React.ComponentType<any> | undefined;
     const stickyPositionComponentInternal = (props as any).stickyPositionComponentInternal as
         | React.ComponentType<any>
         | undefined;
     const {
+        layoutStrategyInternal: _layoutStrategyInternal,
         positionComponentInternal: _positionComponentInternal,
         stickyPositionComponentInternal: _stickyPositionComponentInternal,
         ...restProps
@@ -463,6 +466,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         horizontal: !!horizontal,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),
+        layoutStrategyInternal,
         maintainScrollAtEnd: maintainScrollAtEndConfig,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
