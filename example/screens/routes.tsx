@@ -54,6 +54,7 @@ import InitialScrollStartAtTheEndFixture from "~/screens/fixtures/initial-scroll
 import LargeListRenderTimeFixture from "~/screens/fixtures/large-list-render-time";
 import LayoutAnimationFixture from "~/screens/fixtures/layout-animation";
 import LazyListFixture from "~/screens/fixtures/lazy-list";
+import MasonryFixture from "~/screens/fixtures/masonry";
 import MoviesFlashListFixture from "~/screens/fixtures/movies-flashlist";
 import MoviesLFixture from "~/screens/fixtures/moviesL";
 import MoviesLRFixture from "~/screens/fixtures/moviesLR";
@@ -392,6 +393,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "columns",
         title: "Columns",
+    },
+    {
+        component: MasonryFixture,
+        description: "Balances dynamically sized cards into the shortest available column.",
+        groupKey: "data",
+        groupTitle: "Data & Layout",
+        kind: "fixture",
+        slug: "masonry",
+        title: "Masonry",
     },
     {
         component: CardsColumnsFixture,

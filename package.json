@@ -23,6 +23,12 @@
             "require": "./keyboard-legacy.js",
             "default": "./keyboard-legacy.js"
         },
+        "./masonry": {
+            "types": "./masonry.d.ts",
+            "import": "./masonry.mjs",
+            "require": "./masonry.js",
+            "default": "./masonry.js"
+        },
         "./reanimated": {
             "types": "./reanimated.d.ts",
             "import": "./reanimated.mjs",
