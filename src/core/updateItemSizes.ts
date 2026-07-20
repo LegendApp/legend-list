@@ -102,7 +102,10 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
         state.userScrollAnchorReset = undefined;
     }
     if (result.didChange && result.shouldMaintainScrollAtEnd) {
-        doMaintainScrollAtEnd(ctx);
+        // A measured resize is already the real layout for this pass. Follow it immediately and
+        // non-animated so end-pinned content does not spend frames below the viewport while a
+        // correction catches up.
+        doMaintainScrollAtEnd(ctx, { animated: false, immediate: true });
     }
 }
 
@@ -206,7 +209,9 @@ function applyItemSize(
         }
 
         // Check if we should maintain scroll at end
-        if (prevSizeKnown !== undefined && Math.abs(prevSizeKnown - size) > 5) {
+        // Gradual animated resizes advance only a few pixels per frame, so use the layout noise
+        // epsilon instead of a larger magic number and follow every real measurement.
+        if (prevSizeKnown !== undefined && !isNativeLayoutNoise(prevSizeKnown - size)) {
             shouldMaintainScrollAtEnd = true;
         }
 

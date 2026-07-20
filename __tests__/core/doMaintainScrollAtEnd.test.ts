@@ -123,6 +123,33 @@ describe("doMaintainScrollAtEnd", () => {
             }
         });
 
+        it("should force non-animated scrolling when animated is false", () => {
+            mockState.props.maintainScrollAtEnd = { animated: true };
+
+            const result = doMaintainScrollAtEnd(mockCtx, { animated: false });
+
+            expect(result).toBe(true);
+            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+            if (rafCallback) {
+                rafCallback();
+                expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: false });
+                expect(globalThis.setTimeout).toHaveBeenCalledWith(expect.any(Function), 0);
+            }
+        });
+
+        it("should maintain immediately without scheduling a frame", () => {
+            mockState.props.maintainScrollAtEnd = { animated: true };
+
+            const result = doMaintainScrollAtEnd(mockCtx, { immediate: true });
+
+            expect(result).toBe(true);
+            expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+            expect(mockState.maintainingScrollAtEnd).toBe("animated");
+            expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: true });
+            expect(globalThis.setTimeout).toHaveBeenCalledWith(expect.any(Function), 500);
+        });
+
         it("should reset maintainingScrollAtEnd flag after timeout", () => {
             runMaintainScrollAtEnd(true);
 

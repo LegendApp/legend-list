@@ -2,7 +2,7 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
 import { getLogicalHorizontalMaxOffset, isHorizontalRTL, toNativeHorizontalOffset } from "@/utils/rtl";
 
-export function doMaintainScrollAtEnd(ctx: StateContext) {
+export function doMaintainScrollAtEnd(ctx: StateContext, options?: { animated?: boolean; immediate?: boolean }) {
     const state = ctx.state;
     const {
         didContainersLayout,
@@ -10,6 +10,8 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
         refScroller,
         props: { maintainScrollAtEnd },
     } = state;
+    const animated = options?.animated ?? maintainScrollAtEnd?.animated;
+    const immediate = options?.immediate === true;
     const isWithinMaintainScrollAtEndThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
     const shouldMaintainScrollAtEnd = !!(
         isWithinMaintainScrollAtEndThreshold &&
@@ -35,11 +37,11 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
         }
 
         if (!state.maintainingScrollAtEnd) {
-            const pendingState = maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
-            const activeState = maintainScrollAtEnd.animated ? "animated" : "instant";
+            const pendingState = animated ? "pending-animated" : "pending-instant";
+            const activeState = animated ? "animated" : "instant";
             state.maintainingScrollAtEnd = pendingState;
 
-            requestAnimationFrame(() => {
+            const maintain = () => {
                 // Make sure we're still at the end after the animation frame, before scrolling to the end
                 if (peek$(ctx, "isWithinMaintainScrollAtEndThreshold")) {
                     state.maintainingScrollAtEnd = activeState;
@@ -50,13 +52,13 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
                         const logicalEndOffset = getLogicalHorizontalMaxOffset(state, currentContentSize);
                         const nativeOffset = toNativeHorizontalOffset(state, logicalEndOffset, currentContentSize);
                         scroller?.scrollTo({
-                            animated: maintainScrollAtEnd.animated,
+                            animated,
                             x: nativeOffset,
                             y: 0,
                         });
                     } else {
                         scroller?.scrollToEnd({
-                            animated: maintainScrollAtEnd.animated,
+                            animated,
                         });
                     }
                     setTimeout(
@@ -64,16 +66,22 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
                             if (state.maintainingScrollAtEnd === activeState) {
                                 state.maintainingScrollAtEnd = undefined;
                                 if (state.pendingMaintainScrollAtEnd) {
-                                    doMaintainScrollAtEnd(ctx);
+                                    doMaintainScrollAtEnd(ctx, options);
                                 }
                             }
                         },
-                        maintainScrollAtEnd.animated ? 500 : 0,
+                        animated ? 500 : 0,
                     );
                 } else if (state.maintainingScrollAtEnd === pendingState) {
                     state.maintainingScrollAtEnd = undefined;
                 }
-            });
+            };
+
+            if (immediate) {
+                maintain();
+            } else {
+                requestAnimationFrame(maintain);
+            }
         } else {
             // Coalesce follow-up requests while the current maintain pass is still settling.
             state.pendingMaintainScrollAtEnd = true;

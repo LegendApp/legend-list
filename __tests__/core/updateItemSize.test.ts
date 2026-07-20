@@ -8,6 +8,7 @@ import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSiz
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { getItemSize } from "../../src/utils/getItemSize";
+import { NATIVE_LAYOUT_MEASUREMENT_EPSILON } from "../../src/utils/layoutMeasurement";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -249,7 +250,7 @@ describe("item size update functions", () => {
 
             updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { animated: false, immediate: true });
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
@@ -267,7 +268,47 @@ describe("item size update functions", () => {
 
             updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { animated: false, immediate: true });
+            doMaintainScrollAtEndSpy.mockRestore();
+        });
+
+        it("maintains the end for a known-item resize above layout noise", () => {
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = {
+                animated: true,
+                on: { itemLayout: true },
+            };
+            mockState.sizesKnown.set("item_0", 100);
+            mockState.sizes.set("item_0", 100);
+
+            updateItemAndFlush(mockCtx, "item_0", { height: 102, width: 400 });
+
+            expect(2).toBeGreaterThan(NATIVE_LAYOUT_MEASUREMENT_EPSILON);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { animated: false, immediate: true });
+            doMaintainScrollAtEndSpy.mockRestore();
+        });
+
+        it("does not maintain the end for a sub-epsilon known-item resize", () => {
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = {
+                animated: true,
+                on: { itemLayout: true },
+            };
+            mockState.sizesKnown.set("item_0", 100);
+            mockState.sizes.set("item_0", 100);
+
+            updateItemAndFlush(mockCtx, "item_0", {
+                height: 100 + NATIVE_LAYOUT_MEASUREMENT_EPSILON / 2,
+                width: 400,
+            });
+
+            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
