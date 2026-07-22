@@ -1,4 +1,5 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { cancelScrollCompletionChecks } from "@/core/cancelScrollCompletionChecks";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
@@ -169,13 +170,8 @@ export function scrollTo(
         props: { horizontal },
     } = state;
 
-    // Clear out previous timeouts which would finishScrollTo
-    if (state.animFrameCheckFinishedScroll) {
-        cancelAnimationFrame(ctx.state.animFrameCheckFinishedScroll);
-    }
-    if (state.timeoutCheckFinishedScrollFallback) {
-        clearTimeout(ctx.state.timeoutCheckFinishedScrollFallback);
-    }
+    // Clear out previous callbacks which would finishScrollTo
+    cancelScrollCompletionChecks(state);
 
     const requestedOffset = precomputedWithViewOffset
         ? scrollTargetOffset

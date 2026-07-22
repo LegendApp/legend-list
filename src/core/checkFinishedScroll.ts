@@ -1,5 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { cancelScrollCompletionFrame } from "@/core/cancelScrollCompletionChecks";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
@@ -28,6 +29,7 @@ export function checkFinishedScroll(ctx: StateContext, options?: { onlyIfAligned
 
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
+    cancelScrollCompletionFrame(ctx.state);
     ctx.state.animFrameCheckFinishedScroll = requestAnimationFrame(() => checkFinishedScrollFrame(ctx));
 }
 

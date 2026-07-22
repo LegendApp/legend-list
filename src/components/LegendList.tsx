@@ -20,6 +20,7 @@ import {
     handleBootstrapInitialScrollLayoutChange,
 } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { cancelScrollCompletionChecks } from "@/core/cancelScrollCompletionChecks";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
@@ -782,6 +783,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     useEffect(() => {
         return () => {
+            cancelScrollCompletionChecks(state);
             if (state.queuedFullDrawDistancePrewarm !== undefined) {
                 cancelAnimationFrame(state.queuedFullDrawDistancePrewarm);
                 state.queuedFullDrawDistancePrewarm = undefined;

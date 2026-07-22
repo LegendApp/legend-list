@@ -517,22 +517,52 @@ describe("checkFinishedScrollFallback", () => {
 
 describe("checkFinishedScroll", () => {
     let originalPlatform: typeof Platform.OS;
+    let originalCancelAnimationFrame: typeof globalThis.cancelAnimationFrame;
     let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
+    let canceledFrames: number[];
+    let nextFrameHandle: number;
     let pendingFrame: FrameRequestCallback | undefined;
 
     beforeEach(() => {
         originalPlatform = Platform.OS;
+        originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
         originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        canceledFrames = [];
+        nextFrameHandle = 0;
         pendingFrame = undefined;
+        globalThis.cancelAnimationFrame = (frame: number) => {
+            canceledFrames.push(frame);
+        };
         globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
             pendingFrame = callback;
-            return 1;
+            return nextFrameHandle++;
         }) as typeof globalThis.requestAnimationFrame;
     });
 
     afterEach(() => {
         Platform.OS = originalPlatform;
+        globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    });
+
+    it("cancels a pending completion frame before scheduling another", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                scrollingTo: {
+                    animated: false,
+                    isInitialScroll: false,
+                    offset: 100,
+                    viewOffset: 0,
+                } as any,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        checkFinishedScroll(ctx);
+
+        expect(canceledFrames).toEqual([0]);
+        expect(ctx.state.animFrameCheckFinishedScroll).toBe(1);
     });
 
     it("finishes when the scroll reaches the resolved end clamp target", () => {

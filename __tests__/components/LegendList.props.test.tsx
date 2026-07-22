@@ -8,6 +8,7 @@ let lastListProps: any;
 let requestAdjustCalls: number[] = [];
 let scrollToCalls: any[] = [];
 
+import { checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { type StateContext, set$ } from "../../src/state/state";
@@ -205,6 +206,70 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
 
         expect(state.timeouts.size).toBe(0);
+    });
+
+    it("cancels scroll completion checks on unmount", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-scroll-completion-cleanup");
+        const originalSetTimeout = globalThis.setTimeout;
+        const originalClearTimeout = globalThis.clearTimeout;
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const pendingTimers = new Map<number, () => void>();
+        const pendingFrames = new Set<number>();
+        let nextTimer = -1;
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={renderItem}
+                />,
+            );
+            const ctx = await getContextFromRender();
+            const state = ctx.state;
+            state.didContainersLayout = true;
+            state.scrollingTo = {
+                animated: false,
+                isInitialScroll: false,
+                offset: 100,
+                targetOffset: 100,
+                viewOffset: 0,
+            };
+            state.animFrameCheckFinishedScroll = 0;
+            pendingFrames.add(0);
+
+            globalThis.setTimeout = ((callback: TimerHandler) => {
+                nextTimer += 1;
+                pendingTimers.set(nextTimer, callback as () => void);
+                return nextTimer as unknown as ReturnType<typeof setTimeout>;
+            }) as typeof globalThis.setTimeout;
+            globalThis.clearTimeout = ((timer: ReturnType<typeof setTimeout>) => {
+                pendingTimers.delete(timer as unknown as number);
+            }) as typeof globalThis.clearTimeout;
+            globalThis.cancelAnimationFrame = (frame: number) => {
+                pendingFrames.delete(frame);
+            };
+
+            checkFinishedScrollFallback(ctx);
+            const fallbackTimeout = state.timeoutCheckFinishedScrollFallback as number | undefined;
+            expect(fallbackTimeout).toBe(0);
+            expect(pendingTimers.has(fallbackTimeout!)).toBe(true);
+
+            rendered.unmount();
+
+            expect(pendingTimers.has(fallbackTimeout!)).toBe(false);
+            expect(pendingFrames.has(0)).toBe(false);
+            expect(state.animFrameCheckFinishedScroll).toBeUndefined();
+            expect(state.timeoutCheckFinishedScrollFallback).toBeUndefined();
+        } finally {
+            globalThis.setTimeout = originalSetTimeout;
+            globalThis.clearTimeout = originalClearTimeout;
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
     });
 
     it("cancels queued full drawDistance prewarm on unmount", async () => {
