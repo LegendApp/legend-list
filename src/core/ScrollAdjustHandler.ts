@@ -3,9 +3,13 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
+import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { ScrollTarget } from "@/types.internal";
+
+function doesPlatformAdjustBreakScroll() {
+    return PlatformAdjustBreaksScroll || Platform.OS === "macos";
+}
 
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;
@@ -17,8 +21,13 @@ export class ScrollAdjustHandler {
     }
     requestAdjust(add: number) {
         const scrollingTo = this.ctx.state.scrollingTo;
+        const shouldDeferAdjust =
+            doesPlatformAdjustBreakScroll() &&
+            !!scrollingTo &&
+            !scrollingTo.isInitialScroll &&
+            (scrollingTo.animated || Platform.OS === "macos");
 
-        if (PlatformAdjustBreaksScroll && scrollingTo?.animated && !scrollingTo.isInitialScroll) {
+        if (shouldDeferAdjust) {
             this.pendingAdjust += add;
             set$(this.ctx, "scrollAdjustPending", this.pendingAdjust);
         } else {
@@ -34,10 +43,9 @@ export class ScrollAdjustHandler {
         return this.appliedAdjust;
     }
     commitPendingAdjust(scrollTarget: ScrollTarget) {
-        if (PlatformAdjustBreaksScroll) {
-            // On web and Android, adjust during a scrollTo breaks the scrollTo,
-            // so we need to set scrollAdjustPending while doing the scrollTo
-            // and then do the normal scrollBy when it's finished.
+        if (doesPlatformAdjustBreakScroll()) {
+            // On web and native platforms where adjustment can interfere with scrollTo,
+            // defer the adjustment and apply one correction when scrolling finishes.
             const state = this.ctx.state;
             const pending = this.pendingAdjust;
 
