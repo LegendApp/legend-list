@@ -1,20 +1,27 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("ScrollAdjustHandler", () => {
     let mockCtx: StateContext;
     let handler: ScrollAdjustHandler;
+    let originalPlatform: typeof Platform.OS;
 
     beforeEach(() => {
+        originalPlatform = Platform.OS;
         mockCtx = createMockContext({
             scrollAdjust: 0,
         });
 
         handler = new ScrollAdjustHandler(mockCtx);
+    });
+
+    afterEach(() => {
+        Platform.OS = originalPlatform;
     });
 
     describe("constructor", () => {
@@ -84,6 +91,45 @@ describe("ScrollAdjustHandler", () => {
     });
 
     describe("commitPendingAdjust", () => {
+        it("coalesces non-animated macOS adjustments into one final indexed correction", () => {
+            Platform.OS = "macos";
+            mockCtx = createMockContext(
+                { scrollAdjust: 0 },
+                {
+                    positions: [119],
+                    props: { data: [0] },
+                    scroll: 100,
+                    scrollPending: 100,
+                    totalSize: 1000,
+                },
+            );
+            handler = new ScrollAdjustHandler(mockCtx);
+            mockCtx.state.scrollAdjustHandler = handler;
+            const scrollTarget = {
+                animated: false,
+                index: 0,
+                offset: 100,
+            };
+            mockCtx.state.scrollingTo = scrollTarget;
+
+            for (const adjustment of [83, -64, 32, -32]) {
+                handler.requestAdjust(adjustment);
+            }
+
+            expect((handler as any).appliedAdjust).toBe(0);
+            expect((handler as any).pendingAdjust).toBe(19);
+            expect(mockCtx.values.get("scrollAdjust")).toBe(0);
+            expect(mockCtx.values.get("scrollAdjustPending")).toBe(19);
+
+            handler.commitPendingAdjust(scrollTarget);
+
+            expect((handler as any).appliedAdjust).toBe(19);
+            expect((handler as any).pendingAdjust).toBe(0);
+            expect(mockCtx.values.get("scrollAdjust")).toBe(19);
+            expect(mockCtx.values.get("scrollAdjustPending")).toBe(0);
+            expect(mockCtx.state.scroll).toBe(119);
+        });
+
         it("commits a late indexed adjustment relative to the native offset", () => {
             mockCtx = createMockContext(
                 { scrollAdjust: 0 },

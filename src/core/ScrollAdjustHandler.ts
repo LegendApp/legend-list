@@ -8,6 +8,10 @@ import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { ScrollTarget } from "@/types.internal";
 
+function doesPlatformAdjustBreakScroll() {
+    return PlatformAdjustBreaksScroll || Platform.OS === "macos";
+}
+
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;
     private pendingAdjust = 0;
@@ -32,8 +36,13 @@ export class ScrollAdjustHandler {
     }
     requestAdjust(add: number) {
         const scrollingTo = this.ctx.state.scrollingTo;
+        const shouldDeferAdjust =
+            doesPlatformAdjustBreakScroll() &&
+            !!scrollingTo &&
+            !scrollingTo.isInitialScroll &&
+            (scrollingTo.animated || Platform.OS === "macos");
 
-        if (PlatformAdjustBreaksScroll && scrollingTo?.animated && !scrollingTo.isInitialScroll) {
+        if (shouldDeferAdjust) {
             this.pendingAdjust += add;
             set$(this.ctx, "scrollAdjustPending", this.pendingAdjust);
         } else {
@@ -58,10 +67,8 @@ export class ScrollAdjustHandler {
         this.supersededAdjust = this.pendingAdjust;
     }
     commitPendingAdjust(scrollTarget?: ScrollTarget) {
-        if (PlatformAdjustBreaksScroll) {
-            // On web and Android, adjust during a scrollTo breaks the scrollTo,
-            // so we need to set scrollAdjustPending while doing the scrollTo
-            // and then do the normal scrollBy when it's finished.
+        if (doesPlatformAdjustBreakScroll()) {
+            // Defer adjustments on platforms where they interrupt an active scroll.
             const state = this.ctx.state;
             const pending = this.pendingAdjust;
             // Only a replacement's own offset target excludes what a superseded animation deferred
