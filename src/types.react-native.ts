@@ -12,7 +12,11 @@ import type {
     ViewStyle,
 } from "react-native";
 
-import type { LegendListRef as LegendListRefBase, LegendListState as LegendListStateBase } from "@/types.base";
+import type {
+    AnchoredEndSpaceConfig,
+    LegendListRef as LegendListRefBase,
+    LegendListState as LegendListStateBase,
+} from "@/types.base";
 import type { LegendListPropsBase } from "@/types.internal";
 
 export type {
@@ -20,6 +24,7 @@ export type {
     AdaptiveRenderChangeReason,
     AdaptiveRenderConfig,
     AlwaysRenderConfig,
+    AnchoredEndSpaceConfig,
     ColumnWrapperStyle,
     Insets,
     LayoutRectangle,
@@ -59,6 +64,7 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omi
     | "ListHeaderComponentStyle"
     | "ListFooterComponentStyle"
 > & {
+    anchoredEndSpace?: AnchoredEndSpaceConfig;
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     refScrollView?: React.Ref<ScrollView>;
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
