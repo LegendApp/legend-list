@@ -218,6 +218,46 @@ describe("handleLayout", () => {
     });
 
     describe("maintain scroll at end", () => {
+        it("maintains the end when the viewport shrinks beyond the threshold before the scheduled scroll", () => {
+            const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+            const originalSetTimeout = globalThis.setTimeout;
+            let animationFrameCallback: FrameRequestCallback | undefined;
+            let scrollToEndCalls = 0;
+
+            globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+                animationFrameCallback = callback;
+                return 1;
+            };
+            globalThis.setTimeout = (() => 1) as typeof globalThis.setTimeout;
+
+            try {
+                mockState.lastLayout = { height: 600, width: 400, x: 0, y: 0 };
+                mockState.scrollLength = 600;
+                mockState.scroll = 400;
+                mockState.didContainersLayout = true;
+                mockState.props.maintainScrollAtEnd = true;
+                mockState.refScroller.current = {
+                    scrollToEnd: () => {
+                        scrollToEndCalls++;
+                    },
+                } as any;
+                mockCtx.values.set("isWithinMaintainScrollAtEndThreshold", true);
+                mockLayout.height = 400;
+
+                handleLayout(mockCtx, mockLayout, setCanRender);
+
+                expect(mockState.isWithinMaintainScrollAtEndThreshold).toBe(false);
+                expect(animationFrameCallback).toBeDefined();
+
+                animationFrameCallback?.(0);
+
+                expect(scrollToEndCalls).toBe(1);
+            } finally {
+                globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+                globalThis.setTimeout = originalSetTimeout;
+            }
+        });
+
         it("should handle maintainScrollAtEnd as boolean true", () => {
             mockState.props.maintainScrollAtEnd = true;
 

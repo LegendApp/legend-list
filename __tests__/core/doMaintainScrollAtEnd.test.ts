@@ -437,6 +437,23 @@ describe("doMaintainScrollAtEnd", () => {
             expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: true });
         });
 
+        it("cancels coalesced maintain requests when the scroll position changes away from the end", () => {
+            const result = runMaintainScrollAtEnd(false);
+
+            expect(result).toBe(true);
+
+            runMaintainScrollAtEnd(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+
+            mockState.scroll = 50;
+            mockState.isWithinMaintainScrollAtEndThreshold = false;
+            rafCallback?.();
+
+            expect(mockScrollToEnd).not.toHaveBeenCalled();
+            expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+        });
+
         it("replays a maintain request that arrives while an instant maintain is active", () => {
             const firstResult = runMaintainScrollAtEnd(false);
 
