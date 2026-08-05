@@ -10,7 +10,7 @@ let scrollToCalls: any[] = [];
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
-import { type StateContext, set$ } from "../../src/state/state";
+import { type StateContext, set$, useArr$ } from "../../src/state/state";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
@@ -690,6 +690,13 @@ describe("LegendList props behavior", () => {
     });
 
     it("restarts layout readiness when dataKey changes with non-empty data", async () => {
+        mock.module("@/components/ListComponent", () => ({
+            ListComponent: (props: any) => {
+                lastListProps = props;
+                useArr$(["readyToRender"]);
+                return null;
+            },
+        }));
         const initialData = [
             { id: "item-1", label: "Alpha" },
             { id: "item-2", label: "Beta" },
@@ -699,6 +706,9 @@ describe("LegendList props behavior", () => {
             { id: "item-4", label: "Delta" },
         ];
         const { LegendList } = await import("../../src/components/LegendList?props-test-data-key-fresh-dataset");
+        const consoleError = mock(() => {});
+        const originalConsoleError = console.error;
+        console.error = consoleError;
         const renderList = (data: typeof initialData, dataKey: string) => (
             <LegendList
                 data={data}
@@ -711,34 +721,41 @@ describe("LegendList props behavior", () => {
             />
         );
 
-        const rendered = render(renderList(initialData, "conversation-1"));
-        const ctx = await getContextFromRender();
+        try {
+            const rendered = render(renderList(initialData, "conversation-1"));
+            const ctx = await getContextFromRender();
 
-        await act(async () => {
-            setDidLayout(ctx);
-        });
-        await flushAsync();
+            await act(async () => {
+                setDidLayout(ctx);
+            });
+            await flushAsync();
 
-        expect(ctx.values.get("readyToRender")).toBe(true);
-        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+            expect(ctx.values.get("readyToRender")).toBe(true);
+            expect(ctx.values.get("adaptiveRender")).toBe("normal");
+            const initialFreshDataTransitionEpoch = lastListProps.freshDataTransitionEpoch;
 
-        rendered.rerender(renderList(nextData, "conversation-2"));
-        await flushAsync();
+            rendered.rerender(renderList(nextData, "conversation-2"));
+            await flushAsync();
 
-        expect(ctx.state.didContainersLayout).toBe(false);
-        expect(ctx.state.didFinishInitialScroll).toBe(true);
-        expect(ctx.values.get("readyToRender")).toBe(false);
-        expect(ctx.values.get("adaptiveRender")).toBe("light");
+            expect(ctx.state.didContainersLayout).toBe(false);
+            expect(ctx.state.didFinishInitialScroll).toBe(true);
+            expect(ctx.values.get("readyToRender")).toBe(false);
+            expect(ctx.values.get("adaptiveRender")).toBe("light");
+            expect(lastListProps.freshDataTransitionEpoch).toBe(initialFreshDataTransitionEpoch + 1);
+            expect(consoleError.mock.calls.flat().join(" ")).not.toContain("Cannot update a component");
 
-        await act(async () => {
-            setDidLayout(ctx);
-        });
-        await flushAsync();
+            await act(async () => {
+                setDidLayout(ctx);
+            });
+            await flushAsync();
 
-        expect(ctx.values.get("readyToRender")).toBe(true);
-        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+            expect(ctx.values.get("readyToRender")).toBe(true);
+            expect(ctx.values.get("adaptiveRender")).toBe("normal");
 
-        rendered.unmount();
+            rendered.unmount();
+        } finally {
+            console.error = originalConsoleError;
+        }
     });
 
     it("clears zero-valued initial scroll targets on mount", async () => {

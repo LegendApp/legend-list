@@ -331,6 +331,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 endNoBuffer: -1,
                 endReachedSnapshot: undefined,
                 firstFullyOnScreenIndex: -1,
+                freshDataTransitionEpoch: 0,
                 hasHadNonEmptyData: dataProp.length > 0,
                 idCache: [],
                 idsInView: [],
@@ -432,6 +433,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didDataChange = true;
         state.previousData = state.props.data;
     }
+    if (shouldResetFreshDataLayout) {
+        state.freshDataTransitionEpoch += 1;
+    }
     const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
     const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
     const anchoredEndSpaceResolved =
@@ -499,13 +503,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (!isFirstLocal && previousAdaptiveRender && !experimental_adaptiveRender) {
         resetAdaptiveRender(ctx);
     }
-    if (shouldResetFreshDataLayout) {
-        resetInitialRenderState(ctx, {
-            resetInitialScroll: !!initialScrollProp,
-            resetLayout: true,
-        });
-    }
-
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataProp.length) return [];
         return Array.from({ length: Math.min(numColumnsProp, dataProp.length) }, (_, i) =>
@@ -589,6 +586,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     useLayoutEffect(() => {
+        if (shouldResetFreshDataLayout) {
+            resetInitialRenderState(ctx, {
+                resetInitialScroll: !!initialScrollProp,
+                resetLayout: true,
+            });
+        }
         handleInitialScrollDataChange(ctx, {
             dataLength: dataProp.length,
             didDataChange: didDataChangeLocal,
@@ -840,6 +843,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 canRender={canRender}
                 contentContainerStyle={contentContainerStyle}
                 contentInset={contentInset}
+                freshDataTransitionEpoch={state.freshDataTransitionEpoch}
                 getRenderedItem={fns.getRenderedItem}
                 horizontal={horizontal!}
                 initialContentOffset={initialContentOffset}

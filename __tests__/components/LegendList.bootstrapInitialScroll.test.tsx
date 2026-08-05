@@ -26,6 +26,7 @@ function registerLegendListBootstrapMocks() {
             const Containers = WebContainers;
             return Containers ? (
                 <Containers
+                    freshDataTransitionEpoch={props.freshDataTransitionEpoch}
                     getRenderedItem={props.getRenderedItem}
                     horizontal={props.horizontal}
                     ItemSeparatorComponent={props.ItemSeparatorComponent}
@@ -319,6 +320,67 @@ describe("LegendList bootstrap initial scroll", () => {
                 opacity: 1,
             });
             expect(getBootstrapSession(state)).toBeUndefined();
+        } finally {
+            WebContainers = undefined;
+            renderWebContainersInListComponent = false;
+            Platform.OS = previousPlatform;
+        }
+    });
+
+    it("hides stale web rows throughout a fresh dataKey layout reset", async () => {
+        const previousPlatform = Platform.OS;
+        Platform.OS = "web";
+        WebContainers = (await import("../../src/components/Containers?fresh-data-web-containers")).Containers;
+        renderWebContainersInListComponent = true;
+        const { LegendList } = await import("../../src/components/LegendList?fresh-data-visibility");
+
+        const initialData = [
+            { id: "old-1", label: "Old 1" },
+            { id: "old-2", label: "Old 2" },
+        ];
+        const nextData = [
+            { id: "new-1", label: "New 1" },
+            { id: "new-2", label: "New 2" },
+        ];
+        const renderList = (data: typeof initialData, dataKey: string) => (
+            <LegendList
+                data={data}
+                dataKey={dataKey}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        try {
+            const rendered = render(renderList(initialData, "old"));
+            const ctx = await getContextFromRender();
+
+            await act(async () => {
+                setDidLayout(ctx);
+            });
+
+            expect(ctx.values.get("readyToRender")).toBe(true);
+            expect(findFirstStyleByType(rendered.toJSON(), "div")).toMatchObject({ opacity: 1 });
+
+            rendered.rerender(renderList(nextData, "new"));
+            await flushAsync();
+
+            expect(ctx.values.get("readyToRender")).toBe(false);
+            expect(findFirstStyleByType(rendered.toJSON(), "div")).toMatchObject({
+                opacity: 0,
+                pointerEvents: "none",
+            });
+
+            await act(async () => {
+                setDidLayout(ctx);
+            });
+
+            expect(ctx.values.get("readyToRender")).toBe(true);
+            expect(findFirstStyleByType(rendered.toJSON(), "div")).toMatchObject({ opacity: 1 });
+            rendered.unmount();
         } finally {
             WebContainers = undefined;
             renderWebContainersInListComponent = false;

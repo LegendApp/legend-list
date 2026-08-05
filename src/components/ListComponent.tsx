@@ -46,6 +46,7 @@ interface ListComponentProps<ItemT>
     > {
     horizontal: boolean;
     initialContentOffset: number | undefined;
+    freshDataTransitionEpoch: number;
     refScrollView: React.Ref<LooseScrollView | null>;
     getRenderedItem: GetRenderedItem;
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
@@ -86,6 +87,7 @@ const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizon
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
     canRender,
+    freshDataTransitionEpoch,
     style,
     contentContainerStyle,
     horizontal,
@@ -221,6 +223,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 
             {canRender && !ListEmptyComponent && (
                 <Containers
+                    freshDataTransitionEpoch={freshDataTransitionEpoch}
                     getRenderedItem={getRenderedItem}
                     horizontal={horizontal!}
                     ItemSeparatorComponent={ItemSeparatorComponent}

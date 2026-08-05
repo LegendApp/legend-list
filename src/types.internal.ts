@@ -160,6 +160,7 @@ export interface InternalState {
     containerItemMetadata: Map<number, ContainerItemMetadata>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
+    freshDataTransitionEpoch: number;
     deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;
     didColumnsChange?: boolean;
     didDataChange?: boolean;

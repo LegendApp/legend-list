@@ -31,16 +31,25 @@ type SetupProps = {
     numColumns: number;
     onContext?: (ctx: StateContext) => void;
     otherAxisSize?: number;
+    readyToRender?: boolean;
     children: React.ReactNode;
 };
 
-const Setup = ({ columnWrapperStyle, numColumns, onContext, otherAxisSize = 0, children }: SetupProps) => {
+const Setup = ({
+    columnWrapperStyle,
+    numColumns,
+    onContext,
+    otherAxisSize = 0,
+    readyToRender = true,
+    children,
+}: SetupProps) => {
     const ctx = useStateContext();
     onContext?.(ctx);
     ctx.columnWrapperStyle = columnWrapperStyle;
     ctx.values.set("numColumns", numColumns);
     ctx.values.set("numContainersPooled", 1);
     ctx.values.set("otherAxisSize", otherAxisSize);
+    ctx.values.set("readyToRender", readyToRender);
     ctx.values.set("totalSize", 0);
     return <>{children}</>;
 };
@@ -92,7 +101,12 @@ describe("Containers native", () => {
         const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{ gap: 20 }} numColumns={1}>
-                    <Containers getRenderedItem={() => null} horizontal={false} recycleItems={false} />
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        recycleItems={false}
+                    />
                 </Setup>
             </StateProvider>,
         );
@@ -110,7 +124,12 @@ describe("Containers native", () => {
         const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{ gap: 16 }} numColumns={2}>
-                    <Containers getRenderedItem={() => null} horizontal={false} recycleItems={false} />
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        recycleItems={false}
+                    />
                 </Setup>
             </StateProvider>,
         );
@@ -128,7 +147,12 @@ describe("Containers native", () => {
         const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{}} numColumns={1}>
-                    <Containers getRenderedItem={() => null} horizontal recycleItems={false} />
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal
+                        recycleItems={false}
+                    />
                 </Setup>
             </StateProvider>,
         );
@@ -146,7 +170,12 @@ describe("Containers native", () => {
         const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{}} numColumns={1} otherAxisSize={180}>
-                    <Containers getRenderedItem={() => null} horizontal recycleItems={false} />
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal
+                        recycleItems={false}
+                    />
                 </Setup>
             </StateProvider>,
         );
@@ -171,7 +200,12 @@ describe("Containers native", () => {
                         ctx = value;
                     }}
                 >
-                    <Containers getRenderedItem={() => null} horizontal={false} recycleItems={false} />
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        recycleItems={false}
+                    />
                 </Setup>
             </StateProvider>,
         );
@@ -183,6 +217,28 @@ describe("Containers native", () => {
         });
 
         expect(measureCalls).toHaveLength(1);
+        unmount();
+    });
+
+    it("disables native interaction while the container layer is hidden", async () => {
+        const { Containers } = await import("@/components/Containers");
+
+        const { toJSON, unmount } = render(
+            <StateProvider>
+                <Setup columnWrapperStyle={{}} numColumns={1} readyToRender={false}>
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        recycleItems={false}
+                    />
+                </Setup>
+            </StateProvider>,
+        );
+
+        const props = (toJSON() as any)?.props;
+        expect(props?.style?.opacity).toBe(0);
+        expect(props?.pointerEvents).toBe("none");
         unmount();
     });
 
@@ -199,7 +255,12 @@ describe("Containers native", () => {
                         ctx = value;
                     }}
                 >
-                    <Containers getRenderedItem={() => null} horizontal={false} recycleItems={false} />
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        recycleItems={false}
+                    />
                 </Setup>
             </StateProvider>,
         );
