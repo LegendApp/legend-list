@@ -225,6 +225,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             end: state.endNoBuffer,
             endBuffered: state.endBuffered,
             getAverageItemSizes: () => getAverageItemSizes(state),
+            indexByKey: (key: string) => state.indexByKey.get(key),
             isAtEnd: peek$(ctx, "isAtEnd"),
             isAtStart: peek$(ctx, "isAtStart"),
             isEndReached: state.isEndReached!,

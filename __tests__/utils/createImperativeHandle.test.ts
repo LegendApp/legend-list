@@ -204,7 +204,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
         retargetSpy.mockRestore();
     });
 
-    it("does not expose positions from getState and uses accessors instead", () => {
+    it("exposes positions and indices through accessors", () => {
         const ctx = createMockContext(
             {},
             {
@@ -223,6 +223,8 @@ describe("createImperativeHandle.scrollToEnd", () => {
         const state = createImperativeHandle(ctx).getState();
 
         expect((state as Record<string, unknown>).positions).toBeUndefined();
+        expect(state.indexByKey("b")).toBe(1);
+        expect(state.indexByKey("missing")).toBeUndefined();
         expect(state.positionAtIndex(0)).toBe(10);
         expect(state.positionByKey("b")).toBe(40);
     });

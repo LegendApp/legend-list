@@ -563,6 +563,7 @@ export type LegendListState = {
     isStartReached: boolean;
     isWithinMaintainScrollAtEndThreshold: boolean;
     getAverageItemSizes: () => Record<string, LegendListAverageItemSize>;
+    indexByKey: (key: string) => number | undefined;
     listen: <T extends LegendListListenerType>(
         listenerType: T,
         callback: (value: ListenerTypeValueMap[T]) => void,
