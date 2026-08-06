@@ -370,6 +370,53 @@ describe("LegendList props behavior", () => {
         }
     });
 
+    it("warns when anchoredEndSpace is used with multiple columns", async () => {
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-anchored-columns-warning");
+
+        try {
+            const singleColumn = render(
+                <LegendList
+                    anchoredEndSpace={{ anchorIndex: 0 }}
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
+            singleColumn.unmount();
+
+            const multipleColumns = render(
+                <LegendList
+                    anchoredEndSpace={{ anchorIndex: 0 }}
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    numColumns={2}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] anchoredEndSpace is only supported when numColumns is 1. Using it with multiple columns may produce incorrect anchored spacing.",
+            );
+            multipleColumns.unmount();
+        } finally {
+            console.warn = originalWarn;
+        }
+    });
+
     it("clears stale first-render layout caches before rebuilding positions", async () => {
         const initialData = [
             { id: "a", label: "Alpha" },

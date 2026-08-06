@@ -19,7 +19,17 @@ type LegendListDevProps<T> = LegendListPropsBase<T, LooseScrollViewProps> & {
 
 function useDevChecksImpl(props: LegendListDevProps<any>) {
     const ctx = useStateContext();
-    const { childrenMode, keyExtractor, renderScrollComponent, useWindowScroll } = props;
+    const { anchoredEndSpace, childrenMode, keyExtractor, numColumns, renderScrollComponent, useWindowScroll } = props;
+    const hasAnchoredEndSpace = !!anchoredEndSpace;
+
+    useEffect(() => {
+        if (hasAnchoredEndSpace && (numColumns ?? 1) > 1) {
+            warnDevOnce(
+                "anchoredEndSpaceNumColumns",
+                "anchoredEndSpace is only supported when numColumns is 1. Using it with multiple columns may produce incorrect anchored spacing.",
+            );
+        }
+    }, [hasAnchoredEndSpace, numColumns]);
 
     useEffect(() => {
         if (useWindowScroll && renderScrollComponent) {
