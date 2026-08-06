@@ -29,6 +29,18 @@ describe("updateContentMetrics", () => {
         expect(getContentSize(ctx)).toBe(160);
     });
 
+    it("excludes the trailing gap removed by the containers layer", () => {
+        const ctx = createMockContext(
+            { totalSize: 108 },
+            {
+                props: { data: [1] },
+            },
+        );
+        ctx.scrollAxisGap = 8;
+
+        expect(getContentSize(ctx)).toBe(100);
+    });
+
     it("uses leading padding to absorb end inset for short vertical alignItemsAtEnd content", () => {
         const ctx = createMockContext(
             {

@@ -254,6 +254,17 @@ describe("scrollToIndex", () => {
             expect(mockScrollCalls[0].x).toBe(220);
             expect(mockScrollCalls[0].y).toBe(0);
         });
+
+        it("excludes the following gap from item alignment", () => {
+            mockState.scrollLength = 200;
+            mockState.sizesKnown.set("item_3", 108);
+            mockCtx.scrollAxisGap = 8;
+
+            scrollToIndex(mockCtx, { index: 3, viewPosition: 1 });
+
+            expect(mockScrollCalls[0].x).toBe(200);
+            expect(mockScrollCalls[0].y).toBe(0);
+        });
     });
 
     describe("state management", () => {
