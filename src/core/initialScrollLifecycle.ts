@@ -112,7 +112,7 @@ export function handleInitialScrollDataChange(
         initialScrollAtEnd: boolean;
         latestInitialScroll: StateContext["state"]["initialScroll"];
         latestInitialScrollSessionKind: "bootstrap" | "offset";
-        stylePaddingBottom: number;
+        stylePaddingEnd: number;
         useBootstrapInitialScroll: boolean;
     },
 ) {
@@ -123,7 +123,7 @@ export function handleInitialScrollDataChange(
         initialScrollAtEnd,
         latestInitialScroll,
         latestInitialScrollSessionKind,
-        stylePaddingBottom,
+        stylePaddingEnd,
         useBootstrapInitialScroll,
     } = options;
     const state = ctx.state;
@@ -157,7 +157,7 @@ export function handleInitialScrollDataChange(
             didDataChange,
             initialScrollAtEnd,
             previousDataLength: previousInitialScrollDataLength,
-            stylePaddingBottom,
+            stylePaddingEnd,
         });
         return;
     }

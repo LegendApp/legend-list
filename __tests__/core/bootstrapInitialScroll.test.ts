@@ -67,7 +67,7 @@ describe("bootstrapInitialScroll", () => {
             didDataChange: true,
             initialScrollAtEnd: true,
             previousDataLength: 0,
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
         });
 
         expect(ctx.state.didContainersLayout).toBe(true);
@@ -146,7 +146,7 @@ describe("bootstrapInitialScroll", () => {
             dataLength: data.length,
             footerSize: 40,
             initialScrollAtEnd: true,
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
         });
 
         expect(ctx.state.initialScroll).toMatchObject({
@@ -172,7 +172,7 @@ describe("bootstrapInitialScroll", () => {
             dataLength: data.length,
             footerSize: 60,
             initialScrollAtEnd: true,
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
         });
 
         expect(ctx.state.initialScroll).toMatchObject({
@@ -242,7 +242,7 @@ describe("bootstrapInitialScroll", () => {
             dataLength: data.length,
             footerSize: 40,
             initialScrollAtEnd: true,
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
         });
 
         expect(ctx.state.initialScroll).toMatchObject({
@@ -313,7 +313,7 @@ describe("bootstrapInitialScroll", () => {
             didDataChange: true,
             initialScrollAtEnd: true,
             previousDataLength: 3,
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
         });
 
         expect(ctx.state.initialScroll).toMatchObject({
@@ -378,7 +378,7 @@ describe("bootstrapInitialScroll", () => {
             didDataChange: true,
             initialScrollAtEnd: false,
             previousDataLength: 3,
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
         });
 
         expect(ctx.state.initialScroll).toBeUndefined();

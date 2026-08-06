@@ -835,6 +835,53 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(getBootstrapSession(state)).toBeDefined();
     });
 
+    it("re-targets horizontal bottom-aligned bootstrap targets when end padding changes", async () => {
+        const data = Array.from({ length: 3 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-padding-right");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                horizontal
+                initialScrollIndex={{ index: 2, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                rtl={false}
+                style={{ paddingRight: 10 }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.viewOffset).toBe(-10);
+        expect(getBootstrapSession(state)).toBeDefined();
+
+        getBootstrapSession(state).mountFrameCount = 3;
+
+        rendered.rerender(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                horizontal
+                initialScrollIndex={{ index: 2, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                rtl={false}
+                style={{ paddingRight: 40 }}
+            />,
+        );
+
+        await flushAsync();
+
+        expect(state.initialScroll?.viewOffset).toBe(-40);
+        expect(getBootstrapSession(state)?.mountFrameCount).toBeGreaterThanOrEqual(3);
+        expect(getBootstrapSession(state)).toBeDefined();
+    });
+
     it("does not overwrite explicit bottom-aligned viewOffset values when paddingBottom changes", async () => {
         const data = Array.from({ length: 3 }, (_, index) => ({
             id: `item-${index}`,

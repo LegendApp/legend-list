@@ -72,7 +72,7 @@ describe("initialScrollLifecycle", () => {
             initialScrollAtEnd: false,
             latestInitialScroll: ctx.state.initialScroll,
             latestInitialScrollSessionKind: "offset",
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
             useBootstrapInitialScroll: false,
         });
 
@@ -294,7 +294,7 @@ describe("initialScrollLifecycle", () => {
             initialScrollAtEnd: true,
             latestInitialScroll: ctx.state.initialScroll,
             latestInitialScrollSessionKind: "bootstrap",
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
             useBootstrapInitialScroll: true,
         });
 

@@ -64,7 +64,7 @@ import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
-import { isHorizontalRTLProps } from "@/utils/rtl";
+import { getStylePaddingEnd, isHorizontalRTLProps } from "@/utils/rtl";
 import { resetInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
@@ -220,6 +220,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
     const stylePaddingLeftState = extractPadding(style, contentContainerStyle, "Left");
     const stylePaddingRightState = extractPadding(style, contentContainerStyle, "Right");
+    const stylePaddingEndState = getStylePaddingEnd({
+        horizontal,
+        rtl,
+        stylePaddingBottom: stylePaddingBottomState,
+        stylePaddingLeft: stylePaddingLeftState,
+        stylePaddingRight: stylePaddingRightState,
+    });
     const maintainScrollAtEndConfig = normalizeMaintainScrollAtEnd(maintainScrollAtEnd);
     const maintainVisibleContentPositionConfig = normalizeMaintainVisibleContentPosition(
         maintainVisibleContentPositionProp,
@@ -239,7 +246,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ? {
               index: Math.max(0, dataProp.length - 1),
               preserveForBottomPadding: true,
-              viewOffset: -stylePaddingBottomState,
+              viewOffset: -stylePaddingEndState,
               viewPosition: 1,
           }
         : hasInitialScrollIndex
@@ -252,7 +259,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                             : undefined,
                     viewOffset:
                         initialScrollIndexProp.viewOffset ??
-                        (initialScrollIndexProp.viewPosition === 1 ? -stylePaddingBottomState : 0),
+                        (initialScrollIndexProp.viewPosition === 1 ? -stylePaddingEndState : 0),
                     viewPosition: initialScrollIndexProp.viewPosition ?? 0,
                 }
               : {
@@ -599,7 +606,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScrollAtEnd,
             latestInitialScroll: initialScrollProp,
             latestInitialScrollSessionKind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
-            stylePaddingBottom: stylePaddingBottomState,
+            stylePaddingEnd: stylePaddingEndState,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
         });
     }, [
@@ -608,7 +615,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         didDataChangeLocal,
         shouldResetFreshDataLayout,
         initialScrollAtEnd,
-        stylePaddingBottomState,
+        stylePaddingEndState,
         usesBootstrapInitialScroll,
     ]);
 
@@ -645,10 +652,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 dataLength: dataProp.length,
                 footerSize: layout[horizontal ? "width" : "height"],
                 initialScrollAtEnd,
-                stylePaddingBottom: stylePaddingBottomState,
+                stylePaddingEnd: stylePaddingEndState,
             });
         },
-        [dataProp.length, initialScrollAtEnd, horizontal, stylePaddingBottomState, usesBootstrapInitialScroll],
+        [dataProp.length, initialScrollAtEnd, horizontal, stylePaddingEndState, usesBootstrapInitialScroll],
     );
 
     const onLayoutChange = useCallback(
@@ -668,7 +675,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             advanceCurrentInitialScrollSession(ctx);
         },
-        [dataProp.length, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll],
+        [dataProp.length, initialScrollAtEnd, stylePaddingEndState, usesBootstrapInitialScroll],
     );
 
     const { onLayout } = useOnLayoutSync({

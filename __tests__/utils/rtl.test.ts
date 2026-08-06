@@ -6,6 +6,7 @@ import { I18nManager } from "react-native";
 import { Platform } from "../../src/platform/Platform";
 import type { InternalState } from "../../src/types.internal";
 import {
+    getStylePaddingEnd,
     isHorizontalRTL,
     toLogicalHorizontalOffset,
     toNativeHorizontalOffset,
@@ -41,6 +42,18 @@ describe("rtl horizontal coordinate helpers", () => {
         state.props.rtl = false;
         I18nManager.isRTL = true;
         expect(isHorizontalRTL(state)).toBe(false);
+    });
+
+    it("resolves style padding from the logical scroll end", () => {
+        const paddings = {
+            stylePaddingBottom: 10,
+            stylePaddingLeft: 20,
+            stylePaddingRight: 30,
+        };
+
+        expect(getStylePaddingEnd(paddings)).toBe(10);
+        expect(getStylePaddingEnd({ ...paddings, horizontal: true, rtl: false })).toBe(30);
+        expect(getStylePaddingEnd({ ...paddings, horizontal: true, rtl: true })).toBe(20);
     });
 
     it("normalizes negative native offsets into logical offsets", () => {

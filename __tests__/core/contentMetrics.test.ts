@@ -8,6 +8,27 @@ import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("updateContentMetrics", () => {
+    it("counts padding on the active scroll axis", () => {
+        const ctx = createMockContext(
+            {
+                footerSize: 20,
+                headerSize: 10,
+                stylePaddingTop: 100,
+                totalSize: 100,
+            },
+            {
+                props: {
+                    horizontal: true,
+                    stylePaddingBottom: 200,
+                    stylePaddingLeft: 12,
+                    stylePaddingRight: 18,
+                },
+            },
+        );
+
+        expect(getContentSize(ctx)).toBe(160);
+    });
+
     it("uses leading padding to absorb end inset for short vertical alignItemsAtEnd content", () => {
         const ctx = createMockContext(
             {

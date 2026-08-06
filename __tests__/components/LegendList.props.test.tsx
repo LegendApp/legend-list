@@ -902,6 +902,35 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("offsets horizontal initialScrollAtEnd by the logical end padding", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-horizontal-end-padding");
+        const rendered = render(
+            <LegendList
+                contentContainerStyle={{ paddingBottom: 40, paddingRight: 12 }}
+                data={data}
+                estimatedItemSize={100}
+                horizontal
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                rtl={false}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.index).toBe(2);
+        expect(state.initialScroll?.viewOffset).toBe(-12);
+
+        rendered.unmount();
+    });
+
     it("finishes empty initialScrollAtEnd mounts so onLoad can fire", async () => {
         const onLoadCalls: number[] = [];
 
