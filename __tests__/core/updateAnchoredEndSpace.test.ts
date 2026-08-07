@@ -195,6 +195,26 @@ describe("updateAnchoredEndSpace", () => {
         expect(onReady).toHaveBeenCalledTimes(1);
     });
 
+    it("uses logical end padding for horizontal LTR and RTL lists", () => {
+        mockState.props.horizontal = true;
+        mockState.props.stylePaddingLeft = 10;
+        mockState.props.stylePaddingRight = 30;
+        mockState.props.anchoredEndSpace = { anchorIndex: 1 };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(70);
+
+        mockState.props.rtl = true;
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(90);
+    });
+
+    it("excludes the trailing scroll-axis gap removed by the containers layer", () => {
+        mockCtx.scrollAxisGap = 8;
+        mockState.props.anchoredEndSpace = { anchorIndex: 1 };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(108);
+    });
+
     it("keeps the previous anchored end space while tail item sizes are unknown", () => {
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,

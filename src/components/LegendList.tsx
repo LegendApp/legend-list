@@ -633,7 +633,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         anchoredEndSpace?.anchorMaxSize,
         anchoredEndSpace?.anchorOffset,
         didAnchoredEndSpaceAnchorIndexChange,
+        horizontal,
         numColumnsProp,
+        rtl,
+        stylePaddingBottomState,
+        stylePaddingLeftState,
+        stylePaddingRightState,
     ]);
 
     useLayoutEffect(() => {

@@ -10,7 +10,7 @@ let scrollToCalls: any[] = [];
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
-import { type StateContext, set$, useArr$ } from "../../src/state/state";
+import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
@@ -1502,6 +1502,75 @@ describe("LegendList props behavior", () => {
         });
 
         expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
+
+        rendered.unmount();
+    });
+
+    it("recomputes anchored end space when only axis or logical end padding props change", async () => {
+        const data = [
+            { id: "item-0", label: "Item 0" },
+            { id: "item-1", label: "Item 1" },
+        ];
+        const onSizeChanged = mock(() => {});
+        const keyExtractor = (item: { id: string }) => item.id;
+        const getFixedItemSize = () => 100;
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-anchored-axis-padding");
+        const renderList = ({
+            anchored = true,
+            horizontal = false,
+            paddingBottom = 0,
+            rtl = false,
+        }: {
+            anchored?: boolean;
+            horizontal?: boolean;
+            paddingBottom?: number;
+            rtl?: boolean;
+        }) => (
+            <LegendList
+                anchoredEndSpace={anchored ? { anchorIndex: 1, onSizeChanged } : undefined}
+                contentContainerStyle={{ paddingBottom, paddingLeft: 10, paddingRight: 30 }}
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={getFixedItemSize}
+                horizontal={horizontal}
+                keyExtractor={keyExtractor}
+                recycleItems={false}
+                renderItem={renderItem}
+                rtl={rtl}
+            />
+        );
+
+        const rendered = render(renderList({}));
+        const ctx = await getContextFromRender();
+        const state = ctx.state;
+        state.scrollLength = 300;
+        onSizeChanged.mockClear();
+
+        await act(async () => {
+            rendered.rerender(renderList({ paddingBottom: 20 }));
+        });
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onSizeChanged).toHaveBeenLastCalledWith(180);
+
+        onSizeChanged.mockClear();
+        await act(async () => {
+            rendered.rerender(renderList({ horizontal: true, paddingBottom: 20 }));
+        });
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onSizeChanged).toHaveBeenLastCalledWith(170);
+
+        onSizeChanged.mockClear();
+        await act(async () => {
+            rendered.rerender(renderList({ horizontal: true, paddingBottom: 20, rtl: true }));
+        });
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onSizeChanged).toHaveBeenLastCalledWith(190);
+
+        await act(async () => {
+            rendered.rerender(renderList({ anchored: false, horizontal: true, paddingBottom: 20, rtl: true }));
+        });
+        expect(peek$(ctx, "anchoredEndSpaceSize")).toBe(0);
 
         rendered.unmount();
     });
