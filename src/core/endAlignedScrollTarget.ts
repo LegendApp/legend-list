@@ -5,7 +5,11 @@ import type { StateContext } from "@/state/state";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 
-const ANIMATED_CORRECTION_MIN_DISTANCE = 40;
+// End-aligned targets move while content grows (pendingTotalSize keeps them
+// ~one commit ahead of the reachable native range), so completion and
+// re-dispatch share this slack: sessions finish within it, and re-dispatched
+// remainders beyond it glide while smaller ones snap imperceptibly.
+export const END_ALIGNED_COMPLETION_EPSILON = 30;
 
 export function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     return scrollingTo.index === ctx.state.props.data.length - 1 && scrollingTo.viewPosition === 1;
@@ -23,7 +27,21 @@ export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScr
     return clampScrollOffset(ctx, requestedTargetOffset, scrollingTo);
 }
 
-export function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
+export function scrollToFallbackOffset(ctx: StateContext, offset: number) {
+    dispatchScrollTo(ctx, offset, false);
+}
+
+// Re-dispatch an end-aligned session at its recomputed target. An animated
+// dispatch gets clamped short when the target sits beyond the natively
+// committed range (uncommitted total size or end inset), so an animated
+// session with a remainder beyond the completion slack glides the rest of
+// the way instead of teleporting; smaller remainders snap imperceptibly.
+export function redispatchEndAlignedTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget, target: number) {
+    const animated = !!scrollingTo.animated && target - ctx.state.scroll > END_ALIGNED_COMPLETION_EPSILON;
+    dispatchScrollTo(ctx, target, animated);
+}
+
+function dispatchScrollTo(ctx: StateContext, offset: number, animated: boolean) {
     ctx.state.refScroller.current?.scrollTo({
         animated,
         x: ctx.state.props.horizontal ? offset : 0,
@@ -37,10 +55,7 @@ export function scrollToFallbackOffset(ctx: StateContext, offset: number, animat
 // beyond the reachable range and retries could not move past it. Once the
 // committed size lands natively (two frames), re-dispatch a single correction
 // toward the end. One-shot and end-directed, so it cannot loop or fight the
-// user. A large remainder on an animated session means the original dispatch
-// was clamped short (uncommitted size or end inset), so the correction glides
-// instead of teleporting; small residue snaps instantly to keep the settle
-// imperceptible.
+// user.
 export function maybeCorrectEndAlignedScrollAfterCommit(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const state = ctx.state;
     if (!isEndAlignedLastItemTarget(ctx, scrollingTo)) {
@@ -54,9 +69,7 @@ export function maybeCorrectEndAlignedScrollAfterCommit(ctx: StateContext, scrol
             }
             const correctedTarget = getCurrentTargetOffset(ctx, scrollingTo);
             if (correctedTarget > state.scroll + 1) {
-                const animated =
-                    !!scrollingTo.animated && correctedTarget - state.scroll > ANIMATED_CORRECTION_MIN_DISTANCE;
-                scrollToFallbackOffset(ctx, correctedTarget, animated);
+                redispatchEndAlignedTarget(ctx, scrollingTo, correctedTarget);
             }
         });
     });
