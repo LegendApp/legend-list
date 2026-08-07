@@ -38,8 +38,11 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         });
     } else {
         state.scroll = offset;
+        const targetToken = state.scrollingTo;
         setTimeout(() => {
-            finishScrollTo(ctx);
+            if (targetToken === state.scrollingTo) {
+                finishScrollTo(ctx);
+            }
         }, 100);
     }
 }
