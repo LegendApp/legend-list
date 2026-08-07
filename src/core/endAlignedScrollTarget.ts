@@ -5,6 +5,8 @@ import type { StateContext } from "@/state/state";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 
+const ANIMATED_CORRECTION_MIN_DISTANCE = 40;
+
 export function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     return scrollingTo.index === ctx.state.props.data.length - 1 && scrollingTo.viewPosition === 1;
 }
@@ -21,9 +23,9 @@ export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScr
     return clampScrollOffset(ctx, requestedTargetOffset, scrollingTo);
 }
 
-export function scrollToFallbackOffset(ctx: StateContext, offset: number) {
+export function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
     ctx.state.refScroller.current?.scrollTo({
-        animated: false,
+        animated,
         x: ctx.state.props.horizontal ? offset : 0,
         y: ctx.state.props.horizontal ? 0 : offset,
     });
@@ -33,9 +35,12 @@ export function scrollToFallbackOffset(ctx: StateContext, offset: number) {
 // end-aligned scroll already settled: while the scroll was active the native
 // container still had the previous committed size, so the dispatched target sat
 // beyond the reachable range and retries could not move past it. Once the
-// committed size lands natively (two frames), re-dispatch a single unanimated
-// correction toward the end. One-shot and end-directed, so it cannot loop or
-// fight the user.
+// committed size lands natively (two frames), re-dispatch a single correction
+// toward the end. One-shot and end-directed, so it cannot loop or fight the
+// user. A large remainder on an animated session means the original dispatch
+// was clamped short (uncommitted size or end inset), so the correction glides
+// instead of teleporting; small residue snaps instantly to keep the settle
+// imperceptible.
 export function maybeCorrectEndAlignedScrollAfterCommit(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const state = ctx.state;
     if (!isEndAlignedLastItemTarget(ctx, scrollingTo)) {
@@ -49,7 +54,9 @@ export function maybeCorrectEndAlignedScrollAfterCommit(ctx: StateContext, scrol
             }
             const correctedTarget = getCurrentTargetOffset(ctx, scrollingTo);
             if (correctedTarget > state.scroll + 1) {
-                scrollToFallbackOffset(ctx, correctedTarget);
+                const animated =
+                    !!scrollingTo.animated && correctedTarget - state.scroll > ANIMATED_CORRECTION_MIN_DISTANCE;
+                scrollToFallbackOffset(ctx, correctedTarget, animated);
             }
         });
     });

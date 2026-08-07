@@ -242,7 +242,11 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     });
                     scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
                 } else if (shouldRetryUnalignedEndScroll) {
-                    scrollToFallbackOffset(ctx, completionState.clampedTargetOffset);
+                    // An animated dispatch gets clamped short when the end target sits
+                    // beyond the natively committed range (uncommitted total size or end
+                    // inset). Retry with the session's animation so the remaining distance
+                    // glides instead of teleporting.
+                    scrollToFallbackOffset(ctx, completionState.clampedTargetOffset, !!isStillScrollingTo.animated);
                     scheduleFallbackCheck(100);
                 } else if (
                     shouldFinishZeroTarget ||
