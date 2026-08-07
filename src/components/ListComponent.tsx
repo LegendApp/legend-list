@@ -192,6 +192,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                       }
                     : {},
                 contentContainerStyle,
+                Platform.OS === "web" ? { boxSizing: "border-box" } : undefined,
             ]}
             contentOffset={
                 initialContentOffset !== undefined

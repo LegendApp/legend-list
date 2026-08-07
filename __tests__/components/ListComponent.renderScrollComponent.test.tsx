@@ -44,8 +44,14 @@ function Header({ events }: { events: string[] }) {
     return <Text>Header</Text>;
 }
 
+function getContentContainerStyle(renderer: TestRenderer.ReactTestRenderer) {
+    const styles = renderer.root.findAllByType(View)[0]?.props.contentContainerStyle;
+    return Object.assign({}, ...styles.filter(Boolean));
+}
+
 function ListComponentHarness({
     alignItemsAtEndPaddingEnabled,
+    contentContainerStyle,
     events,
     label,
     ListComponent,
@@ -57,6 +63,7 @@ function ListComponentHarness({
     onRenderScrollComponent,
 }: {
     alignItemsAtEndPaddingEnabled?: boolean;
+    contentContainerStyle?: Record<string, unknown>;
     events: string[];
     label: string;
     ListComponent: React.ComponentType<any>;
@@ -78,6 +85,7 @@ function ListComponentHarness({
     return (
         <ListComponent
             canRender={false}
+            contentContainerStyle={contentContainerStyle}
             drawDistance={0}
             estimatedItemSize={100}
             getRenderedItem={() => null}
@@ -111,6 +119,40 @@ function ListComponentHarness({
 }
 
 describe("ListComponent renderScrollComponent", () => {
+    it("uses border-box sizing for web content containers", async () => {
+        const { Platform } = await import("react-native");
+        const previousPlatform = Platform.OS;
+        const { ListComponent } = await import("../../src/components/ListComponent?custom-scroll-web-end-space");
+        const events: string[] = [];
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        try {
+            Platform.OS = "web" as any;
+            act(() => {
+                renderer = TestRenderer.create(
+                    <StateProvider>
+                        <ListComponentHarness
+                            contentContainerStyle={{ boxSizing: "content-box", paddingBottom: 12 }}
+                            events={events}
+                            ListComponent={ListComponent}
+                            label="web"
+                        />
+                    </StateProvider>,
+                );
+            });
+
+            expect(getContentContainerStyle(renderer)).toMatchObject({
+                boxSizing: "border-box",
+                paddingBottom: 12,
+            });
+        } finally {
+            Platform.OS = previousPlatform;
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("forwards the internal drag boundary to native scroll components", async () => {
         const { Platform } = await import("../../src/platform/Platform");
         const { ListComponent } = await import("../../src/components/ListComponent?native-edge-drag-boundary");
