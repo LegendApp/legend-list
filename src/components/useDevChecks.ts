@@ -4,6 +4,7 @@ import { getDataLength } from "@/core/IndexedData";
 import { Platform } from "@/platform/Platform";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { listen$, peek$, useStateContext } from "@/state/state";
+import type { AnchoredEndSpaceConfig } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 
@@ -12,8 +13,10 @@ const WEB_UNBOUNDED_HEIGHT_CONTAINER_RATIO = 0.9;
 const WEB_UNBOUNDED_HEIGHT_VIEWPORT_RATIO = 0.9;
 
 type LegendListDevProps = {
+    anchoredEndSpace?: AnchoredEndSpaceConfig;
     childrenMode?: boolean;
     keyExtractor?: unknown;
+    numColumns?: number;
     renderScrollComponent?: ((props: LooseScrollViewProps) => ReactElement | null) | undefined;
     useWindowScroll?: boolean | undefined;
 };

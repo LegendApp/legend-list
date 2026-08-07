@@ -443,6 +443,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 startBuffered: -1,
                 startNoBuffer: -1,
                 startReachedSnapshot: undefined,
+                startReachedSnapshotDataChangeEpoch: undefined,
                 stickyContainerPool: new Set(),
                 stickyContainers: new Map(),
                 totalSize: 0,

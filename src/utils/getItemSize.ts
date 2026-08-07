@@ -7,6 +7,7 @@ import { getId } from "./getId";
 export interface ResolvedItemSize {
     didResolveFixedItemSize?: boolean;
     fixedItemSize?: number;
+    itemData?: any;
     itemType?: string;
 }
 

@@ -1079,7 +1079,7 @@ describe("calculateItemsInView", () => {
             mockCtx.values.set("totalSize", previousItems.length * itemSize);
             mockState.didContainersLayout = true;
             mockState.previousData = previousItems;
-            mockState.props.data = nextItems;
+            mockState.props.data = previousItems;
             mockState.props.drawDistance = 0;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
@@ -1097,6 +1097,7 @@ describe("calculateItemsInView", () => {
                 mockState.indexByKey.set(id, i);
                 setLayoutValue(mockState, "positions", id, i * itemSize);
                 mockState.sizes.set(id, itemSize);
+                mockState.sizesKnown.set(id, itemSize);
                 if (i < 11) {
                     mockState.containerItemKeys.set(id, i);
                     mockCtx.values.set(`containerItemKey${i}`, id);
@@ -1105,7 +1106,10 @@ describe("calculateItemsInView", () => {
             }
             for (const item of prependedItems) {
                 mockState.sizes.set(item.id, itemSize);
+                mockState.sizesKnown.set(item.id, itemSize);
             }
+            syncLayoutStoreStructure(mockCtx);
+            mockState.props.data = nextItems;
 
             calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
 
@@ -1129,7 +1133,7 @@ describe("calculateItemsInView", () => {
                 mockCtx.values.set("totalSize", previousItems.length * itemSize);
                 mockState.didContainersLayout = true;
                 mockState.previousData = previousItems;
-                mockState.props.data = nextItems;
+                mockState.props.data = previousItems;
                 mockState.props.drawDistance = 0;
                 mockState.props.keyExtractor = (item: { id: string }) => item.id;
                 mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
@@ -1150,6 +1154,7 @@ describe("calculateItemsInView", () => {
                     mockState.indexByKey.set(id, i);
                     setLayoutValue(mockState, "positions", id, i * itemSize);
                     mockState.sizes.set(id, itemSize);
+                    mockState.sizesKnown.set(id, itemSize);
                     if (i < 11) {
                         mockState.containerItemKeys.set(id, i);
                         mockCtx.values.set(`containerItemKey${i}`, id);
@@ -1158,12 +1163,15 @@ describe("calculateItemsInView", () => {
                 }
                 for (const item of prependedItems) {
                     mockState.sizes.set(item.id, itemSize);
+                    mockState.sizesKnown.set(item.id, itemSize);
                 }
+                syncLayoutStoreStructure(mockCtx);
+                mockState.props.data = nextItems;
 
                 calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
 
                 expect(updateViewableItemsSpy).toHaveBeenCalledTimes(1);
-                expect(updateViewableItemsSpy.mock.calls[0].slice(3)).toEqual([600, 41, 51, 41, 51]);
+                expect(updateViewableItemsSpy.mock.calls[0].slice(2, 7)).toEqual([600, 41, 51, 41, 51]);
                 expect(viewabilityCalls).toHaveLength(1);
                 expect(viewabilityCalls[0]).toMatchObject({
                     end: 51,
@@ -1222,6 +1230,7 @@ describe("calculateItemsInView", () => {
                 mockState.indexByKey.set(id, i);
                 setLayoutValue(mockState, "positions", id, i * itemSize);
                 mockState.sizes.set(id, itemSize);
+                mockState.sizesKnown.set(id, itemSize);
                 if (i < 11) {
                     mockState.containerItemKeys.set(id, i);
                     mockCtx.values.set(`containerItemKey${i}`, id);
@@ -1244,10 +1253,12 @@ describe("calculateItemsInView", () => {
             ]);
 
             viewabilityCalls.length = 0;
+            mockState.previousData = previousItems;
             mockState.props.data = nextItems;
             mockState.idsInView = previousItems.slice(0, 11).map((item) => item.id);
             for (const item of prependedItems) {
                 mockState.sizes.set(item.id, itemSize);
+                mockState.sizesKnown.set(item.id, itemSize);
             }
 
             calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });

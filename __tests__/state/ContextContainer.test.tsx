@@ -196,7 +196,7 @@ describe("ContextContainer hooks", () => {
 
     describe("useViewability", () => {
         it("should request a calculation when the first viewability consumer mounts", async () => {
-            const contextValue = createMockContextValue();
+            const signals = createContainerSignals();
             let calculations = 0;
 
             const TestComponent = () => {
@@ -213,9 +213,9 @@ describe("ContextContainer hooks", () => {
 
             render(
                 <StateProvider>
-                    <ContextContainer.Provider value={contextValue}>
+                    <SignalBackedContainerProvider signals={signals}>
                         <TestComponent />
-                    </ContextContainer.Provider>
+                    </SignalBackedContainerProvider>
                 </StateProvider>,
             );
             await flushAsync();
