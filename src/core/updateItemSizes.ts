@@ -101,6 +101,9 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     } else if (result.didMeasureUserScrollAnchorResetItem && state.userScrollAnchorReset?.keys.size === 0) {
         state.userScrollAnchorReset = undefined;
     }
+    if (result.didChange) {
+        maybeUpdateAnchoredEndSpace(ctx);
+    }
     if (result.didChange && result.shouldMaintainScrollAtEnd) {
         doMaintainScrollAtEnd(ctx);
     }
@@ -218,8 +221,6 @@ function applyItemSize(
             previous: size - diff,
             size,
         });
-
-        maybeUpdateAnchoredEndSpace(ctx);
     }
 
     // Update state with minimum changed index

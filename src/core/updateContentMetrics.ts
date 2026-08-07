@@ -2,6 +2,7 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { Insets } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { maybeUpdateAnchoredEndSpace } from "./updateAnchoredEndSpace";
 import { updateContentMetricsState } from "./updateContentMetricsState";
 
 const SCROLL_ADJUST_EPSILON = 0.1;
@@ -56,7 +57,11 @@ export function setHeaderSize(ctx: StateContext, size: number) {
 }
 
 export function setFooterSize(ctx: StateContext, size: number) {
-    return setContentLengthSignal(ctx, "footerSize", size);
+    const didChange = setContentLengthSignal(ctx, "footerSize", size);
+    if (didChange) {
+        maybeUpdateAnchoredEndSpace(ctx);
+    }
+    return didChange;
 }
 
 function areInsetsEqual(left: Partial<Insets> | null | undefined, right: Partial<Insets> | null | undefined) {

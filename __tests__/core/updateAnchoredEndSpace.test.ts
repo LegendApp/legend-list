@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
-import { updateItemSizes } from "../../src/core/updateItemSizes";
+import { setFooterSize } from "../../src/core/updateContentMetrics";
+import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { getContentInsetEnd } from "../../src/state/getContentInsetEnd";
 import { peek$, type StateContext, set$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -128,10 +129,12 @@ describe("updateAnchoredEndSpace", () => {
         expect(getContentInsetEnd(mockCtx)).toBe(110);
     });
 
-    it("recomputes when item sizes change through updateItemSizes", () => {
+    it("recomputes once after all item sizes in a committed batch are applied", () => {
         const onSizeChanged = mock(() => {});
+        const onReady = mock(() => {});
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,
+            onReady,
             onSizeChanged,
         };
         mockState.props.onItemSizeChanged = undefined;
@@ -139,12 +142,21 @@ describe("updateAnchoredEndSpace", () => {
         mockState.endBuffered = 2;
         mockState.startBuffered = 0;
         mockState.sizes.set("item_1", 120);
+        mockState.sizes.set("item_2", 80);
 
         maybeUpdateAnchoredEndSpace(mockCtx);
-        updateItemSizes(mockCtx, { itemKey: "item_1", size: { height: 150, width: 100 } });
+        onSizeChanged.mockClear();
+        onReady.mockClear();
+        updateItemSizesBatch(mockCtx, [
+            { itemKey: "item_1", size: { height: 150, width: 100 } },
+            { itemKey: "item_2", size: { height: 100, width: 100 } },
+        ]);
 
-        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(70);
-        expect(onSizeChanged).toHaveBeenLastCalledWith(70);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(50);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onSizeChanged).toHaveBeenCalledWith(50);
+        expect(onReady).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledWith({ anchorIndex: 1, anchorKey: "item_1", size: 50 });
     });
 
     it("subtracts footer size and bottom padding from the required anchored end space", () => {
@@ -159,6 +171,28 @@ describe("updateAnchoredEndSpace", () => {
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(60);
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(60);
         expect(onSizeChanged).toHaveBeenCalledWith(60);
+    });
+
+    it("recomputes once when the footer size changes and ignores repeated measurements", () => {
+        const onSizeChanged = mock(() => {});
+        const onReady = mock(() => {});
+        mockState.props.anchoredEndSpace = { anchorIndex: 1, onReady, onSizeChanged };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        onSizeChanged.mockClear();
+        onReady.mockClear();
+
+        expect(setFooterSize(mockCtx, 24)).toBe(true);
+
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(76);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onSizeChanged).toHaveBeenCalledWith(76);
+        expect(onReady).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledWith({ anchorIndex: 1, anchorKey: "item_1", size: 76 });
+
+        expect(setFooterSize(mockCtx, 24)).toBe(false);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(1);
     });
 
     it("keeps the previous anchored end space while tail item sizes are unknown", () => {
