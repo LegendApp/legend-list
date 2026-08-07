@@ -32,6 +32,7 @@ import { finishScrollTo } from "@/core/finishScrollTo";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { scheduleInitialScrollAfterLayout } from "@/core/scheduleInitialScrollAfterLayout";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -41,7 +42,7 @@ import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
-import { peek$, StateProvider, set$, useStateContext } from "@/state/state";
+import { peek$, StateProvider, set$, useSelector$, useStateContext } from "@/state/state";
 import type {
     InternalState,
     LegendListProps,
@@ -167,6 +168,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             : undefined;
 
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
+    const containersDidLayout = useSelector$("containersDidLayout", Boolean);
 
     const contentContainerStyle = { ...StyleSheet.flatten(contentContainerStyleProp) };
     const style = { ...StyleSheet.flatten(styleProp) };
@@ -437,6 +439,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         handleLayout(ctx, state, layout, setCanRender);
     }, []);
+
+    useEffect(() => {
+        if (
+            !containersDidLayout ||
+            !IsNewArchitecture ||
+            Platform.OS !== "android" ||
+            initialScroll?.index === undefined
+        ) {
+            return;
+        }
+
+        const frame = scheduleInitialScrollAfterLayout(state, initialScroll, initialContentOffset);
+
+        return () => cancelAnimationFrame(frame);
+    }, [containersDidLayout]);
 
     const { onLayout } = useOnLayoutSync({
         onLayoutChange,
