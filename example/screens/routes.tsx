@@ -21,6 +21,7 @@ import AdaptiveRenderFixture from "~/screens/fixtures/adaptive-render";
 import AddToEndFixture from "~/screens/fixtures/add-to-end";
 import ActivityAiChatKeyboardFixture from "~/screens/fixtures/ai-chat-keyboard";
 import AlwaysRenderFixture from "~/screens/fixtures/always-render";
+import AnchoredEndSpaceFixture from "~/screens/fixtures/anchored-end-space";
 import BidirectionalInfiniteListFixture from "~/screens/fixtures/bidirectional-infinite-list";
 import CardsFixture from "~/screens/fixtures/cards";
 import CardsColumnsFixture from "~/screens/fixtures/cards-columns";
@@ -257,6 +258,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "chat-example",
         title: "Chat Example",
+    },
+    {
+        component: AnchoredEndSpaceFixture,
+        description: "Validates anchored tail spacing across dynamic sizes, end padding, footers, and both axes.",
+        groupKey: "chat",
+        groupTitle: "Chat & Keyboard",
+        kind: "fixture",
+        slug: "anchored-end-space",
+        title: "Anchored End Space",
     },
     {
         component: ChatInfiniteFixture,
