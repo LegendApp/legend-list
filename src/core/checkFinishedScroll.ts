@@ -185,15 +185,11 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             const isStillScrollingTo = state.scrollingTo;
             if (isStillScrollingTo) {
                 numChecks++;
-                // Hard bound per scroll session, stored on state so it survives
-                // watchdog re-arms: without it, continuous re-dispatches reset the
-                // closure-local numChecks and the finish escape never fires.
-                if (state.fallbackScrollSession !== isStillScrollingTo) {
-                    state.fallbackScrollSession = isStillScrollingTo;
-                    state.fallbackScrollSessionChecks = 0;
-                }
-                state.fallbackScrollSessionChecks = (state.fallbackScrollSessionChecks ?? 0) + 1;
-                if (state.fallbackScrollSessionChecks > MAX_FALLBACK_CHECKS_PER_SESSION) {
+                // Hard bound carried on the session itself so it survives watchdog
+                // re-arms: continuous re-dispatches reset the closure-local numChecks,
+                // and without a persistent count the finish escape never fires.
+                isStillScrollingTo.fallbackChecks = (isStillScrollingTo.fallbackChecks ?? 0) + 1;
+                if (isStillScrollingTo.fallbackChecks > MAX_FALLBACK_CHECKS_PER_SESSION) {
                     finishScrollTo(ctx);
                     return;
                 }

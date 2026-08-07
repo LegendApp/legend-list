@@ -89,6 +89,7 @@ type BootstrapInitialScrollSession = {
 };
 
 type InternalScrollTarget = ScrollTarget & {
+    fallbackChecks?: number;
     waitForInitialScrollCompletionFrame?: boolean;
 };
 
@@ -247,8 +248,6 @@ export interface InternalState {
     timeouts: Set<number>;
     timeoutSetPaddingTop?: any;
     timeoutCheckFinishedScrollFallback?: any;
-    fallbackScrollSession?: InternalScrollTarget | undefined;
-    fallbackScrollSessionChecks?: number;
     totalSize: number;
     triggerCalculateItemsInView?: (params?: {
         doMVCP?: boolean;
