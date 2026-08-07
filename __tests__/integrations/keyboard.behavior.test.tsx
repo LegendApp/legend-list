@@ -160,7 +160,8 @@ describe("KeyboardAwareLegendList", () => {
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorIndex).toBe(0);
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorMaxSize).toBe(44);
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorOffset).toBe(12);
-        expect(lastAnimatedLegendListProps.anchoredEndSpace.includeInEndInset).toBe(true);
+        expect(lastAnimatedLegendListProps.anchoredEndSpace.includeInEndInset).toBeUndefined();
+        expect(lastAnimatedLegendListProps.anchoredEndSpaceOwnerInternal).toBe("scroll");
 
         const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({ testID: "list" });
 

@@ -17,8 +17,7 @@ export function getContentInsetEnd(ctx: StateContext, contentInsetEndAdjustmentO
         contentInsetEndAdjustmentOverride ?? props.contentInsetEndAdjustment,
     );
     const anchoredEndSpaceSize = peek$(ctx, "anchoredEndSpaceSize");
-    const anchoredEndInset =
-        props.anchoredEndSpace?.includeInEndInset && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
+    const anchoredEndInset = props.anchoredEndSpace && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
 
     const overrideInset = state.contentInsetOverride ?? undefined;
     const adjustedBaseEndInset = baseEndInset + contentInsetEndAdjustment;

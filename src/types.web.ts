@@ -3,7 +3,7 @@ import type { CSSProperties, HTMLAttributes, ReactElement, Ref, RefAttributes } 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import type { LooseLayoutChangeEvent, LooseScrollViewProps } from "@/platform/scrollview-types";
 import type {
-    AnchoredEndSpaceConfig as AnchoredEndSpaceConfigBase,
+    AnchoredEndSpaceConfig,
     LegendListRef as LegendListRefBase,
     LegendListState as LegendListStateBase,
     NativeScrollEvent,
@@ -16,6 +16,7 @@ export type {
     AdaptiveRenderChangeReason,
     AdaptiveRenderConfig,
     AlwaysRenderConfig,
+    AnchoredEndSpaceConfig,
     ColumnWrapperStyle,
     Insets,
     LayoutRectangle,
@@ -44,8 +45,6 @@ export type {
     ViewStyle,
     ViewToken,
 } from "@/types.base";
-
-export interface AnchoredEndSpaceConfig extends Omit<AnchoredEndSpaceConfigBase, "includeInEndInset"> {}
 
 type ScrollViewPropsWeb = Omit<
     LooseScrollViewProps,

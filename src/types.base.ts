@@ -471,11 +471,15 @@ export interface ScrollToEndOptions {
 }
 
 export interface AnchoredEndSpaceConfig {
+    /** Index of the item whose row should remain anchored when trailing space is added. */
     anchorIndex: number;
+    /** Desired distance from the viewport's start edge to the anchored row. */
     anchorOffset?: number;
+    /** Optional cap for the anchor item's contribution to its row size. */
     anchorMaxSize?: number;
-    includeInEndInset?: boolean;
+    /** Called whenever the resolved trailing space changes. */
     onSizeChanged?: (size: number) => void;
+    /** Called once the anchor and every row after it have authoritative sizes. */
     onReady?: (info: AnchoredEndSpaceReadyInfo) => void;
 }
 

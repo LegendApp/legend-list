@@ -51,8 +51,10 @@ function getContentContainerStyle(renderer: TestRenderer.ReactTestRenderer) {
 
 function ListComponentHarness({
     alignItemsAtEndPaddingEnabled,
+    anchoredEndSpaceSize,
     contentContainerStyle,
     events,
+    horizontal = false,
     label,
     ListComponent,
     ListFooterComponent,
@@ -61,10 +63,13 @@ function ListComponentHarness({
     onInternalScrollBeginDrag,
     onLayoutFooter,
     onRenderScrollComponent,
+    rtl,
 }: {
     alignItemsAtEndPaddingEnabled?: boolean;
+    anchoredEndSpaceSize?: number;
     contentContainerStyle?: Record<string, unknown>;
     events: string[];
+    horizontal?: boolean;
     label: string;
     ListComponent: React.ComponentType<any>;
     ListFooterComponent?: React.ReactNode;
@@ -73,13 +78,20 @@ function ListComponentHarness({
     onInternalScrollBeginDrag?: (event: unknown) => void;
     onLayoutFooter?: (rect: { height: number; width: number; x: number; y: number }) => void;
     onRenderScrollComponent?: () => void;
+    rtl?: boolean;
 }) {
     const ctx = useStateContext();
     const state = React.useMemo(() => createMockState(), []);
     state.props.alignItemsAtEnd = !!alignItemsAtEndPaddingEnabled;
     state.props.alignItemsAtEndPaddingEnabled = !!alignItemsAtEndPaddingEnabled;
+    state.props.anchoredEndSpace = anchoredEndSpaceSize === undefined ? undefined : { anchorIndex: 0 };
+    state.props.horizontal = horizontal;
     state.props.maintainScrollAtEnd = maintainScrollAtEnd;
+    state.props.rtl = rtl;
     ctx.state = state;
+    if (anchoredEndSpaceSize !== undefined) {
+        ctx.values.set("anchoredEndSpaceSize", anchoredEndSpaceSize);
+    }
     onContext?.(ctx);
 
     return (
@@ -89,7 +101,7 @@ function ListComponentHarness({
             drawDistance={0}
             estimatedItemSize={100}
             getRenderedItem={() => null}
-            horizontal={false}
+            horizontal={horizontal}
             initialContentOffset={undefined}
             ListFooterComponent={ListFooterComponent}
             ListHeaderComponent={<Header events={events} />}
@@ -119,6 +131,85 @@ function ListComponentHarness({
 }
 
 describe("ListComponent renderScrollComponent", () => {
+    it("materializes anchored end space only when the list owns it", async () => {
+        const { ListComponent } = await import("../../src/components/ListComponent?custom-scroll-anchored-end-space");
+        const events: string[] = [];
+        let ctx!: StateContext;
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <StateProvider>
+                        <ListComponentHarness
+                            anchoredEndSpaceSize={80}
+                            contentContainerStyle={{ paddingBottom: 12 }}
+                            events={events}
+                            ListComponent={ListComponent}
+                            label="custom"
+                            onContext={(value) => {
+                                ctx = value;
+                            }}
+                        />
+                    </StateProvider>,
+                );
+            });
+
+            expect(getContentContainerStyle(renderer).paddingBottom).toBe(92);
+
+            act(() => set$(ctx, "anchoredEndSpaceSize", 40));
+
+            expect(getContentContainerStyle(renderer).paddingBottom).toBe(52);
+
+            ctx.state.props.anchoredEndSpaceOwner = "scroll";
+            act(() => set$(ctx, "anchoredEndSpaceSize", 80));
+            expect(getContentContainerStyle(renderer).paddingBottom).toBe(12);
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("materializes horizontal anchored end space on the logical end side", async () => {
+        const { ListComponent } = await import("../../src/components/ListComponent?custom-scroll-logical-end-space");
+        const events: string[] = [];
+        let renderer!: TestRenderer.ReactTestRenderer;
+        const renderHarness = (rtl: boolean) => (
+            <StateProvider>
+                <ListComponentHarness
+                    anchoredEndSpaceSize={40}
+                    contentContainerStyle={{ paddingLeft: 7, paddingRight: 12 }}
+                    events={events}
+                    horizontal
+                    ListComponent={ListComponent}
+                    label="horizontal"
+                    rtl={rtl}
+                />
+            </StateProvider>
+        );
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(renderHarness(false));
+            });
+
+            expect(getContentContainerStyle(renderer).paddingLeft).toBe(7);
+            expect(getContentContainerStyle(renderer).paddingRight).toBe(52);
+
+            act(() => {
+                renderer.update(renderHarness(true));
+            });
+
+            expect(getContentContainerStyle(renderer).paddingLeft).toBe(47);
+            expect(getContentContainerStyle(renderer).paddingRight).toBe(12);
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("uses border-box sizing for web content containers", async () => {
         const { Platform } = await import("react-native");
         const previousPlatform = Platform.OS;

@@ -147,6 +147,8 @@ export interface PendingDataComparison {
 
 export type AverageSizes = Record<string, { num: number; avg: number }>;
 
+export type AnchoredEndSpaceOwner = "list" | "scroll";
+
 export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
@@ -281,6 +283,7 @@ export interface InternalState {
         alignItemsAtEndPaddingEnabled: boolean;
         animatedProps: StylesAsSharedValue<Record<string, any>>;
         anchoredEndSpace: AnchoredEndSpaceConfig | undefined;
+        anchoredEndSpaceOwner: AnchoredEndSpaceOwner;
         alwaysRender: AlwaysRenderConfig | undefined;
         contentContainerAlignItems: ViewStyle["alignItems"] | undefined;
         alwaysRenderIndicesArr: number[];

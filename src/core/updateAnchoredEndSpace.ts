@@ -1,3 +1,4 @@
+import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { updateScroll } from "@/core/updateScroll";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
@@ -54,7 +55,8 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
         }
     }
 
-    const didSizeChange = previousSize !== nextSize;
+    const didSizeChange = previousSize !== nextSize && (previousSize !== undefined || anchoredEndSpace !== undefined);
+    const didEffectiveSizeChange = (previousSize || 0) !== nextSize;
     const didReadyAnchorChange =
         previousReadyAnchorIndex !== nextAnchorIndex || previousReadyAnchorKey !== nextAnchorKey;
 
@@ -67,8 +69,9 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
             anchoredEndSpace?.onSizeChanged?.(nextSize);
         }
 
-        if (didSizeChange && anchoredEndSpace?.includeInEndInset) {
-            updateScroll(ctx, state.scroll, true);
+        if (didEffectiveSizeChange) {
+            updateContentMetricsState(ctx);
+            updateScroll(ctx, state.scroll, true, { markHasScrolled: false });
         }
 
         anchoredEndSpace?.onReady?.({ anchorIndex: nextAnchorIndex, anchorKey: nextAnchorKey, size: nextSize });

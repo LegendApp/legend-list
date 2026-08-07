@@ -166,7 +166,6 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
 
         return {
             ...anchoredEndSpace,
-            includeInEndInset: true,
             onSizeChanged: (size: number) => {
                 blankSpace.value = size;
                 anchoredEndSpace.onSizeChanged?.(size);
@@ -207,6 +206,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     const AnimatedLegendListInternal = AnimatedLegendList as unknown as React.ComponentType<
         AnimatedLegendListProps<ItemT> & {
             anchoredEndSpace?: AnchoredEndSpaceConfig;
+            anchoredEndSpaceOwnerInternal?: "list" | "scroll";
             ref?: ForwardedRef<LegendListRef>;
         }
     >;
@@ -214,6 +214,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     return (
         <AnimatedLegendListInternal
             anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
+            anchoredEndSpaceOwnerInternal="scroll"
             ref={combinedRef}
             renderScrollComponent={memoList}
             {...rest}

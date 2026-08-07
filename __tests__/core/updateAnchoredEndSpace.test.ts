@@ -110,7 +110,6 @@ describe("updateAnchoredEndSpace", () => {
         set$(mockCtx, "anchoredEndSpaceSize", 50);
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,
-            includeInEndInset: true,
         };
 
         expect(getContentInsetEnd(mockCtx)).toBe(60);
@@ -176,11 +175,14 @@ describe("updateAnchoredEndSpace", () => {
     it("recomputes once when the footer size changes and ignores repeated measurements", () => {
         const onSizeChanged = mock(() => {});
         const onReady = mock(() => {});
+        const triggerCalculateItemsInView = mock(() => {});
         mockState.props.anchoredEndSpace = { anchorIndex: 1, onReady, onSizeChanged };
+        mockState.triggerCalculateItemsInView = triggerCalculateItemsInView;
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
         onSizeChanged.mockClear();
         onReady.mockClear();
+        triggerCalculateItemsInView.mockClear();
 
         expect(setFooterSize(mockCtx, 24)).toBe(true);
 
@@ -189,10 +191,46 @@ describe("updateAnchoredEndSpace", () => {
         expect(onSizeChanged).toHaveBeenCalledWith(76);
         expect(onReady).toHaveBeenCalledTimes(1);
         expect(onReady).toHaveBeenCalledWith({ anchorIndex: 1, anchorKey: "item_1", size: 76 });
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
 
         expect(setFooterSize(mockCtx, 24)).toBe(false);
         expect(onSizeChanged).toHaveBeenCalledTimes(1);
         expect(onReady).toHaveBeenCalledTimes(1);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+    });
+
+    it("refreshes scroll geometry without marking anchored end-space changes as user scrolls", () => {
+        const triggerCalculateItemsInView = mock(() => {});
+        mockState.hasScrolled = false;
+        mockState.props.anchoredEndSpace = { anchorIndex: 1 };
+        mockState.triggerCalculateItemsInView = triggerCalculateItemsInView;
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(mockState.hasScrolled).toBe(false);
+
+        triggerCalculateItemsInView.mockClear();
+        mockState.props.anchoredEndSpace = undefined;
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(0);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(mockState.hasScrolled).toBe(false);
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+    });
+
+    it("replaces alignItemsAtEnd padding instead of stacking with it", () => {
+        mockState.props.data = [{ id: "item_0" }];
+        mockState.props.alignItemsAtEndPaddingEnabled = true;
+        mockState.props.anchoredEndSpace = { anchorIndex: 0 };
+        mockState.totalSize = 100;
+        mockState.sizesKnown.set("item_0", 100);
+        set$(mockCtx, "alignItemsAtEndPadding", 200);
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(200);
+        expect(peek$(mockCtx, "alignItemsAtEndPadding")).toBe(0);
     });
 
     it("uses logical end padding for horizontal LTR and RTL lists", () => {

@@ -113,6 +113,7 @@ export function createMockState(
             alwaysRenderIndicesArr: [],
             alwaysRenderIndicesSet: new Set<number>(),
             anchoredEndSpace: undefined,
+            anchoredEndSpaceOwner: "list",
             contentInset: DEFAULT_CONTENT_INSET,
             contentInsetEndAdjustment: undefined,
             data: [],

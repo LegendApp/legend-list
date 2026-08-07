@@ -50,7 +50,12 @@ import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
-import type { InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
+import type {
+    AnchoredEndSpaceOwner,
+    InternalState,
+    LegendListPropsBase,
+    LegendListScrollerRef,
+} from "@/types.internal";
 import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
@@ -187,11 +192,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
 
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
+    const anchoredEndSpaceOwner =
+        ((props as any).anchoredEndSpaceOwnerInternal as AnchoredEndSpaceOwner | undefined) ?? "list";
     const positionComponentInternal = (props as any).positionComponentInternal as React.ComponentType<any> | undefined;
     const stickyPositionComponentInternal = (props as any).stickyPositionComponentInternal as
         | React.ComponentType<any>
         | undefined;
     const {
+        anchoredEndSpaceOwnerInternal: _anchoredEndSpaceOwnerInternal,
         positionComponentInternal: _positionComponentInternal,
         stickyPositionComponentInternal: _stickyPositionComponentInternal,
         ...restProps
@@ -445,12 +453,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
     const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
     const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
-    const anchoredEndSpaceResolved =
-        Platform.OS === "web" && anchoredEndSpace ? { ...anchoredEndSpace, includeInEndInset: true } : anchoredEndSpace;
     const didAnchoredEndSpaceAnchorIndexChange =
         !isFirstLocal &&
         !didDataChangeLocal &&
-        state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpaceResolved?.anchorIndex;
+        state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpace?.anchorIndex;
 
     state.props = {
         adaptiveRender: experimental_adaptiveRender,
@@ -459,7 +465,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         alwaysRender,
         alwaysRenderIndicesArr: alwaysRenderIndices.arr,
         alwaysRenderIndicesSet: alwaysRenderIndices.set,
-        anchoredEndSpace: anchoredEndSpaceResolved,
+        anchoredEndSpace,
+        anchoredEndSpaceOwner,
         animatedProps: animatedPropsInternal,
         contentContainerAlignItems: contentContainerStyle.alignItems,
         contentInset,

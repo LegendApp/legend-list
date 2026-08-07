@@ -26,7 +26,7 @@ const mockCtx = {
         initialScrollSession: undefined as { kind?: string } | undefined,
         mvcpAnchorLock: undefined as { expiresAt: number } | undefined,
         props: {
-            anchoredEndSpace: undefined as { includeInEndInset?: boolean } | undefined,
+            anchoredEndSpace: undefined as { anchorIndex: number } | undefined,
             contentInsetEndAdjustment: undefined as number | undefined,
         },
         scrollingTo: undefined as { animated?: boolean } | undefined,
@@ -826,7 +826,7 @@ describe("ListComponentScrollView (web)", () => {
     it("does not double count anchored end space that already renders into the DOM", async () => {
         resetMocks();
         mockCtx.state.anchoredEndSpaceSize = 24;
-        mockCtx.state.props.anchoredEndSpace = { includeInEndInset: true };
+        mockCtx.state.props.anchoredEndSpace = { anchorIndex: 0 };
         mockCtx.state.props.contentInsetEndAdjustment = 40;
         const { ListComponentScrollView } = await import(
             "../../src/components/ListComponentScrollView?web-scroll-overlay-inset-anchored"

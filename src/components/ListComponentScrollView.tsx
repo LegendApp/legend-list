@@ -437,8 +437,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     };
 
     const contentInsetEndAdjustment = getContentInsetEndAdjustmentEnd(ctx);
-    const anchoredEndInset =
-        ctx.state?.props?.anchoredEndSpace?.includeInEndInset && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
+    const anchoredEndInset = ctx.state?.props?.anchoredEndSpace && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
     const renderedContentInsetEndAdjustment = Math.max(0, contentInsetEndAdjustment - anchoredEndInset);
     const contentInsetEndAdjustmentSpacerStyle: CSSProperties | undefined = renderedContentInsetEndAdjustment
         ? horizontal
