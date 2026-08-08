@@ -222,7 +222,7 @@ describe("requestAdjust", () => {
             requestAdjust(mockCtx, 20);
 
             expect(timeoutCallbacks.size).toBe(1);
-            expect(mockState.ignoreScrollFromMVCPTimeout).toBeDefined();
+            expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
 
             // Execute timeout
             const callbacks = Array.from(timeoutCallbacks.values());
@@ -292,13 +292,13 @@ describe("requestAdjust", () => {
         it("should clear existing timeout before setting new one", () => {
             // First adjustment
             requestAdjust(mockCtx, 20);
-            const firstTimeout = mockState.ignoreScrollFromMVCPTimeout;
+            const firstTimeout = Array.from(timeoutCallbacks.keys())[0];
             expect(timeoutCallbacks.size).toBe(1);
 
             // Second adjustment should clear first timeout
             requestAdjust(mockCtx, 15);
-            expect(mockState.ignoreScrollFromMVCPTimeout).toBeDefined();
-            expect(mockState.ignoreScrollFromMVCPTimeout).not.toBe(firstTimeout);
+            expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
+            expect(Array.from(timeoutCallbacks.keys())[0]).not.toBe(firstTimeout);
             expect(timeoutCallbacks.size).toBe(1); // Old one cleared, new one added
         });
     });
@@ -493,18 +493,18 @@ describe("requestAdjust", () => {
         it("should properly manage timeout lifecycle", () => {
             // Create timeout
             requestAdjust(mockCtx, 10);
-            const timeoutHandle = mockState.ignoreScrollFromMVCPTimeout;
+            const timeoutHandle = Array.from(timeoutCallbacks.keys())[0];
             expect(timeoutHandle).toBeDefined();
-            expect(timeoutCallbacks.has(timeoutHandle!)).toBe(true);
+            expect(timeoutCallbacks.has(timeoutHandle)).toBe(true);
 
             // Clear and create new timeout
             requestAdjust(mockCtx, 15);
-            expect(mockState.ignoreScrollFromMVCPTimeout).toBeDefined();
-            expect(mockState.ignoreScrollFromMVCPTimeout).not.toBe(timeoutHandle);
-            expect(timeoutCallbacks.has(timeoutHandle!)).toBe(false); // Old one cleared
+            expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
+            expect(Array.from(timeoutCallbacks.keys())[0]).not.toBe(timeoutHandle);
+            expect(timeoutCallbacks.has(timeoutHandle)).toBe(false); // Old one cleared
 
             // Execute the current timeout
-            const currentCallback = timeoutCallbacks.get(mockState.ignoreScrollFromMVCPTimeout!);
+            const currentCallback = Array.from(timeoutCallbacks.values())[0];
             currentCallback!();
             expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
         });

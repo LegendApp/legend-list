@@ -475,7 +475,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
             props: {
                 data: [1, 2, 3],
             },
-            queuedMVCPRecalculate: undefined,
         } as any);
 
         const handle = createImperativeHandle(ctx);

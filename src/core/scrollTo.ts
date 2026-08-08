@@ -170,12 +170,8 @@ export function scrollTo(
     } = state;
 
     // Clear out previous timeouts which would finishScrollTo
-    if (state.animFrameCheckFinishedScroll) {
-        cancelAnimationFrame(ctx.state.animFrameCheckFinishedScroll);
-    }
-    if (state.timeoutCheckFinishedScrollFallback) {
-        clearTimeout(ctx.state.timeoutCheckFinishedScrollFallback);
-    }
+    state.scheduledWork.cancel("checkFinishedScrollFrame");
+    state.scheduledWork.cancel("checkFinishedScrollFallback");
 
     const requestedOffset = precomputedWithViewOffset
         ? scrollTargetOffset

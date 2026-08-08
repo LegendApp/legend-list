@@ -61,7 +61,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
     const isSettlingAfterDataChange = () =>
         !!state.didDataChange ||
         !!state.didColumnsChange ||
-        state.queuedMVCPRecalculate !== undefined ||
+        state.scheduledWork.has("mvcpRecalculate") ||
         state.ignoreScrollFromMVCP !== undefined;
 
     const isScrollToIndexReady = (targetIndex: number, allowEmpty = false) => {

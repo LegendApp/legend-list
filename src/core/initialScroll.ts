@@ -49,10 +49,7 @@ export function setInitialScrollTarget(
 ) {
     const { state } = ctx;
     state.clearPreservedInitialScrollOnNextFinish = undefined;
-    if (state.timeoutPreservedInitialScrollClear !== undefined) {
-        clearTimeout(state.timeoutPreservedInitialScrollClear);
-        state.timeoutPreservedInitialScrollClear = undefined;
-    }
+    state.scheduledWork.cancel("preservedInitialScroll");
     state.initialScroll = target;
 
     if (options?.resetDidFinish) {

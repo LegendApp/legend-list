@@ -14,10 +14,7 @@ function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
 }
 
 function clearPreservedInitialScrollTargetTimeout(state: StateContext["state"]) {
-    if (state.timeoutPreservedInitialScrollClear !== undefined) {
-        clearTimeout(state.timeoutPreservedInitialScrollClear);
-        state.timeoutPreservedInitialScrollClear = undefined;
-    }
+    state.scheduledWork.cancel("preservedInitialScroll");
 }
 
 export function clearPreservedInitialScrollTarget(state: StateContext["state"]) {
@@ -62,14 +59,21 @@ export function finishInitialScroll(
             if (options?.schedulePreservedTargetClear) {
                 // This is only a backstop. The main preservation lifecycle is
                 // event-driven via late layout/data/user-scroll invalidation.
-                state.timeoutPreservedInitialScrollClear = setTimeout(() => {
-                    state.timeoutPreservedInitialScrollClear = undefined;
-                    if (!state.didFinishInitialScroll || state.scrollingTo?.isInitialScroll || !state.initialScroll) {
-                        return;
-                    }
+                state.scheduledWork.timeout(
+                    () => {
+                        if (
+                            !state.didFinishInitialScroll ||
+                            state.scrollingTo?.isInitialScroll ||
+                            !state.initialScroll
+                        ) {
+                            return;
+                        }
 
-                    clearPreservedInitialScrollTarget(state);
-                }, PRESERVED_INITIAL_SCROLL_FALLBACK_CLEAR_DELAY_MS);
+                        clearPreservedInitialScrollTarget(state);
+                    },
+                    PRESERVED_INITIAL_SCROLL_FALLBACK_CLEAR_DELAY_MS,
+                    "preservedInitialScroll",
+                );
             }
         } else {
             clearPreservedInitialScrollTarget(state);

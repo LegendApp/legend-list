@@ -22,16 +22,10 @@ export function runOrScheduleMVCPRecalculate(ctx: StateContext) {
         }
     } else if (Platform.OS === "web") {
         if (!state.mvcpAnchorLock) {
-            if (state.queuedMVCPRecalculate !== undefined) {
-                cancelAnimationFrame(state.queuedMVCPRecalculate);
-                state.queuedMVCPRecalculate = undefined;
-            }
+            state.scheduledWork.cancel("mvcpRecalculate");
             calculateItemsInView(ctx, { doMVCP: true });
-        } else if (state.queuedMVCPRecalculate === undefined) {
-            state.queuedMVCPRecalculate = requestAnimationFrame(() => {
-                state.queuedMVCPRecalculate = undefined;
-                calculateItemsInView(ctx, { doMVCP: true });
-            });
+        } else if (!state.scheduledWork.has("mvcpRecalculate")) {
+            state.scheduledWork.frame(() => calculateItemsInView(ctx, { doMVCP: true }), "mvcpRecalculate");
         }
     } else {
         calculateItemsInView(ctx, { doMVCP: true });

@@ -31,9 +31,7 @@ describe("updateScroll large user jumps", () => {
     });
 
     afterEach(() => {
-        for (const timeout of mockCtx.state.timeouts) {
-            clearTimeout(timeout);
-        }
+        mockCtx.state.scheduledWork.dispose();
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
         flushSyncSpy.mockRestore();
     });
@@ -60,7 +58,7 @@ describe("updateScroll large user jumps", () => {
                 position: 0,
                 quietPasses: 0,
             };
-            mockCtx.state.queuedMVCPRecalculate = 7;
+            mockCtx.state.scheduledWork.frame(() => {}, "mvcpRecalculate");
             mockCtx.state.pendingNativeMVCPAdjust = {
                 amount: -500,
                 furthestProgressTowardAmount: 0,
@@ -73,8 +71,8 @@ describe("updateScroll large user jumps", () => {
             expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
             expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
             expect(mockCtx.state.userScrollAnchorReset?.keys).toEqual(new Set());
-            expect(mockCtx.state.queuedMVCPRecalculate).toBeUndefined();
-            expect(cancelCalls).toEqual([7]);
+            expect(mockCtx.state.scheduledWork.has("mvcpRecalculate")).toBe(false);
+            expect(cancelCalls).toEqual([1]);
         } finally {
             globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
         }
@@ -92,7 +90,7 @@ describe("updateScroll large user jumps", () => {
             quietPasses: 0,
         };
         mockCtx.state.mvcpAnchorLock = anchorLock;
-        mockCtx.state.queuedMVCPRecalculate = 7;
+        mockCtx.state.scheduledWork.frame(() => {}, "mvcpRecalculate");
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: 500,
             furthestProgressTowardAmount: 0,
@@ -108,7 +106,7 @@ describe("updateScroll large user jumps", () => {
         expect(mockCtx.state.mvcpAnchorLock).toBe(anchorLock);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeDefined();
         expect(mockCtx.state.userScrollAnchorReset).toBeUndefined();
-        expect(mockCtx.state.queuedMVCPRecalculate).toBe(7);
+        expect(mockCtx.state.scheduledWork.has("mvcpRecalculate")).toBe(true);
         triggerCalculateItemsInViewSpy.mockRestore();
     });
 
@@ -151,9 +149,7 @@ describe("updateScroll large user jumps", () => {
             expect(peek$(mockCtx, "adaptiveRender")).toBe("light");
             expect(changes).toEqual([["light", "scroll"]]);
         } finally {
-            for (const timeout of mockCtx.state.timeouts) {
-                clearTimeout(timeout);
-            }
+            mockCtx.state.scheduledWork.dispose();
             Date.now = originalDateNow;
         }
     });
@@ -200,12 +196,12 @@ describe("updateScroll large user jumps", () => {
             },
         ]);
         expect(rafCallbacks).toHaveLength(1);
-        expect(mockCtx.state.queuedFullDrawDistancePrewarm).toBe(1);
+        expect(mockCtx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
 
         rafCallbacks[0](Date.now());
 
         expect(triggerCalculateItemsInViewSpy.mock.calls[1]).toEqual([]);
-        expect(mockCtx.state.queuedFullDrawDistancePrewarm).toBeUndefined();
+        expect(mockCtx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(false);
         triggerCalculateItemsInViewSpy.mockRestore();
     });
 
@@ -234,7 +230,7 @@ describe("updateScroll large user jumps", () => {
             ],
         ]);
         expect(rafCallbacks).toHaveLength(1);
-        expect(mockCtx.state.queuedFullDrawDistancePrewarm).toBe(1);
+        expect(mockCtx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
         triggerCalculateItemsInViewSpy.mockRestore();
     });
 

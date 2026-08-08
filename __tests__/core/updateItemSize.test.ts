@@ -421,13 +421,13 @@ describe("item size update functions", () => {
 
                     expect(calculateSpy).not.toHaveBeenCalled();
                     expect(rafCallbacks.length).toBe(1);
-                    expect(mockState.queuedMVCPRecalculate).toBe(1);
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(true);
 
                     rafCallbacks[0](0);
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
                     expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     rafSpy.mockRestore();
                     calculateSpy.mockRestore();
@@ -459,7 +459,7 @@ describe("item size update functions", () => {
                     };
 
                     updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
-                    expect(mockState.queuedMVCPRecalculate).toBe(42);
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(true);
 
                     mockState.mvcpAnchorLock = undefined;
                     updateItemAndFlush(mockCtx, "item_0", { height: 180, width: 400 });
@@ -467,7 +467,7 @@ describe("item size update functions", () => {
                     expect(cancelCalls).toEqual([42]);
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
                     expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
                     rafSpy.mockRestore();
@@ -502,7 +502,7 @@ describe("item size update functions", () => {
                         expect(calculateSpy).toHaveBeenNthCalledWith(1, mockCtx);
                         expect(calculateSpy).toHaveBeenNthCalledWith(2, mockCtx);
                         expect(mockState.userScrollAnchorReset).toBeUndefined();
-                        expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                        expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                     } finally {
                         rafSpy.mockRestore();
                         calculateSpy.mockRestore();
@@ -540,7 +540,7 @@ describe("item size update functions", () => {
                     expect(calculateSpy).toHaveBeenNthCalledWith(2, mockCtx);
                     expect(rafCallbacks.length).toBe(0);
                     expect(mockState.userScrollAnchorReset?.keys).toEqual(new Set(["item_2", "item_3"]));
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     rafSpy.mockRestore();
                     calculateSpy.mockRestore();
@@ -575,7 +575,7 @@ describe("item size update functions", () => {
                     expect(calculateSpy).toHaveBeenCalledTimes(2);
                     expect(rafCallbacks.length).toBe(0);
                     expect(mockState.userScrollAnchorReset?.keys).toEqual(new Set(["item_2", "item_3"]));
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
 
                     for (let i = 2; i < 4; i++) {
                         updateItemAndFlush(mockCtx, `item_${i}`, { height: 150 + i * 10, width: 400 });
@@ -620,7 +620,7 @@ describe("item size update functions", () => {
                     expect(calculateSpy).toHaveBeenNthCalledWith(2, mockCtx);
                     expect(rafCallbacks.length).toBe(0);
                     expect(mockState.userScrollAnchorReset?.keys).toEqual(new Set(["item_2", "item_3"]));
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     rafSpy.mockRestore();
                     calculateSpy.mockRestore();

@@ -120,10 +120,7 @@ export function updateScroll(
             state.mvcpAnchorLock = undefined;
             state.pendingNativeMVCPAdjust = undefined;
             state.userScrollAnchorReset = { keys: new Set() };
-            if (state.queuedMVCPRecalculate !== undefined) {
-                cancelAnimationFrame(state.queuedMVCPRecalculate);
-                state.queuedMVCPRecalculate = undefined;
-            }
+            state.scheduledWork.cancel("mvcpRecalculate");
             flushSync(runCalculateItems);
             scheduleFullDrawDistancePrewarm(ctx);
         } else {

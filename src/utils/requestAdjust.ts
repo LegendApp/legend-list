@@ -43,22 +43,22 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
                     state.ignoreScrollFromMVCP.gt = threshold;
                 }
 
-                if (state.ignoreScrollFromMVCPTimeout) {
-                    clearTimeout(state.ignoreScrollFromMVCPTimeout);
-                }
-
                 const delay = needsScrollWorkaround ? 250 : 100;
-                state.ignoreScrollFromMVCPTimeout = setTimeout(() => {
-                    state.ignoreScrollFromMVCP = undefined;
-                    const shouldForceUpdate =
-                        state.ignoreScrollFromMVCPIgnored && state.scrollProcessingEnabled !== false;
+                state.scheduledWork.timeout(
+                    () => {
+                        state.ignoreScrollFromMVCP = undefined;
+                        const shouldForceUpdate =
+                            state.ignoreScrollFromMVCPIgnored && state.scrollProcessingEnabled !== false;
 
-                    if (shouldForceUpdate) {
-                        state.ignoreScrollFromMVCPIgnored = false;
-                        state.scrollPending = state.scroll;
-                        state.reprocessCurrentScroll?.();
-                    }
-                }, delay);
+                        if (shouldForceUpdate) {
+                            state.ignoreScrollFromMVCPIgnored = false;
+                            state.scrollPending = state.scroll;
+                            state.reprocessCurrentScroll?.();
+                        }
+                    },
+                    delay,
+                    "ignoreScrollFromMVCP",
+                );
             }
         } else {
             state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 0) + 1;

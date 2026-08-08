@@ -199,12 +199,11 @@ describe("LegendList props behavior", () => {
             />,
         );
         const state = await getStateFromRender();
-        const timeout = setTimeout(() => {}, 1000) as unknown as number;
-        state.timeouts.add(timeout);
+        state.scheduledWork.timeout(() => {}, 1000, "adaptiveRender");
 
         rendered.unmount();
 
-        expect(state.timeouts.size).toBe(0);
+        expect(state.scheduledWork.has("adaptiveRender")).toBe(false);
     });
 
     it("cancels queued full drawDistance prewarm on unmount", async () => {
@@ -228,12 +227,12 @@ describe("LegendList props behavior", () => {
                 />,
             );
             const state = await getStateFromRender();
-            state.queuedFullDrawDistancePrewarm = 123;
+            state.scheduledWork.frame(() => {}, "fullDrawDistancePrewarm");
 
             rendered.unmount();
 
-            expect(cancelCalls).toEqual([123]);
-            expect(state.queuedFullDrawDistancePrewarm).toBeUndefined();
+            expect(cancelCalls).toHaveLength(1);
+            expect(state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(false);
         } finally {
             globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
         }
@@ -663,9 +662,7 @@ describe("LegendList props behavior", () => {
             }),
         );
         const ctx = await getContextFromRender();
-        const timeout = setTimeout(() => {}, 10_000) as unknown as number;
-        ctx.state.timeoutAdaptiveRender = timeout;
-        ctx.state.timeouts.add(timeout);
+        ctx.state.scheduledWork.timeout(() => {}, 10_000, "adaptiveRender");
 
         expect(ctx.values.get("adaptiveRender")).toBe("light");
 
@@ -673,8 +670,7 @@ describe("LegendList props behavior", () => {
         await flushAsync();
 
         expect(ctx.values.get("adaptiveRender")).toBe("normal");
-        expect(ctx.state.timeoutAdaptiveRender).toBeUndefined();
-        expect(ctx.state.timeouts.has(timeout)).toBe(false);
+        expect(ctx.state.scheduledWork.has("adaptiveRender")).toBe(false);
         expect(changes).toEqual([]);
 
         rendered.unmount();

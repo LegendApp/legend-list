@@ -1023,10 +1023,7 @@ describe("bootstrapInitialScroll", () => {
         expect(rafCallbacks.length).toBe(1);
 
         rafCallbacks.shift()?.(0);
-        if (ctx.state.ignoreScrollFromMVCPTimeout) {
-            clearTimeout(ctx.state.ignoreScrollFromMVCPTimeout);
-            ctx.state.ignoreScrollFromMVCPTimeout = undefined;
-        }
+        ctx.state.scheduledWork.cancel("ignoreScrollFromMVCP");
 
         expect(ctx.state.scroll).toBe(450);
         expect(ctx.state.initialScroll).toMatchObject({

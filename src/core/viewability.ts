@@ -81,7 +81,6 @@ export function updateViewableItems(
     endBuffered = end,
 ) {
     const {
-        timeouts,
         props: { data },
     } = state;
     for (const viewabilityConfigCallbackPair of viewabilityConfigCallbackPairs) {
@@ -91,11 +90,10 @@ export function updateViewableItems(
         viewabilityState.startBuffered = startBuffered;
         viewabilityState.endBuffered = endBuffered;
         if (viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime) {
-            const timer: any = setTimeout(() => {
-                timeouts.delete(timer);
-                updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize);
-            }, viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime);
-            timeouts.add(timer);
+            state.scheduledWork.timeout(
+                () => updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize),
+                viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime,
+            );
         } else {
             updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize);
         }

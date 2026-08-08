@@ -45,8 +45,8 @@ describe("scrollTo", () => {
         globalThis.cancelAnimationFrame = ((id: number) => {
             cancelCalls.push(id);
         }) as typeof cancelAnimationFrame;
-        mockCtx.state.animFrameCheckFinishedScroll = 11 as never;
-        mockCtx.state.timeoutCheckFinishedScrollFallback = 22 as never;
+        mockCtx.state.scheduledWork.frame(() => {}, "checkFinishedScrollFrame");
+        mockCtx.state.scheduledWork.timeout(() => {}, 100, "checkFinishedScrollFallback");
 
         try {
             scrollTo(mockCtx, { animated: true, offset: 60 });
@@ -55,8 +55,8 @@ describe("scrollTo", () => {
             clearTimeoutSpy.mockRestore();
         }
 
-        expect(cancelCalls).toEqual([11]);
-        expect(clearTimeoutCalls).toEqual([22]);
+        expect(cancelCalls).toHaveLength(1);
+        expect(clearTimeoutCalls).toHaveLength(1);
     });
 
     it("keeps initial iOS scrolls local while arming the native watchdog", () => {

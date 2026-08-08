@@ -103,12 +103,12 @@ describe("getEffectiveDrawDistance", () => {
             scheduleFullDrawDistancePrewarm(ctx);
 
             expect(rafCallbacks).toHaveLength(1);
-            expect(ctx.state.queuedFullDrawDistancePrewarm).toBe(1);
+            expect(ctx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
 
             rafCallbacks[0](Date.now());
 
             expect(calculateCount).toBe(1);
-            expect(ctx.state.queuedFullDrawDistancePrewarm).toBeUndefined();
+            expect(ctx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(false);
         } finally {
             globalThis.requestAnimationFrame = originalRAF;
         }
@@ -134,7 +134,7 @@ describe("getEffectiveDrawDistance", () => {
             scheduleFullDrawDistancePrewarm(ctx);
 
             expect(rafCallbacks).toHaveLength(0);
-            expect(ctx.state.queuedFullDrawDistancePrewarm).toBeUndefined();
+            expect(ctx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(false);
         } finally {
             globalThis.requestAnimationFrame = originalRAF;
         }

@@ -30,6 +30,7 @@ import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
+import { ScheduledWork } from "@/core/ScheduledWork";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdjustment";
@@ -373,8 +374,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 positions: [],
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
-                queuedFullDrawDistancePrewarm: undefined,
                 refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
+                scheduledWork: new ScheduledWork(),
                 scroll: 0,
                 scrollAdjustHandler: new ScrollAdjustHandler(ctx),
                 scrollForNextCalculateItemsInView: undefined,
@@ -392,8 +393,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 startReachedSnapshot: undefined,
                 stickyContainerPool: new Set(),
                 stickyContainers: new Map(),
-                timeoutAdaptiveRender: undefined,
-                timeouts: new Set(),
                 totalSize: 0,
                 viewabilityConfigCallbackPairs: undefined as never,
             };
@@ -803,16 +802,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, scheduleImperativeScrollCommit), []);
 
     useEffect(() => {
-        return () => {
-            if (state.queuedFullDrawDistancePrewarm !== undefined) {
-                cancelAnimationFrame(state.queuedFullDrawDistancePrewarm);
-                state.queuedFullDrawDistancePrewarm = undefined;
-            }
-            for (const timeout of state.timeouts) {
-                clearTimeout(timeout);
-            }
-            state.timeouts.clear();
-        };
+        return () => state.scheduledWork.dispose();
     }, [state]);
 
     // Run pending scroll to end after props have settled.

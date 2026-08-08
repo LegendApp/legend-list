@@ -70,10 +70,7 @@ describe("calculateItemsInView", () => {
     });
 
     afterEach(() => {
-        for (const timeout of mockState.timeouts) {
-            clearTimeout(timeout);
-        }
-        mockState.timeouts.clear();
+        mockState.scheduledWork.dispose();
     });
 
     function measureSteadyStateDuration(run: () => void) {
@@ -510,7 +507,7 @@ describe("calculateItemsInView", () => {
                 bottom: 900,
                 top: 300,
             });
-            expect(mockState.timeoutRenderRangeProjectionSettle).not.toBeUndefined();
+            expect(mockState.scheduledWork.has("renderRangeProjection")).toBe(true);
         });
 
         it("redistributes buffered range backward while keeping total buffer size stable when scrolling up", () => {
@@ -551,7 +548,7 @@ describe("calculateItemsInView", () => {
             expect(mockState.endNoBuffer).toBe(6);
             expect(mockState.startBuffered).toBe(2);
             expect(mockState.endBuffered).toBe(6);
-            expect(mockState.timeoutRenderRangeProjectionSettle).toBeUndefined();
+            expect(mockState.scheduledWork.has("renderRangeProjection")).toBe(false);
         });
     });
 

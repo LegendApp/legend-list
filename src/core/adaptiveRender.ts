@@ -10,13 +10,7 @@ export const DEFAULT_WEB_ADAPTIVE_RENDER_EXIT_VELOCITY = 3;
 export const DEFAULT_WEB_ADAPTIVE_RENDER_EXIT_DELAY = 250;
 
 function clearAdaptiveRenderExitTimeout(ctx: StateContext) {
-    const state = ctx.state;
-    const previousTimeout = state.timeoutAdaptiveRender;
-    if (previousTimeout !== undefined) {
-        clearTimeout(previousTimeout);
-        state.timeouts.delete(previousTimeout);
-        state.timeoutAdaptiveRender = undefined;
-    }
+    ctx.state.scheduledWork.cancel("adaptiveRender");
 }
 
 function scheduleAdaptiveRenderExit(ctx: StateContext, exitDelay: number) {
@@ -25,13 +19,7 @@ function scheduleAdaptiveRenderExit(ctx: StateContext, exitDelay: number) {
     if (exitDelay <= 0) {
         setAdaptiveRender(ctx, "normal", "scroll");
     } else {
-        const timeout: any = setTimeout(() => {
-            state.timeouts.delete(timeout);
-            state.timeoutAdaptiveRender = undefined;
-            setAdaptiveRender(ctx, "normal", "scroll");
-        }, exitDelay);
-        state.timeoutAdaptiveRender = timeout;
-        state.timeouts.add(timeout);
+        state.scheduledWork.timeout(() => setAdaptiveRender(ctx, "normal", "scroll"), exitDelay, "adaptiveRender");
     }
 }
 
@@ -70,7 +58,7 @@ export function updateAdaptiveRender(ctx: StateContext, scrollVelocity: number, 
                 (isWeb ? DEFAULT_WEB_ADAPTIVE_RENDER_EXIT_DELAY : DEFAULT_ADAPTIVE_RENDER_EXIT_DELAY);
             const threshold = currentMode === "light" ? exitVelocity : enterVelocity;
             const nextMode = options?.forceLight || Math.abs(scrollVelocity) > threshold ? "light" : "normal";
-            const previousMode = state.timeoutAdaptiveRender !== undefined ? "normal" : currentMode;
+            const previousMode = state.scheduledWork.has("adaptiveRender") ? "normal" : currentMode;
 
             if (nextMode !== previousMode) {
                 if (nextMode === "light") {
