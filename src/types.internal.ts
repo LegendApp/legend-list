@@ -90,6 +90,7 @@ type BootstrapInitialScrollSession = {
 };
 
 type InternalScrollTarget = ScrollTarget & {
+    fallbackChecks?: number;
     waitForInitialScrollCompletionFrame?: boolean;
 };
 

@@ -1,4 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { maybeCorrectEndAlignedScrollAfterCommit } from "@/core/endAlignedScrollTarget";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
@@ -46,6 +47,7 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         recalculateSettledScroll(ctx);
+        maybeCorrectEndAlignedScrollAfterCommit(ctx, scrollingTo);
         resolvePendingScroll?.();
     }
 }

@@ -1,6 +1,11 @@
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import {
+    END_ALIGNED_COMPLETION_EPSILON,
+    getCurrentTargetOffset,
+    isEndAlignedLastItemTarget,
+    redispatchEndAlignedTarget,
+    scrollToFallbackOffset,
+} from "@/core/endAlignedScrollTarget";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
@@ -9,6 +14,7 @@ import type { StateContext } from "@/state/state";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
+const MAX_FALLBACK_CHECKS_PER_SESSION = 40;
 const INITIAL_SCROLL_COMPLETION_TARGET_EPSILON = 1;
 const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
@@ -97,22 +103,6 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     );
 }
 
-function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    return scrollingTo.index === ctx.state.props.data.length - 1 && scrollingTo.viewPosition === 1;
-}
-
-function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    const index = scrollingTo.index;
-    const shouldRecomputeEndTarget = isEndAlignedLastItemTarget(ctx, scrollingTo);
-    const requestedTargetOffset =
-        shouldRecomputeEndTarget && index !== undefined
-            ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), scrollingTo)
-            : (scrollingTo.targetOffset ??
-              clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo));
-
-    return clampScrollOffset(ctx, requestedTargetOffset, scrollingTo);
-}
-
 function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const { state } = ctx;
     const scroll = state.scrollPending;
@@ -123,10 +113,17 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
     const adjustedTargetOffset = clampedTargetOffset + adjust;
     const diff2 = Math.abs(scroll - adjustedTargetOffset);
     const canUseAdjustedCompletion = !scrollingTo.animated || Platform.OS === "ios";
+    // End-aligned targets move while content grows (and pendingTotalSize keeps
+    // them ~one commit ahead of the reachable native range). Chasing them to
+    // sub-pixel precision causes visible retry jumps; finish within slack
+    // instead and let the post-commit end correction snap the exact position.
+    const completionEpsilon = isEndAlignedLastItemTarget(ctx, scrollingTo) ? END_ALIGNED_COMPLETION_EPSILON : 1;
 
     return {
         clampedTargetOffset,
-        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (canUseAdjustedCompletion && diff2 < 1)),
+        isAtResolvedTarget:
+            Math.abs(scroll - maxOffset) < completionEpsilon &&
+            (diff1 < completionEpsilon || (canUseAdjustedCompletion && diff2 < completionEpsilon)),
     };
 }
 
@@ -150,18 +147,17 @@ function checkFinishedScrollFrame(ctx: StateContext) {
     }
 }
 
-function scrollToFallbackOffset(ctx: StateContext, offset: number) {
-    ctx.state.refScroller.current?.scrollTo({
-        animated: false,
-        x: ctx.state.props.horizontal ? offset : 0,
-        y: ctx.state.props.horizontal ? 0 : offset,
-    });
-}
-
 // In case checkFinishedScroll does not work correctly, set a maximum timeout
 // to make sure it does eventually get cleared, just waiting for scroll to end
 export function checkFinishedScrollFallback(ctx: StateContext) {
     const state = ctx.state;
+    // Re-arming replaces the pending watchdog instead of orphaning it: each
+    // orphaned closure kept its own retry loop alive, multiplying timers and
+    // native scroll dispatches while a scroll session stayed unresolved.
+    if (state.timeoutCheckFinishedScrollFallback) {
+        clearTimeout(state.timeoutCheckFinishedScrollFallback);
+        state.timeoutCheckFinishedScrollFallback = undefined;
+    }
     const scrollingTo = state.scrollingTo;
     const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
     const silentInitialDispatch = isSilentInitialDispatch(state, scrollingTo);
@@ -190,6 +186,14 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             const isStillScrollingTo = state.scrollingTo;
             if (isStillScrollingTo) {
                 numChecks++;
+                // Hard bound carried on the session itself so it survives watchdog
+                // re-arms: continuous re-dispatches reset the closure-local numChecks,
+                // and without a persistent count the finish escape never fires.
+                isStillScrollingTo.fallbackChecks = (isStillScrollingTo.fallbackChecks ?? 0) + 1;
+                if (isStillScrollingTo.fallbackChecks > MAX_FALLBACK_CHECKS_PER_SESSION) {
+                    finishScrollTo(ctx);
+                    return;
+                }
                 const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
                 const maxChecks = silentInitialDispatch
                     ? 5
@@ -235,7 +239,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     });
                     scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
                 } else if (shouldRetryUnalignedEndScroll) {
-                    scrollToFallbackOffset(ctx, completionState.clampedTargetOffset);
+                    redispatchEndAlignedTarget(ctx, isStillScrollingTo, completionState.clampedTargetOffset);
                     scheduleFallbackCheck(100);
                 } else if (
                     shouldFinishZeroTarget ||
