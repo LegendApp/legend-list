@@ -14,11 +14,8 @@ export interface RowSpanCacheInput {
 }
 
 export class LayoutStoreRuntime {
-    didFlushInitialEstimate = false;
-    lastFlushedEstimateMeasurementCount = 0;
     positionListenerOffsets?: Map<string, number>;
     propEstimatedSize: number;
-    queuedEstimateFlush?: number;
     private rowSpanCache?: {
         input: RowSpanCacheInput;
         spans: Array<number | undefined>;
@@ -30,14 +27,7 @@ export class LayoutStoreRuntime {
         this.store = store;
     }
 
-    resetTransientState(timeouts: Set<number>) {
-        if (this.queuedEstimateFlush !== undefined) {
-            clearTimeout(this.queuedEstimateFlush);
-            timeouts.delete(this.queuedEstimateFlush);
-            this.queuedEstimateFlush = undefined;
-        }
-        this.didFlushInitialEstimate = false;
-        this.lastFlushedEstimateMeasurementCount = 0;
+    resetTransientState() {
         this.positionListenerOffsets = undefined;
     }
 

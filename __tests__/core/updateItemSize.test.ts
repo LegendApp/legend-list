@@ -6,7 +6,6 @@ import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import {
     materializeLayoutStoreRange,
-    maybeFlushInitialLayoutStoreEstimate,
     syncLayoutStoreState,
     syncLayoutStoreStructure,
 } from "../../src/core/layoutStoreLifecycle";
@@ -110,7 +109,7 @@ describe("item size update functions", () => {
             expect(mockState.totalSize).toBe(520);
         });
 
-        it("flushes the initial visible average into the prefix layout estimate", () => {
+        it("keeps the configured estimate after visible rows are measured", () => {
             const store = syncLayoutStoreStructure(mockCtx)!;
             syncLayoutStoreState(mockCtx);
             materializeLayoutStoreRange(mockCtx, 0, 2);
@@ -122,40 +121,16 @@ describe("item size update functions", () => {
             updateOneItemSize(mockCtx, "item_0", { height: 50, width: 400 });
             updateOneItemSize(mockCtx, "item_1", { height: 50, width: 400 });
 
-            expect(store.getEstimatedSize()).toBe(100);
-
             updateOneItemSize(mockCtx, "item_2", { height: 50, width: 400 });
 
-            expect(store.getEstimatedSize()).toBe(50);
-            expect(mockState.totalSize).toBe(250);
+            expect(store.getEstimatedSize()).toBe(100);
+            expect(mockState.totalSize).toBe(350);
             expect(getLayoutValue(mockState, "positions", 0)).toBeUndefined();
             expect(getLayoutValue(mockState, "positions", 1)).toBeUndefined();
             expect(getLayoutValue(mockState, "positions", 2)).toBeUndefined();
         });
 
-        it("defers the initial estimate flush while an indexed scroll is active", () => {
-            const store = syncLayoutStoreStructure(mockCtx)!;
-            syncLayoutStoreState(mockCtx);
-            materializeLayoutStoreRange(mockCtx, 0, 2);
-            mockState.startBuffered = 0;
-            mockState.startNoBuffer = 0;
-            mockState.endBuffered = 2;
-            mockState.endNoBuffer = 2;
-            mockState.scrollingTo = { animated: true, index: 4, offset: 400 };
-
-            updateOneItemSize(mockCtx, "item_0", { height: 50, width: 400 });
-            updateOneItemSize(mockCtx, "item_1", { height: 50, width: 400 });
-            updateOneItemSize(mockCtx, "item_2", { height: 50, width: 400 });
-
-            expect(store.getEstimatedSize()).toBe(100);
-            expect(mockState.layoutStoreRuntime?.didFlushInitialEstimate).toBe(false);
-
-            mockState.scrollingTo = undefined;
-            expect(maybeFlushInitialLayoutStoreEstimate(mockCtx)).toBe(true);
-            expect(store.getEstimatedSize()).toBe(50);
-        });
-
-        it("keeps equal-to-estimate prefix measurements measured after the initial estimate flush", () => {
+        it("keeps equal-to-estimate prefix measurements explicitly measured", () => {
             const store = syncLayoutStoreStructure(mockCtx)!;
             syncLayoutStoreState(mockCtx);
             materializeLayoutStoreRange(mockCtx, 0, 2);
@@ -170,7 +145,7 @@ describe("item size update functions", () => {
             const diff = updateOneItemSize(mockCtx, "item_2", { height: 100, width: 400 });
 
             expect(diff).toBe(0);
-            expect(store.getEstimatedSize()).toBeCloseTo(200 / 3);
+            expect(store.getEstimatedSize()).toBe(100);
             expect(store.getSize(2)).toBe(100);
             expect(store.getOffset(3)).toBe(200);
         });
@@ -209,37 +184,6 @@ describe("item size update functions", () => {
             expect(diff).toBe(-20);
             expect(mockState.sizesKnown.get("item_4")).toBe(80);
             expect(mockState.sizes.get("item_4")).toBe(80);
-        });
-
-        it("requests an MVCP correction when the initial estimate flush moves the anchor", () => {
-            const dataLength = 20;
-            mockState.props.data = Array.from({ length: dataLength }, (_, index) => ({ id: `item_${index}` }));
-            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
-            mockState.indexByKey.clear();
-            for (let index = 0; index < dataLength; index++) {
-                mockState.indexByKey.set(`item_${index}`, index);
-            }
-            const requestedAdjustments: number[] = [];
-            mockState.scrollAdjustHandler.requestAdjust = (amount) => {
-                requestedAdjustments.push(amount);
-            };
-
-            const store = syncLayoutStoreStructure(mockCtx)!;
-            syncLayoutStoreState(mockCtx);
-            materializeLayoutStoreRange(mockCtx, 10, 12);
-            mockState.startBuffered = 10;
-            mockState.startNoBuffer = 10;
-            mockState.endBuffered = 12;
-            mockState.endNoBuffer = 12;
-
-            updateOneItemSize(mockCtx, "item_10", { height: 50, width: 400 });
-            updateOneItemSize(mockCtx, "item_11", { height: 50, width: 400 });
-            updateOneItemSize(mockCtx, "item_12", { height: 50, width: 400 });
-
-            expect(store.getEstimatedSize()).toBe(50);
-            expect(requestedAdjustments).toEqual([-500]);
-            expect(getLayoutValue(mockState, "positions", 10)).toBeUndefined();
-            expect(mockState.totalSize).toBe(1000);
         });
 
         it("should call getFixedItemSize with the correct item", () => {

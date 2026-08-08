@@ -7,20 +7,9 @@ import { RowLayoutStore } from "@/core/RowLayoutStore";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
-import { getScrollVelocity } from "@/utils/getScrollVelocity";
-import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
-import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
-import { requestAdjust } from "@/utils/requestAdjust";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
-const INITIAL_ESTIMATE_FLUSH_THRESHOLD = 1;
-const INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS = 2;
-const PERIODIC_ESTIMATE_FLUSH_DELAY = 250;
-const PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY = 0.25;
-const PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS = 4;
-
 interface LayoutStoreSeed {
-    estimatedSize: number;
     hasDuplicateKey?: boolean;
     sizeEntries: LayoutStoreSizeEntry[];
 }
@@ -88,182 +77,11 @@ export function materializeLayoutStoreRange(ctx: StateContext, startIndex: numbe
 }
 
 function applyLayoutStoreSeed(store: ActiveLayoutStore, seed: LayoutStoreSeed) {
-    store.setEstimatedSize(seed.estimatedSize);
     store.replaceKnownSizeEntries(seed.sizeEntries);
 }
 
-function getMaterializeRange(state: InternalState, fallbackStart: number, fallbackEnd: number) {
-    const start =
-        typeof state.startBuffered === "number" && state.startBuffered >= 0 ? state.startBuffered : fallbackStart;
-    const end = typeof state.endBuffered === "number" && state.endBuffered >= start ? state.endBuffered : fallbackEnd;
-    return { end, start };
-}
-
-function flushLayoutStoreEstimate(
-    ctx: StateContext,
-    estimatedSize: number,
-    anchorIndex: number,
-    options?: { requireAnchorCorrection?: boolean },
-) {
-    const state = ctx.state;
-    const store = getActiveLayoutStore(ctx);
-    let didFlush = false;
-
-    if (
-        store &&
-        store.length > 0 &&
-        Math.abs(estimatedSize - store.getEstimatedSize()) > INITIAL_ESTIMATE_FLUSH_THRESHOLD
-    ) {
-        const canCorrectAnchor = state.didContainersLayout && state.props.maintainVisibleContentPosition.size;
-        if (!options?.requireAnchorCorrection || anchorIndex === 0 || canCorrectAnchor) {
-            const clampedAnchorIndex = Math.min(Math.max(anchorIndex, 0), store.length - 1);
-            const oldAnchorTop = store.getOffset(clampedAnchorIndex);
-            store.setEstimatedSize(estimatedSize);
-            syncLayoutStoreState(ctx);
-            const newAnchorTop = store.getOffset(clampedAnchorIndex);
-            const positionDiff = newAnchorTop - oldAnchorTop;
-
-            if (canCorrectAnchor) {
-                requestAdjust(ctx, positionDiff);
-            }
-
-            const range = getMaterializeRange(state, clampedAnchorIndex, clampedAnchorIndex);
-            materializeLayoutStoreRange(ctx, range.start, range.end);
-            didFlush = true;
-        }
-    }
-
-    return didFlush;
-}
-
-export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext) {
-    const state = ctx.state;
-    const runtime = getActiveLayoutStoreRuntime(ctx);
-    const store = runtime?.store;
-    let didFlush = false;
-    const startNoBuffer = state.startNoBuffer;
-    const endNoBuffer = state.endNoBuffer;
-
-    if (
-        store &&
-        !runtime.didFlushInitialEstimate &&
-        typeof startNoBuffer === "number" &&
-        typeof endNoBuffer === "number" &&
-        startNoBuffer >= 0 &&
-        endNoBuffer >= startNoBuffer
-    ) {
-        let totalMeasuredSize = 0;
-        let measuredCount = 0;
-        let areAllVisibleSizesKnown = true;
-
-        for (let index = startNoBuffer; index <= endNoBuffer; index++) {
-            const id = state.idCache[index] ?? getId(state, index);
-            const size = state.sizesKnown.get(id);
-            if (size === undefined) {
-                areAllVisibleSizesKnown = false;
-                break;
-            }
-            if (size > 0) {
-                totalMeasuredSize += size;
-                measuredCount++;
-            }
-        }
-
-        if (areAllVisibleSizesKnown && measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS) {
-            const nextEstimate = totalMeasuredSize / measuredCount;
-            if (!state.scrollingTo) {
-                runtime.didFlushInitialEstimate = true;
-                runtime.lastFlushedEstimateMeasurementCount = store.getMeasuredCount();
-                didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer);
-            }
-        }
-    }
-
-    return didFlush;
-}
-
-function hasEnoughNewMeasurementsForPeriodicFlush(runtime: LayoutStoreRuntime) {
-    const store = runtime.store;
-    const lastMeasuredCount = runtime.lastFlushedEstimateMeasurementCount;
-    return store.getMeasuredCount() - lastMeasuredCount >= PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS;
-}
-
-function shouldDeferPeriodicEstimateFlush(state: InternalState) {
-    const recentScrollAge = state.scrollTime > 0 ? Date.now() - state.scrollTime : Number.POSITIVE_INFINITY;
-    return (
-        !state.didContainersLayout ||
-        hasActiveInitialScroll(state) ||
-        !!state.queuedInitialLayout ||
-        !!state.scrollingTo ||
-        !!state.pendingScrollToEnd ||
-        !!state.pendingLayoutEffectMeasurements?.size ||
-        !!state.userScrollAnchorReset?.keys.size ||
-        hasActiveMVCPAnchorLock(state) ||
-        recentScrollAge < PERIODIC_ESTIMATE_FLUSH_DELAY ||
-        Math.abs(getScrollVelocity(state)) > PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY
-    );
-}
-
-function getEstimateFlushAnchorIndex(state: InternalState) {
-    const dataLength = getDataLength(state);
-    let anchorIndex: number | undefined;
-    if (typeof state.firstFullyOnScreenIndex === "number" && state.firstFullyOnScreenIndex >= 0) {
-        anchorIndex = state.firstFullyOnScreenIndex;
-    } else if (typeof state.startNoBuffer === "number" && state.startNoBuffer >= 0) {
-        anchorIndex = state.startNoBuffer;
-    } else if (typeof state.startBuffered === "number" && state.startBuffered >= 0) {
-        anchorIndex = state.startBuffered;
-    }
-
-    return anchorIndex !== undefined && dataLength > 0 ? Math.min(anchorIndex, dataLength - 1) : undefined;
-}
-
-function flushPeriodicLayoutStoreEstimate(ctx: StateContext) {
-    const state = ctx.state;
-    const runtime = getActiveLayoutStoreRuntime(ctx);
-    let didFlush = false;
-
-    if (runtime && hasEnoughNewMeasurementsForPeriodicFlush(runtime)) {
-        if (shouldDeferPeriodicEstimateFlush(state)) {
-            schedulePeriodicLayoutStoreEstimateFlush(ctx);
-        } else {
-            const store = runtime.store;
-            const measuredAverage = store.getMeasuredAverageSize();
-            const anchorIndex = getEstimateFlushAnchorIndex(state);
-            runtime.lastFlushedEstimateMeasurementCount = store.getMeasuredCount();
-
-            if (measuredAverage !== undefined && anchorIndex !== undefined) {
-                didFlush = flushLayoutStoreEstimate(ctx, measuredAverage, anchorIndex, {
-                    requireAnchorCorrection: true,
-                });
-            }
-        }
-    }
-
-    return didFlush;
-}
-
-export function schedulePeriodicLayoutStoreEstimateFlush(ctx: StateContext) {
-    const state = ctx.state;
-    const runtime = getActiveLayoutStoreRuntime(ctx);
-    let didSchedule = false;
-
-    if (runtime && runtime.queuedEstimateFlush === undefined && hasEnoughNewMeasurementsForPeriodicFlush(runtime)) {
-        const timeout = setTimeout(() => {
-            runtime.queuedEstimateFlush = undefined;
-            state.timeouts.delete(timeout);
-            flushPeriodicLayoutStoreEstimate(ctx);
-        }, PERIODIC_ESTIMATE_FLUSH_DELAY) as unknown as number;
-        runtime.queuedEstimateFlush = timeout;
-        state.timeouts.add(timeout);
-        didSchedule = true;
-    }
-
-    return didSchedule;
-}
-
 export function resetLayoutStoreRuntimeState(state: InternalState) {
-    state.layoutStoreRuntime?.resetTransientState(state.timeouts);
+    state.layoutStoreRuntime?.resetTransientState();
 }
 
 export function setLayoutStoreMeasuredSize(ctx: StateContext, index: number | undefined, size: number) {
@@ -277,21 +95,6 @@ export function setLayoutStoreMeasuredSize(ctx: StateContext, index: number | un
         didSet = true;
     }
     return didSet;
-}
-
-function getLayoutStoreSeedEstimate(input: {
-    dataLength: number;
-    fallbackSize: number;
-    fallbackTotalSize: number;
-    measuredCount: number;
-    measuredTotalSize: number;
-}) {
-    const { dataLength, fallbackSize, fallbackTotalSize, measuredCount, measuredTotalSize } = input;
-    return measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS
-        ? measuredTotalSize / measuredCount
-        : dataLength > 0
-          ? fallbackTotalSize / dataLength
-          : fallbackSize;
 }
 
 export function reconcileLayoutStoreDataChange(
@@ -495,15 +298,14 @@ function getLayoutStorePropEstimatedSize(ctx: StateContext) {
 
 function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions = { mode: "seed" }): LayoutStoreSeed {
     const state = ctx.state;
-    const { data, estimatedItemSize } = state.props;
+    const { data } = state.props;
     const dataLength = getDataLength(state);
-    const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
     const sizeEntries: LayoutStoreSeed["sizeEntries"] = [];
     const canSeedKnownSizes = state.sizesKnown.size > 0;
     const canSeedCachedSizes = state.sizes.size > 0;
 
     if (options.mode === "seed" && !canSeedKnownSizes && !canSeedCachedSizes) {
-        return { estimatedSize: fallbackSize, sizeEntries };
+        return { sizeEntries };
     }
 
     const previousData = state.previousData;
@@ -514,10 +316,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
         statePendingDataComparison.nextData === data
             ? statePendingDataComparison
             : undefined;
-    const fallbackTotalSize = dataLength * fallbackSize;
     let hasDuplicateKey = false;
-    let measuredCount = 0;
-    let measuredTotalSize = 0;
     const dataLengthDelta = previousData ? dataLength - previousData.length : 0;
 
     const materializedIndices =
@@ -575,8 +374,6 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
 
         const knownSize = canSeedKnownSizes ? state.sizesKnown.get(key) : undefined;
         if (knownSize !== undefined) {
-            measuredCount++;
-            measuredTotalSize += knownSize;
             sizeEntries.push({
                 index: targetIndex,
                 size: knownSize,
@@ -596,13 +393,6 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
     }
 
     return {
-        estimatedSize: getLayoutStoreSeedEstimate({
-            dataLength,
-            fallbackSize,
-            fallbackTotalSize,
-            measuredCount,
-            measuredTotalSize,
-        }),
         hasDuplicateKey,
         sizeEntries,
     };

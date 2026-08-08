@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, spyOn } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import {
@@ -8,9 +8,7 @@ import {
 import {
     getActiveLayoutStore,
     materializeLayoutStoreRange,
-    maybeFlushInitialLayoutStoreEstimate,
     rebuildLayoutStoreExact,
-    schedulePeriodicLayoutStoreEstimateFlush,
     setLayoutStoreMeasuredSize,
     syncActiveRowLayoutStoreSpans,
     syncLayoutStoreState,
@@ -21,23 +19,6 @@ import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCaches
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { countLayoutValues, getLayoutValue } from "../helpers/layoutStore";
-
-function captureTimeouts() {
-    const callbacks: Array<() => void> = [];
-    const setTimeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation((callback: any) => {
-        callbacks.push(callback);
-        return callbacks.length as any;
-    });
-    const clearTimeoutSpy = spyOn(globalThis, "clearTimeout").mockImplementation(() => undefined as any);
-
-    return {
-        callbacks,
-        restore() {
-            clearTimeoutSpy.mockRestore();
-            setTimeoutSpy.mockRestore();
-        },
-    };
-}
 
 function createLayoutStoreContext(dataLength = 3) {
     return createMockContext(
@@ -216,7 +197,7 @@ describe("layout store lifecycle", () => {
         expect(ctx.state.layoutStoreRuntime?.store).toBe(initialStore);
     });
 
-    it("seeds newly created stores from known measurements", () => {
+    it("seeds known measurements without changing the configured estimate", () => {
         const ctx = createLayoutStoreContext(4);
         ctx.state.idCache[0] = "item-0";
         ctx.state.idCache[1] = "item-1";
@@ -225,11 +206,11 @@ describe("layout store lifecycle", () => {
 
         const store = syncLayoutStoreStructure(ctx);
 
-        expect(store?.getEstimatedSize()).toBe(50);
+        expect(store?.getEstimatedSize()).toBe(100);
         expect(store?.getMeasuredCount()).toBe(2);
         expect(store?.getSize(0)).toBe(40);
         expect(store?.getSize(1)).toBe(60);
-        expect(store?.getTotalSize()).toBe(200);
+        expect(store?.getTotalSize()).toBe(300);
     });
 
     it("uses the scroll-axis gap in the initial estimate", () => {
@@ -337,7 +318,7 @@ describe("layout store lifecycle", () => {
         expect(getFixedItemSize).not.toHaveBeenCalled();
     });
 
-    it("uses measured known sizes as the exact rebuild seed estimate", () => {
+    it("restores measured known sizes without changing the configured estimate", () => {
         const ctx = createLayoutStoreContext(5);
         ctx.state.idCache[0] = "item-0";
         ctx.state.idCache[1] = "item-1";
@@ -348,8 +329,8 @@ describe("layout store lifecycle", () => {
 
         const store = rebuildLayoutStoreExact(ctx);
 
-        expect(store?.getEstimatedSize()).toBe(50);
-        expect(store?.getTotalSize()).toBe(250);
+        expect(store?.getEstimatedSize()).toBe(100);
+        expect(store?.getTotalSize()).toBe(400);
         expect(store?.getMeasuredCount()).toBe(2);
     });
 
@@ -399,13 +380,13 @@ describe("layout store lifecycle", () => {
         expect(nextStore?.getTotalSize()).toBe(400);
     });
 
-    it("preserves learned estimates across syncs until the prop estimate changes", () => {
+    it("keeps the configured estimate across syncs until the prop changes", () => {
         const ctx = createLayoutStoreContext();
         const store = syncLayoutStoreStructure(ctx)!;
-        store.setEstimatedSize(60);
+        store.setMeasuredSize(0, 60);
 
         expect(syncLayoutStoreStructure(ctx)).toBe(store);
-        expect(store.getEstimatedSize()).toBe(60);
+        expect(store.getEstimatedSize()).toBe(100);
 
         ctx.state.props.estimatedItemSize = 80;
         syncLayoutStoreStructure(ctx);
@@ -435,30 +416,6 @@ describe("layout store lifecycle", () => {
 
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
         expect(countLayoutValues(ctx.state, "positions")).toBe(0);
-    });
-
-    it("updates snap offsets after a periodic prefix estimate flush", () => {
-        const timers = captureTimeouts();
-        try {
-            const ctx = createLayoutStoreContext(10);
-            const store = syncLayoutStoreStructure(ctx)!;
-            ctx.state.props.snapToIndices = [5];
-            ctx.state.firstFullyOnScreenIndex = 5;
-            syncLayoutStoreState(ctx);
-
-            for (let index = 0; index < 4; index++) {
-                setLayoutStoreMeasuredSize(ctx, index, 50);
-            }
-
-            expect(ctx.values.get("snapToOffsets")).toEqual([300]);
-            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
-            timers.callbacks[0]();
-
-            expect(store.getEstimatedSize()).toBe(50);
-            expect(ctx.values.get("snapToOffsets")).toEqual([250]);
-        } finally {
-            timers.restore();
-        }
     });
 
     it("supports internal position components and position listeners", () => {
@@ -525,86 +482,6 @@ describe("layout store lifecycle", () => {
 
         expect(store.getSize(0)).toBe(100);
         expect(store.getTotalSize()).toBe(300);
-    });
-
-    it("clamps stale visible anchors when flushing the initial estimate", () => {
-        const ctx = createLayoutStoreContext(2);
-        const store = syncLayoutStoreStructure(ctx)!;
-        ctx.state.startNoBuffer = 3;
-        ctx.state.endNoBuffer = 4;
-        ctx.state.idCache[3] = "stale-3";
-        ctx.state.idCache[4] = "stale-4";
-        ctx.state.sizesKnown.set("stale-3", 50);
-        ctx.state.sizesKnown.set("stale-4", 50);
-
-        setLayoutStoreMeasuredSize(ctx, 0, 50);
-        maybeFlushInitialLayoutStoreEstimate(ctx);
-
-        expect(store.getEstimatedSize()).toBe(50);
-        expect(store.getTotalSize()).toBe(100);
-    });
-
-    it("periodically flushes the measured average while idle and corrects the anchor", () => {
-        const timers = captureTimeouts();
-        try {
-            const ctx = createLayoutStoreContext(10);
-            const store = syncLayoutStoreStructure(ctx)!;
-            const requestedAdjustments: number[] = [];
-            ctx.state.scrollAdjustHandler.requestAdjust = (amount) => {
-                requestedAdjustments.push(amount);
-            };
-            ctx.state.firstFullyOnScreenIndex = 5;
-            ctx.state.startBuffered = 5;
-            ctx.state.startNoBuffer = 5;
-            ctx.state.endBuffered = 6;
-            ctx.state.endNoBuffer = 6;
-            materializeLayoutStoreRange(ctx, 5, 6);
-
-            for (let index = 0; index < 4; index++) {
-                setLayoutStoreMeasuredSize(ctx, index, 50);
-            }
-
-            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
-            expect(timers.callbacks.length).toBe(1);
-
-            timers.callbacks[0]();
-
-            expect(store.getEstimatedSize()).toBe(50);
-            expect(ctx.state.totalSize).toBe(500);
-            expect(getLayoutValue(ctx.state, "positions", 5)).toBeUndefined();
-            expect(store.getOffset(5)).toBe(250);
-            expect(requestedAdjustments).toEqual([-50]);
-            expect(ctx.state.layoutStoreRuntime?.lastFlushedEstimateMeasurementCount).toBe(4);
-        } finally {
-            timers.restore();
-        }
-    });
-
-    it("defers periodic estimate flushes until recent scroll activity settles", () => {
-        const timers = captureTimeouts();
-        try {
-            const ctx = createLayoutStoreContext(10);
-            const store = syncLayoutStoreStructure(ctx)!;
-            ctx.state.scrollTime = Date.now();
-
-            for (let index = 0; index < 4; index++) {
-                setLayoutStoreMeasuredSize(ctx, index, 50);
-            }
-
-            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
-            timers.callbacks[0]();
-
-            expect(store.getEstimatedSize()).toBe(100);
-            expect(timers.callbacks.length).toBe(2);
-
-            ctx.state.scrollTime = Date.now() - 1000;
-            timers.callbacks[1]();
-
-            expect(store.getEstimatedSize()).toBe(50);
-            expect(ctx.state.layoutStoreRuntime?.lastFlushedEstimateMeasurementCount).toBe(4);
-        } finally {
-            timers.restore();
-        }
     });
 
     it("replaces the store when column support changes", () => {

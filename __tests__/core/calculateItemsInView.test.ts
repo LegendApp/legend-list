@@ -967,6 +967,7 @@ describe("calculateItemsInView", () => {
             mockState.props.data = previousItems;
             mockState.previousData = previousItems;
             mockState.props.drawDistance = 0;
+            mockState.props.estimatedItemSize = itemSize;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
             mockState.scroll = -4;
@@ -1081,6 +1082,7 @@ describe("calculateItemsInView", () => {
             mockState.previousData = previousItems;
             mockState.props.data = previousItems;
             mockState.props.drawDistance = 0;
+            mockState.props.estimatedItemSize = itemSize;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
                 data: true,
@@ -1135,6 +1137,7 @@ describe("calculateItemsInView", () => {
                 mockState.previousData = previousItems;
                 mockState.props.data = previousItems;
                 mockState.props.drawDistance = 0;
+                mockState.props.estimatedItemSize = itemSize;
                 mockState.props.keyExtractor = (item: { id: string }) => item.id;
                 mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
                 mockState.scroll = -4;
@@ -1212,6 +1215,7 @@ describe("calculateItemsInView", () => {
             mockState.didContainersLayout = true;
             mockState.props.data = previousItems;
             mockState.props.drawDistance = 0;
+            mockState.props.estimatedItemSize = itemSize;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
             mockState.scroll = -4;
@@ -1317,6 +1321,7 @@ describe("calculateItemsInView", () => {
             mockCtx.values.set("totalSize", 1000);
             mockState.totalSize = 1000;
             mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+            mockState.props.estimatedItemSize = 50;
             mockState.scroll = 700;
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;

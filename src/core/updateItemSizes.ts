@@ -2,12 +2,7 @@ import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { getDataItem } from "@/core/IndexedData";
-import {
-    getActiveLayoutStore,
-    maybeFlushInitialLayoutStoreEstimate,
-    schedulePeriodicLayoutStoreEstimateFlush,
-    setLayoutStoreMeasuredSize,
-} from "@/core/layoutStoreLifecycle";
+import { getActiveLayoutStore, setLayoutStoreMeasuredSize } from "@/core/layoutStoreLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
 import { setSize } from "@/core/setSize";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
@@ -113,9 +108,6 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     }
     if (result.didChange && result.shouldMaintainScrollAtEnd) {
         doMaintainScrollAtEnd(ctx);
-    }
-    if (result.didChange) {
-        schedulePeriodicLayoutStoreEstimateFlush(ctx);
     }
 }
 
@@ -346,13 +338,12 @@ export function updateOneItemSize(
     const didSetPrefixLayoutStoreSize = setLayoutStoreMeasuredSize(ctx, index, size);
 
     // Update saved size if it changed. With the prefix layout store, also record
-    // equal-to-estimate measurements so future estimate flushes do not reclassify
-    // real measured rows as estimated rows.
+    // equal-to-estimate measurements so they remain known if the configured
+    // estimated item size changes later.
     if (didSizeChange || didSetPrefixLayoutStoreSize) {
         if (!didSetPrefixLayoutStoreSize) {
             setSize(ctx, itemKey, size);
         }
-        maybeFlushInitialLayoutStoreEstimate(ctx);
         return didSizeChange ? size - prevSize : 0;
     }
     return 0;
