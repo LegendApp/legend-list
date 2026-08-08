@@ -118,4 +118,34 @@ describe("doScrollTo (native)", () => {
             expect(ctx.state.scrollingTo).toBeUndefined();
         });
     }
+
+    it("synchronizes logical scroll for an instant scroll without a deferred adjustment", () => {
+        const scrollTo = mock();
+        const ctx = createMockContext(
+            {},
+            {
+                refScroller: { current: { scrollTo } } as any,
+                scroll: 100,
+            },
+        );
+
+        doScrollTo(ctx, { animated: false, horizontal: false, offset: 200 });
+
+        expect(ctx.state.scroll).toBe(200);
+    });
+
+    it("preserves an MVCP-adjusted logical scroll during an instant scroll", () => {
+        const scrollTo = mock();
+        const ctx = createMockContext(
+            { scrollAdjustPending: 32 },
+            {
+                refScroller: { current: { scrollTo } } as any,
+                scroll: 23_410,
+            },
+        );
+
+        doScrollTo(ctx, { animated: false, horizontal: false, offset: 23_378 });
+
+        expect(ctx.state.scroll).toBe(23_410);
+    });
 });

@@ -2,7 +2,7 @@ import { checkFinishedScroll, checkFinishedScrollFallback } from "@/core/checkFi
 import type { DoScrollToParams } from "@/core/doScrollParams";
 import { initialScrollCompletion } from "@/core/initialScrollSession";
 import { getContentSize } from "@/state/getContentSize";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
@@ -36,7 +36,10 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     // If it's animated we can rely on onMomentumScrollEnd to call finishScrollTo
     // so if it's not aniamted we set it up here
     if (!isAnimated) {
-        state.scroll = offset;
+        const pendingAdjust = peek$(ctx, "scrollAdjustPending") ?? 0;
+        if (Math.abs(pendingAdjust) <= 0.1) {
+            state.scroll = offset;
+        }
 
         checkFinishedScrollFallback(ctx);
     }
