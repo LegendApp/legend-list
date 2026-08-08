@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import { cancelImperativeScroll } from "../../src/core/cancelImperativeScroll";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
@@ -924,5 +925,98 @@ describe("createImperativeHandle.scrollToEnd", () => {
         } finally {
             restore();
         }
+    });
+
+    it("cancels readiness polling and settles its promise during disposal", async () => {
+        const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const callbacks = new Map<number, FrameRequestCallback>();
+        const cancelCalls: number[] = [];
+        let lateCallback: FrameRequestCallback | undefined;
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            lateCallback = callback;
+            callbacks.set(0, callback);
+            return 0;
+        }) as typeof requestAnimationFrame;
+        globalThis.cancelAnimationFrame = ((id: number) => {
+            cancelCalls.push(id);
+            callbacks.delete(id);
+        }) as typeof cancelAnimationFrame;
+
+        try {
+            const ctx = createMockContext({}, { didDataChange: true, props: { data: [1, 2, 3] } } as any);
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 2 });
+            let resolved = false;
+            void promise.then(() => {
+                resolved = true;
+            });
+
+            cancelImperativeScroll(ctx.state);
+            lateCallback?.(0);
+            await Promise.resolve();
+
+            expect(cancelCalls).toEqual([0]);
+            expect(callbacks.size).toBe(0);
+            expect(resolved).toBe(true);
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+        } finally {
+            globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
+    it("settles a scrollToEnd promise that is pending a layout commit during disposal", async () => {
+        const scheduleCommit = mock(() => {});
+        const ctx = createMockContext({}, { props: { data: [1, 2, 3] } } as any);
+        const handle = createImperativeHandle(ctx, scheduleCommit);
+        const promise = handle.scrollToEnd({ animated: false });
+        let resolveCount = 0;
+        void promise.then(() => {
+            resolveCount++;
+        });
+
+        expect(scheduleCommit).toHaveBeenCalledTimes(1);
+        expect(ctx.state.pendingScrollToEnd).toBeDefined();
+
+        cancelImperativeScroll(ctx.state);
+        cancelImperativeScroll(ctx.state);
+        await promise;
+
+        expect(resolveCount).toBe(1);
+        expect(ctx.state.pendingScrollToEnd).toBeUndefined();
+        expect(ctx.state.pendingScrollResolve).toBeUndefined();
+        expect(scrollToIndexSpy).not.toHaveBeenCalled();
+    });
+
+    it("settles an active scrollToOffset promise during cancellation", async () => {
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                didFinishInitialScroll: true,
+                refScroller: {
+                    current: {
+                        getScrollableNode: () => ({}),
+                        scrollTo: mock(() => {}),
+                    },
+                } as any,
+                scrollLength: 200,
+            },
+        );
+        const handle = createImperativeHandle(ctx);
+        const promise = handle.scrollToOffset({ animated: false, offset: 300 });
+        let resolveCount = 0;
+        void promise.then(() => {
+            resolveCount++;
+        });
+
+        expect(ctx.state.scrollingTo).toBeDefined();
+
+        cancelImperativeScroll(ctx.state);
+        await promise;
+
+        expect(resolveCount).toBe(1);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.pendingScrollResolve).toBeUndefined();
     });
 });

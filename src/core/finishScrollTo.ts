@@ -1,4 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
@@ -7,6 +8,7 @@ import type { StateContext } from "@/state/state";
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
+        cancelScrollCompletionChecks(state);
         const resolvePendingScroll = state.pendingScrollResolve;
         state.pendingScrollResolve = undefined;
 

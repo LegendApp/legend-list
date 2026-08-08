@@ -206,6 +206,51 @@ describe("LegendList props behavior", () => {
         expect(state.scheduledWork.has("adaptiveRender")).toBe(false);
     });
 
+    it("cancels and settles imperative scroll work on unmount", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-imperative-scroll-cleanup");
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const cancelCalls: number[] = [];
+        const cancelPlatformCompletion = mock(() => {});
+        const resolveScroll = mock(() => {});
+        globalThis.cancelAnimationFrame = ((id: number) => {
+            cancelCalls.push(id);
+        }) as typeof cancelAnimationFrame;
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={renderItem}
+                />,
+            );
+            const state = await getStateFromRender();
+            const lifecycleState = state as any;
+            lifecycleState.scheduledWork.register("checkFinishedScrollFrame", () => cancelAnimationFrame(0));
+            lifecycleState.scheduledWork.register("platformScrollCompletion", cancelPlatformCompletion);
+            lifecycleState.pendingScrollResolve = resolveScroll;
+            lifecycleState.pendingScrollToEnd = { options: {}, resolve: resolveScroll, token: 1 };
+            lifecycleState.scrollingTo = { animated: false, offset: 100 };
+            lifecycleState.scrollTargetPinnedRange = { end: 1, start: 0 };
+
+            rendered.unmount();
+
+            expect(cancelCalls).toEqual([0]);
+            expect(cancelPlatformCompletion).toHaveBeenCalledTimes(1);
+            expect(resolveScroll).toHaveBeenCalledTimes(1);
+            expect(lifecycleState.pendingScrollResolve).toBeUndefined();
+            expect(lifecycleState.pendingScrollToEnd).toBeUndefined();
+            expect(lifecycleState.scrollingTo).toBeUndefined();
+            expect(lifecycleState.scrollTargetPinnedRange).toBeUndefined();
+        } finally {
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
     it("cancels queued full drawDistance prewarm on unmount", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;

@@ -45,10 +45,12 @@ describe("ScheduledWork", () => {
     it("replaces named timeouts and forgets completed work", () => {
         const calls: string[] = [];
         scheduledWork.timeout(() => calls.push("first"), 10, "adaptiveRender");
+        const staleCallback = Array.from(timeouts.values())[0]!;
         scheduledWork.timeout(() => calls.push("second"), 10, "adaptiveRender");
 
         expect(timeouts.size).toBe(1);
         expect(scheduledWork.has("adaptiveRender")).toBe(true);
+        staleCallback();
         Array.from(timeouts.values())[0]();
 
         expect(calls).toEqual(["second"]);
@@ -72,25 +74,51 @@ describe("ScheduledWork", () => {
     it("replaces named frames", () => {
         const calls: string[] = [];
         scheduledWork.frame(() => calls.push("first"), "mvcpRecalculate");
+        const staleCallback = Array.from(frames.values())[0]!;
         scheduledWork.frame(() => calls.push("second"), "mvcpRecalculate");
 
         expect(frames.size).toBe(1);
+        staleCallback(0);
         Array.from(frames.values())[0](0);
 
         expect(calls).toEqual(["second"]);
         expect(scheduledWork.has("mvcpRecalculate")).toBe(false);
     });
 
+    it("registers arbitrary cleanup with the same replacement lifecycle", () => {
+        const calls: string[] = [];
+        scheduledWork.register("platformScrollCompletion", () => calls.push("first"));
+        scheduledWork.register("platformScrollCompletion", () => calls.push("second"));
+
+        scheduledWork.cancel("platformScrollCompletion");
+
+        expect(calls).toEqual(["first", "second"]);
+        expect(scheduledWork.has("platformScrollCompletion")).toBe(false);
+    });
+
     it("cancels every kind of pending work on dispose", () => {
-        scheduledWork.timeout(() => {}, 10);
-        scheduledWork.timeout(() => {}, 10, "adaptiveRender");
-        scheduledWork.frame(() => {}, "mvcpRecalculate");
+        const calls: string[] = [];
+        scheduledWork.timeout(() => calls.push("anonymous timeout"), 10);
+        scheduledWork.timeout(() => calls.push("named timeout"), 10, "adaptiveRender");
+        scheduledWork.frame(() => calls.push("frame"), "mvcpRecalculate");
+        const lateTimeouts = Array.from(timeouts.values());
+        const lateFrames = Array.from(frames.values());
+        const cleanupCalls: string[] = [];
+        scheduledWork.register("platformScrollCompletion", () => cleanupCalls.push("cleanup"));
 
         scheduledWork.dispose();
+        for (const callback of lateTimeouts) {
+            callback();
+        }
+        for (const callback of lateFrames) {
+            callback(0);
+        }
 
         expect(timeouts.size).toBe(0);
         expect(frames.size).toBe(0);
+        expect(calls).toEqual([]);
         expect(scheduledWork.has("adaptiveRender")).toBe(false);
         expect(scheduledWork.has("mvcpRecalculate")).toBe(false);
+        expect(cleanupCalls).toEqual(["cleanup"]);
     });
 });

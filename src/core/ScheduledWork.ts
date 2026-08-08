@@ -2,9 +2,12 @@ export type ScheduledWorkKey =
     | "adaptiveRender"
     | "checkFinishedScrollFallback"
     | "checkFinishedScrollFrame"
+    | "checkFinishedScrollRetryFrame"
     | "fullDrawDistancePrewarm"
     | "ignoreScrollFromMVCP"
+    | "imperativeScrollReady"
     | "mvcpRecalculate"
+    | "platformScrollCompletion"
     | "preservedInitialScroll"
     | "renderRangeProjection";
 
@@ -17,20 +20,33 @@ export class ScheduledWork {
         if (key) {
             this.cancel(key);
         }
+        const work: Work = [undefined, clearTimeout];
         const handle = setTimeout(() => {
-            this.work.delete(key ?? handle);
-            callback();
+            const workKey = key ?? handle;
+            if (this.work.get(workKey) === work) {
+                this.work.delete(workKey);
+                callback();
+            }
         }, delay);
-        this.work.set(key ?? handle, [handle, clearTimeout]);
+        work[0] = handle;
+        this.work.set(key ?? handle, work);
     }
 
     frame(callback: () => void, key: ScheduledWorkKey) {
         this.cancel(key);
-        const handle = requestAnimationFrame(() => {
-            this.work.delete(key);
-            callback();
+        const work: Work = [undefined, cancelAnimationFrame];
+        this.work.set(key, work);
+        work[0] = requestAnimationFrame(() => {
+            if (this.work.get(key) === work) {
+                this.work.delete(key);
+                callback();
+            }
         });
-        this.work.set(key, [handle, cancelAnimationFrame]);
+    }
+
+    register(key: ScheduledWorkKey, cancel: () => void) {
+        this.cancel(key);
+        this.work.set(key, [undefined, cancel]);
     }
 
     cancel(key: ScheduledWorkKey) {

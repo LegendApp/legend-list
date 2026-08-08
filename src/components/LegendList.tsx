@@ -20,6 +20,7 @@ import {
     handleBootstrapInitialScrollLayoutChange,
 } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
@@ -802,7 +803,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, scheduleImperativeScrollCommit), []);
 
     useEffect(() => {
-        return () => state.scheduledWork.dispose();
+        return () => {
+            cancelImperativeScroll(state);
+            state.scheduledWork.dispose();
+        };
     }, [state]);
 
     // Run pending scroll to end after props have settled.

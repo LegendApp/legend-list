@@ -226,9 +226,10 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         : targetOffset + SILENT_INITIAL_SCROLL_TARGET_EPSILON;
                 initialScrollCompletion.markSilentInitialScrollRetry(state);
                 scrollToFallbackOffset(ctx, jiggleOffset);
-                requestAnimationFrame(() => {
-                    scrollToFallbackOffset(ctx, targetOffset);
-                });
+                state.scheduledWork.frame(
+                    () => scrollToFallbackOffset(ctx, targetOffset),
+                    "checkFinishedScrollRetryFrame",
+                );
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
             } else if (shouldRetryUnalignedEndScroll) {
                 scrollToFallbackOffset(ctx, completionState.clampedTargetOffset);

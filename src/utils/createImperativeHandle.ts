@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { settlePendingImperativeScroll } from "@/core/cancelImperativeScroll";
 import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
@@ -103,10 +104,10 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
                 return;
             }
 
-            requestAnimationFrame(check);
+            state.scheduledWork.frame(check, "imperativeScrollReady");
         };
 
-        requestAnimationFrame(check);
+        state.scheduledWork.frame(check, "imperativeScrollReady");
     };
 
     const runScrollRequest = (token: number, resolve: () => void, run: () => boolean, isReady = () => true) => {
@@ -132,10 +133,10 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
     };
     const startImperativeScroll = (resolve: () => void) => {
         // A new imperative scroll supersedes any previous unresolved one.
+        state.scheduledWork.cancel("imperativeScrollReady");
         const token = ++imperativeScrollToken;
 
-        state.pendingScrollToEnd = undefined;
-        state.pendingScrollResolve?.();
+        settlePendingImperativeScroll(state);
         state.pendingScrollResolve = resolve;
 
         return token;
