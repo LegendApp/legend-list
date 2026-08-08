@@ -206,7 +206,15 @@ export function useStateContext() {
     return React.useContext(ContextState)!;
 }
 
-function createSelectorFunctionsArr(ctx: StateContext, signalNames: readonly ListenerType[]) {
+function createSelectorFunctionsArr(ctx: StateContext | null, signalNames: readonly ListenerType[]) {
+    if (!ctx) {
+        const emptyValues: any[] = [];
+        return {
+            get: () => emptyValues,
+            subscribe: () => () => {},
+        };
+    }
+
     let lastValues: any[] = [];
     let lastSignalValues: any[] = [];
 
@@ -417,7 +425,7 @@ export function useArr$<
     ListenerTypeValueMap[T8],
 ];
 export function useArr$<T extends ListenerType>(signalNames: readonly [T, ...T[]]): ListenerTypeValueMap[T][] {
-    const ctx = React.useContext(ContextState)!;
+    const ctx = React.useContext(ContextState);
     const signalNamesKey = getSignalNamesKey(signalNames);
     const { subscribe, get } = React.useMemo(
         () => createSelectorFunctionsArr(ctx, getSignalNamesFromKey(signalNamesKey)),
@@ -431,7 +439,7 @@ export function useSelector$<T extends ListenerType, T2>(
     signalName: T,
     selector: (value: ListenerTypeValueMap[T]) => T2,
 ): T2 {
-    const ctx = React.useContext(ContextState)!;
+    const ctx = React.useContext(ContextState);
     const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, [signalName]), [ctx, signalName]);
     const getSelectedValue = React.useCallback(() => selector(get()[0]), [get, selector]);
 
