@@ -5,9 +5,14 @@ import { cancelImperativeScroll } from "../../src/core/cancelImperativeScroll";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
-import { rebuildLayoutStoreExact } from "../../src/core/layoutStoreLifecycle";
+import {
+    getActiveLayoutStore,
+    rebuildLayoutStoreExact,
+    syncLayoutStoreStructure,
+} from "../../src/core/layoutStoreLifecycle";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("createImperativeHandle.scrollToEnd", () => {
@@ -329,6 +334,119 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.sizes.size).toBe(0);
         expect(ctx.state.sizesKnown.size).toBe(0);
         expect(ctx.state.totalSize).toBe(300);
+    });
+
+    it("replaceKnownSizeEntries atomically replaces sparse geometry and preserves the visible item", () => {
+        const requestAdjust = mock(() => {});
+        const triggerCalculateItemsInView = mock(() => {});
+        const data = Array.from({ length: 4 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            { readyToRender: true, totalSize: 400 },
+            {
+                didContainersLayout: true,
+                idCache: data.map((item) => item.id),
+                idsInView: [data[1].id],
+                indexByKey: new Map(data.map((item, index) => [item.id, index])),
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                    maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(true),
+                },
+                scroll: 100,
+                scrollAdjustHandler: {
+                    getAdjust: () => 0,
+                    requestAdjust,
+                    setMounted: () => {},
+                },
+                totalSize: 400,
+                triggerCalculateItemsInView,
+            },
+        );
+        syncLayoutStoreStructure(ctx);
+
+        const handle = createImperativeHandle(ctx);
+        handle.replaceKnownSizeEntries([{ index: 0, size: 200 }]);
+
+        expect(handle.getState().positionAtIndex(1)).toBe(200);
+        expect(handle.getState().sizeAtIndex(0)).toBe(200);
+        expect(ctx.state.totalSize).toBe(500);
+        expect(ctx.state.scroll).toBe(200);
+        expect(requestAdjust).toHaveBeenLastCalledWith(100);
+        expect(triggerCalculateItemsInView).toHaveBeenLastCalledWith({ forceFullItemPositions: true });
+
+        handle.replaceKnownSizeEntries([{ index: 2, size: 300 }]);
+
+        expect(handle.getState().positionAtIndex(1)).toBe(100);
+        expect(handle.getState().sizeAtIndex(0)).toBe(100);
+        expect(handle.getState().sizeAtIndex(2)).toBe(300);
+        expect(ctx.state.totalSize).toBe(600);
+        expect(ctx.state.scroll).toBe(100);
+        expect(requestAdjust).toHaveBeenLastCalledWith(-100);
+    });
+
+    it("replaceKnownSizeEntries preserves the configured default", () => {
+        const data = Array.from({ length: 3 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            { readyToRender: true },
+            {
+                didContainersLayout: true,
+                endNoBuffer: 1,
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(data.map((item, index) => [item.id, index])),
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                    maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(true),
+                },
+                startNoBuffer: 0,
+            },
+        );
+        const store = syncLayoutStoreStructure(ctx)!;
+        store.setEstimatedSize(140);
+
+        const handle = createImperativeHandle(ctx);
+        handle.replaceKnownSizeEntries([{ index: 2, size: 300 }]);
+
+        expect(store.getSize(0)).toBe(100);
+        expect(store.getSize(2)).toBe(300);
+        expect(store.getTotalSize()).toBe(500);
+
+        ctx.state.sizesKnown.set(data[0].id, 180);
+        ctx.state.sizesKnown.set(data[1].id, 220);
+
+        expect(getActiveLayoutStore(ctx)?.getEstimatedSize()).toBe(100);
+    });
+
+    it("replaceKnownSizeEntries keeps million-item data sources sparse", () => {
+        const itemCount = 1_000_000;
+        const dataSource = {
+            getItem: () => undefined,
+            getKey: (index: number) => `item-${index}`,
+            getLength: () => itemCount,
+            getRevision: () => 0,
+            subscribe: () => () => {},
+        };
+        const ctx = createMockContext(
+            {},
+            {
+                props: {
+                    data: [],
+                    dataSource,
+                    estimatedItemSize: 20,
+                },
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        handle.replaceKnownSizeEntries([{ index: itemCount - 1, size: 60 }]);
+
+        expect(handle.getState().positionAtIndex(itemCount - 1)).toBe((itemCount - 1) * 20);
+        expect(handle.getState().contentLength).toBe(itemCount * 20 + 40);
+        expect(getActiveLayoutStore(ctx)?.getMeasuredCount()).toBe(0);
+        expect(ctx.state.sizes.size).toBe(0);
+        expect(ctx.state.sizesKnown.size).toBe(0);
     });
 
     it("setItemSize updates item measurement through the public ref", () => {

@@ -1,4 +1,9 @@
-import type { LayoutIndexRange, LayoutStoreSizeEntry, MutableLayoutStore } from "@/core/LayoutStore";
+import {
+    type LayoutIndexRange,
+    type LayoutStoreSizeEntry,
+    type MutableLayoutStore,
+    validateKnownSizeEntryOrder,
+} from "@/core/LayoutStore";
 
 const PIECE_UNKNOWN = 0;
 const PIECE_KNOWN = 1;
@@ -218,27 +223,20 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         }
     }
 
-    replaceKnownSizeEntries(entries: PrefixLayoutStoreSizeEntry[]) {
-        const byIndex = new Map<number, { kind: SizeKind; size: number }>();
+    replaceKnownSizeEntries(entries: readonly PrefixLayoutStoreSizeEntry[]) {
         for (const entry of entries) {
             this.assertIndex(entry.index);
             normalizeSize(entry.size);
-            const existing = byIndex.get(entry.index);
-            if (entry.type === "measured") {
-                byIndex.set(entry.index, { kind: SIZE_MEASURED, size: entry.size });
-            } else if (existing?.kind !== SIZE_MEASURED) {
-                byIndex.set(entry.index, { kind: SIZE_CACHED, size: entry.size });
-            }
+        }
+        if (!validateKnownSizeEntryOrder(entries)) {
+            return false;
         }
 
-        const sortedEntries = Array.from(byIndex, ([index, entry]) => ({ index, ...entry })).sort(
-            (first, second) => first.index - second.index,
-        );
         let root: SequenceNode | undefined;
         let cursor = 0;
         let entryIndex = 0;
-        while (entryIndex < sortedEntries.length) {
-            const first = sortedEntries[entryIndex]!;
+        while (entryIndex < entries.length) {
+            const first = entries[entryIndex]!;
             if (first.index > cursor) {
                 root = joinTrees(root, createUnknownNode(first.index - cursor));
                 cursor = first.index;
@@ -246,12 +244,15 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
 
             const blockEntries: Array<{ kind: SizeKind; size: number }> = [];
             while (
-                entryIndex < sortedEntries.length &&
-                sortedEntries[entryIndex]!.index === cursor &&
+                entryIndex < entries.length &&
+                entries[entryIndex]!.index === cursor &&
                 blockEntries.length < KNOWN_BLOCK_CAPACITY
             ) {
-                const entry = sortedEntries[entryIndex]!;
-                blockEntries.push({ kind: entry.kind, size: entry.size });
+                const entry = entries[entryIndex]!;
+                blockEntries.push({
+                    kind: entry.type === "measured" ? SIZE_MEASURED : SIZE_CACHED,
+                    size: entry.size,
+                });
                 cursor++;
                 entryIndex++;
             }
@@ -261,6 +262,7 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
             root = joinTrees(root, createUnknownNode(this.length - cursor));
         }
         this.root = root;
+        return true;
     }
 
     invalidateRange(index: number, count: number) {

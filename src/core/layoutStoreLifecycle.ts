@@ -28,8 +28,26 @@ export interface LayoutStoreDataChangeReconciliationOptions {
 export type SparseIdCacheSnapshot = Map<number, string>;
 
 export function clearLayoutStoreKnownSizes(ctx: StateContext) {
-    ctx.state.layoutStoreRuntime?.store.clearKnownSizes();
+    const runtime = ctx.state.layoutStoreRuntime;
+    runtime?.store.clearKnownSizes();
     resetLayoutStoreRuntimeState(ctx.state);
+}
+
+export function replaceLayoutStoreKnownSizeEntries(ctx: StateContext, entries: readonly LayoutStoreSizeEntry[]) {
+    const store = syncLayoutStoreStructure(ctx);
+    const runtime = ctx.state.layoutStoreRuntime;
+    if (!store || !runtime) {
+        return false;
+    }
+
+    if (!store.replaceKnownSizeEntries(entries)) {
+        return false;
+    }
+    store.setEstimatedSize(runtime.propEstimatedSize);
+    runtime.resetTransientState();
+    ctx.state.pendingTotalSize = undefined;
+    syncLayoutStoreState(ctx);
+    return true;
 }
 
 function getActiveLayoutStoreRuntime(ctx: StateContext) {

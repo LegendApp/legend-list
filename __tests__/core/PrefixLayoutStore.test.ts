@@ -227,7 +227,7 @@ describe("PrefixLayoutStore", () => {
         expect(store.getMeasuredAverageSize()).toBe(80);
     });
 
-    it("rebuilds cached and measured sizes in bulk", () => {
+    it("rebuilds sorted cached and measured sizes in bulk", () => {
         const store = new PrefixLayoutStore(5, 100);
 
         store.replaceKnownSizeEntries([{ index: 4, size: 600, type: "cached" }]);
@@ -235,7 +235,6 @@ describe("PrefixLayoutStore", () => {
         store.replaceKnownSizeEntries([
             { index: 1, size: 50, type: "cached" },
             { index: 2, size: 80, type: "measured" },
-            { index: 3, size: 120, type: "cached" },
             { index: 3, size: 90, type: "measured" },
         ]);
 

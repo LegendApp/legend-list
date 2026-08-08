@@ -1,4 +1,9 @@
-import type { LayoutIndexRange, LayoutStoreSizeEntry, MutableLayoutStore } from "@/core/LayoutStore";
+import {
+    type LayoutIndexRange,
+    type LayoutStoreSizeEntry,
+    type MutableLayoutStore,
+    validateKnownSizeEntryOrder,
+} from "@/core/LayoutStore";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 
 const SIZE_CACHED = 1;
@@ -129,23 +134,25 @@ export class RowLayoutStore implements MutableLayoutStore {
         return index !== undefined && Number.isInteger(index) && index >= 0 && index < this.length;
     }
 
-    replaceKnownSizeEntries(entries: LayoutStoreSizeEntry[]) {
+    replaceKnownSizeEntries(entries: readonly LayoutStoreSizeEntry[]) {
         for (const entry of entries) {
             this.assertIndex(entry.index);
             normalizeSize(entry.size);
         }
+        if (!validateKnownSizeEntryOrder(entries)) {
+            return false;
+        }
 
         const knownSizes = new Map<number, KnownItemSize>();
         for (const entry of entries) {
-            const existing = knownSizes.get(entry.index);
-            if (entry.type === "measured") {
-                knownSizes.set(entry.index, { kind: SIZE_MEASURED, size: entry.size });
-            } else if (existing?.kind !== SIZE_MEASURED) {
-                knownSizes.set(entry.index, { kind: SIZE_CACHED, size: entry.size });
-            }
+            knownSizes.set(entry.index, {
+                kind: entry.type === "measured" ? SIZE_MEASURED : SIZE_CACHED,
+                size: entry.size,
+            });
         }
         this.knownSizes = knownSizes;
         this.rebuildRowsAndTotals();
+        return true;
     }
 
     invalidateRange(index: number, count: number) {

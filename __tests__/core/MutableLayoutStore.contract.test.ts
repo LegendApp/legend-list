@@ -1,7 +1,7 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
-import type { MutableLayoutStore } from "../../src/core/LayoutStore";
+import type { LayoutStoreSizeEntry, MutableLayoutStore } from "../../src/core/LayoutStore";
 import { PrefixLayoutStore } from "../../src/core/PrefixLayoutStore";
 import { RowLayoutStore } from "../../src/core/RowLayoutStore";
 
@@ -194,6 +194,35 @@ describe("MutableLayoutStore contract", () => {
         expect(store.getSize(20)).toBe(12);
         expect(store.getSize(1_000_004)).toBe(13);
         expect(store.getMeasuredCount()).toBe(2);
+    });
+
+    it("rejects unsorted or duplicate bulk size entries without changing layout", () => {
+        const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+        const invalidEntrySets: LayoutStoreSizeEntry[][] = [
+            [
+                { index: 2, size: 20, type: "cached" },
+                { index: 1, size: 30, type: "measured" },
+            ],
+            [
+                { index: 1, size: 20, type: "cached" },
+                { index: 1, size: 30, type: "measured" },
+            ],
+        ];
+
+        for (const store of [
+            new PrefixLayoutStore(4, 10),
+            new RowLayoutStore({ estimatedSize: 10, length: 4, numColumns: 2 }),
+        ]) {
+            store.setMeasuredSize(0, 15);
+            for (const entries of invalidEntrySets) {
+                expect(store.replaceKnownSizeEntries(entries)).toBe(false);
+                expect(store.getSize(0)).toBe(15);
+                expect(store.getMeasuredCount()).toBe(1);
+            }
+        }
+
+        expect(consoleErrorSpy).toHaveBeenCalledTimes(4);
+        consoleErrorSpy.mockRestore();
     });
 
     it("rejects invalid structural ranges", () => {

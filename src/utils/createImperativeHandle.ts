@@ -4,8 +4,14 @@ import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata"
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { getDataLength, getIndexedData } from "@/core/IndexedData";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
-import { getLayoutOffset } from "@/core/layoutAccessors";
-import { clearLayoutStoreKnownSizes, rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
+import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
+import {
+    clearLayoutStoreKnownSizes,
+    rebuildLayoutStoreExact,
+    replaceLayoutStoreKnownSizeEntries,
+    syncLayoutStoreState,
+} from "@/core/layoutStoreLifecycle";
+import { prepareMVCP } from "@/core/mvcp";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
@@ -23,7 +29,7 @@ import {
     type StateContext,
     set$,
 } from "@/state/state";
-import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
+import type { LegendListAverageItemSize, LegendListKnownSizeEntry, LegendListRef } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { areKnownOrFixedItemSizesAvailable } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -222,6 +228,30 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
     };
 
+    const replaceKnownSizeEntries = (entries: readonly LegendListKnownSizeEntry[]) => {
+        const checkMVCP = prepareMVCP(ctx);
+
+        const layoutEntries = entries.map(({ index, size }) => ({
+            index,
+            size: size + ctx.scrollAxisGap,
+            type: "cached" as const,
+        }));
+        const didReplace = replaceLayoutStoreKnownSizeEntries(ctx, layoutEntries);
+
+        if (didReplace) {
+            state.sizes.clear();
+            state.sizesKnown.clear();
+            for (const key in state.averageSizes) {
+                delete state.averageSizes[key];
+            }
+            state.minIndexSizeChanged = 0;
+            state.scrollForNextCalculateItemsInView = undefined;
+
+            checkMVCP?.();
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        }
+    };
+
     return {
         clearCaches,
         flashScrollIndicators: () => refScroller.current!.flashScrollIndicators(),
@@ -256,11 +286,12 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             scroll: state.scroll,
             scrollLength: state.scrollLength,
             scrollVelocity: getScrollVelocity(state),
-            sizeAtIndex: (index: number) => state.sizesKnown.get(getId(state, index))!,
+            sizeAtIndex: (index: number) => getLayoutSize(ctx, index)!,
             sizes: state.sizesKnown,
             start: state.startNoBuffer as number,
             startBuffered: state.startBuffered,
         }),
+        replaceKnownSizeEntries,
         reportContentInset: (inset) => {
             const didChange = setContentInsetOverride(ctx, inset);
             updateScroll(ctx, state.scroll, true, { markHasScrolled: false });

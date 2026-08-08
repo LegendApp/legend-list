@@ -28,6 +28,7 @@ export type {
     LegendListDataSource,
     LegendListDataSourceModeProps,
     LegendListDataSourceRenderItemProps,
+    LegendListKnownSizeEntry,
     LegendListMetrics,
     LegendListRecyclingState,
     LegendListRenderItemProps,

@@ -658,6 +658,12 @@ export type LegendListState = {
     startBuffered: number;
 };
 
+export interface LegendListKnownSizeEntry {
+    index: number;
+    /** Scroll-axis item size, excluding the list gap. */
+    size: number;
+}
+
 export type LegendListRef = {
     /**
      * Clears internal virtualization caches.
@@ -695,6 +701,14 @@ export type LegendListRef = {
      * Returns the internal state of the scroll virtualization.
      */
     getState(): LegendListState;
+
+    /**
+     * Atomically replaces the complete authoritative set of item-size exceptions.
+     * Omitted indexes use the currently configured estimated item size.
+     * Passing an empty array declares that every item uses the configured estimate.
+     * Entries must have strictly increasing, unique indexes. Invalid input is ignored and logged in development.
+     */
+    replaceKnownSizeEntries(entries: readonly LegendListKnownSizeEntry[]): void;
 
     /**
      * Reports an externally measured content inset. Pass null/undefined to clear.
