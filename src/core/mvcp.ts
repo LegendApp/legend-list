@@ -261,6 +261,12 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
     const shouldMVCP = dataChanged ? mvcpData : mvcpScroll;
     const indexByKey = state.indexByKey;
+    const resolveTargetIndex = () =>
+        scrollTarget !== undefined && !dataChanged
+            ? scrollTarget
+            : targetId !== undefined
+              ? indexByKey.get(targetId)
+              : undefined;
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
@@ -302,7 +308,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
         }
 
         if (targetId !== undefined && prevPosition === undefined) {
-            const targetIndex = indexByKey.get(targetId);
+            const targetIndex = resolveTargetIndex();
             if (targetIndex !== undefined) {
                 prevPosition = state.dataSourceAnchorPositions?.get(targetId) ?? getLayoutOffset(ctx, targetIndex);
             }
@@ -371,7 +377,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
             // If we have a targetId, then we can use the previous position of that item
             if (!skipTargetAnchor && targetId !== undefined && prevPosition !== undefined) {
-                const targetIndex = indexByKey.get(targetId);
+                const targetIndex = resolveTargetIndex();
                 const newPosition = getLayoutOffset(ctx, targetIndex);
 
                 if (newPosition !== undefined) {

@@ -126,6 +126,43 @@ describe("mvcp helpers", () => {
         }
     });
 
+    it("anchors an unmounted indexed scroll target during size MVCP", () => {
+        const data = Array.from({ length: 10 }, (_, index) => ({ id: index }));
+        const mockCtx = createMockContext(
+            { totalSize: 1000 },
+            {
+                idCache: ["item_0"],
+                indexByKey: new Map([["item_0", 0]]),
+                positions: data.map((_, index) => index * 100),
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(true),
+                },
+                scrollingTo: {
+                    animated: false,
+                    index: 5,
+                    itemSize: 40,
+                    offset: 500,
+                    viewPosition: 0,
+                },
+            },
+        );
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+
+        try {
+            const adjustFunction = prepareMVCP(mockCtx);
+            setLayoutValue(mockCtx.state, "positions", 5, 564);
+
+            adjustFunction?.();
+
+            expect(mockCtx.state.indexByKey.has("item_5")).toBe(false);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 64, undefined);
+        } finally {
+            requestAdjustSpy.mockRestore();
+        }
+    });
+
     it("uses the pre-mutation anchor snapshot after sparse identities move", () => {
         const mockCtx = createMockContext(
             { totalSize: 400 },
