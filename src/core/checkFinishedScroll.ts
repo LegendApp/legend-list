@@ -58,17 +58,41 @@ function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
     return !state.didFinishInitialScroll && initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset);
 }
 
-function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["state"], scrollingTo: ActiveScrollTarget) {
+function shouldFinishInitialScrollWithoutNativeProgress(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const { state } = ctx;
     if (!scrollingTo.isInitialScroll || scrollingTo.animated || !state.didContainersLayout) {
         return false;
     }
 
-    if (state.initialScrollSession?.kind === "bootstrap") {
+    const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
+
+    // On iOS an unanimated initial scrollTo/contentOffset does NOT emit a
+    // scroll event, so gating completion on observing native scroll progress
+    // deadlocks plain initial targets: the fallback loop re-issues scrollTo to
+    // the same offset (which again emits nothing) until the watchdog gives up
+    // seconds later — all while the list is held at opacity 0.
+    //
+    // state.scroll is set optimistically at dispatch (doScrollTo.native.ts),
+    // so it is only trustworthy when the requested offset was actually
+    // applicable: a plain target (no viewOffset/viewPosition adjustment —
+    // those are recomputed on retries) that lies within the currently
+    // scrollable range (so native cannot have clamped it short). End-aligned /
+    // initialScrollAtEnd targets with footers can exceed the max scroll until
+    // late layout and must keep waiting for confirmed native progress, which
+    // their recomputed-offset retries do produce.
+    const maxScrollOffset = getContentSize(ctx) - state.scrollLength;
+    const canTrustDispatchedOffsetOnIOS =
+        Platform.OS === "ios" &&
+        !scrollingTo.viewOffset &&
+        !scrollingTo.viewPosition &&
+        targetOffset <= maxScrollOffset + 1;
+
+    if (!canTrustDispatchedOffsetOnIOS && state.initialScrollSession?.kind === "bootstrap") {
         return false;
     }
 
-    const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
     if (
+        !canTrustDispatchedOffsetOnIOS &&
         initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset) &&
         initialScrollCompletion.didDispatchNativeScroll(state) &&
         !state.hasScrolled
@@ -166,7 +190,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
     const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
     const silentInitialDispatch = isSilentInitialDispatch(state, scrollingTo);
     const canFinishInitialWithoutNativeProgress =
-        scrollingTo !== undefined ? shouldFinishInitialScrollWithoutNativeProgress(state, scrollingTo) : false;
+        scrollingTo !== undefined ? shouldFinishInitialScrollWithoutNativeProgress(ctx, scrollingTo) : false;
     const slowTimeout =
         (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget && !canFinishInitialWithoutNativeProgress) ||
         !state.didContainersLayout;
@@ -198,7 +222,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                       : 5;
                 const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
                 const canFinishInitialScrollWithoutNativeProgress = shouldFinishInitialScrollWithoutNativeProgress(
-                    state,
+                    ctx,
                     isStillScrollingTo,
                 );
                 const completionState = getResolvedScrollCompletionState(ctx, isStillScrollingTo);
