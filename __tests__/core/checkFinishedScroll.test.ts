@@ -140,6 +140,52 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 
+    it("preserves the retry budget when momentum completion re-enters the fallback", () => {
+        Platform.OS = "ios";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            { totalSize: 500 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                positions: [400],
+                props: {
+                    data: [{ id: 0 }],
+                    estimatedItemSize: 100,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 268,
+                scrollingTo: {
+                    animated: false,
+                    index: 0,
+                    offset: 332,
+                    targetOffset: 332,
+                    viewOffset: -32,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 200,
+                scrollPending: 268,
+                sizesKnown: new Map([["item_0", 100]]),
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        for (let i = 0; i < 8 && ctx.state.scrollingTo; i++) {
+            flushTimers(1);
+            if (ctx.state.scrollingTo) {
+                checkFinishedScrollFallback(ctx);
+            }
+        }
+
+        expect(scrollToCalls).toHaveLength(5);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
     it("retries an unresolved iOS scroll to end at the current measured end target", () => {
         Platform.OS = "ios";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];

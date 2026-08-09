@@ -161,6 +161,10 @@ function scrollToFallbackOffset(ctx: StateContext, offset: number) {
 // to make sure it does eventually get cleared, just waiting for scroll to end
 export function checkFinishedScrollFallback(ctx: StateContext) {
     const state = ctx.state;
+    if (state.scheduledWork.has("checkFinishedScrollFallback")) {
+        return;
+    }
+
     const scrollingTo = state.scrollingTo;
     const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
     const silentInitialDispatch = isSilentInitialDispatch(state, scrollingTo);
