@@ -1,3 +1,14 @@
+## 3.3.4
+
+- Feat: `getState().indexByKey(key)` looks up an item’s current index by key.
+- Feat: `anchoredEndSpace` now works with standard React Native `LegendList`, including horizontal and RTL lists, and stays accurate after content measurements change. It supports single-column lists only.
+- Fix: `maintainScrollAtEnd` continues following content growth unless the user scrolls away.
+- Fix: Changing `dataKey` no longer briefly displays stale rows from the previous dataset.
+- Fix: Initial scrolling and `scrollToIndex` correctly account for padding, direction, and final-item gaps.
+- Fix: Web content-container sizing remains correct when callers provide padding or `content-box` styles.
+- Fix: `useRecyclingEffect` and `useRecyclingState` no longer crash outside a `LegendList`. #498
+- Fix: Programmatic scrolls settle reliably when superseded, already aligned on iOS, or interrupted by unmounting. #508
+-
 ## 3.3.3
 
 - Fix: Row measurements are applied together in a batch, so item positions don't sometimes move after rendering.
