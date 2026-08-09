@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import { checkFinishedScroll, checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
@@ -137,6 +137,35 @@ describe("checkFinishedScrollFallback", () => {
         checkFinishedScrollFallback(ctx);
 
         flushTimers(8);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
+    it("settles an interrupted non-end request after observing native movement", () => {
+        Platform.OS = "ios";
+        const resolveScroll = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                hasScrolled: true,
+                pendingScrollResolve: resolveScroll,
+                scroll: 300,
+                scrollingTo: {
+                    animated: true,
+                    index: 5,
+                    offset: 500,
+                    targetOffset: 500,
+                    viewPosition: 0,
+                } as any,
+                scrollLength: 200,
+                scrollPending: 300,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+        flushTimers(1);
+
+        expect(resolveScroll).toHaveBeenCalledTimes(1);
+        expect(ctx.state.pendingScrollResolve).toBeUndefined();
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 

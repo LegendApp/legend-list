@@ -419,6 +419,62 @@ describe("createImperativeHandle.scrollToEnd", () => {
         await secondPromise;
     });
 
+    it("does not let stale completion work resolve a superseding request", async () => {
+        const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const scheduledFrames: FrameRequestCallback[] = [];
+        let nextFrameId = 0;
+
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            scheduledFrames.push(callback);
+            return nextFrameId++;
+        }) as typeof requestAnimationFrame;
+        globalThis.cancelAnimationFrame = (() => {}) as typeof cancelAnimationFrame;
+        scrollToIndexSpy.mockImplementation((nextCtx, params) => {
+            nextCtx.state.scrollingTo = {
+                animated: true,
+                index: params.index,
+                offset: params.index * 100,
+            };
+            nextCtx.state.scheduledWork.frame(() => finishScrollTo(nextCtx), "checkFinishedScrollFrame");
+        });
+
+        try {
+            const ctx = createMockContext({}, { props: { data: [1, 2, 3] } } as any);
+            const handle = createImperativeHandle(ctx);
+            let firstResolveCount = 0;
+            let secondResolveCount = 0;
+
+            const firstPromise = handle.scrollToIndex({ animated: true, index: 1 }).then(() => {
+                firstResolveCount++;
+            });
+            const staleCompletionFrame = scheduledFrames[0]!;
+            const secondPromise = handle.scrollToIndex({ animated: true, index: 2 }).then(() => {
+                secondResolveCount++;
+            });
+
+            await firstPromise;
+            expect(firstResolveCount).toBe(1);
+            expect(secondResolveCount).toBe(0);
+            expect(ctx.state.scrollingTo?.index).toBe(2);
+
+            staleCompletionFrame(0);
+            await Promise.resolve();
+
+            expect(secondResolveCount).toBe(0);
+            expect(ctx.state.scrollingTo?.index).toBe(2);
+
+            scheduledFrames[1]!(0);
+            await secondPromise;
+
+            expect(secondResolveCount).toBe(1);
+            expect(ctx.state.scrollingTo).toBeUndefined();
+        } finally {
+            globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
     it("waits for data and MVCP settling before starting imperative scroll", async () => {
         const originalRAF = globalThis.requestAnimationFrame;
         const rafCallbacks: FrameRequestCallback[] = [];
