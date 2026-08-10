@@ -1098,6 +1098,26 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(scrollToIndexSpy).not.toHaveBeenCalled();
     });
 
+    it("keeps the deferred scroll runner installed when cleanup replays on a live state", async () => {
+        const ctx = createMockContext({}, { props: { data: [1, 2, 3] } } as any);
+        const handle = createImperativeHandle(ctx);
+        const runner = ctx.state.runPendingScrollToEnd;
+
+        cancelImperativeScroll(ctx.state);
+        const promise = handle.scrollToEnd({ animated: true });
+
+        expect(ctx.state.runPendingScrollToEnd).toBe(runner);
+        expect(scrollToIndexSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                animated: true,
+                index: 2,
+                viewPosition: 1,
+            }),
+        );
+        await promise;
+    });
+
     it("settles an active scrollToOffset promise during cancellation", async () => {
         const ctx = createMockContext(
             { totalSize: 1000 },

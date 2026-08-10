@@ -22,7 +22,6 @@ export function cancelImperativeScroll(state: InternalState) {
 
     // Match request supersession by resolving cancellation. Calling finishScrollTo here would
     // recalculate layout and commit adjustments against a list that is already unmounting.
-    state.runPendingScrollToEnd = undefined;
     state.scrollingTo = undefined;
     state.scrollTargetPinnedRange = undefined;
     settlePendingImperativeScroll(state);
