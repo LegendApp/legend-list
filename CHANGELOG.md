@@ -1,3 +1,9 @@
+## 3.3.5
+
+- Fix: Changing `dataKey` no longer leaves the new dataset invisible. #519
+- Fix: `maintainScrollAtEnd` stays pinned as newly inserted rows are measured, and scroll corrections preserve `anchoredEndSpace` padding. #520
+- Fix: Programmatic scrolls no longer throw in browsers, get lost when they replace unfinished initial scrolling, or stop working after a previous request is canceled. #518
+
 ## 3.3.4
 
 - Feat: `getState().indexByKey(key)` looks up an item’s current index by key.
