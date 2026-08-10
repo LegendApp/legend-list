@@ -1,5 +1,6 @@
+import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { releaseDeferredPublicOnScroll } from "@/core/deferredPublicOnScroll";
-import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
+import { initialScrollCompletion, initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -22,6 +23,27 @@ export function clearPreservedInitialScrollTarget(state: StateContext["state"]) 
     state.clearPreservedInitialScrollOnNextFinish = undefined;
     state.initialScroll = undefined;
     setInitialScrollSession(state);
+}
+
+export function supersedeInitialScroll(ctx: StateContext) {
+    const state = ctx.state;
+    const bootstrapInitialScroll =
+        state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+
+    if (state.initialScroll || bootstrapInitialScroll || state.scrollingTo?.isInitialScroll) {
+        if (bootstrapInitialScroll?.frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
+            cancelAnimationFrame(bootstrapInitialScroll.frameHandle);
+        }
+        if (state.scrollingTo?.isInitialScroll) {
+            cancelScrollCompletionChecks(state);
+            state.scrollingTo = undefined;
+            state.scrollTargetPinnedRange = undefined;
+        }
+
+        initialScrollCompletion.resetFlags(state);
+        setInitialScrollSession(state, { bootstrap: null });
+        finishInitialScroll(ctx);
+    }
 }
 
 export function finishInitialScroll(

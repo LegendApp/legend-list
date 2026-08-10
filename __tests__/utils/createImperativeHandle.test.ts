@@ -419,6 +419,59 @@ describe("createImperativeHandle.scrollToEnd", () => {
         await secondPromise;
     });
 
+    it("supersedes unfinished initial scroll ownership before queuing scrollToEnd", async () => {
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const canceledFrames: number[] = [];
+        globalThis.cancelAnimationFrame = ((frame: number) => {
+            canceledFrames.push(frame);
+        }) as typeof cancelAnimationFrame;
+
+        try {
+            const scheduleCommit = mock(() => {});
+            const ctx = createMockContext({}, {
+                didFinishInitialScroll: false,
+                initialScroll: {
+                    index: 2,
+                    viewPosition: 1,
+                },
+                initialScrollSession: {
+                    bootstrap: {
+                        frameHandle: 42,
+                        mountFrameCount: 1,
+                        passCount: 1,
+                        scroll: 100,
+                        seedContentOffset: 0,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: 3,
+                },
+                props: {
+                    data: [1, 2, 3],
+                },
+                scrollingTo: {
+                    index: 2,
+                    isInitialScroll: true,
+                    offset: 100,
+                },
+            } as any);
+            const handle = createImperativeHandle(ctx, scheduleCommit);
+            const promise = handle.scrollToEnd({ animated: true });
+
+            expect(canceledFrames).toContain(42);
+            expect(ctx.state.didFinishInitialScroll).toBe(true);
+            expect(ctx.state.initialScroll).toBeUndefined();
+            expect(ctx.state.initialScrollSession).toBeUndefined();
+            expect(ctx.state.scrollingTo).toBeUndefined();
+            expect(ctx.state.pendingScrollToEnd).toBeDefined();
+            expect(scheduleCommit).toHaveBeenCalledTimes(1);
+
+            cancelImperativeScroll(ctx.state);
+            await promise;
+        } finally {
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
     it("does not let stale completion work resolve a superseding request", async () => {
         const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
         const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
