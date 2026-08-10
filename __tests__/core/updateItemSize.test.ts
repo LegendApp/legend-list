@@ -271,6 +271,26 @@ describe("item size update functions", () => {
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
+        it("anchors on a first measurement, which has no previously known size", () => {
+            // Rows added by a prepend are measured for the first time, so requiring a previously
+            // known size made maintainScrollAtEnd blind to the content they add and left the list
+            // parked short of its end.
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = {
+                animated: true,
+                on: { itemLayout: true },
+            };
+            expect(mockState.sizesKnown.has("item_0")).toBe(false);
+
+            updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            doMaintainScrollAtEndSpy.mockRestore();
+        });
+
         it("skips item-layout anchoring when on excludes it", () => {
             const doMaintainScrollAtEndSpy = spyOn(
                 doMaintainScrollAtEndModule,
