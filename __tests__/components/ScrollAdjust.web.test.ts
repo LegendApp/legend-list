@@ -36,6 +36,74 @@ function createCtx(horizontal = false, scrollElement?: HTMLElement) {
     } as any;
 }
 
+function installAnimationFrameQueue() {
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let nextId = 0;
+
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+        const id = ++nextId;
+        callbacks.set(id, callback);
+        return id;
+    };
+    globalThis.cancelAnimationFrame = (id: number) => {
+        callbacks.delete(id);
+    };
+
+    return {
+        flush() {
+            const pending = [...callbacks.values()];
+            callbacks.clear();
+            pending.forEach((callback) => callback(Date.now()));
+        },
+        restore() {
+            globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        },
+    };
+}
+
+function renderPaddingAdjustment() {
+    const contentNode = {
+        offsetHeight: 0,
+        parentElement: null,
+        scrollHeight: 76723,
+        style: { paddingBottom: "607px" },
+    } as unknown as HTMLElement;
+    const scrollElement = {
+        clientHeight: 799,
+        querySelector: mock(() => contentNode),
+        scrollBy: mock(({ top }: { top: number }) => {
+            scrollElement.scrollTop += top;
+        }),
+        scrollLeft: 0,
+        scrollTop: 75924,
+    } as unknown as HTMLElement;
+    let ctx: ReturnType<typeof useStateContext> | undefined;
+
+    function Setup() {
+        ctx = useStateContext();
+        ctx.state = createMockState({
+            props: { horizontal: false },
+            refScroller: {
+                current: {
+                    getScrollableNode: () => scrollElement,
+                },
+            } as any,
+            scroll: 75924.25,
+        });
+
+        return React.createElement(ScrollAdjust);
+    }
+
+    let renderer: TestRenderer.ReactTestRenderer | undefined;
+    act(() => {
+        renderer = TestRenderer.create(React.createElement(StateProvider, null, React.createElement(Setup)));
+    });
+    return { contentNode, ctx: ctx!, renderer: renderer!, scrollElement };
+}
+
 describe("ScrollAdjust (web)", () => {
     it("uses horizontal scroll measurements and padding on the x axis", () => {
         expect(getScrollAdjustAxis(true)).toEqual({
@@ -286,6 +354,89 @@ describe("ScrollAdjust (web)", () => {
             act(() => {
                 renderer?.unmount();
             });
+        }
+    });
+
+    it("adds temporary scroll room without replacing existing end padding, then restores it", () => {
+        const animationFrames = installAnimationFrameQueue();
+        const originalGetComputedStyle = window.getComputedStyle;
+        window.getComputedStyle = ((element: HTMLElement) => element.style) as typeof window.getComputedStyle;
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            const rendered = renderPaddingAdjustment();
+            renderer = rendered.renderer;
+
+            act(() => {
+                set$(rendered.ctx, "scrollAdjust", -20.75);
+            });
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("607.5px");
+            expect(rendered.scrollElement.scrollTop).toBe(75924.25);
+
+            act(() => animationFrames.flush());
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("607px");
+        } finally {
+            window.getComputedStyle = originalGetComputedStyle;
+            animationFrames.restore();
+            act(() => renderer?.unmount());
+        }
+    });
+
+    it("coalesces repeated temporary padding and restores the original baseline", () => {
+        const animationFrames = installAnimationFrameQueue();
+        const originalGetComputedStyle = window.getComputedStyle;
+        window.getComputedStyle = ((element: HTMLElement) => element.style) as typeof window.getComputedStyle;
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            const rendered = renderPaddingAdjustment();
+            renderer = rendered.renderer;
+
+            act(() => {
+                set$(rendered.ctx, "scrollAdjust", -20.75);
+            });
+            rendered.contentNode.scrollHeight = 76723.5;
+            rendered.ctx.state.scroll = 75924.75;
+            act(() => {
+                set$(rendered.ctx, "scrollAdjust", -20.25);
+            });
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("608px");
+
+            act(() => animationFrames.flush());
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("607px");
+        } finally {
+            window.getComputedStyle = originalGetComputedStyle;
+            animationFrames.restore();
+            act(() => renderer?.unmount());
+        }
+    });
+
+    it("does not reset over a newer padding value applied while temporary padding is active", () => {
+        const animationFrames = installAnimationFrameQueue();
+        const originalGetComputedStyle = window.getComputedStyle;
+        window.getComputedStyle = ((element: HTMLElement) => element.style) as typeof window.getComputedStyle;
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            const rendered = renderPaddingAdjustment();
+            renderer = rendered.renderer;
+
+            act(() => {
+                set$(rendered.ctx, "scrollAdjust", -20.75);
+            });
+            rendered.contentNode.style.paddingBottom = "586px";
+
+            act(() => animationFrames.flush());
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("586px");
+        } finally {
+            window.getComputedStyle = originalGetComputedStyle;
+            animationFrames.restore();
+            act(() => renderer?.unmount());
         }
     });
 });

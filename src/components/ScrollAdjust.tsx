@@ -46,7 +46,7 @@ export function ScrollAdjust() {
     const lastScrollOffsetRef = React.useRef(0);
     const lastScrollAdjustUserOffsetRef = React.useRef(0);
     const resetPaddingRafRef = React.useRef<number | undefined>(undefined);
-    const resetPaddingBaselineRef = React.useRef<string | undefined>(undefined);
+    const temporaryPaddingRef = React.useRef<{ baseline: string; value: string } | undefined>(undefined);
     const contentNodeRef = React.useRef<HTMLElement | null>(null);
 
     const callback = React.useCallback(() => {
@@ -88,11 +88,19 @@ export function ScrollAdjust() {
                         // If trying to scroll out of bounds of the scroll element's current size
                         // it would clamp the scroll and not do the full adjustment. So we need to
                         // add padding to the scroll element to allow the scroll to complete.
-                        const previousPaddingEnd =
-                            resetPaddingBaselineRef.current ?? contentNode.style[axis.paddingEndProp];
-                        resetPaddingBaselineRef.current = previousPaddingEnd;
+                        const currentInlinePaddingEnd = contentNode.style[axis.paddingEndProp];
+                        const previousTemporaryPadding = temporaryPaddingRef.current;
+                        const baselinePaddingEnd =
+                            previousTemporaryPadding?.value === currentInlinePaddingEnd
+                                ? previousTemporaryPadding.baseline
+                                : currentInlinePaddingEnd;
                         const pad = (nextScroll + viewportSize - totalSize) * 2;
-                        contentNode.style[axis.paddingEndProp] = `${pad}px`;
+                        const currentPaddingEnd = Number.parseFloat(
+                            window.getComputedStyle(contentNode)[axis.paddingEndProp],
+                        );
+                        const temporaryPaddingEnd = `${(currentPaddingEnd || 0) + pad}px`;
+                        temporaryPaddingRef.current = { baseline: baselinePaddingEnd, value: temporaryPaddingEnd };
+                        contentNode.style[axis.paddingEndProp] = temporaryPaddingEnd;
                         // Force a layout update by reading from DOM
                         void contentNode.offsetHeight;
 
@@ -104,9 +112,12 @@ export function ScrollAdjust() {
 
                         // After the scrollBy, revert the temporary end padding.
                         resetPaddingRafRef.current = requestAnimationFrame(() => {
+                            const temporaryPadding = temporaryPaddingRef.current;
                             resetPaddingRafRef.current = undefined;
-                            resetPaddingBaselineRef.current = undefined;
-                            contentNode.style[axis.paddingEndProp] = previousPaddingEnd;
+                            temporaryPaddingRef.current = undefined;
+                            if (contentNode.style[axis.paddingEndProp] === temporaryPadding?.value) {
+                                contentNode.style[axis.paddingEndProp] = temporaryPadding.baseline;
+                            }
                         });
                     } else {
                         scrollBy();
