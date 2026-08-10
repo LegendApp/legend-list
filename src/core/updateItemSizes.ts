@@ -202,8 +202,10 @@ function applyItemSize(
             needsRecalculate = true;
         }
 
-        // Check if we should maintain scroll at end
-        if (prevSizeKnown !== undefined && Math.abs(prevSizeKnown - size) > 5) {
+        // Check if we should maintain scroll at end. A first measurement counts too: rows
+        // inserted by a prepend have no previously known size, so requiring one left their
+        // growth unfollowed and parked the list short of its end.
+        if (prevSizeKnown === undefined || Math.abs(prevSizeKnown - size) > 5) {
             shouldMaintainScrollAtEnd = true;
         }
 
