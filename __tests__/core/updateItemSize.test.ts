@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
@@ -289,6 +289,80 @@ describe("item size update functions", () => {
 
             expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
             doMaintainScrollAtEndSpy.mockRestore();
+        });
+
+        describe("first-measurement end-maintenance safety", () => {
+            const originalRAF = globalThis.requestAnimationFrame;
+            const originalSetTimeout = globalThis.setTimeout;
+            let rafCallback: FrameRequestCallback | undefined;
+            let scrollToEnd: ReturnType<typeof mock>;
+
+            beforeEach(() => {
+                rafCallback = undefined;
+                globalThis.requestAnimationFrame = mock((callback: FrameRequestCallback) => {
+                    rafCallback = callback;
+                    return 1;
+                });
+                globalThis.setTimeout = mock(() => 1) as typeof globalThis.setTimeout;
+                scrollToEnd = mock();
+
+                mockState.props.maintainScrollAtEnd = {
+                    animated: false,
+                    on: { itemLayout: true },
+                };
+                mockState.refScroller.current = { scrollToEnd } as any;
+                mockState.totalSize = 1000;
+                mockCtx.values.set("totalSize", 1000);
+                mockState.scroll = 400;
+            });
+
+            afterEach(() => {
+                globalThis.requestAnimationFrame = originalRAF;
+                globalThis.setTimeout = originalSetTimeout;
+            });
+
+            it("does not pull back to the end when a first measurement arrives after scrolling away", () => {
+                mockState.isWithinMaintainScrollAtEndThreshold = false;
+
+                updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(mockState.sizesKnown.get("item_0")).toBe(150);
+                expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+                expect(scrollToEnd).not.toHaveBeenCalled();
+                expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+            });
+
+            it("cancels a first-measurement maintain request when the user scrolls away before its frame", () => {
+                mockState.isWithinMaintainScrollAtEndThreshold = true;
+
+                updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+                expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+
+                mockState.scroll = 250;
+                mockState.isWithinMaintainScrollAtEndThreshold = false;
+                rafCallback?.(0);
+
+                expect(scrollToEnd).not.toHaveBeenCalled();
+                expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+                expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+            });
+
+            it("preserves a first-measurement maintain request when only geometry moves beyond the threshold", () => {
+                mockState.isWithinMaintainScrollAtEndThreshold = true;
+
+                updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+                mockState.isWithinMaintainScrollAtEndThreshold = false;
+                rafCallback?.(0);
+
+                expect(scrollToEnd).toHaveBeenCalledTimes(1);
+                expect(scrollToEnd).toHaveBeenCalledWith({ animated: false });
+                expect(mockState.maintainingScrollAtEnd).toBe("instant");
+            });
         });
 
         it("skips item-layout anchoring when on excludes it", () => {
