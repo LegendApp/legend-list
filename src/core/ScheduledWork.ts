@@ -53,7 +53,8 @@ export class ScheduledWork {
         const work = this.work.get(key);
         if (work) {
             this.work.delete(key);
-            work[1](work[0]);
+            const [handle, cancel] = work;
+            cancel(handle);
         }
     }
 

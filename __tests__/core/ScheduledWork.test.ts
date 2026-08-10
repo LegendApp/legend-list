@@ -96,6 +96,37 @@ describe("ScheduledWork", () => {
         expect(scheduledWork.has("platformScrollCompletion")).toBe(false);
     });
 
+    it("cancels native work without rebinding the global timer receiver", () => {
+        // Browsers reject `clearTimeout` / `cancelAnimationFrame` when the receiver is not the
+        // global object, so cancel() must not invoke the stored canceller as a property of its
+        // own bookkeeping tuple. Chrome reports that as "TypeError: Illegal invocation".
+        const receivers: unknown[] = [];
+        const assertGlobalReceiver = function (this: unknown) {
+            if (this !== undefined && this !== globalThis) {
+                throw new TypeError("Illegal invocation");
+            }
+            receivers.push(this);
+        };
+        globalThis.clearTimeout = function (this: unknown, handle: number) {
+            assertGlobalReceiver.call(this);
+            timeouts.delete(handle);
+        } as typeof clearTimeout;
+        globalThis.cancelAnimationFrame = function (this: unknown, handle: number) {
+            assertGlobalReceiver.call(this);
+            frames.delete(handle);
+        } as typeof cancelAnimationFrame;
+
+        scheduledWork.timeout(() => {}, 10, "adaptiveRender");
+        scheduledWork.frame(() => {}, "mvcpRecalculate");
+
+        expect(() => scheduledWork.cancel("adaptiveRender")).not.toThrow();
+        expect(() => scheduledWork.cancel("mvcpRecalculate")).not.toThrow();
+
+        expect(receivers).toEqual([undefined, undefined]);
+        expect(timeouts.size).toBe(0);
+        expect(frames.size).toBe(0);
+    });
+
     it("cancels every kind of pending work on dispose", () => {
         const calls: string[] = [];
         scheduledWork.timeout(() => calls.push("anonymous timeout"), 10);
