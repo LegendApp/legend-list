@@ -2,7 +2,39 @@ import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import type { CatalogGroup } from "~/lib/catalogTypes";
+import type { CatalogEntry, CatalogGroup } from "~/lib/catalogTypes";
+
+function CatalogCard({ entry, onNavigate }: { entry: CatalogEntry; onNavigate: (href: string) => void }) {
+    const cardHeader = (
+        <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{entry.title}</Text>
+            <Text style={styles.cardDescription}>{entry.description}</Text>
+        </View>
+    );
+
+    return entry.actions ? (
+        <View style={styles.card}>
+            {cardHeader}
+            <View style={styles.cardActions}>
+                {entry.actions.map((action) => (
+                    <Pressable
+                        accessibilityLabel={`Open ${entry.title} with ${action.label}`}
+                        accessibilityRole="button"
+                        key={action.href}
+                        onPress={() => onNavigate(action.href)}
+                        style={styles.cardAction}
+                    >
+                        <Text style={styles.cardActionText}>{action.label}</Text>
+                    </Pressable>
+                ))}
+            </View>
+        </View>
+    ) : (
+        <Pressable onPress={() => onNavigate(entry.href)} style={styles.card}>
+            {cardHeader}
+        </Pressable>
+    );
+}
 
 export function CatalogScreen({
     groups,
@@ -29,16 +61,11 @@ export function CatalogScreen({
                     <View key={group.key} style={index === 0 && !showHero ? styles.groupFirst : styles.group}>
                         <Text style={styles.groupTitle}>{group.title}</Text>
                         {group.entries.map((entry) => (
-                            <Pressable
-                                key={entry.href}
-                                onPress={() => router.push(entry.href as never)}
-                                style={styles.card}
-                            >
-                                <View style={styles.cardHeader}>
-                                    <Text style={styles.cardTitle}>{entry.title}</Text>
-                                    <Text style={styles.cardDescription}>{entry.description}</Text>
-                                </View>
-                            </Pressable>
+                            <CatalogCard
+                                entry={entry}
+                                key={entry.id}
+                                onNavigate={(href) => router.push(href as never)}
+                            />
                         ))}
                     </View>
                 ))}
@@ -56,6 +83,26 @@ const styles = StyleSheet.create({
         gap: 10,
         marginTop: 12,
         padding: 16,
+    },
+    cardAction: {
+        alignItems: "center",
+        backgroundColor: "#EEF2FF",
+        borderColor: "#C7D2FE",
+        borderRadius: 10,
+        borderWidth: 1,
+        flex: 1,
+        minHeight: 40,
+        paddingHorizontal: 8,
+        paddingVertical: 10,
+    },
+    cardActions: {
+        flexDirection: "row",
+        gap: 8,
+    },
+    cardActionText: {
+        color: "#3730A3",
+        fontSize: 13,
+        fontWeight: "700",
     },
     cardDescription: {
         color: "#475569",

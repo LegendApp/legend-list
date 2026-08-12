@@ -4,16 +4,25 @@ import { CURATED_EXAMPLES, CURATED_GROUP_ORDER, type ExampleSlug } from "@exampl
 import type { CatalogGroup } from "~/lib/catalogTypes";
 import { ActivityHistoryExample } from "~/screens/examples/ActivityHistoryExample";
 import { AiChatExample } from "~/screens/examples/AiChatExample";
+import { ADVANCED_HOME_ENTRIES } from "~/screens/examples/advancedConfig";
 import { CardsFeedExample } from "~/screens/examples/CardsFeedExample";
 import { ChatExample } from "~/screens/examples/ChatExample";
+import { ComparisonsExample } from "~/screens/examples/ComparisonsExample";
+import { COMPARISON_HOME_ENTRIES, COMPARISON_ROUTE_SLUG } from "~/screens/examples/comparisonConfig";
+import { DebuggingExample } from "~/screens/examples/DebuggingExample";
 import { DirectoryExample } from "~/screens/examples/DirectoryExample";
+import { DEBUGGING_HOME_ENTRIES, DEBUGGING_ROUTE_SLUG } from "~/screens/examples/debuggingConfig";
 import { GalleryGridExample } from "~/screens/examples/GalleryGridExample";
 import { InfiniteCalendarExample } from "~/screens/examples/InfiniteCalendarExample";
 import { MediaRailsExample } from "~/screens/examples/MediaRailsExample";
 import { NotificationsInboxExample } from "~/screens/examples/NotificationsInboxExample";
+import { OptimizationExample } from "~/screens/examples/OptimizationExample";
+import { OPTIMIZATION_HOME_ENTRIES, OPTIMIZATION_ROUTE_SLUG } from "~/screens/examples/optimizationConfig";
 import { ProductShelfExample } from "~/screens/examples/ProductShelfExample";
+import { ReanimatedSharedValuesExample } from "~/screens/examples/ReanimatedSharedValuesExample";
 import { SectionedDirectoryExample } from "~/screens/examples/SectionedDirectoryExample";
 import { VideoFeedExample } from "~/screens/examples/VideoFeedExample";
+import { VisibilityExample } from "~/screens/examples/VisibilityExample";
 import AccurateScrollToFixture from "~/screens/fixtures/accurate-scrollto";
 import AccurateScrollTo2Fixture from "~/screens/fixtures/accurate-scrollto-2";
 import AccurateScrollToHugeFixture from "~/screens/fixtures/accurate-scrollto-huge";
@@ -113,6 +122,42 @@ export const EXAMPLE_ROUTES: ExampleRouteDefinition[] = CURATED_EXAMPLES.map((ex
     slug: example.slug,
     title: example.title,
 }));
+
+const COMPARISON_ROUTE: RouteDefinition = {
+    component: ComparisonsExample,
+    description: "Compare FlatList, FlashList, and LegendList with the same native workloads.",
+    slug: COMPARISON_ROUTE_SLUG,
+    title: "Comparisons",
+};
+
+const OPTIMIZATION_ROUTE: RouteDefinition = {
+    component: OptimizationExample,
+    description: "Explore render identity, invalidation, recycling state, and dataset lifecycle.",
+    slug: OPTIMIZATION_ROUTE_SLUG,
+    title: "Optimization",
+};
+
+const ADVANCED_ROUTES: RouteDefinition[] = [
+    {
+        component: VisibilityExample,
+        description: "Drive row presentation and leading-item UI from viewability signals.",
+        slug: "visibility",
+        title: "Visibility",
+    },
+    {
+        component: ReanimatedSharedValuesExample,
+        description: "Consume semantic list state through Reanimated SharedValues.",
+        slug: "reanimated-shared-values",
+        title: "Reanimated SharedValues",
+    },
+];
+
+const DEBUGGING_ROUTE: RouteDefinition = {
+    component: DebuggingExample,
+    description: "Profile row cost, inspect render windows, and diagnose delayed measurements.",
+    slug: DEBUGGING_ROUTE_SLUG,
+    title: "Debugging",
+};
 
 export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
     {
@@ -576,7 +621,14 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
     },
 ];
 
-const ALL_ROUTES = [...EXAMPLE_ROUTES, ...FIXTURE_ROUTES];
+const ALL_ROUTES = [
+    ...EXAMPLE_ROUTES,
+    COMPARISON_ROUTE,
+    OPTIMIZATION_ROUTE,
+    ...ADVANCED_ROUTES,
+    DEBUGGING_ROUTE,
+    ...FIXTURE_ROUTES,
+];
 const ROUTE_MAP = new Map(ALL_ROUTES.map((route) => [route.slug, route]));
 
 if (ROUTE_MAP.size !== ALL_ROUTES.length) {
@@ -587,15 +639,38 @@ export function getRouteBySlug(slug: string) {
     return ROUTE_MAP.get(slug);
 }
 
-export const EXAMPLE_CATALOG: CatalogGroup[] = CURATED_GROUP_ORDER.map((group) => ({
-    entries: EXAMPLE_ROUTES.filter((route) => route.group === group).map((route) => ({
-        description: route.description,
-        href: `/${route.slug}`,
-        title: route.title,
+export const EXAMPLE_CATALOG: CatalogGroup[] = [
+    ...CURATED_GROUP_ORDER.map((group) => ({
+        entries: EXAMPLE_ROUTES.filter((route) => route.group === group).map((route) => ({
+            description: route.description,
+            href: `/${route.slug}`,
+            id: route.slug,
+            title: route.title,
+        })),
+        key: group.toLowerCase(),
+        title: group,
     })),
-    key: group.toLowerCase(),
-    title: group,
-}));
+    {
+        entries: COMPARISON_HOME_ENTRIES,
+        key: "comparisons",
+        title: "Comparisons",
+    },
+    {
+        entries: OPTIMIZATION_HOME_ENTRIES,
+        key: "optimization",
+        title: "Optimization",
+    },
+    {
+        entries: ADVANCED_HOME_ENTRIES,
+        key: "advanced",
+        title: "Advanced",
+    },
+    {
+        entries: DEBUGGING_HOME_ENTRIES,
+        key: "debugging",
+        title: "Debugging",
+    },
+];
 
 const FIXTURE_GROUP_ORDER = [
     { key: "scroll", title: "Scroll & Position" },
@@ -608,6 +683,7 @@ export const FIXTURE_CATALOG: CatalogGroup[] = FIXTURE_GROUP_ORDER.map((group) =
     entries: FIXTURE_ROUTES.filter((route) => route.groupKey === group.key).map((route) => ({
         description: route.description,
         href: `/${route.slug}`,
+        id: route.slug,
         title: route.title,
     })),
     key: group.key,

@@ -1,38 +1,43 @@
-import { Fragment, useRef } from "react";
+import { memo, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 
 import type { LegendListRenderItemProps } from "@legendapp/list/react-native";
-import { FlashList, type FlashListRef, type ListRenderItemInfo } from "@shopify/flash-list";
-import { DRAW_DISTANCE, RECYCLE_ITEMS } from "~/constants/constants";
-import {
-    type Item,
-    renderItem as renderCardItem,
-    renderFixedCardItem,
-} from "~/screens/fixtures/shared/cardsRenderItem";
+import { FlashList, type FlashListRef, type ListRenderItemInfo, useRecyclingState } from "@shopify/flash-list";
+import { DRAW_DISTANCE } from "~/constants/constants";
+import type { DemoMetricStore } from "~/lib/demoMetrics";
+import { type Item, ItemCardContent, type ItemCardProps } from "~/screens/fixtures/shared/cardsRenderItem";
 
 interface CardsFlashListProps {
     fixedItemSize?: number;
+    metrics?: DemoMetricStore;
 }
 
-export default function CardsFlashList({ fixedItemSize }: CardsFlashListProps) {
+const FlashRecyclingItemCard = memo(function FlashRecyclingItemCardComponent(props: ItemCardProps) {
+    const [isExpanded, setIsExpanded] = useRecyclingState(false, [props.item.id]);
+    return <ItemCardContent {...props} isExpanded={isExpanded} setIsExpanded={setIsExpanded} />;
+});
+
+export default function CardsFlashList({ fixedItemSize, metrics }: CardsFlashListProps) {
     const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));
 
     const scrollRef = useRef<FlashListRef<Item>>(null);
-    const renderSharedCardItem = fixedItemSize !== undefined ? renderFixedCardItem : renderCardItem;
 
     const renderItemFn = (info: ListRenderItemInfo<Item>) => {
         const legendListProps = {
             data,
-            extraData: undefined,
+            extraData: { metrics },
             index: info.index,
             item: info.item,
             type: undefined,
         } satisfies LegendListRenderItemProps<Item>;
 
-        return RECYCLE_ITEMS ? (
-            renderSharedCardItem(legendListProps)
-        ) : (
-            <Fragment key={info.item.id}>{renderSharedCardItem(legendListProps)}</Fragment>
+        return (
+            <FlashRecyclingItemCard
+                {...legendListProps}
+                fixedHeight={fixedItemSize}
+                metrics={metrics}
+                numSentences={fixedItemSize === undefined ? undefined : 1}
+            />
         );
     };
 

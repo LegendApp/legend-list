@@ -1,10 +1,11 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { memo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { Animated, Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list/react-native";
 import { DARK_MODE, PERF_TEST } from "~/constants/constants";
+import type { DemoMetricStore } from "~/lib/demoMetrics";
 
 export interface Item {
     id: string;
@@ -128,213 +129,241 @@ const renderRightActions = () => {
 // Inline Separator makes containers rerender each data change
 const Separator = () => <View style={{ height: 10 }} />;
 
-export const ItemCard = memo(
-    ({
-        item,
-        index,
-        extraData,
-        fixedHeight,
-        numSentences: numSentencesProp,
-    }: LegendListRenderItemProps<Item> & {
-        fixedHeight?: number;
-        numSentences?: number | ((index: number) => number);
-    }) => {
-        const refSwipeable = useRef<Swipeable | null>(null);
+export type ItemCardProps = LegendListRenderItemProps<Item> & {
+    fixedHeight?: number;
+    metrics?: DemoMetricStore;
+    numSentences?: number | ((index: number) => number);
+};
 
-        // A useState that resets when the item is recycled
-        const [isExpandedValue, setIsExpanded] = extraData?.recycleState
-            ? useRecyclingState(() => false)
-            : useState(false);
-        const isExpanded = isExpandedValue ?? false;
+export function ItemCardContent({
+    item,
+    index,
+    fixedHeight,
+    isExpanded,
+    metrics,
+    numSentences: numSentencesProp,
+    setIsExpanded,
+}: ItemCardProps & {
+    isExpanded: boolean;
+    setIsExpanded: (value: boolean) => void;
+}) {
+    const refSwipeable = useRef<Swipeable | null>(null);
+    const swipeableState = useRef(false);
+    const previousItemId = useRef(item.id);
 
-        const swipeableState = useRef(false);
+    metrics?.increment("rowRenders");
+    if (previousItemId.current !== item.id) {
+        previousItemId.current = item.id;
+        metrics?.increment("reassignments");
+    }
 
-        // console.log(Math.round(performance.now()), "renderItem", index);
+    useEffect(() => {
+        return metrics?.trackMount("mounted");
+    }, [metrics]);
 
-        // A callback when the item is recycled
-        // useRecyclingEffect?.(({ item, prevItem, index, prevIndex }) => {
-        //     if (swipeableState.current) {
-        //         // this is expensive operation, run .close() only if the swipeable is open
-        //         refSwipeable?.current?.close();
-        //     }
-        // });
+    // console.log(Math.round(performance.now()), "renderItem", index);
 
-        // A callback when the item viewability (from viewabilityConfig) changes
-        // useViewability?.("viewability", ({ item, isViewable, index }) => {
-        //     // console.log('viewable', viewToken.index, viewToken.isViewable);
-        // });
+    // A callback when the item is recycled
+    // useRecyclingEffect?.(({ item, prevItem, index, prevIndex }) => {
+    //     if (swipeableState.current) {
+    //         // this is expensive operation, run .close() only if the swipeable is open
+    //         refSwipeable?.current?.close();
+    //     }
+    // });
 
-        // @ts-ignore
-        // const opacity = useViewabilityAmount ? useAnimatedValue(1) : 1;
-        // useViewabilityAmount?.(({ sizeVisible, size, percentOfScroller }) => {
-        //     // @ts-ignore
-        //     // opacity.setValue(Math.max(0, Math.min(1, sizeVisible / Math.min(400, size || 400)) ** 1.5));
-        //     // console.log('viewable', sizeVisible, size, percentOfScroller);
-        // });
+    // A callback when the item viewability (from viewabilityConfig) changes
+    // useViewability?.("viewability", ({ item, isViewable, index }) => {
+    //     // console.log('viewable', viewToken.index, viewToken.isViewable);
+    // });
 
-        // Math.abs needed for negative indices
-        const indexForData = Math.abs(item.id.includes("new") ? 100 + +item.id.replace("new", "") : +item.id);
+    // @ts-ignore
+    // const opacity = useViewabilityAmount ? useAnimatedValue(1) : 1;
+    // useViewabilityAmount?.(({ sizeVisible, size, percentOfScroller }) => {
+    //     // @ts-ignore
+    //     // opacity.setValue(Math.max(0, Math.min(1, sizeVisible / Math.min(400, size || 400)) ** 1.5));
+    //     // console.log('viewable', sizeVisible, size, percentOfScroller);
+    // });
 
-        // EXPENSIVE COMPUTATIONS (for performance testing)
-        let perfTestResults = null;
-        if (PERF_TEST) {
-            // COMPUTATION 1: Prime number calculation
-            const isPrime = (n: number): boolean => {
-                if (n <= 1) return false;
-                if (n <= 3) return true;
-                if (n % 2 === 0 || n % 3 === 0) return false;
-                for (let i = 5; i * i <= n; i += 6) {
-                    if (n % i === 0 || n % (i + 2) === 0) return false;
-                }
-                return true;
-            };
-            const primeCheck = isPrime(indexForData + 1000);
+    // Math.abs needed for negative indices
+    const indexForData = Math.abs(item.id.includes("new") ? 100 + +item.id.replace("new", "") : +item.id);
 
-            // COMPUTATION 2: Fibonacci calculation (intentionally inefficient)
-            const fibonacci = (n: number): number => {
-                if (n <= 1) return n;
-                return fibonacci(n - 1) + fibonacci(n - 2);
-            };
-            const fibResult = fibonacci(Math.min((indexForData % 20) + 15, 25)); // Cap at 25 to avoid extreme slowness
+    // EXPENSIVE COMPUTATIONS (for performance testing)
+    let perfTestResults = null;
+    if (PERF_TEST) {
+        // COMPUTATION 1: Prime number calculation
+        const isPrime = (n: number): boolean => {
+            if (n <= 1) return false;
+            if (n <= 3) return true;
+            if (n % 2 === 0 || n % 3 === 0) return false;
+            for (let i = 5; i * i <= n; i += 6) {
+                if (n % i === 0 || n % (i + 2) === 0) return false;
+            }
+            return true;
+        };
+        const primeCheck = isPrime(indexForData + 1000);
 
-            // COMPUTATION 3: Complex string manipulation
-            const expensiveStringOp = (str: string): string => {
-                let result = str;
-                for (let i = 0; i < 50; i++) {
-                    result = result.split("").reverse().join("").toLowerCase().toUpperCase();
-                }
-                return result.slice(0, 10);
-            };
-            const processedString = expensiveStringOp(item.id.repeat(10));
+        // COMPUTATION 2: Fibonacci calculation (intentionally inefficient)
+        const fibonacci = (n: number): number => {
+            if (n <= 1) return n;
+            return fibonacci(n - 1) + fibonacci(n - 2);
+        };
+        const fibResult = fibonacci(Math.min((indexForData % 20) + 15, 25)); // Cap at 25 to avoid extreme slowness
 
-            // COMPUTATION 4: Array sorting and filtering
-            const largeArray = Array.from({ length: 1000 }, (_, _i) => Math.random() * indexForData);
-            const sortedFiltered = largeArray
-                .filter((x) => x > indexForData / 2)
-                .sort((a, b) => b - a)
-                .slice(0, 10);
+        // COMPUTATION 3: Complex string manipulation
+        const expensiveStringOp = (str: string): string => {
+            let result = str;
+            for (let i = 0; i < 50; i++) {
+                result = result.split("").reverse().join("").toLowerCase().toUpperCase();
+            }
+            return result.slice(0, 10);
+        };
+        const processedString = expensiveStringOp(item.id.repeat(10));
 
-            perfTestResults = { fibResult, primeCheck, processedString, sortedFiltered };
-        }
+        // COMPUTATION 4: Array sorting and filtering
+        const largeArray = Array.from({ length: 1000 }, (_, _i) => Math.random() * indexForData);
+        const sortedFiltered = largeArray
+            .filter((x) => x > indexForData / 2)
+            .sort((a, b) => b - a)
+            .slice(0, 10);
 
-        // Generate 1-5 random sentences
-        const numSentences = numSentencesProp
-            ? typeof numSentencesProp === "function"
-                ? numSentencesProp(indexForData)
-                : numSentencesProp
-            : ((indexForData * 7919) % 12) + 1; // Using prime number 7919 for better distribution
-        //   const indexForData =
-        //     item.id === "0" ? 0 : item.id === "1" ? 1 : item.id === "new0" ? 2 : 3;
-        //   const numSentences =
-        //     item.id === "0" ? 1 : item.id === "1" ? 2 : item.id === "new0" ? 4 : 8;
-        const randomText = Array.from(
-            { length: numSentences },
-            (_, i) => loremSentences[i % loremSentences.length],
-        ).join(" ");
+        perfTestResults = { fibResult, primeCheck, processedString, sortedFiltered };
+    }
 
-        // Use randomIndex to deterministically select random data
-        const avatarUrl = randomAvatars[indexForData % randomAvatars.length];
-        const authorName = randomNames[indexForData % randomNames.length];
-        const timestamp = `${Math.max(1, indexForData % 24)}h ago`;
+    // Generate 1-5 random sentences
+    const numSentences = numSentencesProp
+        ? typeof numSentencesProp === "function"
+            ? numSentencesProp(indexForData)
+            : numSentencesProp
+        : ((indexForData * 7919) % 12) + 1; // Using prime number 7919 for better distribution
+    //   const indexForData =
+    //     item.id === "0" ? 0 : item.id === "1" ? 1 : item.id === "new0" ? 2 : 3;
+    //   const numSentences =
+    //     item.id === "0" ? 1 : item.id === "1" ? 2 : item.id === "new0" ? 4 : 8;
+    const randomText = Array.from({ length: numSentences }, (_, i) => loremSentences[i % loremSentences.length]).join(
+        " ",
+    );
 
-        if (index === 1 && demoNestedList) {
-            return (
-                <Animated.View style={[styles.nestedListContainer]}>
-                    <LegendList
-                        data={[
-                            {
-                                id: "1",
-                                text: "List Item 1",
-                            },
-                            {
-                                id: "2",
-                                text: "List Item 2",
-                            },
-                            {
-                                id: "3",
-                                text: "List Item 3",
-                            },
-                        ]}
-                        estimatedItemSize={400}
-                        horizontal
-                        ItemSeparatorComponent={Separator}
-                        keyExtractor={(nestedItem) => nestedItem.text}
-                        recycleItems
-                        renderItem={({ item: nestedItem }) => (
-                            <View style={styles.nestedListItem}>
-                                <Text style={styles.nestedListItemText}>{nestedItem.text}</Text>
-                            </View>
-                        )}
-                        showsHorizontalScrollIndicator={false}
-                    />
-                </Animated.View>
-            );
-        }
+    // Use randomIndex to deterministically select random data
+    const avatarUrl = randomAvatars[indexForData % randomAvatars.length];
+    const authorName = randomNames[indexForData % randomNames.length];
+    const timestamp = `${Math.max(1, indexForData % 24)}h ago`;
 
+    if (index === 1 && demoNestedList) {
         return (
-            <View style={[styles.itemOuterContainer, fixedHeight !== undefined && { height: fixedHeight }]}>
-                <Swipeable
-                    containerStyle={styles.swipeableContainer}
-                    onSwipeableWillClose={() => {
-                        swipeableState.current = false;
+            <Animated.View style={[styles.nestedListContainer]}>
+                <LegendList
+                    data={[
+                        {
+                            id: "1",
+                            text: "List Item 1",
+                        },
+                        {
+                            id: "2",
+                            text: "List Item 2",
+                        },
+                        {
+                            id: "3",
+                            text: "List Item 3",
+                        },
+                    ]}
+                    estimatedItemSize={400}
+                    horizontal
+                    ItemSeparatorComponent={Separator}
+                    keyExtractor={(nestedItem) => nestedItem.text}
+                    recycleItems
+                    renderItem={({ item: nestedItem }) => (
+                        <View style={styles.nestedListItem}>
+                            <Text style={styles.nestedListItemText}>{nestedItem.text}</Text>
+                        </View>
+                    )}
+                    showsHorizontalScrollIndicator={false}
+                />
+            </Animated.View>
+        );
+    }
+
+    return (
+        <View style={[styles.itemOuterContainer, fixedHeight !== undefined && { height: fixedHeight }]}>
+            <Swipeable
+                containerStyle={styles.swipeableContainer}
+                onSwipeableWillClose={() => {
+                    swipeableState.current = false;
+                }}
+                onSwipeableWillOpen={() => {
+                    swipeableState.current = true;
+                }}
+                overshootRight={true}
+                ref={refSwipeable as any}
+                renderRightActions={renderRightActions}
+            >
+                <Pressable
+                    onPress={(e) => {
+                        //   LinearTransition.easing(Easing.ease);
+
+                        e.stopPropagation();
+                        setIsExpanded(!isExpanded);
                     }}
-                    onSwipeableWillOpen={() => {
-                        swipeableState.current = true;
-                    }}
-                    overshootRight={true}
-                    ref={refSwipeable as any}
-                    renderRightActions={renderRightActions}
                 >
-                    <Pressable
-                        onPress={(e) => {
-                            //   LinearTransition.easing(Easing.ease);
-
-                            e.stopPropagation();
-                            setIsExpanded(!isExpanded);
-                        }}
-                    >
-                        <View style={styles.itemContainer}>
-                            <View style={styles.headerContainer}>
-                                <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-                                <View style={styles.headerText}>
-                                    <Text style={styles.authorName}>
-                                        {authorName} {item.id}
-                                    </Text>
-                                    <Text style={styles.timestamp}>{timestamp}</Text>
-                                </View>
-                            </View>
-
-                            <Text style={styles.itemTitle}>Item #{item.id}</Text>
-                            <Text
-                                style={styles.itemBody}
-                                //   numberOfLines={isExpanded ? undefined : 10}
-                            >
-                                {randomText}
-                                {isExpanded ? randomText : null}
-                            </Text>
-                            <View style={styles.itemFooter}>
-                                <Text style={styles.footerText}>❤️ 42</Text>
-                                <Text style={styles.footerText}>💬 12</Text>
-                                <Text style={styles.footerText}>🔄 8</Text>
-                                {perfTestResults && (
-                                    <Text style={styles.footerText}>
-                                        🧮 Prime: {perfTestResults.primeCheck ? "✓" : "✗"} | Fib:{" "}
-                                        {perfTestResults.fibResult}
-                                        {/* | Str: {perfTestResults.processedString} | Array:{" "} */}
-                                        {/* {perfTestResults.sortedFiltered.length} */}
-                                    </Text>
-                                )}
+                    <View style={styles.itemContainer}>
+                        <View style={styles.headerContainer}>
+                            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                            <View style={styles.headerText}>
+                                <Text style={styles.authorName}>
+                                    {authorName} {item.id}
+                                </Text>
+                                <Text style={styles.timestamp}>{timestamp}</Text>
                             </View>
                         </View>
-                        {/* <Breathe /> */}
-                    </Pressable>
-                </Swipeable>
-            </View>
-        );
-    },
-);
 
-export const renderItem = (props: LegendListRenderItemProps<Item>) => <ItemCard {...props} />;
+                        <Text style={styles.itemTitle}>Item #{item.id}</Text>
+                        <Text
+                            style={styles.itemBody}
+                            //   numberOfLines={isExpanded ? undefined : 10}
+                        >
+                            {randomText}
+                            {isExpanded ? randomText : null}
+                        </Text>
+                        <View style={styles.itemFooter}>
+                            <Text style={styles.footerText}>❤️ 42</Text>
+                            <Text style={styles.footerText}>💬 12</Text>
+                            <Text style={styles.footerText}>🔄 8</Text>
+                            {perfTestResults && (
+                                <Text style={styles.footerText}>
+                                    🧮 Prime: {perfTestResults.primeCheck ? "✓" : "✗"} | Fib:{" "}
+                                    {perfTestResults.fibResult}
+                                    {/* | Str: {perfTestResults.processedString} | Array:{" "} */}
+                                    {/* {perfTestResults.sortedFiltered.length} */}
+                                </Text>
+                            )}
+                        </View>
+                    </View>
+                    {/* <Breathe /> */}
+                </Pressable>
+            </Swipeable>
+        </View>
+    );
+}
+
+const StandardItemCard = memo(function StandardItemCardComponent(props: ItemCardProps) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    return <ItemCardContent {...props} isExpanded={isExpanded} setIsExpanded={setIsExpanded} />;
+});
+
+const LegendRecyclingItemCard = memo(function LegendRecyclingItemCardComponent(props: ItemCardProps) {
+    const [isExpanded = false, setIsExpanded] = useRecyclingState<boolean>(() => false);
+    return <ItemCardContent {...props} isExpanded={isExpanded} setIsExpanded={setIsExpanded} />;
+});
+
+export const ItemCard = memo(function ItemCardComponent(props: ItemCardProps) {
+    const metrics = props.metrics ?? props.extraData?.metrics;
+    return props.extraData?.recycleState ? (
+        <LegendRecyclingItemCard {...props} metrics={metrics} />
+    ) : (
+        <StandardItemCard {...props} metrics={metrics} />
+    );
+});
+
+export const renderItem = (props: ItemCardProps) => <ItemCard {...props} />;
 export const renderFixedCardItem = (props: LegendListRenderItemProps<Item>) => (
     <ItemCard {...props} fixedHeight={FIXED_CARD_ITEM_SIZE} numSentences={1} />
 );
