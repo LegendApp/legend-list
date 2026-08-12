@@ -80,7 +80,7 @@ describe("checkAtBottom", () => {
         expect(state.endReachedSnapshot).toBeUndefined();
     });
 
-    it("returns early when maintainingScrollAtEnd is active", () => {
+    it("keeps the end threshold active during animated end maintenance", () => {
         const ctx = createMockContext({ totalSize: 1000 });
         const state = createMockState({
             isEndReached: null,
@@ -94,6 +94,8 @@ describe("checkAtBottom", () => {
 
         expect(state.isEndReached).toBeNull();
         expect(state.endReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
     });
 
     it("fires after leaving and re-entering the threshold window", () => {

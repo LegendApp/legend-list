@@ -118,6 +118,33 @@ describe("updateScroll large user jumps", () => {
         expect(flushSyncSpy).not.toHaveBeenCalled();
     });
 
+    it("cancels end maintenance only when native scrolling moves away from the end", () => {
+        mockCtx = createMockContext(
+            { totalSize: 1000 },
+            {
+                isWithinMaintainScrollAtEndThreshold: true,
+                maintainingScrollAtEnd: "animated",
+                pendingMaintainScrollAtEnd: true,
+                queuedInitialLayout: true,
+                scroll: 100,
+                scrollLastCalculate: 100,
+                scrollLength: 100,
+                triggerCalculateItemsInView: () => {},
+            },
+        );
+
+        updateScroll(mockCtx, 120, undefined, { fromNativeScrollEvent: true });
+
+        expect(mockCtx.state.maintainingScrollAtEnd).toBe("animated");
+        expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(true);
+
+        updateScroll(mockCtx, 100, undefined, { fromNativeScrollEvent: true });
+
+        expect(mockCtx.state.maintainingScrollAtEnd).toBeUndefined();
+        expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(peek$(mockCtx, "isWithinMaintainScrollAtEndThreshold")).toBe(false);
+    });
+
     it("updates adaptive render from the current scroll sample", () => {
         const originalDateNow = Date.now;
         const changes: Array<[string, string]> = [];

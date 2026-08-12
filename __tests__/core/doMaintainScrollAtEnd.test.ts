@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
+import { checkAtBottom } from "../../src/utils/checkAtBottom";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("doMaintainScrollAtEnd", () => {
@@ -486,6 +487,27 @@ describe("doMaintainScrollAtEnd", () => {
             }
 
             expect(mockScrollToEnd).toHaveBeenCalledTimes(2);
+        });
+
+        it("replays active maintenance after rapid content growth", () => {
+            mockState.queuedInitialLayout = true;
+            runMaintainScrollAtEnd(true);
+            rafCallback?.();
+
+            mockCtx.values.set("totalSize", 1200);
+            checkAtBottom(mockCtx);
+            runMaintainScrollAtEnd(true);
+
+            expect(mockState.isWithinMaintainScrollAtEndThreshold).toBe(true);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+
+            timeoutCallback?.();
+
+            expect(mockState.isWithinMaintainScrollAtEndThreshold).toBe(true);
+            expect(mockState.maintainingScrollAtEnd).toBe("pending-animated");
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+            expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(2);
         });
     });
 

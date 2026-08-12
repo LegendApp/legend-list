@@ -35,7 +35,10 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
         set$(
             ctx,
             "isWithinMaintainScrollAtEndThreshold",
-            isContentLess || distanceFromEnd <= maintainScrollAtEndThreshold! * scrollLength,
+            isContentLess ||
+                distanceFromEnd <= maintainScrollAtEndThreshold! * scrollLength ||
+                maintainingScrollAtEnd === "animated" ||
+                maintainingScrollAtEnd === "instant",
         );
 
         const shouldSkipThresholdChecks = hasActiveInitialScroll(state) || maintainingScrollAtEnd;

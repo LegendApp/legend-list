@@ -75,6 +75,14 @@ export function updateScroll(
         !adjustChanged &&
         scrollingTo === undefined &&
         !state.pendingNativeMVCPAdjust;
+    const didCancelMaintainScrollAtEnd =
+        isUserScrollEvent &&
+        newScroll < prevScroll &&
+        !!(state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd);
+    if (didCancelMaintainScrollAtEnd) {
+        state.maintainingScrollAtEnd = undefined;
+        state.pendingMaintainScrollAtEnd = false;
+    }
     const allowedEdge = isUserScrollEvent ? beginReachedEdgeUserScroll(ctx, newScroll - prevScroll) : undefined;
     const didResolvePendingNativeMVCPAdjust = resolvePendingNativeMVCPAdjust(ctx, newScroll);
     const scrollLength = state.scrollLength;
@@ -89,6 +97,7 @@ export function updateScroll(
     const shouldUpdate =
         useAggressiveItemRecalculation ||
         didResolvePendingNativeMVCPAdjust ||
+        didCancelMaintainScrollAtEnd ||
         allowedEdge !== undefined ||
         forceUpdate ||
         lastCalculated === undefined ||
