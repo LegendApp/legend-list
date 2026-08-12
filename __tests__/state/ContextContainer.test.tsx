@@ -1,7 +1,7 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
-import { memo, type ReactNode, useMemo } from "react";
+import { memo, type ReactNode, useEffect, useMemo } from "react";
 import { Text } from "react-native";
 
 import {
@@ -18,7 +18,8 @@ import {
     useViewabilityAmount,
 } from "../../src/state/ContextContainer";
 import { StateProvider, set$, useArr$, useStateContext } from "../../src/state/state";
-import type { ViewAmountToken, ViewToken } from "../../src/types.base";
+import type { ViewAmountToken, ViewabilityConfigCallbackPairs, ViewToken } from "../../src/types.base";
+import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { act, render } from "../helpers/testingLibrary";
 
 type ContainerSignals = {
@@ -60,13 +61,62 @@ function SignalBackedContainerProvider({ children, signals }: { children: ReactN
     return <ContextContainer.Provider value={providerValue}>{children}</ContextContainer.Provider>;
 }
 
+function ViewabilityStateProvider({
+    children,
+    pairs,
+}: {
+    children: ReactNode;
+    pairs: ViewabilityConfigCallbackPairs<any> | undefined;
+}) {
+    const ctx = useStateContext();
+    ctx.state ??= { viewabilityConfigCallbackPairs: undefined } as any;
+    useEffect(() => {
+        ctx.state.viewabilityConfigCallbackPairs = pairs;
+    }, [ctx, pairs]);
+    return children;
+}
+
 async function flushAsync() {
     await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
     });
 }
 
+async function renderViewabilityHook(useTestHook: () => void, pairs: ViewabilityConfigCallbackPairs<any> | undefined) {
+    const consoleWarnSpy = mock(() => {});
+    const originalWarn = console.warn;
+    console.warn = consoleWarnSpy as typeof console.warn;
+    const signals = createContainerSignals();
+
+    const TestComponent = () => {
+        useTestHook();
+        return <Text>Test</Text>;
+    };
+
+    try {
+        const { unmount } = render(
+            <StateProvider>
+                <ViewabilityStateProvider pairs={pairs}>
+                    <SignalBackedContainerProvider signals={signals}>
+                        <TestComponent />
+                    </SignalBackedContainerProvider>
+                </ViewabilityStateProvider>
+            </StateProvider>,
+        );
+        await flushAsync();
+        unmount();
+    } finally {
+        console.warn = originalWarn;
+    }
+
+    return consoleWarnSpy;
+}
+
 describe("ContextContainer hooks", () => {
+    beforeEach(() => {
+        clearWarnDevOnceForTests();
+    });
+
     describe("useArr$", () => {
         it("should keep inline signal arrays stable when signal names do not change", async () => {
             let capturedCtx: ReturnType<typeof useStateContext> | undefined;
@@ -195,6 +245,50 @@ describe("ContextContainer hooks", () => {
     });
 
     describe("useViewability", () => {
+        it("should warn when viewability is not configured", async () => {
+            const consoleWarnSpy = await renderViewabilityHook(() => {
+                useViewability(() => {});
+                useViewabilityAmount(() => {});
+            }, undefined);
+
+            expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] useViewability requires viewability to be configured on the owning LegendList. Add viewabilityConfig with a visibility threshold.",
+            );
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] useViewabilityAmount requires viewability to be configured on the owning LegendList. Add viewabilityConfig with a visibility threshold.",
+            );
+        });
+
+        it("should warn when the configId does not match", async () => {
+            const consoleWarnSpy = await renderViewabilityHook(
+                () => useViewability(() => {}, "row"),
+                [
+                    {
+                        viewabilityConfig: { id: "other", itemVisiblePercentThreshold: 50 },
+                    },
+                ],
+            );
+
+            expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                '[legend-list] useViewability for configId "row" requires a matching viewabilityConfig.id on the owning LegendList. Add an id to viewabilityConfig and pass the same id to useViewability.',
+            );
+        });
+
+        it("should not warn when the configId matches", async () => {
+            const consoleWarnSpy = await renderViewabilityHook(() => {
+                useViewability(() => {}, "row");
+                useViewabilityAmount(() => {});
+            }, [
+                {
+                    viewabilityConfig: { id: "row", itemVisiblePercentThreshold: 50 },
+                },
+            ]);
+
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
+        });
+
         it("should register callback when used inside context", async () => {
             const callback = (token: ViewToken) => {
                 expect(token).toBeDefined();
