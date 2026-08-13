@@ -1,6 +1,6 @@
 import { setSize } from "@/core/setSize";
 import type { StateContext } from "@/state/state";
-import { roundSize } from "@/utils/helpers";
+import { roundEstimatedSize } from "@/utils/helpers";
 import { getId } from "./getId";
 
 export interface ResolvedItemSize {
@@ -92,7 +92,7 @@ export function getItemSize(
         // Use item type specific average if available
         const averageSizeForType = averageSizes[itemType]?.avg;
         if (averageSizeForType !== undefined) {
-            size = roundSize(averageSizeForType);
+            size = roundEstimatedSize(averageSizeForType);
         }
     }
 
@@ -105,7 +105,7 @@ export function getItemSize(
     if (size === undefined && useAverageSize && scrollingTo) {
         const averageSizeForType = scrollingTo.averageSizeSnapshot?.[itemType];
         if (averageSizeForType !== undefined) {
-            size = roundSize(averageSizeForType);
+            size = roundEstimatedSize(averageSizeForType);
         }
     }
 

@@ -165,4 +165,22 @@ describe("getItemSize", () => {
 
         expect(result).toBe(0);
     });
+    it("rounds an averaged size to the nearest eighth instead of flooring it", () => {
+        mockState.averageSizes[""] = { avg: 80.1, num: 1 };
+
+        const result = callGetItemSize("item_0", 0, { id: 0 }, true);
+
+        expect(result).toBe(80.125);
+    });
+
+    it("does not accumulate a downward bias when summing averaged sizes", () => {
+        mockState.averageSizes[""] = { avg: 80.1, num: 1 };
+
+        let total = 0;
+        for (let index = 0; index < 1000; index++) {
+            total += callGetItemSize(`item_${index}`, index, { id: index }, true);
+        }
+
+        expect(Math.abs(total - 80.1 * 1000)).toBeLessThan(30);
+    });
 });
