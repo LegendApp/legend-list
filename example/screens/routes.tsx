@@ -54,6 +54,7 @@ import CountriesWithHeadersFixedFixture from "~/screens/fixtures/countries-with-
 import CountriesWithHeadersStickyFixture from "~/screens/fixtures/countries-with-headers-sticky";
 import ExtraDataFixture from "~/screens/fixtures/extra-data";
 import FilterElementsFixture from "~/screens/fixtures/filter-elements";
+import HeaderMvcpFixture from "~/screens/fixtures/header-mvcp";
 import HorizontalAlignItemsFixture from "~/screens/fixtures/horizontal-align-items";
 import HorizontalCrossAxisFixture from "~/screens/fixtures/horizontal-cross-axis";
 import InitialScrollAtEndEmptyFixture from "~/screens/fixtures/initial-scroll-at-end-empty";
@@ -258,6 +259,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "mvcp-test",
         title: "MVCP Test",
+    },
+    {
+        component: HeaderMvcpFixture,
+        description: "Grows and shrinks a measured header while it is above the viewport.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "header-mvcp",
+        title: "Header MVCP",
     },
     {
         component: AlwaysRenderFixture,
