@@ -162,8 +162,11 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         );
     }, [stickyHeaderConfig?.backdropComponent]);
 
+    // The interpolation above is rebuilt whenever position changes, but Animated keeps the node it
+    // attached on mount, so the header would keep following the range of its previous position.
+    // Keying on position remounts the view and lets Animated attach the new node.
     return (
-        <Animated.View ref={refView} style={viewStyle} {...rest}>
+        <Animated.View key={`sticky-pos:${position}`} ref={refView} style={viewStyle} {...rest}>
             {renderStickyHeaderBackdrop}
             {children}
         </Animated.View>
