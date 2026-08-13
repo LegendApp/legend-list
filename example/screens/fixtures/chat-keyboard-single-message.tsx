@@ -82,7 +82,7 @@ export default function ChatKeyboardSingleMessage() {
                         keyboardDismissMode="interactive"
                         keyboardOffset={insets.bottom}
                         keyExtractor={(item) => item.id}
-                        maintainScrollAtEnd
+                        maintainScrollAtEnd={{ animated: true }}
                         maintainVisibleContentPosition
                         recycleItems
                         renderItem={(props) => <ChatMessage {...props} />}
