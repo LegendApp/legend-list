@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
@@ -36,6 +37,7 @@ describe("setDidLayout", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let checkAtBottomSpy: Mock<typeof checkAtBottomModule.checkAtBottom>;
+    let doMaintainScrollAtEndSpy: Mock<typeof doMaintainScrollAtEndModule.doMaintainScrollAtEnd>;
 
     beforeEach(() => {
         mockCtx = createMockContext();
@@ -57,10 +59,12 @@ describe("setDidLayout", () => {
         mockCtx.state = mockState;
 
         checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom").mockImplementation((_ctx) => {});
+        doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockReturnValue(true);
     });
 
     afterEach(() => {
         checkAtBottomSpy.mockRestore();
+        doMaintainScrollAtEndSpy.mockRestore();
     });
 
     describe("basic functionality", () => {
@@ -82,6 +86,14 @@ describe("setDidLayout", () => {
             setDidLayout(mockCtx);
 
             expect(mockState.didContainersLayout).toBe(true);
+        });
+
+        it("replays a deferred maintain-scroll request after containers lay out", () => {
+            mockState.pendingMaintainScrollAtEnd = true;
+
+            setDidLayout(mockCtx);
+
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
         });
 
         it("should call onLoad with elapsed time when initial scroll already finished", () => {

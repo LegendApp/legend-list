@@ -26,6 +26,12 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
 
     const contentSize = getContentSize(ctx);
     resetSharedEdgeGateIfOutsideHysteresis(ctx);
+    if (state.props.data.length === 0 && scrollLength > 0 && contentSize <= scrollLength) {
+        set$(ctx, "isAtEnd", true);
+        set$(ctx, "isNearEnd", true);
+        set$(ctx, "isWithinMaintainScrollAtEndThreshold", true);
+        return;
+    }
     if (contentSize > 0 && queuedInitialLayout) {
         const insetEnd = getContentInsetEnd(ctx);
         const distanceFromEnd = contentSize - scroll - scrollLength - insetEnd;
@@ -37,6 +43,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
             "isWithinMaintainScrollAtEndThreshold",
             isContentLess ||
                 distanceFromEnd <= maintainScrollAtEndThreshold! * scrollLength ||
+                state.pendingMaintainScrollAtEnd ||
                 maintainingScrollAtEnd === "animated" ||
                 maintainingScrollAtEnd === "instant",
         );

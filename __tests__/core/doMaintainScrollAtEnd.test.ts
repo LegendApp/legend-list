@@ -154,13 +154,24 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should not trigger when didContainersLayout is false", () => {
-            mockState.didContainersLayout = mockState.didFinishInitialScroll = false;
+            mockState.didContainersLayout = false;
             mockCtx.values.set("readyToRender", false);
 
             const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+        });
+
+        it("should not supersede an unfinished initial scroll", () => {
+            mockState.didFinishInitialScroll = false;
+
+            const result = doMaintainScrollAtEnd(mockCtx);
+
+            expect(result).toBe(false);
+            expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+            expect(mockRunTrackedScrollToEnd).not.toHaveBeenCalled();
         });
 
         it("should handle didContainersLayout being undefined", () => {

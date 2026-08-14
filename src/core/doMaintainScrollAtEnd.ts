@@ -25,16 +25,22 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
     const state = ctx.state;
     const {
         didContainersLayout,
+        didFinishInitialScroll,
         pendingNativeMVCPAdjust,
         props: { maintainScrollAtEnd },
     } = state;
     const isWithinMaintainScrollAtEndThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
     const isReplayingPendingMaintain = !!state.pendingMaintainScrollAtEnd;
     const shouldMaintainScrollAtEnd = !!(
-        isWithinMaintainScrollAtEndThreshold &&
+        (isWithinMaintainScrollAtEndThreshold || isReplayingPendingMaintain) &&
         maintainScrollAtEnd &&
-        didContainersLayout
+        didFinishInitialScroll
     );
+
+    if (shouldMaintainScrollAtEnd && !didContainersLayout) {
+        state.pendingMaintainScrollAtEnd = true;
+        return false;
+    }
 
     // Native MVCP can still be finishing its own clamp after data changes. Defer the end-anchor scroll
     // until that settles so maintainScrollAtEnd does not fight the platform's pending adjustment.
