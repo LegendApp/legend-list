@@ -4,6 +4,7 @@ import { Dimensions } from "react-native";
 
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { handleLayout } from "../../src/core/handleLayout";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -220,7 +221,6 @@ describe("handleLayout", () => {
     describe("maintain scroll at end", () => {
         it("maintains the end when the viewport shrinks beyond the threshold before the scheduled scroll", () => {
             const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
-            const originalSetTimeout = globalThis.setTimeout;
             let animationFrameCallback: FrameRequestCallback | undefined;
             let scrollToEndCalls = 0;
 
@@ -228,19 +228,18 @@ describe("handleLayout", () => {
                 animationFrameCallback = callback;
                 return 1;
             };
-            globalThis.setTimeout = (() => 1) as typeof globalThis.setTimeout;
-
             try {
                 mockState.lastLayout = { height: 600, width: 400, x: 0, y: 0 };
                 mockState.scrollLength = 600;
                 mockState.scroll = 400;
                 mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
                 mockState.props.maintainScrollAtEnd = true;
-                mockState.refScroller.current = {
-                    scrollToEnd: () => {
+                getScrollRequestTracker(mockCtx).runNowIfIdle = () => {
+                    return new Promise<void>(() => {
                         scrollToEndCalls++;
-                    },
-                } as any;
+                    });
+                };
                 mockCtx.values.set("isWithinMaintainScrollAtEndThreshold", true);
                 mockLayout.height = 400;
 
@@ -254,7 +253,6 @@ describe("handleLayout", () => {
                 expect(scrollToEndCalls).toBe(1);
             } finally {
                 globalThis.requestAnimationFrame = originalRequestAnimationFrame;
-                globalThis.setTimeout = originalSetTimeout;
             }
         });
 

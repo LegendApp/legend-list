@@ -123,6 +123,26 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("does not create the public imperative handle without a forwarded ref", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-internal-imperative-runner");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+        const state = await getStateFromRender();
+
+        expect(state.runPendingScrollToEnd).toBeUndefined();
+        rendered.unmount();
+    });
+
     it("prepares the reached-edge gate when a native drag begins", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
@@ -145,6 +165,69 @@ describe("LegendList props behavior", () => {
         });
 
         expect(state.edgeReachedGate).toBe("prepared");
+        rendered.unmount();
+    });
+
+    it("cancels an active automatic end scroll when a native drag begins", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const resolveScroll = mock(() => {});
+        const { LegendList } = await import("../../src/components/LegendList?props-test-maintain-end-drag-cancel");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+        const state = await getStateFromRender();
+        state.maintainingScrollAtEnd = "animated";
+        state.pendingMaintainScrollAtEnd = true;
+        state.pendingScrollResolve = resolveScroll;
+        state.scrollingTo = { animated: true, offset: 100 };
+
+        act(() => {
+            lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+        });
+
+        expect(resolveScroll).toHaveBeenCalledTimes(1);
+        expect(state.scrollingTo).toBeUndefined();
+        expect(state.maintainingScrollAtEnd).toBeUndefined();
+        expect(state.pendingMaintainScrollAtEnd).toBe(false);
+        rendered.unmount();
+    });
+
+    it("does not cancel another imperative scroll while end maintenance is only pending", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const resolveScroll = mock(() => {});
+        const { LegendList } = await import("../../src/components/LegendList?props-test-pending-maintain-drag");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+        const state = await getStateFromRender();
+        const scrollingTo = { animated: true, offset: 100 };
+        state.maintainingScrollAtEnd = "pending-animated";
+        state.pendingScrollResolve = resolveScroll;
+        state.scrollingTo = scrollingTo;
+
+        act(() => {
+            lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+        });
+
+        expect(resolveScroll).not.toHaveBeenCalled();
+        expect(state.scrollingTo).toBe(scrollingTo);
+        expect(state.maintainingScrollAtEnd).toBeUndefined();
         rendered.unmount();
     });
 

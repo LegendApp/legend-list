@@ -25,6 +25,7 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
+import { finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
@@ -837,6 +838,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             },
             onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
             onScrollBeginDrag: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                const maintainingScrollAtEnd = state.maintainingScrollAtEnd;
+                if (maintainingScrollAtEnd === "animated" || maintainingScrollAtEnd === "instant") {
+                    cancelImperativeScroll(state);
+                }
+                if (maintainingScrollAtEnd) {
+                    finishMaintainScrollAtEnd(ctx);
+                }
                 prepareReachedEdgeForNextUserScroll(ctx);
                 state.props.onScrollBeginDrag?.(event as any);
             },

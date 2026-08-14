@@ -5,6 +5,8 @@ import { cancelImperativeScroll } from "../../src/core/cancelImperativeScroll";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
+import { scrollToEnd } from "../../src/core/scrollToEnd";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -66,6 +68,95 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 viewPosition: 1,
             }),
         );
+    });
+
+    it("runs tracked internal end scrolls without creating the imperative handle", async () => {
+        const ctx = createMockContext({}, {
+            didDataChange: true,
+            didFinishInitialScroll: true,
+            props: { data: [1] },
+        } as any);
+
+        await getScrollRequestTracker(ctx).runNowIfIdle(() => scrollToEnd(ctx, { animated: false }));
+
+        expect(scrollToIndexSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ animated: false, index: 0, viewPosition: 1 }),
+        );
+        expect(ctx.state.scheduledWork.has("imperativeScrollReady")).toBe(false);
+        expect(ctx.state.pendingScrollToEnd).toBeUndefined();
+        expect(ctx.state.runPendingScrollToEnd).toBeUndefined();
+    });
+
+    it("resolves tracked internal end scrolls through the shared completion owner", async () => {
+        scrollToIndexSpy.mockImplementation((nextCtx) => {
+            nextCtx.state.scrollingTo = { offset: 100 };
+        });
+        const ctx = createMockContext({}, { didFinishInitialScroll: true, props: { data: [1] } });
+        createImperativeHandle(ctx);
+
+        const scrollPromise = getScrollRequestTracker(ctx).runNowIfIdle(() => scrollToEnd(ctx, { animated: true }));
+        let resolved = false;
+        void scrollPromise.then(() => {
+            resolved = true;
+        });
+        await Promise.resolve();
+
+        expect(resolved).toBe(false);
+        expect(ctx.state.pendingScrollToEnd).toBeUndefined();
+
+        finishScrollTo(ctx);
+        await scrollPromise;
+        expect(resolved).toBe(true);
+    });
+
+    it("does not let a tracked internal end scroll supersede an active imperative scroll", async () => {
+        scrollToIndexSpy.mockImplementation((nextCtx, params) => {
+            nextCtx.state.scrollingTo = { animated: params.animated, index: params.index, offset: 100 };
+        });
+        const ctx = createMockContext({}, { didFinishInitialScroll: true, props: { data: [1, 2] } });
+        const handle = createImperativeHandle(ctx);
+        const imperativePromise = handle.scrollToIndex({ animated: true, index: 0 });
+        const imperativeTarget = ctx.state.scrollingTo;
+        let imperativeResolved = false;
+        void imperativePromise.then(() => {
+            imperativeResolved = true;
+        });
+
+        await getScrollRequestTracker(ctx).runNowIfIdle(() => scrollToEnd(ctx, { animated: true }));
+
+        expect(imperativeResolved).toBe(false);
+        expect(ctx.state.scrollingTo).toBe(imperativeTarget);
+        expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+
+        finishScrollTo(ctx);
+        await imperativePromise;
+        expect(imperativeResolved).toBe(true);
+    });
+
+    it("does not let a tracked internal end scroll supersede an imperative request awaiting commit", async () => {
+        scrollToIndexSpy.mockImplementation((nextCtx, params) => {
+            nextCtx.state.scrollingTo = { animated: params.animated, index: params.index, offset: 100 };
+        });
+        const scheduleCommit = mock(() => {});
+        const ctx = createMockContext({}, { didFinishInitialScroll: true, props: { data: [1, 2] } });
+        const handle = createImperativeHandle(ctx, scheduleCommit);
+        const imperativePromise = handle.scrollToEnd({ animated: true });
+        let imperativeResolved = false;
+        void imperativePromise.then(() => {
+            imperativeResolved = true;
+        });
+
+        await getScrollRequestTracker(ctx).runNowIfIdle(() => scrollToEnd(ctx, { animated: true }));
+
+        expect(imperativeResolved).toBe(false);
+        expect(ctx.state.pendingScrollToEnd).toBeDefined();
+        expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+        ctx.state.runPendingScrollToEnd?.();
+        finishScrollTo(ctx);
+        await imperativePromise;
+        expect(imperativeResolved).toBe(true);
     });
 
     it("returns full content size in getState().contentLength", () => {

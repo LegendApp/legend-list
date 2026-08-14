@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -293,9 +294,8 @@ describe("item size update functions", () => {
 
         describe("first-measurement end-maintenance safety", () => {
             const originalRAF = globalThis.requestAnimationFrame;
-            const originalSetTimeout = globalThis.setTimeout;
             let rafCallback: FrameRequestCallback | undefined;
-            let scrollToEnd: ReturnType<typeof mock>;
+            let runTrackedScrollToEnd: ReturnType<typeof mock>;
 
             beforeEach(() => {
                 rafCallback = undefined;
@@ -303,14 +303,13 @@ describe("item size update functions", () => {
                     rafCallback = callback;
                     return 1;
                 });
-                globalThis.setTimeout = mock(() => 1) as typeof globalThis.setTimeout;
-                scrollToEnd = mock();
+                runTrackedScrollToEnd = mock(() => new Promise<void>(() => {}));
 
                 mockState.props.maintainScrollAtEnd = {
                     animated: false,
                     on: { itemLayout: true },
                 };
-                mockState.refScroller.current = { scrollToEnd } as any;
+                getScrollRequestTracker(mockCtx).runNowIfIdle = () => runTrackedScrollToEnd();
                 mockState.totalSize = 1000;
                 mockCtx.values.set("totalSize", 1000);
                 mockState.scroll = 400;
@@ -318,7 +317,6 @@ describe("item size update functions", () => {
 
             afterEach(() => {
                 globalThis.requestAnimationFrame = originalRAF;
-                globalThis.setTimeout = originalSetTimeout;
             });
 
             it("does not pull back to the end when a first measurement arrives after scrolling away", () => {
@@ -328,7 +326,7 @@ describe("item size update functions", () => {
 
                 expect(mockState.sizesKnown.get("item_0")).toBe(150);
                 expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
-                expect(scrollToEnd).not.toHaveBeenCalled();
+                expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
                 expect(mockState.maintainingScrollAtEnd).toBeUndefined();
             });
 
@@ -344,7 +342,7 @@ describe("item size update functions", () => {
                 mockState.isWithinMaintainScrollAtEndThreshold = false;
                 rafCallback?.(0);
 
-                expect(scrollToEnd).not.toHaveBeenCalled();
+                expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
                 expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                 expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
             });
@@ -359,8 +357,8 @@ describe("item size update functions", () => {
                 mockState.isWithinMaintainScrollAtEndThreshold = false;
                 rafCallback?.(0);
 
-                expect(scrollToEnd).toHaveBeenCalledTimes(1);
-                expect(scrollToEnd).toHaveBeenCalledWith({ animated: false });
+                expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(1);
+                expect(runTrackedScrollToEnd).toHaveBeenCalledWith();
                 expect(mockState.maintainingScrollAtEnd).toBe("instant");
             });
         });

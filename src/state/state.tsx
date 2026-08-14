@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
+import type { ScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type { LooseView } from "@/platform/scrollview-types";
 import type {
@@ -155,6 +156,7 @@ export interface StateContext {
     positionListeners: Map<string, Set<(value: any) => void>>;
     state: InternalState;
     scrollAxisGap: number;
+    scrollRequestTracker?: ScrollRequestTracker;
     values: Map<ListenerType, any>;
     viewRefs: Map<number, React.RefObject<LooseView | null>>;
 }
