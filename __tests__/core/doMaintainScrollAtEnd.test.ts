@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
+import { updateContentMetricsState } from "../../src/core/updateContentMetricsState";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
@@ -623,6 +624,86 @@ describe("doMaintainScrollAtEnd", () => {
                     timeoutCallback();
                 }
             });
+        });
+
+        it("keeps shrinking end-alignment padding as scroll range until the animation finishes", () => {
+            const requestAdjust = mock();
+            mockState.props.alignItemsAtEnd = true;
+            mockState.props.alignItemsAtEndPaddingEnabled = true;
+            mockState.props.data = [{}];
+            mockState.props.maintainScrollAtEnd = { animated: true };
+            mockState.scrollAdjustHandler.requestAdjust = requestAdjust;
+            mockState.scrollLength = 400;
+            mockCtx.values.set("totalSize", 150);
+            updateContentMetricsState(mockCtx);
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(250);
+
+            mockCtx.values.set("totalSize", 200);
+            updateContentMetricsState(mockCtx);
+            doMaintainScrollAtEnd(mockCtx);
+
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(250);
+            rafCallback?.();
+            expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: true });
+
+            mockState.scroll = 50;
+            timeoutCallback?.();
+
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(200);
+            expect(mockState.scroll).toBe(0);
+            expect(requestAdjust).toHaveBeenCalledWith(-50);
+        });
+
+        it("normalizes to the natural end offset when content grows beyond the viewport", () => {
+            const requestAdjust = mock();
+            mockState.props.alignItemsAtEnd = true;
+            mockState.props.alignItemsAtEndPaddingEnabled = true;
+            mockState.props.data = [{}];
+            mockState.props.maintainScrollAtEnd = { animated: true };
+            mockState.scrollAdjustHandler.requestAdjust = requestAdjust;
+            mockState.scrollLength = 400;
+            mockCtx.values.set("totalSize", 150);
+            updateContentMetricsState(mockCtx);
+
+            mockCtx.values.set("totalSize", 450);
+            updateContentMetricsState(mockCtx);
+            doMaintainScrollAtEnd(mockCtx);
+            rafCallback?.();
+            mockState.scroll = 300;
+            timeoutCallback?.();
+
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(0);
+            expect(mockState.scroll).toBe(50);
+            expect(requestAdjust).toHaveBeenCalledWith(-250);
+        });
+
+        it("retains the runway across coalesced content growth", () => {
+            mockState.props.alignItemsAtEnd = true;
+            mockState.props.alignItemsAtEndPaddingEnabled = true;
+            mockState.props.data = [{}];
+            mockState.props.maintainScrollAtEnd = { animated: true };
+            mockState.scrollLength = 400;
+            mockCtx.values.set("totalSize", 150);
+            updateContentMetricsState(mockCtx);
+
+            mockCtx.values.set("totalSize", 200);
+            updateContentMetricsState(mockCtx);
+            doMaintainScrollAtEnd(mockCtx);
+            rafCallback?.();
+
+            mockCtx.values.set("totalSize", 240);
+            updateContentMetricsState(mockCtx);
+            doMaintainScrollAtEnd(mockCtx);
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(250);
+
+            timeoutCallback?.();
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(250);
+            rafCallback?.();
+            mockState.scroll = 90;
+            timeoutCallback?.();
+
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(160);
+            expect(mockState.scroll).toBe(0);
         });
     });
 

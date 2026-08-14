@@ -120,18 +120,20 @@ describe("updateScroll large user jumps", () => {
 
     it("cancels end maintenance only when native scrolling moves away from the end", () => {
         mockCtx = createMockContext(
-            { totalSize: 1000 },
+            { alignItemsAtEndPadding: 400, readyToRender: true, totalSize: 700 },
             {
                 isWithinMaintainScrollAtEndThreshold: true,
                 maintainingScrollAtEnd: "animated",
                 pendingMaintainScrollAtEnd: true,
+                props: { alignItemsAtEndPaddingEnabled: true, data: [{}] },
                 queuedInitialLayout: true,
                 scroll: 100,
                 scrollLastCalculate: 100,
-                scrollLength: 100,
+                scrollLength: 840,
                 triggerCalculateItemsInView: () => {},
             },
         );
+        const animationRequestAdjust = spyOn(mockCtx.state.scrollAdjustHandler, "requestAdjust");
 
         updateScroll(mockCtx, 120, undefined, { fromNativeScrollEvent: true });
 
@@ -142,7 +144,9 @@ describe("updateScroll large user jumps", () => {
 
         expect(mockCtx.state.maintainingScrollAtEnd).toBeUndefined();
         expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
-        expect(peek$(mockCtx, "isWithinMaintainScrollAtEndThreshold")).toBe(false);
+        expect(peek$(mockCtx, "alignItemsAtEndPadding")).toBe(140);
+        expect(mockCtx.state.scroll).toBe(0);
+        expect(animationRequestAdjust).toHaveBeenCalledWith(-100);
     });
 
     it("updates adaptive render from the current scroll sample", () => {

@@ -1,6 +1,22 @@
+import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { getAlignItemsAtEndPadding } from "@/core/updateContentMetricsState";
 import { getContentSize } from "@/state/getContentSize";
-import { peek$, type StateContext } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
+import { requestAdjust } from "@/utils/requestAdjust";
 import { getLogicalHorizontalMaxOffset, isHorizontalRTL, toNativeHorizontalOffset } from "@/utils/rtl";
+
+export function finishMaintainScrollAtEnd(ctx: StateContext) {
+    const { state } = ctx;
+    const currentPadding = peek$(ctx, "alignItemsAtEndPadding") || 0;
+    const nextPadding = getAlignItemsAtEndPadding(ctx);
+    state.maintainingScrollAtEnd = undefined;
+    state.pendingMaintainScrollAtEnd = false;
+    if (currentPadding !== nextPadding) {
+        set$(ctx, "alignItemsAtEndPadding", nextPadding);
+        const nextScroll = clampScrollOffset(ctx, state.scroll + nextPadding - currentPadding);
+        requestAdjust(ctx, nextScroll - state.scroll);
+    }
+}
 
 export function doMaintainScrollAtEnd(ctx: StateContext) {
     const state = ctx.state;
@@ -67,17 +83,18 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
                     setTimeout(
                         () => {
                             if (state.maintainingScrollAtEnd === activeState) {
-                                state.maintainingScrollAtEnd = undefined;
                                 if (state.pendingMaintainScrollAtEnd) {
+                                    state.maintainingScrollAtEnd = undefined;
                                     doMaintainScrollAtEnd(ctx);
+                                } else {
+                                    finishMaintainScrollAtEnd(ctx);
                                 }
                             }
                         },
                         maintainScrollAtEnd.animated ? 500 : 0,
                     );
                 } else if (state.maintainingScrollAtEnd === pendingState) {
-                    state.maintainingScrollAtEnd = undefined;
-                    state.pendingMaintainScrollAtEnd = false;
+                    finishMaintainScrollAtEnd(ctx);
                 }
             });
         } else {
@@ -88,6 +105,6 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
         return true;
     }
 
-    state.pendingMaintainScrollAtEnd = false;
+    finishMaintainScrollAtEnd(ctx);
     return false;
 }

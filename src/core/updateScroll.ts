@@ -1,5 +1,5 @@
 import { updateAdaptiveRender } from "@/core/adaptiveRender";
-import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { doMaintainScrollAtEnd, finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import type { StateContext } from "@/state/state";
@@ -80,8 +80,7 @@ export function updateScroll(
         newScroll < prevScroll &&
         !!(state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd);
     if (didCancelMaintainScrollAtEnd) {
-        state.maintainingScrollAtEnd = undefined;
-        state.pendingMaintainScrollAtEnd = false;
+        finishMaintainScrollAtEnd(ctx);
     }
     const allowedEdge = isUserScrollEvent ? beginReachedEdgeUserScroll(ctx, newScroll - prevScroll) : undefined;
     const didResolvePendingNativeMVCPAdjust = resolvePendingNativeMVCPAdjust(ctx, newScroll);
