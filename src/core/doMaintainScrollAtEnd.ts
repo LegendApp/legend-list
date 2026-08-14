@@ -13,6 +13,8 @@ export function finishMaintainScrollAtEnd(ctx: StateContext) {
     state.pendingMaintainScrollAtEnd = false;
     if (currentPadding !== nextPadding) {
         set$(ctx, "alignItemsAtEndPadding", nextPadding);
+        state.scrollForNextCalculateItemsInView = undefined;
+        state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         const nextScroll = clampScrollOffset(ctx, state.scroll + nextPadding - currentPadding);
         requestAdjust(ctx, nextScroll - state.scroll);
     }

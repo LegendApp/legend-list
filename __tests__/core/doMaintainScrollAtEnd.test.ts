@@ -628,11 +628,13 @@ describe("doMaintainScrollAtEnd", () => {
 
         it("keeps shrinking end-alignment padding as scroll range until the animation finishes", () => {
             const requestAdjust = mock();
+            const triggerCalculateItemsInView = mock();
             mockState.props.alignItemsAtEnd = true;
             mockState.props.alignItemsAtEndPaddingEnabled = true;
             mockState.props.data = [{}];
             mockState.props.maintainScrollAtEnd = { animated: true };
             mockState.scrollAdjustHandler.requestAdjust = requestAdjust;
+            mockState.triggerCalculateItemsInView = triggerCalculateItemsInView;
             mockState.scrollLength = 400;
             mockCtx.values.set("totalSize", 150);
             updateContentMetricsState(mockCtx);
@@ -651,6 +653,7 @@ describe("doMaintainScrollAtEnd", () => {
 
             expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(200);
             expect(mockState.scroll).toBe(0);
+            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
             expect(requestAdjust).toHaveBeenCalledWith(-50);
         });
 
