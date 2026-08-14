@@ -253,6 +253,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const initialScrollUsesOffsetOnly =
         !initialScrollAtEnd && !hasInitialScrollIndex && (hasInitialScrollOffset || shouldInitializeHorizontalRTL);
     const usesBootstrapInitialScroll = initialScrollAtEnd || hasInitialScrollIndex;
+    const shouldBottomAlignNumericInitialScrollIndex =
+        typeof initialScrollIndexProp === "number" &&
+        !hasInitialScrollOffset &&
+        dataProp.length > 1 &&
+        initialScrollIndexProp >= dataProp.length - 1;
     const initialScrollProp: InternalState["initialScroll"] = initialScrollAtEnd
         ? {
               index: Math.max(0, dataProp.length - 1),
@@ -275,7 +280,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
               : {
                     index: initialScrollIndexProp ?? 0,
-                    viewOffset: initialScrollOffsetProp ?? 0,
+                    preserveForBottomPadding: shouldBottomAlignNumericInitialScrollIndex ? true : undefined,
+                    viewOffset:
+                        initialScrollOffsetProp ??
+                        (shouldBottomAlignNumericInitialScrollIndex ? -stylePaddingEndState : 0),
+                    viewPosition: shouldBottomAlignNumericInitialScrollIndex ? 1 : undefined,
                 }
           : initialScrollUsesOffsetOnly
             ? {

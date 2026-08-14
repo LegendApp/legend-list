@@ -1212,6 +1212,70 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("bottom-aligns only an unoffset numeric initialScrollIndex targeting the last item", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-numeric-last-index");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={2}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.index).toBe(2);
+        expect(state.initialScroll?.preserveForBottomPadding).toBe(true);
+        expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+
+        rendered.unmount();
+
+        const middleRendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={1}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const middleState = await getStateFromRender();
+        expect(middleState.initialScroll?.viewPosition).toBeUndefined();
+        expect(middleState.initialScroll?.preserveForBottomPadding).toBeUndefined();
+
+        middleRendered.unmount();
+
+        const offsetRendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={2}
+                initialScrollOffset={20}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const offsetState = await getStateFromRender();
+        expect(offsetState.initialScroll?.viewOffset).toBe(20);
+        expect(offsetState.initialScroll?.viewPosition).toBeUndefined();
+        expect(offsetState.initialScroll?.preserveForBottomPadding).toBeUndefined();
+
+        offsetRendered.unmount();
+    });
+
     it("offsets the built-in RefreshControl by contentContainerStyle.paddingTop", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },

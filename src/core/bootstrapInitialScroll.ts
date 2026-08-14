@@ -1,6 +1,6 @@
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
-import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
+import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -805,10 +805,7 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
         const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
         const scrollingTo = state.scrollingTo?.isInitialScroll ? state.scrollingTo : undefined;
 
-        /*
-         * Once bootstrap has already dispatched or finished, late viewport changes
-         * should correct the existing position instead of starting another scrollTo.
-         */
+        // Late viewport changes retarget the active or preserved position without rearming bootstrap.
         if (!bootstrapInitialScroll && (scrollingTo || state.didFinishInitialScroll)) {
             const currentOffset = scrollingTo
                 ? (scrollingTo.targetOffset ?? scrollingTo.offset)
@@ -819,22 +816,15 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
                 if (state.didFinishInitialScroll) {
                     schedulePreservedEndAnchorCorrection(ctx);
                 } else if (scrollingTo) {
-                    const existingWatchdog = initialScrollWatchdog.get(state);
-                    scrollingTo.offset = resolvedOffset;
-                    scrollingTo.targetOffset = resolvedOffset;
-                    // Prevent the normal measured-initial-scroll path from redispatching the same correction.
                     state.initialScroll = {
                         ...initialScroll,
                         contentOffset: resolvedOffset,
                     };
-                    // The native scroll still belongs to the old target; retarget the watchdog so that
-                    // partial progress cannot finish the adjusted initial scroll too early.
-                    state.hasScrolled = false;
-                    initialScrollWatchdog.set(state, {
-                        startScroll: existingWatchdog?.startScroll ?? state.scroll,
-                        targetOffset: resolvedOffset,
+                    dispatchInitialScroll(ctx, {
+                        forceScroll: true,
+                        resolvedOffset,
+                        target: state.initialScroll,
                     });
-                    requestAdjust(ctx, offsetDiff);
                 }
             }
         } else {

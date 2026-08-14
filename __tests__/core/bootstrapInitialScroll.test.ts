@@ -1034,7 +1034,9 @@ describe("bootstrapInitialScroll", () => {
         });
     });
 
-    it("adjusts an active initial scroll target on late viewport layout without rearming bootstrap", () => {
+    it("retargets an active initial scroll natively when a late viewport layout changes its offset", () => {
+        const requestedAdjusts: number[] = [];
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
         const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
         const ctx = createMockContext(
             {
@@ -1071,7 +1073,18 @@ describe("bootstrapInitialScroll", () => {
                     estimatedItemSize: 100,
                     keyExtractor: (item: { id: string }) => item.id,
                 },
+                refScroller: {
+                    current: {
+                        getScrollableNode: () => ({}),
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as StateContext["state"]["refScroller"],
                 scroll: 500,
+                scrollAdjustHandler: {
+                    getAdjust: () => 0,
+                    requestAdjust: (offset: number) => requestedAdjusts.push(offset),
+                    setMounted: () => {},
+                },
                 scrollingTo: {
                     animated: false,
                     isInitialScroll: true,
@@ -1111,5 +1124,8 @@ describe("bootstrapInitialScroll", () => {
             targetOffset: 450,
         });
         expect(ctx.state.scroll).toBe(450);
+        expect(ctx.state.scrollPending).toBe(450);
+        expect(requestedAdjusts).toEqual([]);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 450 }]);
     });
 });
