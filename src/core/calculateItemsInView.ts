@@ -14,7 +14,7 @@ import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types.internal";
+import type { InternalState, ScrollAdjustmentSource } from "@/types.internal";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getExpandedContainerPoolSize } from "@/utils/containerPool";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
@@ -322,6 +322,7 @@ export function calculateItemsInView(
         dataChanged?: boolean;
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
+        mvcpAdjustmentSource?: ScrollAdjustmentSource;
         scrollVelocity?: number;
     } = {},
 ) {
@@ -346,7 +347,7 @@ export function calculateItemsInView(
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
-        const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const { dataChanged, doMVCP, forceFullItemPositions, mvcpAdjustmentSource } = params;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
@@ -502,7 +503,10 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
+        const checkMVCP =
+            doMVCP && !suppressInitialScrollSideEffects
+                ? prepareMVCP(ctx, dataChanged, mvcpAdjustmentSource)
+                : undefined;
 
         if (dataChanged) {
             resetLayoutCachesForDataChange(state);

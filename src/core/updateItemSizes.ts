@@ -23,12 +23,15 @@ export function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     } else if (Platform.OS === "web") {
         if (!state.mvcpAnchorLock) {
             state.scheduledWork.cancel("mvcpRecalculate");
-            calculateItemsInView(ctx, { doMVCP: true });
+            calculateItemsInView(ctx, { doMVCP: true, mvcpAdjustmentSource: "item-size" });
         } else if (!state.scheduledWork.has("mvcpRecalculate")) {
-            state.scheduledWork.frame(() => calculateItemsInView(ctx, { doMVCP: true }), "mvcpRecalculate");
+            state.scheduledWork.frame(
+                () => calculateItemsInView(ctx, { doMVCP: true, mvcpAdjustmentSource: "item-size" }),
+                "mvcpRecalculate",
+            );
         }
     } else {
-        calculateItemsInView(ctx, { doMVCP: true });
+        calculateItemsInView(ctx, { doMVCP: true, mvcpAdjustmentSource: "item-size" });
     }
 }
 

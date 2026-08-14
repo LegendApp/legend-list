@@ -2,6 +2,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
+import type { ScrollAdjustmentSource } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -134,7 +135,7 @@ function settlePendingNativeMVCPAdjust(ctx: StateContext, remainingAfterManual: 
     const remaining = remainingAfterManual - nativeDelta;
 
     if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
-        requestAdjust(ctx, remaining, true);
+        requestAdjust(ctx, remaining, "data");
     }
 }
 
@@ -157,7 +158,7 @@ function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
     }
 
     pending.manualApplied = manualDesired;
-    requestAdjust(ctx, manualDesired, true);
+    requestAdjust(ctx, manualDesired, "data");
     pending.furthestProgressTowardAmount = 0;
 }
 
@@ -226,7 +227,11 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     return false;
 }
 
-export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
+export function prepareMVCP(
+    ctx: StateContext,
+    dataChanged?: boolean,
+    adjustmentSource?: ScrollAdjustmentSource,
+): (() => void) | undefined {
     const state = ctx.state;
     const { idsInView, positions, props } = state;
     const {
@@ -438,7 +443,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                     peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
 
                 if (!shouldSkipAdjustForMaintainedEnd) {
-                    requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
+                    requestAdjust(ctx, positionDiff, dataChanged && mvcpData ? "data" : adjustmentSource);
                 }
             }
         };

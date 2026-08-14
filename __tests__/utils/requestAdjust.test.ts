@@ -184,8 +184,40 @@ describe("requestAdjust", () => {
     });
 
     describe("MVCP ignore logic", () => {
-        it("should set up ignore threshold for positive adjustments", () => {
+        const requestDataAdjust = (positionDiff: number) => requestAdjust(mockCtx, positionDiff, "data");
+
+        it("should not ignore native scroll events for size-only adjustments", () => {
+            requestAdjust(mockCtx, 20, "item-size");
+
+            expect(mockState.scroll).toBe(120);
+            expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
+            expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(false);
+            expect(timeoutCallbacks).toHaveLength(0);
+        });
+
+        it("should preserve scroll-event suppression for adjustments without a source", () => {
             requestAdjust(mockCtx, 20);
+
+            expect(mockState.ignoreScrollFromMVCP).toEqual({ lt: 110 });
+            expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
+            expect(timeoutCallbacks).toHaveLength(1);
+        });
+
+        it("should not replace or extend an active data guard for an item-size adjustment", () => {
+            requestDataAdjust(20);
+            const guard = mockState.ignoreScrollFromMVCP;
+            const timeoutHandle = Array.from(timeoutCallbacks.keys())[0];
+
+            requestAdjust(mockCtx, 15, "item-size");
+
+            expect(mockState.scroll).toBe(135);
+            expect(mockState.ignoreScrollFromMVCP).toBe(guard);
+            expect(mockState.ignoreScrollFromMVCP).toEqual({ lt: 110 });
+            expect(Array.from(timeoutCallbacks.keys())).toEqual([timeoutHandle]);
+        });
+
+        it("should set up ignore threshold for positive adjustments", () => {
+            requestDataAdjust(20);
 
             expect(mockState.ignoreScrollFromMVCP).toBeDefined();
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(110); // 120 - 20/2 = 110
@@ -193,7 +225,7 @@ describe("requestAdjust", () => {
         });
 
         it("should set up ignore threshold for negative adjustments", () => {
-            requestAdjust(mockCtx, -20);
+            requestDataAdjust(-20);
 
             expect(mockState.ignoreScrollFromMVCP).toBeDefined();
             expect(mockState.ignoreScrollFromMVCP!.gt).toBe(90); // 80 - (-20)/2 = 90
@@ -203,7 +235,7 @@ describe("requestAdjust", () => {
         it("should create ignoreScrollFromMVCP object if it doesn't exist", () => {
             mockState.ignoreScrollFromMVCP = undefined;
 
-            requestAdjust(mockCtx, 15);
+            requestDataAdjust(15);
 
             expect(mockState.ignoreScrollFromMVCP).toBeDefined();
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(107.5); // 115 - 15/2
@@ -212,14 +244,14 @@ describe("requestAdjust", () => {
         it("should update existing ignoreScrollFromMVCP object", () => {
             mockState.ignoreScrollFromMVCP = { gt: 50 };
 
-            requestAdjust(mockCtx, 10);
+            requestDataAdjust(10);
 
             expect(mockState.ignoreScrollFromMVCP!.gt).toBe(50); // Preserved
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(105); // 110 - 10/2
         });
 
         it("should set up timeout to clear ignore flags", () => {
-            requestAdjust(mockCtx, 20);
+            requestDataAdjust(20);
 
             expect(timeoutCallbacks.size).toBe(1);
             expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
@@ -236,7 +268,7 @@ describe("requestAdjust", () => {
             const reprocessCurrentScroll = spyOn(mockState, "reprocessCurrentScroll");
 
             try {
-                requestAdjust(mockCtx, 20);
+                requestDataAdjust(20);
                 mockState.ignoreScrollFromMVCPIgnored = true;
 
                 const callbacks = Array.from(timeoutCallbacks.values());
@@ -256,7 +288,7 @@ describe("requestAdjust", () => {
             const reprocessCurrentScroll = spyOn(mockState, "reprocessCurrentScroll");
 
             try {
-                requestAdjust(mockCtx, 20);
+                requestDataAdjust(20);
 
                 mockState.ignoreScrollFromMVCPIgnored = false;
 
@@ -276,7 +308,7 @@ describe("requestAdjust", () => {
 
             try {
                 mockState.scrollProcessingEnabled = false as any;
-                requestAdjust(mockCtx, 20);
+                requestDataAdjust(20);
 
                 const callbacks = Array.from(timeoutCallbacks.values());
                 expect(callbacks).toHaveLength(1);
@@ -291,12 +323,12 @@ describe("requestAdjust", () => {
 
         it("should clear existing timeout before setting new one", () => {
             // First adjustment
-            requestAdjust(mockCtx, 20);
+            requestDataAdjust(20);
             const firstTimeout = Array.from(timeoutCallbacks.keys())[0];
             expect(timeoutCallbacks.size).toBe(1);
 
             // Second adjustment should clear first timeout
-            requestAdjust(mockCtx, 15);
+            requestDataAdjust(15);
             expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
             expect(Array.from(timeoutCallbacks.keys())[0]).not.toBe(firstTimeout);
             expect(timeoutCallbacks.size).toBe(1); // Old one cleared, new one added
@@ -393,13 +425,13 @@ describe("requestAdjust", () => {
 
         it("should handle MVCP timeout interactions", () => {
             // First adjustment: scroll = 100 + 20 = 120, threshold = 120 - 20/2 = 110
-            requestAdjust(mockCtx, 20);
+            requestAdjust(mockCtx, 20, "data");
             expect(timeoutCallbacks.size).toBe(1);
             expect(mockState.scroll).toBe(120);
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(110);
 
             // Second adjustment: scroll = 120 + (-15) = 105, threshold = 105 - (-15)/2 = 112.5
-            requestAdjust(mockCtx, -15);
+            requestAdjust(mockCtx, -15, "data");
             expect(timeoutCallbacks.size).toBe(1); // Old cleared, new added
             expect(mockState.scroll).toBe(105);
 
@@ -409,14 +441,14 @@ describe("requestAdjust", () => {
         });
 
         it("should handle alternating positive and negative adjustments", () => {
-            requestAdjust(mockCtx, 10);
+            requestAdjust(mockCtx, 10, "data");
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(105); // 110 - 10/2
 
-            requestAdjust(mockCtx, -8);
+            requestAdjust(mockCtx, -8, "data");
             expect(mockState.ignoreScrollFromMVCP!.gt).toBe(106); // 102 - (-8)/2
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(105); // Still present
 
-            requestAdjust(mockCtx, 12);
+            requestAdjust(mockCtx, 12, "data");
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(108); // 114 - 12/2
             expect(mockState.ignoreScrollFromMVCP!.gt).toBe(106); // Still present
         });
@@ -438,7 +470,7 @@ describe("requestAdjust", () => {
         it("should not accumulate memory with timeout creation", () => {
             // Create many adjustments to trigger many timeouts
             for (let i = 0; i < 100; i++) {
-                requestAdjust(mockCtx, 1);
+                requestAdjust(mockCtx, 1, "data");
             }
 
             // Should only have one timeout (previous ones cleared)
@@ -492,13 +524,13 @@ describe("requestAdjust", () => {
     describe("integration with timeout system", () => {
         it("should properly manage timeout lifecycle", () => {
             // Create timeout
-            requestAdjust(mockCtx, 10);
+            requestAdjust(mockCtx, 10, "data");
             const timeoutHandle = Array.from(timeoutCallbacks.keys())[0];
             expect(timeoutHandle).toBeDefined();
             expect(timeoutCallbacks.has(timeoutHandle)).toBe(true);
 
             // Clear and create new timeout
-            requestAdjust(mockCtx, 15);
+            requestAdjust(mockCtx, 15, "data");
             expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
             expect(Array.from(timeoutCallbacks.keys())[0]).not.toBe(timeoutHandle);
             expect(timeoutCallbacks.has(timeoutHandle)).toBe(false); // Old one cleared
@@ -510,7 +542,7 @@ describe("requestAdjust", () => {
         });
 
         it("should handle timeout execution after state changes", () => {
-            requestAdjust(mockCtx, 10);
+            requestAdjust(mockCtx, 10, "data");
             const _originalIgnore = mockState.ignoreScrollFromMVCP;
 
             // Modify ignore flags manually

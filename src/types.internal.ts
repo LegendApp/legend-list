@@ -22,6 +22,8 @@ import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
 
 export type { BaseScrollViewProps, LegendListPropsBase } from "@/types.base";
 
+export type ScrollAdjustmentSource = "data" | "item-size";
+
 export interface ScrollEventTargetLike {
     addEventListener(type: string, listener: (...args: any[]) => void): void;
     removeEventListener(type: string, listener: (...args: any[]) => void): void;
@@ -265,6 +267,7 @@ export interface InternalState {
         dataChanged?: boolean;
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
+        mvcpAdjustmentSource?: ScrollAdjustmentSource;
         scrollVelocity?: number;
     }) => void;
     userScrollAnchorReset?: {

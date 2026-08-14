@@ -520,7 +520,10 @@ describe("item size update functions", () => {
                     rafCallbacks[0](0);
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
+                        doMVCP: true,
+                        mvcpAdjustmentSource: "item-size",
+                    });
                     expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     rafSpy.mockRestore();
@@ -560,7 +563,10 @@ describe("item size update functions", () => {
 
                     expect(cancelCalls).toEqual([42]);
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
+                        doMVCP: true,
+                        mvcpAdjustmentSource: "item-size",
+                    });
                     expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
