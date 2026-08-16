@@ -1,5 +1,6 @@
 export type ScheduledWorkKey =
     | "adaptiveRender"
+    | "alignItemsAtEndPaddingFallback"
     | "checkFinishedScrollFallback"
     | "checkFinishedScrollFrame"
     | "checkFinishedScrollRetryFrame"
@@ -11,16 +12,36 @@ export type ScheduledWorkKey =
     | "preservedInitialScroll"
     | "renderRangeProjection";
 
-type Work = [handle: any, cancel: (handle: any) => void];
+interface Work {
+    callback?: () => void;
+    cancel: () => void;
+}
 
 export class ScheduledWork {
     private work = new Map<ScheduledWorkKey | ReturnType<typeof setTimeout>, Work>();
+
+    microtask(callback: () => void, key: ScheduledWorkKey) {
+        const pendingWork = this.work.get(key);
+        if (pendingWork?.callback) {
+            pendingWork.callback = callback;
+        } else {
+            this.cancel(key);
+            const work: Work = { callback, cancel: () => {} };
+            this.work.set(key, work);
+            queueMicrotask(() => {
+                if (this.work.get(key) === work) {
+                    this.work.delete(key);
+                    work.callback?.();
+                }
+            });
+        }
+    }
 
     timeout(callback: () => void, delay: number, key?: ScheduledWorkKey) {
         if (key) {
             this.cancel(key);
         }
-        const work: Work = [undefined, clearTimeout];
+        const work: Work = { cancel: () => clearTimeout(handle) };
         const handle = setTimeout(() => {
             const workKey = key ?? handle;
             if (this.work.get(workKey) === work) {
@@ -28,15 +49,14 @@ export class ScheduledWork {
                 callback();
             }
         }, delay);
-        work[0] = handle;
         this.work.set(key ?? handle, work);
     }
 
     frame(callback: () => void, key: ScheduledWorkKey) {
         this.cancel(key);
-        const work: Work = [undefined, cancelAnimationFrame];
+        const work: Work = { cancel: () => cancelAnimationFrame(handle) };
         this.work.set(key, work);
-        work[0] = requestAnimationFrame(() => {
+        const handle = requestAnimationFrame(() => {
             if (this.work.get(key) === work) {
                 this.work.delete(key);
                 callback();
@@ -46,15 +66,14 @@ export class ScheduledWork {
 
     register(key: ScheduledWorkKey, cancel: () => void) {
         this.cancel(key);
-        this.work.set(key, [undefined, cancel]);
+        this.work.set(key, { cancel });
     }
 
     cancel(key: ScheduledWorkKey) {
         const work = this.work.get(key);
         if (work) {
             this.work.delete(key);
-            const [handle, cancel] = work;
-            cancel(handle);
+            work.cancel();
         }
     }
 
@@ -63,8 +82,8 @@ export class ScheduledWork {
     }
 
     dispose() {
-        for (const [handle, cancel] of this.work.values()) {
-            cancel(handle);
+        for (const work of this.work.values()) {
+            work.cancel();
         }
         this.work.clear();
     }

@@ -135,6 +135,34 @@ describe("updateContentMetrics", () => {
         expect(ctx.values.get("alignItemsAtEndPadding")).toBe(200);
     });
 
+    it("coalesces animation runway fallback across synchronous content growth", async () => {
+        const ctx = createMockContext(
+            { alignItemsAtEndPadding: 250, totalSize: 200 },
+            {
+                didContainersLayout: true,
+                isWithinMaintainScrollAtEndThreshold: true,
+                props: {
+                    alignItemsAtEnd: true,
+                    alignItemsAtEndPaddingEnabled: true,
+                    data: [1],
+                    maintainScrollAtEnd: { animated: true },
+                },
+                scrollLength: 400,
+                totalSize: 200,
+            },
+        );
+
+        updateContentMetricsState(ctx);
+        ctx.values.set("totalSize", 240);
+        updateContentMetricsState(ctx);
+
+        expect(ctx.state.scheduledWork.has("alignItemsAtEndPaddingFallback")).toBe(true);
+        await Promise.resolve();
+
+        expect(ctx.values.get("alignItemsAtEndPadding")).toBe(160);
+        expect(ctx.state.scheduledWork.has("alignItemsAtEndPaddingFallback")).toBe(false);
+    });
+
     it("does not schedule fallback work after animated maintenance claims the runway", async () => {
         const ctx = createMockContext(
             { alignItemsAtEndPadding: 250, totalSize: 240 },

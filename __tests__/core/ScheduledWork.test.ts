@@ -42,6 +42,36 @@ describe("ScheduledWork", () => {
         globalThis.setTimeout = originalSetTimeout;
     });
 
+    it("coalesces named microtasks onto the latest callback", () => {
+        const calls: string[] = [];
+        const microtasks: (() => void)[] = [];
+        const originalQueueMicrotask = globalThis.queueMicrotask;
+        globalThis.queueMicrotask = (callback) => microtasks.push(callback);
+
+        try {
+            scheduledWork.microtask(() => calls.push("first"), "alignItemsAtEndPaddingFallback");
+            scheduledWork.microtask(() => calls.push("second"), "alignItemsAtEndPaddingFallback");
+
+            expect(microtasks).toHaveLength(1);
+            expect(scheduledWork.has("alignItemsAtEndPaddingFallback")).toBe(true);
+            microtasks[0]();
+
+            expect(calls).toEqual(["second"]);
+            expect(scheduledWork.has("alignItemsAtEndPaddingFallback")).toBe(false);
+        } finally {
+            globalThis.queueMicrotask = originalQueueMicrotask;
+        }
+    });
+
+    it("suppresses a queued microtask after disposal", async () => {
+        const calls: string[] = [];
+        scheduledWork.microtask(() => calls.push("microtask"), "alignItemsAtEndPaddingFallback");
+        scheduledWork.dispose();
+        await Promise.resolve();
+
+        expect(calls).toEqual([]);
+    });
+
     it("replaces named timeouts and forgets completed work", () => {
         const calls: string[] = [];
         scheduledWork.timeout(() => calls.push("first"), 10, "adaptiveRender");

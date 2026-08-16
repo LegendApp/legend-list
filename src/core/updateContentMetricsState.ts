@@ -39,11 +39,11 @@ export function updateContentMetricsState(ctx: StateContext) {
 
         if (isMaintainExpected && !isAnimatedMaintainActive && !state.pendingMaintainScrollAtEnd) {
             // Keep the current padding only when a synchronous maintain pass claims it as animation runway.
-            queueMicrotask(() => {
+            state.scheduledWork.microtask(() => {
                 if (!state.maintainingScrollAtEnd && !state.pendingMaintainScrollAtEnd) {
                     set$(ctx, "alignItemsAtEndPadding", getAlignItemsAtEndPadding(ctx));
                 }
-            });
+            }, "alignItemsAtEndPaddingFallback");
         } else if (!isMaintainExpected) {
             set$(ctx, "alignItemsAtEndPadding", nextPadding);
         }
