@@ -1,3 +1,9 @@
+## 3.3.6
+
+- Fix: Animated `maintainScrollAtEnd` follows rapid and first-load content growth, including short `alignItemsAtEnd` lists, and stops when the user scrolls away.
+- Fix: Item size changes no longer interrupt momentum scrolling when `maintainVisibleContentPosition` adjusts the scroll position.
+- Fix: A numeric `initialScrollIndex` targeting the last item stays at the end when the viewport is measured or resized, while object targets and explicit offsets keep their requested alignment.
+
 ## 3.3.5
 
 - Fix: Changing `dataKey` no longer leaves the new dataset invisible. #519
