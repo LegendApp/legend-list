@@ -1,0 +1,16 @@
+steps:
+  - echo: Launch the fixture catalog at its deterministic top position.
+  - launch: com.legendapp.listtest
+  - await: { visible: { id: open-scroll-regression-qa }, timeout: 15000 }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open the isolated scroll regression fixture.
+  - tap: { id: open-scroll-regression-qa }
+  - await: { visible: { id: qa-open-empty-load } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open empty first load and prove no rows exist yet.
+  - tap: { id: qa-open-empty-load }
+  - await: { visible: { id: qa-empty-load-baseline } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Load the first page; expect initial end ownership to land on the final row.
+  - tap: { id: qa-empty-load-action }
+  - await: { visible: { id: qa-empty-load-pass } }

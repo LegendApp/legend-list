@@ -71,6 +71,7 @@ import MutableCellsFixture from "~/screens/fixtures/mutable-cells";
 import MvcpTestFixture from "~/screens/fixtures/mvcp-test";
 import ProductShelfFixture from "~/screens/fixtures/product-shelf";
 import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
+import ScrollRegressionQaFixture from "~/screens/fixtures/scroll-regression-qa";
 import SectionListFixedSizeFixture from "~/screens/fixtures/section-list-fixed-size";
 import VideoFeedFixture from "~/screens/fixtures/video-feed";
 import AiChatFixture from "./fixtures/ai-chat";
@@ -160,6 +161,15 @@ const DEBUGGING_ROUTE: RouteDefinition = {
 };
 
 export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
+    {
+        component: ScrollRegressionQaFixture,
+        description: "Runs deterministic end-maintenance, MVCP, and initial-scroll regression scenarios.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "scroll-regression-qa",
+        title: "Scroll Regression QA",
+    },
     {
         component: AccurateScrollToFixture,
         description: "Verifies indexed scrollTo accuracy on variable-height content.",

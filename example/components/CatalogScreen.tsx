@@ -30,7 +30,13 @@ function CatalogCard({ entry, onNavigate }: { entry: CatalogEntry; onNavigate: (
             </View>
         </View>
     ) : (
-        <Pressable onPress={() => onNavigate(entry.href)} style={styles.card}>
+        <Pressable
+            accessibilityLabel={`Open ${entry.title}`}
+            accessibilityRole="button"
+            onPress={() => onNavigate(entry.href)}
+            style={styles.card}
+            testID={`open-${entry.id}`}
+        >
             {cardHeader}
         </Pressable>
     );
