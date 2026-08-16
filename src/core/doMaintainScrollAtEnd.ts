@@ -1,6 +1,5 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
-import { scrollToEnd } from "@/core/scrollToEnd";
 import { getAlignItemsAtEndPadding } from "@/core/updateContentMetricsState";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
@@ -76,7 +75,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
                 if (isReplayingPendingMaintain || isStillWithinThreshold || !didScrollSinceRequest) {
                     state.maintainingScrollAtEnd = activeState;
                     const scrollPromise = getScrollRequestTracker(ctx).runNowIfIdle(() =>
-                        scrollToEnd(ctx, { animated: maintainScrollAtEnd.animated }),
+                        ctx.scrollToEnd!({ animated: maintainScrollAtEnd.animated }),
                     );
 
                     void scrollPromise.then(() => {

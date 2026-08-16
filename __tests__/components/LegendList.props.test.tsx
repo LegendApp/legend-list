@@ -123,7 +123,7 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
-    it("does not create the public imperative handle without a forwarded ref", async () => {
+    it("registers internal end scrolling without creating a public imperative handle", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
         const { LegendList } = await import("../../src/components/LegendList?props-test-internal-imperative-runner");
@@ -137,9 +137,10 @@ describe("LegendList props behavior", () => {
                 renderItem={renderItem}
             />,
         );
-        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
 
-        expect(state.runPendingScrollToEnd).toBeUndefined();
+        expect(ctx.state.runPendingScrollToEnd).toBeUndefined();
+        expect(typeof ctx.scrollToEnd).toBe("function");
         rendered.unmount();
     });
 

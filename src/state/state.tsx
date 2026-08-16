@@ -6,6 +6,7 @@ import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type { LooseView } from "@/platform/scrollview-types";
 import type {
     ColumnWrapperStyle,
+    ScrollToEndOptions,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
@@ -157,6 +158,7 @@ export interface StateContext {
     state: InternalState;
     scrollAxisGap: number;
     scrollRequestTracker?: ScrollRequestTracker;
+    scrollToEnd?: (options?: ScrollToEndOptions) => boolean;
     values: Map<ListenerType, any>;
     viewRefs: Map<number, React.RefObject<LooseView | null>>;
 }

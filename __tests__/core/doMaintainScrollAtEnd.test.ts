@@ -53,6 +53,7 @@ describe("doMaintainScrollAtEnd", () => {
                 scroll: 100,
             },
         );
+        mockCtx.scrollToEnd = (options) => scrollToEndModule.scrollToEnd(mockCtx, options);
         getScrollRequestTracker(mockCtx).runNowIfIdle = mockRunTrackedScrollToEnd;
 
         mockState = mockCtx.state;

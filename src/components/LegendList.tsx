@@ -34,6 +34,7 @@ import { onScroll } from "@/core/onScroll";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { scrollToEnd } from "@/core/scrollToEnd";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdjustment";
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
@@ -409,6 +410,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             };
 
             const internalState = ctx.state;
+            // Late-bind this command so updateScroll can maintain the end without importing back through scrollTo.
+            ctx.scrollToEnd = (options) => scrollToEnd(ctx, options);
             internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, params);
             internalState.reprocessCurrentScroll = () => updateScroll(ctx, internalState.scroll, true);
 
