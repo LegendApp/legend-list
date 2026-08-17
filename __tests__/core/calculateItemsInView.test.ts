@@ -2219,4 +2219,36 @@ describe("calculateItemsInView", () => {
             expect(results.every((ids) => Array.isArray(ids))).toBe(true);
         });
     });
+    describe("lastPositionUpdate", () => {
+        // `Containers.native` re-renders on this signal so it can re-sort its children into
+        // item order (see Containers.native.tsx). It used to be emitted only on web, for the
+        // DOM sorter in useDOMOrder, which left the native path never re-sorting.
+        it("is emitted when positions change on native", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                setupFixedSizeItems(10, 50);
+
+                calculateItemsInView(mockCtx);
+
+                expect(typeof mockCtx.values.get("lastPositionUpdate")).toBe("number");
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
+        it("is emitted when positions change on web", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                setupFixedSizeItems(10, 50);
+
+                calculateItemsInView(mockCtx);
+
+                expect(typeof mockCtx.values.get("lastPositionUpdate")).toBe("number");
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+    });
 });
