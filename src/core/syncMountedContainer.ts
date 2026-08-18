@@ -1,4 +1,5 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
+import { updateContainerItemMetadata } from "@/core/containerItemMetadata";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -22,6 +23,7 @@ export function syncMountedContainer(
         return { didChangePosition: false, didRefreshData: false };
     }
     const itemKey = state.idCache[itemIndex] ?? getId(state, itemIndex);
+    const metadata = updateContainerItemMetadata(state, containerIndex, itemIndex, item);
 
     const updateLayout = options?.updateLayout ?? true;
     let didChangePosition = false;
@@ -35,7 +37,9 @@ export function syncMountedContainer(
         }
 
         const logicalPosition = (positionValue || 0) - (options?.scrollAdjustPending ?? 0);
-        const itemSize = state.sizes.get(itemKey) ?? getItemSize(ctx, itemKey, itemIndex, item);
+        const itemSize =
+            state.sizes.get(itemKey) ??
+            getItemSize(ctx, itemKey, itemIndex, item, undefined, undefined, undefined, metadata);
         const position = toPhysicalHorizontalItemPosition(state, logicalPosition, itemSize, peek$(ctx, "totalSize"));
         const column = columns[itemIndex] || 1;
         const span = columnSpans[itemIndex] || 1;

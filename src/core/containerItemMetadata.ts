@@ -7,6 +7,7 @@ export function createContainerItemMetadata(
     itemType?: string,
 ): ContainerItemMetadata {
     return {
+        data: state.props.data,
         dataChangeEpoch: state.dataChangeEpoch,
         getFixedItemSize: state.props.getFixedItemSize,
         getItemType: state.props.getItemType,
@@ -16,27 +17,38 @@ export function createContainerItemMetadata(
     };
 }
 
-export function resolveContainerItemMetadata(
+export function updateContainerItemMetadata(
     state: InternalState,
     containerId: number,
     itemIndex: number,
     itemData: any,
+    itemType?: string,
 ) {
-    const { getFixedItemSize, getItemType } = state.props;
+    const { getItemType } = state.props;
     const previousMetadata = state.containerItemMetadata.get(containerId);
-    let metadata: ContainerItemMetadata;
     if (
         previousMetadata?.dataChangeEpoch === state.dataChangeEpoch &&
         previousMetadata.getItemType === getItemType &&
         previousMetadata.itemData === itemData &&
         previousMetadata.itemIndex === itemIndex
     ) {
-        metadata = previousMetadata;
-    } else {
-        const itemType = getItemType ? (getItemType(itemData, itemIndex) ?? "") : undefined;
-        metadata = createContainerItemMetadata(state, itemIndex, itemData, itemType);
-        state.containerItemMetadata.set(containerId, metadata);
+        return previousMetadata;
     }
+
+    const resolvedItemType = itemType ?? (getItemType ? (getItemType(itemData, itemIndex) ?? "") : undefined);
+    const metadata = createContainerItemMetadata(state, itemIndex, itemData, resolvedItemType);
+    state.containerItemMetadata.set(containerId, metadata);
+    return metadata;
+}
+
+export function resolveContainerItemMetadata(
+    state: InternalState,
+    containerId: number,
+    itemIndex: number,
+    itemData: any,
+) {
+    const { getFixedItemSize } = state.props;
+    const metadata = updateContainerItemMetadata(state, containerId, itemIndex, itemData);
 
     if (metadata.getFixedItemSize !== getFixedItemSize) {
         metadata.didResolveFixedItemSize = false;

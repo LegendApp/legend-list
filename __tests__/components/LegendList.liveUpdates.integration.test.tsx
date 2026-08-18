@@ -85,10 +85,16 @@ async function flushFrames(count = 4) {
     }
 }
 
-function IntegrationContainer({ getRenderedItem, id }: { getRenderedItem: (key: string) => any; id: number }) {
+function IntegrationContainer({
+    getRenderedItem,
+    id,
+}: {
+    getRenderedItem: (key: string, containerId: number) => any;
+    id: number;
+}) {
     const [data, itemKey, extraData] = useArr$([`containerItemData${id}`, `containerItemKey${id}`, "extraData"]);
     const renderedItemInfo = React.useMemo(
-        () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),
+        () => (itemKey !== undefined ? getRenderedItem(itemKey, id) : null),
         [data, extraData, getRenderedItem, itemKey],
     );
 

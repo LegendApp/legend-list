@@ -132,6 +132,7 @@ type LegendListPropsInternal = LegendListPropsBase<any, Record<string, any>, str
 };
 
 export interface ContainerItemMetadata {
+    data: readonly any[];
     dataChangeEpoch: number;
     didResolveFixedItemSize?: boolean;
     fixedItemSize?: number;
@@ -339,7 +340,7 @@ export interface ViewableRange<T> {
 }
 
 export type GetRenderedItemResult<ItemT> = { index: number; item: ItemT; renderedItem: React.ReactNode };
-export type GetRenderedItem = (key: string) => GetRenderedItemResult<any> | null;
+export type GetRenderedItem = (key: string, containerId: number) => GetRenderedItemResult<any> | null;
 
 // biome-ignore lint/complexity/noBannedTypes: This is correct
 export type TypedForwardRef = <T, P = {}>(

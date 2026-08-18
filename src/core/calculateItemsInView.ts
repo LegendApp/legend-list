@@ -796,16 +796,16 @@ export function calculateItemsInView(
                             (state.containerItemGenerations[containerIndex] ?? 0) + 1;
                     }
 
-                    set$(ctx, `containerItemKey${containerIndex}`, id);
-                    set$(ctx, `containerItemIndex${containerIndex}`, i);
-                    set$(ctx, `containerItemData${containerIndex}`, data[i]);
-
-                    // The allocated type also seeds fixed-size resolution without
-                    // calling getItemType again after this container commits.
+                    // Publish coherent assignment metadata before reactive signals can render the container.
+                    // The allocated type also seeds fixed-size resolution without calling getItemType again.
                     state.containerItemMetadata.set(
                         containerIndex,
                         createContainerItemMetadata(state, i, data[i], allocation.itemType),
                     );
+
+                    set$(ctx, `containerItemKey${containerIndex}`, id);
+                    set$(ctx, `containerItemIndex${containerIndex}`, i);
+                    set$(ctx, `containerItemData${containerIndex}`, data[i]);
 
                     // Update cache when adding new item
                     containerItemKeys!.set(id, containerIndex);

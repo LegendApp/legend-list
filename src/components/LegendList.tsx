@@ -837,7 +837,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const fns = useMemo(
         () => ({
-            getRenderedItem: (key: string) => getRenderedItem(ctx, key),
+            getRenderedItem: (key: string, containerId: number) => getRenderedItem(ctx, key, containerId),
             onMomentumScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback

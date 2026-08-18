@@ -15,6 +15,7 @@ describe("findAvailableContainers", () => {
         allocations.map((allocation) => allocation.containerIndex);
     const setContainerItemType = (containerIndex: number, itemType: string) => {
         mockState.containerItemMetadata.set(containerIndex, {
+            data: [],
             dataChangeEpoch: 0,
             getFixedItemSize: undefined,
             getItemType: undefined,

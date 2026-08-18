@@ -151,7 +151,7 @@ export const Container = typedMemo(function Container<ItemT>({
     );
 
     const renderedItemInfo = useMemo(
-        () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),
+        () => (itemKey !== undefined ? getRenderedItem(itemKey, id) : null),
         [itemKey, data, extraData],
     );
     const { renderedItem } = renderedItemInfo || {};

@@ -95,11 +95,11 @@ async function waitForTailWindow(
     state: any,
     dataLength: number,
     observedRenderedIndices: Set<number>,
-    getRenderedItem: ((key: string) => { index: number } | null) | undefined,
+    getRenderedItem: ((key: string, containerId: number) => { index: number } | null) | undefined,
 ) {
     for (let i = 0; i < 20; i++) {
-        for (const key of state.containerItemKeys.keys()) {
-            const rendered = getRenderedItem?.(key);
+        for (const [key, containerId] of state.containerItemKeys) {
+            const rendered = getRenderedItem?.(key, containerId);
             if (rendered?.index !== undefined) {
                 observedRenderedIndices.add(rendered.index);
             }

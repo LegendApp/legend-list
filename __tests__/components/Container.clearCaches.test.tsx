@@ -71,6 +71,58 @@ beforeEach(() => {
 });
 
 describe("Container clearCaches measurement", () => {
+    it("passes its physical container id to the render lookup", async () => {
+        const data: TestItem[] = [{ id: "a", label: "Alpha" }];
+        const getRenderedItem = mock(() => null);
+        const { Container } = await import("../../src/components/Container?container-render-assignment-id");
+
+        function Harness() {
+            const ctx = useStateContext();
+            const didInitialize = React.useRef(false);
+
+            if (!didInitialize.current) {
+                ctx.state = createMockState({
+                    props: {
+                        data,
+                        keyExtractor: (item: TestItem) => item.id,
+                    },
+                });
+                set$(ctx, "containerColumn7", 1);
+                set$(ctx, "containerSpan7", 1);
+                set$(ctx, "containerItemData7", data[0]);
+                set$(ctx, "containerItemKey7", "a");
+                set$(ctx, "containerPosition7", 0);
+                set$(ctx, "numColumns", 1);
+                didInitialize.current = true;
+            }
+
+            return (
+                <Container
+                    getRenderedItem={getRenderedItem}
+                    horizontal={false}
+                    id={7}
+                    itemKey="a"
+                    recycleItems={false}
+                />
+            );
+        }
+
+        let renderer: TestRenderer.ReactTestRenderer;
+        await act(async () => {
+            renderer = TestRenderer.create(
+                <StateProvider>
+                    <Harness />
+                </StateProvider>,
+            );
+        });
+
+        expect(getRenderedItem).toHaveBeenCalledWith("a", 7);
+
+        await act(async () => {
+            renderer!.unmount();
+        });
+    });
+
     it("remeasures mounted containers from the layout effect after clearCaches", async () => {
         const data: TestItem[] = [{ id: "a", label: "Alpha" }];
         const sizesAtRecalculate: Array<number | undefined> = [];
