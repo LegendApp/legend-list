@@ -24,13 +24,7 @@ if (typeof __DEV__ !== "undefined" && __DEV__ && !KeyboardChatScrollView) {
 
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,
-    | keyof ScrollViewProps
-    | "inverted"
-    | "ScrollViewComponent"
-    | "blankSpace"
-    | "extraContentPadding"
-    | "onContentInsetChange"
-    | "offset"
+    keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "blankSpace" | "extraContentPadding" | "offset"
 >;
 
 type KeyboardAwareLegendListProps<ItemT> = Omit<
@@ -146,6 +140,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         freeze,
         keyboardLiftBehavior,
         keyboardOffset,
+        onContentInsetChange: onContentInsetChangeProp,
         ...rest
     } = props;
 
@@ -173,9 +168,13 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         };
     }, [anchoredEndSpace, blankSpace]);
 
-    const onContentInsetChange = useCallback((insets: KeyboardChatScrollViewContentInsets) => {
-        refLegendList.current?.reportContentInset(insets);
-    }, []);
+    const onContentInsetChange = useCallback(
+        (insets: KeyboardChatScrollViewContentInsets) => {
+            refLegendList.current?.reportContentInset(insets);
+            onContentInsetChangeProp?.(insets);
+        },
+        [onContentInsetChangeProp],
+    );
 
     const memoList = useCallback(
         (scrollProps: ScrollViewProps) => {
