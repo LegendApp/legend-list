@@ -1,3 +1,7 @@
+## 3.3.7
+
+- Fix: Recycled rows no longer briefly show content from the wrong item when data is prepended.
+
 ## 3.3.6
 
 - Fix: Animated `maintainScrollAtEnd` follows rapid and first-load content growth, including short `alignItemsAtEnd` lists, and stops when the user scrolls away.
