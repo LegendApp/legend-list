@@ -25,6 +25,12 @@ export function roundSize(size: number) {
     return Math.floor(size * 8) / 8; // Round to nearest quater pixel to avoid accumulating rounding errors
 }
 
+// Estimates are summed across many items, so flooring would bias every estimate low and the
+// error would accumulate over the list. Round to the nearest eighth instead to keep it unbiased.
+export function roundEstimatedSize(size: number) {
+    return Math.round(size * 8) / 8;
+}
+
 export function isNullOrUndefined(value: unknown) {
     return value === null || value === undefined;
 }

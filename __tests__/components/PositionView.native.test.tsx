@@ -5,7 +5,7 @@ import * as React from "react";
 import { describe, expect, it, mock } from "bun:test";
 import { PositionView, PositionViewSticky } from "../../src/components/PositionView.native";
 import { updateItemSizes } from "../../src/core/updateItemSizes";
-import { type StateContext, StateProvider, useStateContext } from "../../src/state/state";
+import { type StateContext, StateProvider, set$, useStateContext } from "../../src/state/state";
 import { createMockState } from "../__mocks__/createMockState";
 import { setLayoutValue } from "../helpers/layoutArrays";
 import { act, render } from "../helpers/testingLibrary";
@@ -127,6 +127,58 @@ function ReplacementMeasurementHarness() {
     );
 }
 
+function MountProbe({ onMount }: { onMount: () => void }) {
+    React.useEffect(() => {
+        onMount();
+    }, [onMount]);
+
+    return null;
+}
+
+function StickyRemountHarness({
+    animatedScrollY,
+    onMount,
+}: {
+    animatedScrollY: { interpolate: (config: any) => any };
+    onMount: () => void;
+}) {
+    const ctx = useStateContext();
+    const didSetupRef = React.useRef(false);
+    currentCtx = ctx;
+
+    if (!didSetupRef.current) {
+        ctx.state = createMockState({
+            positions: [],
+            props: {
+                stickyHeaderIndicesArr: [1],
+            },
+        }) as any;
+        ctx.state.positions[1] = 100;
+        ctx.state.sizes.set("header-1", 120);
+        ctx.values.set("alignItemsAtEndPadding", 0);
+        ctx.values.set("containerItemIndex7", 1);
+        ctx.values.set("containerItemKey7", "header-1");
+        ctx.values.set("containerPosition7", 100);
+        ctx.values.set("headerSize", 0);
+        ctx.values.set("stylePaddingTop", 0);
+        ctx.values.set("totalSize", 420);
+        didSetupRef.current = true;
+    }
+
+    return (
+        <PositionViewSticky
+            animatedScrollY={animatedScrollY as any}
+            horizontal={false}
+            id={7}
+            onLayout={() => {}}
+            refView={{ current: null }}
+            style={{}}
+        >
+            <MountProbe onMount={onMount} />
+        </PositionViewSticky>
+    );
+}
+
 describe("PositionView.native", () => {
     it("pushes a tall sticky header out when the next sticky header arrives", () => {
         const interpolate = mock((config: any) => config);
@@ -225,5 +277,48 @@ describe("PositionView.native", () => {
         } finally {
             globalThis.requestAnimationFrame = originalRaf;
         }
+    });
+    it("rebuilds the sticky transform node when the container position changes", () => {
+        const interpolate = mock((config: any) => config);
+        const onMount = mock(() => {});
+        currentCtx = undefined;
+
+        const { toJSON, unmount } = render(
+            <StateProvider>
+                <StickyRemountHarness animatedScrollY={{ interpolate }} onMount={onMount} />
+            </StateProvider>,
+        );
+
+        expect(onMount).toHaveBeenCalledTimes(1);
+        expect(flattenStyle((toJSON() as any)?.props?.style)?.transform).toEqual([
+            {
+                translateY: {
+                    extrapolateLeft: "clamp",
+                    extrapolateRight: "extend",
+                    inputRange: [100, 5100],
+                    outputRange: [100, 5100],
+                },
+            },
+        ]);
+
+        act(() => {
+            set$(currentCtx!, "containerPosition7", 260);
+        });
+
+        expect(flattenStyle((toJSON() as any)?.props?.style)?.transform).toEqual([
+            {
+                translateY: {
+                    extrapolateLeft: "clamp",
+                    extrapolateRight: "extend",
+                    inputRange: [260, 5260],
+                    outputRange: [260, 5260],
+                },
+            },
+        ]);
+        // The interpolation node is recreated, so the view has to remount for Animated to
+        // attach the new node instead of keeping the one bound at the old position.
+        expect(onMount).toHaveBeenCalledTimes(2);
+
+        unmount();
     });
 });
