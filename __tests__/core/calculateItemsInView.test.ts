@@ -1011,6 +1011,11 @@ describe("calculateItemsInView", () => {
             expect(mockState.containerItemKeys.get("old-0")).toBe(0);
             expect(mockState.containerItemKeys.get("old-10")).toBe(10);
             expect(mockState.containerItemKeys.has("new-41")).toBe(true);
+            const prependedContainer = mockState.containerItemKeys.get("new-41")!;
+            expect(mockState.containerItemMetadata.get(prependedContainer)).toMatchObject({
+                itemIndex: 41,
+                measurementPending: true,
+            });
         });
 
         it("recomputes the visible range after MVCP adjusts a preserved initial-scroll target", () => {
@@ -1874,6 +1879,8 @@ describe("calculateItemsInView", () => {
                 );
             }
             expect(mockState.containerItemKeys.has("item_50")).toBe(true);
+            const recycledContainer = mockState.containerItemKeys.get("item_50")!;
+            expect(mockState.containerItemMetadata.get(recycledContainer)?.measurementPending).toBe(false);
 
             mockState.scrollTargetPinnedRange = undefined;
         });

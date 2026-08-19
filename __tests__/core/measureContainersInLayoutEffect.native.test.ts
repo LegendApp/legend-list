@@ -53,6 +53,29 @@ describe("measureContainersInLayoutEffect", () => {
         Platform.OS = previousPlatform;
     });
 
+    it("reveals a pending container when measurement completes after the layout-effect pass", () => {
+        let measureCallback: ((x: number, y: number, width: number, height: number) => void) | undefined;
+        const metadata = createContainerItemMetadata(ctx.state, 0, ctx.state.props.data![0]);
+        metadata.measurementPending = true;
+        ctx.state.containerItemMetadata.set(0, metadata);
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: NonNullable<typeof measureCallback>) => {
+                    measureCallback = callback;
+                },
+            },
+        } as any);
+
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+        expect(ctx.state.containerItemMetadata.get(0)?.measurementPending).toBe(true);
+        expect(ctx.values.get("containerMeasurementEpoch0")).toBeUndefined();
+        measureCallback?.(0, 0, 400, 170);
+
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(170);
+        expect(ctx.state.containerItemMetadata.get(0)?.measurementPending).toBe(false);
+        expect(ctx.values.get("containerMeasurementEpoch0")).toBe(1);
+    });
+
     it("collects synchronous Fabric measurements before one recalculation", () => {
         const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
         ctx.viewRefs.set(0, {
@@ -72,6 +95,55 @@ describe("measureContainersInLayoutEffect", () => {
         expect(ctx.state.sizesKnown.get("item_1")).toBe(220);
         expect(calculateSpy).toHaveBeenCalledTimes(1);
         calculateSpy.mockRestore();
+    });
+
+    it("reveals a measurement-pending container only after synchronous recalculation", () => {
+        const itemData = ctx.state.props.data![0];
+        const metadata = createContainerItemMetadata(ctx.state, 0, itemData);
+        metadata.measurementPending = true;
+        ctx.state.containerItemMetadata.set(0, metadata);
+        const pendingDuringRecalculation: boolean[] = [];
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {
+            pendingDuringRecalculation.push(ctx.state.containerItemMetadata.get(0)?.measurementPending === true);
+        });
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: any) => callback(0, 0, 400, 175),
+            },
+        } as any);
+
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+
+        expect(pendingDuringRecalculation).toEqual([true]);
+        expect(ctx.state.containerItemMetadata.get(0)?.measurementPending).toBe(false);
+        expect(ctx.values.get("containerMeasurementEpoch0")).toBe(1);
+        calculateSpy.mockRestore();
+    });
+
+    it("does not reveal a reassigned container from a stale delayed measurement", () => {
+        const firstMetadata = createContainerItemMetadata(ctx.state, 0, ctx.state.props.data![0]);
+        firstMetadata.measurementPending = true;
+        ctx.state.containerItemMetadata.set(0, firstMetadata);
+        let measureCallback: ((x: number, y: number, width: number, height: number) => void) | undefined;
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: NonNullable<typeof measureCallback>) => {
+                    measureCallback = callback;
+                },
+            },
+        } as any);
+
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+
+        ctx.values.set("containerItemKey0", "item_1");
+        ctx.state.containerItemGenerations[0] = (ctx.state.containerItemGenerations[0] ?? 0) + 1;
+        const secondMetadata = createContainerItemMetadata(ctx.state, 1, ctx.state.props.data![1]);
+        secondMetadata.measurementPending = true;
+        ctx.state.containerItemMetadata.set(0, secondMetadata);
+        measureCallback?.(0, 0, 400, 175);
+
+        expect(ctx.state.containerItemMetadata.get(0)?.measurementPending).toBe(true);
+        expect(ctx.values.get("containerMeasurementEpoch0")).toBeUndefined();
     });
 
     it("measures only containers assigned since the previous commit", () => {
@@ -125,6 +197,9 @@ describe("measureContainersInLayoutEffect", () => {
         let fixedMeasureCalls = 0;
         let dynamicMeasureCalls = 0;
         ctx.state.props.getFixedItemSize = (item: { id: string }) => (item.id === "item_0" ? 100 : undefined);
+        const fixedMetadata = createContainerItemMetadata(ctx.state, 0, ctx.state.props.data![0]);
+        fixedMetadata.measurementPending = true;
+        ctx.state.containerItemMetadata.set(0, fixedMetadata);
         ctx.viewRefs.set(0, {
             current: {
                 measure: () => {
@@ -147,6 +222,8 @@ describe("measureContainersInLayoutEffect", () => {
         expect(dynamicMeasureCalls).toBe(1);
         expect(ctx.state.sizesKnown.get("item_0")).toBe(100);
         expect(ctx.state.sizesKnown.get("item_1")).toBe(220);
+        expect(ctx.state.containerItemMetadata.get(0)?.measurementPending).toBe(false);
+        expect(ctx.values.get("containerMeasurementEpoch0")).toBe(1);
         expect(calculateSpy).toHaveBeenCalledTimes(1);
         calculateSpy.mockRestore();
     });

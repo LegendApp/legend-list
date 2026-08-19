@@ -539,6 +539,7 @@ export function calculateItemsInView(
         }
 
         let protectedContainerKeys: Set<string> | undefined;
+        let firstProtectedIndex: number | undefined;
         if (
             dataChanged &&
             doMVCP &&
@@ -553,6 +554,9 @@ export function calculateItemsInView(
                 if (index === undefined) continue;
                 if (shouldRestorePosition && !shouldRestorePosition(data[index], index, data)) continue;
                 protectedContainerKeys.add(id);
+                // Only rows inserted before the retained viewport can briefly cover it
+                // while their estimate is replaced by the committed measurement.
+                firstProtectedIndex = Math.min(firstProtectedIndex ?? index, index);
             }
         }
         const scrollBeforeMVCP = state.scroll;
@@ -798,10 +802,15 @@ export function calculateItemsInView(
 
                     // Publish coherent assignment metadata before reactive signals can render the container.
                     // The allocated type also seeds fixed-size resolution without calling getItemType again.
-                    state.containerItemMetadata.set(
-                        containerIndex,
-                        createContainerItemMetadata(state, i, data[i], allocation.itemType),
-                    );
+                    const metadata = createContainerItemMetadata(state, i, data[i], allocation.itemType);
+                    // Keep ordinary recycling visible. The gate is only needed for an
+                    // unknown-size assignment ahead of the MVCP-retained viewport.
+                    metadata.measurementPending =
+                        oldKey !== id &&
+                        firstProtectedIndex !== undefined &&
+                        i < firstProtectedIndex &&
+                        state.sizesKnown.get(id) === undefined;
+                    state.containerItemMetadata.set(containerIndex, metadata);
 
                     set$(ctx, `containerItemKey${containerIndex}`, id);
                     set$(ctx, `containerItemIndex${containerIndex}`, i);

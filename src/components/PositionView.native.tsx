@@ -25,9 +25,22 @@ const PositionViewState = typedMemo(function PositionViewState({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, _itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
+    const ctx = useStateContext();
+    const [position = POSITION_OUT_OF_VIEW, _itemKey, _measurementEpoch] = useArr$([
+        `containerPosition${id}`,
+        `containerItemKey${id}`,
+        `containerMeasurementEpoch${id}`,
+    ]);
+    const measurementPending = ctx.state.containerItemMetadata.get(id)?.measurementPending === true;
 
-    return <View ref={refView} style={[style, horizontal ? { left: position } : { top: position }]} {...rest} />;
+    return (
+        <View
+            pointerEvents={measurementPending ? "none" : undefined}
+            ref={refView}
+            style={[style, horizontal ? { left: position } : { top: position }, measurementPending && { opacity: 0 }]}
+            {...rest}
+        />
+    );
 });
 
 // The Animated version is better on old arch but worse on new arch.

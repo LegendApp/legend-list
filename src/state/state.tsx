@@ -58,6 +58,7 @@ export type ListenerType =
     | `containerItemData${number}`
     | `containerItemIndex${number}`
     | `containerItemKey${number}`
+    | `containerMeasurementEpoch${number}`
     | `containerPosition${number}`
     | `containerSticky${number}`;
 
@@ -121,6 +122,8 @@ export type ListenerTypeValueMap = {
     [K in ListenerType as K extends `containerItemData${number}` ? K : never]: any;
 } & {
     [K in ListenerType as K extends `containerItemIndex${number}` ? K : never]: number;
+} & {
+    [K in ListenerType as K extends `containerMeasurementEpoch${number}` ? K : never]: number;
 } & {
     [K in ListenerType as K extends `containerPosition${number}` ? K : never]: number;
 } & {

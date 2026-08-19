@@ -141,6 +141,7 @@ export interface ContainerItemMetadata {
     itemData: any;
     itemIndex: number;
     itemType?: string;
+    measurementPending?: boolean;
 }
 
 export interface PendingDataComparison {
