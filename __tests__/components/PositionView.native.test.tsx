@@ -5,7 +5,7 @@ import * as React from "react";
 import { describe, expect, it, mock } from "bun:test";
 import { PositionView, PositionViewSticky } from "../../src/components/PositionView.native";
 import { updateItemSizes } from "../../src/core/updateItemSizes";
-import { type StateContext, StateProvider, useStateContext } from "../../src/state/state";
+import { type StateContext, StateProvider, set$, useStateContext } from "../../src/state/state";
 import { createMockState } from "../__mocks__/createMockState";
 import { setLayoutValue } from "../helpers/layoutArrays";
 import { act, render } from "../helpers/testingLibrary";
@@ -127,7 +127,48 @@ function ReplacementMeasurementHarness() {
     );
 }
 
+function LayoutReadyHarness() {
+    const ctx = useStateContext();
+    const didSetupRef = React.useRef(false);
+    currentCtx = ctx;
+
+    if (!didSetupRef.current) {
+        ctx.values.set("containerItemKey7", "dynamic-item");
+        ctx.values.set("containerLayoutReady7", false);
+        ctx.values.set("containerPosition7", 100);
+        didSetupRef.current = true;
+    }
+
+    return (
+        <PositionView horizontal={false} id={7} onLayout={() => {}} refView={{ current: null }} style={{}}>
+            {null}
+        </PositionView>
+    );
+}
+
 describe("PositionView.native", () => {
+    it("keeps an unknown-size Fabric assignment measurable but hidden until its layout is ready", () => {
+        currentCtx = undefined;
+        const { toJSON, unmount } = render(
+            <StateProvider>
+                <LayoutReadyHarness />
+            </StateProvider>,
+        );
+
+        expect(flattenStyle((toJSON() as any)?.props?.style)).toMatchObject({ opacity: 0, top: 100 });
+        expect((toJSON() as any)?.props?.pointerEvents).toBe("none");
+
+        act(() => {
+            set$(currentCtx!, "containerLayoutReady7", true);
+        });
+
+        expect(flattenStyle((toJSON() as any)?.props?.style)).toMatchObject({ top: 100 });
+        expect(flattenStyle((toJSON() as any)?.props?.style)?.opacity).toBeUndefined();
+        expect((toJSON() as any)?.props?.pointerEvents).toBeUndefined();
+
+        unmount();
+    });
+
     it("pushes a tall sticky header out when the next sticky header arrives", () => {
         const interpolate = mock((config: any) => config);
         const animatedScrollY = { interpolate };

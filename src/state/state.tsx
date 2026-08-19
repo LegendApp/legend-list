@@ -58,6 +58,7 @@ export type ListenerType =
     | `containerItemData${number}`
     | `containerItemIndex${number}`
     | `containerItemKey${number}`
+    | `containerLayoutReady${number}`
     | `containerPosition${number}`
     | `containerSticky${number}`;
 
@@ -117,6 +118,8 @@ export type ListenerTypeValueMap = {
     adaptiveRender: "normal" | "light";
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
+} & {
+    [K in ListenerType as K extends `containerLayoutReady${number}` ? K : never]: boolean;
 } & {
     [K in ListenerType as K extends `containerItemData${number}` ? K : never]: any;
 } & {

@@ -337,6 +337,21 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     experimental_adaptiveRender?: AdaptiveRenderConfig;
 
     /**
+     * Keeps a newly recycled item laid out but invisible until its size has been measured, so it is never painted at
+     * the estimated position it was recycled to. Only applies on the new architecture.
+     *
+     * This trades a possible flash at the wrong position for an extra render and native commit per recycled row, so it
+     * is worth enabling only for lists with dynamically sized items whose estimates are visibly wrong. Items with a
+     * size from `getFixedItemSize`, or with an already measured size, are exact and render immediately either way.
+     *
+     * Sticky headers are intentionally excluded. They are painted from a scroll-driven interpolation rather than the
+     * committed position, so hiding them would blink a header out mid-scroll without preventing a flash.
+     *
+     * @default false
+     */
+    experimental_hideItemsUntilMeasured?: boolean;
+
+    /**
      * Function to call when the user pulls to refresh.
      */
     onRefresh?: () => void;

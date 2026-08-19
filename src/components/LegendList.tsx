@@ -24,6 +24,7 @@ import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
+import { resetContainerLayoutReady } from "@/core/containerLayoutReady";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
@@ -152,6 +153,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
         experimental_adaptiveRender,
+        experimental_hideItemsUntilMeasured,
         itemsAreEqual,
         keyExtractor: keyExtractorProp,
         ListEmptyComponent,
@@ -427,6 +429,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const state = refState.current!;
     const isFirstLocal = state.isFirst;
     const previousAdaptiveRender = state.props.adaptiveRender;
+    const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
     const previousNumColumnsProp = state.props.numColumns;
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
 
@@ -491,6 +494,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         estimatedItemSize,
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
         getItemType: useWrapIfItem(getItemType),
+        hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),
@@ -529,6 +533,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     if (!isFirstLocal && previousAdaptiveRender && !experimental_adaptiveRender) {
         resetAdaptiveRender(ctx);
+    }
+    if (!isFirstLocal && previousHideItemsUntilMeasured && !experimental_hideItemsUntilMeasured) {
+        resetContainerLayoutReady(ctx);
     }
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataProp.length) return [];

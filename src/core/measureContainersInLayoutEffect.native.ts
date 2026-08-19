@@ -1,6 +1,6 @@
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { type ItemSizeMeasurement, updateItemSizes, updateItemSizesBatch } from "@/core/updateItemSizes";
-import { peek$, type StateContext } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 
 function resolveFixedItemSize(ctx: StateContext, containerId: number, itemKey: string) {
     const state = ctx.state;
@@ -26,19 +26,32 @@ function resolveSkippedAnchorReset(ctx: StateContext, itemKey: string) {
     }
 }
 
+function revealMeasuredGeneration(ctx: StateContext, containerId: number, itemKey: string, generation: number) {
+    // Opted-out lists never hide a row, so there is nothing to reveal.
+    if (!ctx.state.props.hideItemsUntilMeasured) {
+        return;
+    }
+    const isCurrentGeneration = (ctx.state.containerItemGenerations[containerId] ?? 0) === generation;
+    const isCurrentAssignment = peek$(ctx, `containerItemKey${containerId}`) === itemKey;
+    if (isCurrentGeneration && isCurrentAssignment) {
+        set$(ctx, `containerLayoutReady${containerId}`, true);
+    }
+}
+
 export function measureContainersInLayoutEffect(
     ctx: StateContext,
     targetContainerIds: ReadonlySet<number> | null = null,
 ) {
     const state = ctx.state;
     const measurements: ItemSizeMeasurement[] = [];
+    const measuredGenerations: Array<{ containerId: number; generation: number; itemKey: string }> = [];
     // Fabric normally invokes measure callbacks inline. Keep those results together,
     // but let an unexpectedly late callback update independently after this pass closes.
     let isCollectingSynchronousMeasurements = true;
     const containerIds = targetContainerIds ?? ctx.viewRefs.keys();
 
     for (const containerId of containerIds) {
-        const viewRef = ctx.viewRefs.get(containerId);
+        const view = ctx.viewRefs.get(containerId)?.current;
         const itemKey = peek$(ctx, `containerItemKey${containerId}`);
         if (itemKey !== undefined) {
             // Assignment changes also advance this token. Advancing it for every pass
@@ -54,8 +67,9 @@ export function measureContainersInLayoutEffect(
                 state.sizesKnown.get(itemKey) === fixedItemSize + ctx.scrollAxisGap;
             if (canSkipMeasurement) {
                 resolveSkippedAnchorReset(ctx, itemKey);
-            } else if (viewRef) {
-                viewRef.current?.measure?.((_x, _y, width, height) => {
+                revealMeasuredGeneration(ctx, containerId, itemKey, generation);
+            } else if (view?.measure) {
+                view.measure((_x, _y, width, height) => {
                     const isCurrentGeneration = (ctx.state.containerItemGenerations[containerId] ?? 0) === generation;
                     if (isCurrentGeneration) {
                         const measurement: ItemSizeMeasurement = {
@@ -65,11 +79,18 @@ export function measureContainersInLayoutEffect(
                         };
                         if (isCollectingSynchronousMeasurements) {
                             measurements.push(measurement);
+                            measuredGenerations.push({ containerId, generation, itemKey });
                         } else {
                             updateItemSizes(ctx, measurement);
+                            revealMeasuredGeneration(ctx, containerId, itemKey, generation);
                         }
                     }
                 });
+            } else {
+                // Nothing can measure this container, so a hidden row would stay hidden until
+                // its slot is recycled to another item. Show it at its estimated position
+                // instead: a row that is slightly misplaced beats a row that never appears.
+                revealMeasuredGeneration(ctx, containerId, itemKey, generation);
             }
         }
     }
@@ -77,5 +98,8 @@ export function measureContainersInLayoutEffect(
     isCollectingSynchronousMeasurements = false;
     if (measurements.length > 0) {
         updateItemSizesBatch(ctx, measurements);
+        for (const { containerId, generation, itemKey } of measuredGenerations) {
+            revealMeasuredGeneration(ctx, containerId, itemKey, generation);
+        }
     }
 }
