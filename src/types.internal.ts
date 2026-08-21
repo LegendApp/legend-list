@@ -294,6 +294,7 @@ export interface InternalState {
         estimatedItemSize: number | undefined;
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];
+        hideItemsUntilMeasured: LegendListPropsInternal["experimental_hideItemsUntilMeasured"];
         horizontal: boolean;
         rtl?: boolean;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];

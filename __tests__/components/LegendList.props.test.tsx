@@ -728,6 +728,74 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("forwards experimental_hideItemsUntilMeasured to internal props", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-hide-items-until-measured");
+
+        const renderList = (experimental_hideItemsUntilMeasured?: boolean) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                experimental_hideItemsUntilMeasured={experimental_hideItemsUntilMeasured}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList(true));
+        const ctx = await getContextFromRender();
+        expect(ctx.state.props.hideItemsUntilMeasured).toBe(true);
+
+        await act(async () => {
+            rendered.rerender(renderList(undefined));
+        });
+        expect(ctx.state.props.hideItemsUntilMeasured).toBeUndefined();
+
+        rendered.unmount();
+    });
+
+    it("clears hidden containers when experimental_hideItemsUntilMeasured is turned off", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-hide-items-reset");
+
+        const renderList = (experimental_hideItemsUntilMeasured?: boolean) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                experimental_hideItemsUntilMeasured={experimental_hideItemsUntilMeasured}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList(true));
+        const ctx = await getContextFromRender();
+
+        // Simulate a container left hidden because its measurement never landed.
+        await act(async () => {
+            set$(ctx, "containerLayoutReady0", false);
+            set$(ctx, "containerLayoutReady1", false);
+        });
+        expect(peek$(ctx, "containerLayoutReady0")).toBe(false);
+
+        // Opting out must not strand those containers invisible forever.
+        await act(async () => {
+            rendered.rerender(renderList(false));
+        });
+        expect(peek$(ctx, "containerLayoutReady0")).toBeUndefined();
+        expect(peek$(ctx, "containerLayoutReady1")).toBeUndefined();
+
+        rendered.unmount();
+    });
+
     it("uses the configured adaptive render initial mode before readyToRender", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },

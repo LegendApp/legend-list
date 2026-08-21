@@ -110,6 +110,7 @@ describe("calculateItemsInView", () => {
         it("should calculate visible items in basic scenario", () => {
             // Setup: 10 items, each 50px tall, scroll at position 100
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
+            mockState.props.hideItemsUntilMeasured = true;
             mockState.scroll = 100;
 
             // Setup positions and sizes
@@ -128,6 +129,64 @@ describe("calculateItemsInView", () => {
             expect(mockState.startNoBuffer).toBeDefined();
             expect(mockState.endNoBuffer).toBeDefined();
             expect(mockState.idsInView).toBeDefined();
+            for (let containerId = 0; containerId < 10; containerId++) {
+                if (mockCtx.values.get(`containerItemKey${containerId}`) !== undefined) {
+                    expect(mockCtx.values.get(`containerLayoutReady${containerId}`)).toBe(false);
+                }
+            }
+        });
+
+        it("never publishes layout readiness unless hideItemsUntilMeasured opts in", () => {
+            setupFixedSizeItems(3, 100);
+            mockState.sizesKnown.clear();
+            mockState.props.getFixedItemSize = undefined;
+
+            calculateItemsInView(mockCtx);
+
+            // Left undefined rather than true, so an opted-out list writes nothing at all.
+            for (let containerId = 0; containerId < 3; containerId++) {
+                expect(mockCtx.values.get(`containerLayoutReady${containerId}`)).toBeUndefined();
+            }
+        });
+
+        it("lets assignments with cached exact sizes render immediately", () => {
+            setupFixedSizeItems(3, 100);
+            mockState.props.hideItemsUntilMeasured = true;
+            // Isolate the cached-size path from the fixed-size path.
+            mockState.props.getFixedItemSize = undefined;
+
+            calculateItemsInView(mockCtx);
+
+            for (let containerId = 0; containerId < 3; containerId++) {
+                expect(mockCtx.values.get(`containerLayoutReady${containerId}`)).toBe(true);
+            }
+        });
+
+        it("lets never-measured fixed-size assignments render immediately", () => {
+            setupFixedSizeItems(3, 100);
+            mockState.props.hideItemsUntilMeasured = true;
+            // A fixed size is exact without measuring, so a cold cache must not hide the row.
+            mockState.sizesKnown.clear();
+
+            calculateItemsInView(mockCtx);
+
+            for (let containerId = 0; containerId < 3; containerId++) {
+                expect(mockCtx.values.get(`containerLayoutReady${containerId}`)).toBe(true);
+            }
+        });
+
+        it("still hides never-measured dynamic assignments", () => {
+            setupFixedSizeItems(3, 100);
+            mockState.props.hideItemsUntilMeasured = true;
+            mockState.sizesKnown.clear();
+            // getFixedItemSize may opt individual items out of a fixed size.
+            mockState.props.getFixedItemSize = (_item: any, index: number) => (index === 1 ? undefined : 100);
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockCtx.values.get("containerLayoutReady0")).toBe(true);
+            expect(mockCtx.values.get("containerLayoutReady1")).toBe(false);
+            expect(mockCtx.values.get("containerLayoutReady2")).toBe(true);
         });
 
         it("tracks an intersecting oversized item when no item starts inside the viewport", () => {

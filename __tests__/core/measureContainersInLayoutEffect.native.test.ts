@@ -20,6 +20,8 @@ describe("measureContainersInLayoutEffect", () => {
             {
                 containerItemKey0: "item_0",
                 containerItemKey1: "item_1",
+                containerLayoutReady0: false,
+                containerLayoutReady1: false,
                 otherAxisSize: 400,
                 readyToRender: true,
             },
@@ -33,6 +35,8 @@ describe("measureContainersInLayoutEffect", () => {
                 props: {
                     data: [{ id: "item_0" }, { id: "item_1" }],
                     estimatedItemSize: 100,
+                    // Reveal only runs for lists that opted into hiding.
+                    hideItemsUntilMeasured: true,
                 },
                 sizes: new Map([
                     ["item_0", 100],
@@ -70,6 +74,40 @@ describe("measureContainersInLayoutEffect", () => {
 
         expect(ctx.state.sizesKnown.get("item_0")).toBe(150);
         expect(ctx.state.sizesKnown.get("item_1")).toBe(220);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(true);
+        expect(ctx.values.get("containerLayoutReady1")).toBe(true);
+        expect(calculateSpy).toHaveBeenCalledTimes(1);
+        calculateSpy.mockRestore();
+    });
+
+    it("skips per-container reveal bookkeeping when hiding is disabled", () => {
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        let hideItemsUntilMeasuredReads = 0;
+        Object.defineProperty(ctx.state.props, "hideItemsUntilMeasured", {
+            configurable: true,
+            get: () => {
+                hideItemsUntilMeasuredReads++;
+                return false;
+            },
+        });
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: any) => callback(0, 0, 400, 150),
+            },
+        } as any);
+        ctx.viewRefs.set(1, {
+            current: {
+                measure: (callback: any) => callback(0, 0, 400, 220),
+            },
+        } as any);
+
+        measureContainersInLayoutEffect(ctx);
+
+        expect(hideItemsUntilMeasuredReads).toBe(1);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(false);
+        expect(ctx.values.get("containerLayoutReady1")).toBe(false);
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(150);
+        expect(ctx.state.sizesKnown.get("item_1")).toBe(220);
         expect(calculateSpy).toHaveBeenCalledTimes(1);
         calculateSpy.mockRestore();
     });
@@ -92,6 +130,8 @@ describe("measureContainersInLayoutEffect", () => {
 
         expect(ctx.state.sizesKnown.get("item_0")).toBe(100);
         expect(ctx.state.sizesKnown.get("item_1")).toBe(220);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(false);
+        expect(ctx.values.get("containerLayoutReady1")).toBe(true);
         expect(calculateSpy).toHaveBeenCalledTimes(1);
         calculateSpy.mockRestore();
     });
@@ -145,6 +185,8 @@ describe("measureContainersInLayoutEffect", () => {
 
         expect(fixedMeasureCalls).toBe(0);
         expect(dynamicMeasureCalls).toBe(1);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(true);
+        expect(ctx.values.get("containerLayoutReady1")).toBe(true);
         expect(ctx.state.sizesKnown.get("item_0")).toBe(100);
         expect(ctx.state.sizesKnown.get("item_1")).toBe(220);
         expect(calculateSpy).toHaveBeenCalledTimes(1);
@@ -362,5 +404,42 @@ describe("measureContainersInLayoutEffect", () => {
         expect(ctx.state.sizesKnown.get("item_0")).toBe(160);
         expect(calculateSpy).toHaveBeenCalledTimes(1);
         calculateSpy.mockRestore();
+    });
+
+    it("does not reveal a newer assignment from a stale native measurement callback", () => {
+        const measureCallbacks: Array<(x: number, y: number, width: number, height: number) => void> = [];
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: (typeof measureCallbacks)[number]) => {
+                    measureCallbacks.push(callback);
+                },
+            },
+        } as any);
+
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+        ctx.values.set("containerItemKey0", "item_1");
+        ctx.values.set("containerLayoutReady0", false);
+        ctx.state.containerItemGenerations[0] = (ctx.state.containerItemGenerations[0] ?? 0) + 1;
+
+        measureCallbacks[0](0, 0, 400, 160);
+
+        expect(ctx.values.get("containerLayoutReady0")).toBe(false);
+    });
+
+    it("reveals a container that has no view to measure", () => {
+        // No viewRefs entry at all: nothing will ever call back to reveal this row.
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+
+        expect(ctx.values.get("containerLayoutReady0")).toBe(true);
+    });
+
+    it("reveals a container whose view is detached or cannot measure", () => {
+        ctx.viewRefs.set(0, { current: null } as any);
+        ctx.viewRefs.set(1, { current: {} } as any);
+
+        measureContainersInLayoutEffect(ctx, new Set([0, 1]));
+
+        expect(ctx.values.get("containerLayoutReady0")).toBe(true);
+        expect(ctx.values.get("containerLayoutReady1")).toBe(true);
     });
 });

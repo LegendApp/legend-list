@@ -1,7 +1,7 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
-import { createContainerItemMetadata } from "@/core/containerItemMetadata";
+import { createContainerItemMetadata, resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
@@ -787,6 +787,13 @@ export function calculateItemsInView(
                     if (oldKey && oldKey !== id) {
                         containerItemKeys!.delete(oldKey);
                     }
+                    // Publish coherent assignment metadata before reactive signals can render the container.
+                    // The allocated type also seeds fixed-size resolution without calling getItemType again.
+                    state.containerItemMetadata.set(
+                        containerIndex,
+                        createContainerItemMetadata(state, i, data[i], allocation.itemType),
+                    );
+
                     if (oldKey !== id) {
                         changedContainerIds ??= new Set();
                         changedContainerIds.add(containerIndex);
@@ -794,14 +801,23 @@ export function calculateItemsInView(
                         // assignment even if this physical slot later returns to the same key.
                         state.containerItemGenerations[containerIndex] =
                             (state.containerItemGenerations[containerIndex] ?? 0) + 1;
-                    }
 
-                    // Publish coherent assignment metadata before reactive signals can render the container.
-                    // The allocated type also seeds fixed-size resolution without calling getItemType again.
-                    state.containerItemMetadata.set(
-                        containerIndex,
-                        createContainerItemMetadata(state, i, data[i], allocation.itemType),
-                    );
+                        // Opted-out lists never publish this signal at all. Containers left
+                        // undefined default to ready in the position components, so an opted-out
+                        // list pays nothing for the feature.
+                        if (state.props.hideItemsUntilMeasured) {
+                            // A dynamic row must stay measurable without painting at its
+                            // provisional recycled position. A cached size or a fixed size means
+                            // measurement has nothing to correct, so those render immediately. The
+                            // cheap check runs first so getFixedItemSize is only called for rows
+                            // we would otherwise hide.
+                            const isLayoutReady =
+                                state.sizesKnown.has(id) ||
+                                resolveContainerItemMetadata(state, containerIndex, i, data[i]).fixedItemSize !==
+                                    undefined;
+                            set$(ctx, `containerLayoutReady${containerIndex}`, isLayoutReady);
+                        }
+                    }
 
                     set$(ctx, `containerItemKey${containerIndex}`, id);
                     set$(ctx, `containerItemIndex${containerIndex}`, i);

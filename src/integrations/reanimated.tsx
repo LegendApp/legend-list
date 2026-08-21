@@ -214,7 +214,10 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
 const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponent(props: ReanimatedPositionViewProps) {
     const ctx = useStateContext();
     const { id, horizontal, style, refView, children, recycleItems, layoutTransition, ...rest } = props;
-    const [positionValue = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+    const [positionValue = POSITION_OUT_OF_VIEW, layoutReady = true] = useArr$([
+        `containerPosition${id}`,
+        `containerLayoutReady${id}`,
+    ]);
     const prevItemKeyRef = React.useRef<string | undefined>(undefined);
     let shouldSkipTransitionForRecycleReuse = false;
 
@@ -232,9 +235,11 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
     }
 
     // Layout transitions require positional layout props instead of transform.
+    // An unmeasured row stays laid out but invisible when hideItemsUntilMeasured is on,
+    // matching PositionView on the new architecture.
     const viewStyle = React.useMemo(
-        () => [style, horizontal ? { left: positionValue } : { top: positionValue }],
-        [horizontal, positionValue, style],
+        () => [style, horizontal ? { left: positionValue } : { top: positionValue }, !layoutReady && { opacity: 0 }],
+        [horizontal, layoutReady, positionValue, style],
     );
 
     return (
@@ -243,6 +248,7 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
             ref={refView}
             style={viewStyle}
             {...rest}
+            pointerEvents={layoutReady ? undefined : "none"}
         >
             {children}
         </Reanimated.View>
