@@ -1,5 +1,6 @@
 import { describe, expect, it, spyOn } from "bun:test";
 import { clampScrollOffset } from "../../src/core/clampScrollOffset";
+import { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { setContentInsetOverride, setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
 import { updateContentMetricsState } from "../../src/core/updateContentMetricsState";
 import { Platform } from "../../src/platform/Platform";
@@ -278,42 +279,87 @@ describe("updateContentMetrics", () => {
         expect(ctx.values.get("footerSize")).toBe(12);
     });
 
-    it("compensates web MVCP when a measured header changes above the viewport", () => {
-        const prevPlatform = Platform.OS;
-        Platform.OS = "web";
-        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
-        const ctx = createMockContext(
-            {
-                headerSize: 60,
-                readyToRender: true,
-                totalSize: 1000,
-            },
-            {
-                didContainersLayout: true,
-                didFinishInitialScroll: true,
-                props: {
-                    data: [1],
-                    maintainVisibleContentPosition: { data: false, size: true },
+    for (const platformOS of ["web", "ios", "android"] as const) {
+        it(`compensates MVCP on ${platformOS} when a measured header changes above the viewport`, () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = platformOS;
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const ctx = createMockContext(
+                {
+                    headerSize: 60,
+                    readyToRender: true,
+                    totalSize: 1000,
                 },
-                scroll: 200,
-                scrollLength: 500,
-                totalSize: 1000,
-            },
-        );
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    props: {
+                        data: [1],
+                        maintainVisibleContentPosition: { data: false, size: true },
+                    },
+                    scroll: 200,
+                    scrollLength: 500,
+                    totalSize: 1000,
+                },
+            );
 
-        try {
-            setHeaderSize(ctx, 60);
-            expect(requestAdjustSpy).not.toHaveBeenCalled();
+            try {
+                setHeaderSize(ctx, 60);
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
 
-            requestAdjustSpy.mockClear();
-            setHeaderSize(ctx, 120);
+                requestAdjustSpy.mockClear();
+                setHeaderSize(ctx, 120);
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 60);
-        } finally {
-            requestAdjustSpy.mockRestore();
-            Platform.OS = prevPlatform;
-        }
-    });
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 60);
+
+                requestAdjustSpy.mockClear();
+                setHeaderSize(ctx, 60);
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, -60);
+            } finally {
+                requestAdjustSpy.mockRestore();
+                Platform.OS = prevPlatform;
+            }
+        });
+
+        it(`settles the scroll position on ${platformOS} when a measured header grows above the viewport`, () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = platformOS;
+            const ctx = createMockContext(
+                {
+                    headerSize: 60,
+                    readyToRender: true,
+                    totalSize: 1000,
+                },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    props: {
+                        data: [1],
+                        maintainVisibleContentPosition: { data: false, size: true },
+                    },
+                    scroll: 200,
+                    scrollLength: 500,
+                    totalSize: 1000,
+                },
+            );
+            // Drive the real adjust handler so the assertion is about the resulting scroll
+            // position the user sees, not just that an adjustment was requested.
+            ctx.state.scrollAdjustHandler = new ScrollAdjustHandler(ctx);
+
+            try {
+                setHeaderSize(ctx, 60);
+                setHeaderSize(ctx, 120);
+
+                // The header grew by 60 above the viewport, so the same content stays put.
+                expect(ctx.state.scroll).toBe(260);
+                expect(ctx.values.get("scrollAdjust")).toBe(60);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+                Platform.OS = prevPlatform;
+            }
+        });
+    }
 
     it("does not compensate the initial web MVCP header measurement", () => {
         const prevPlatform = Platform.OS;
@@ -416,37 +462,39 @@ describe("updateContentMetrics", () => {
         }
     });
 
-    it("does not compensate web MVCP header changes while the header is visible", () => {
-        const prevPlatform = Platform.OS;
-        Platform.OS = "web";
-        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
-        const ctx = createMockContext(
-            {
-                headerSize: 60,
-                readyToRender: true,
-                totalSize: 1000,
-            },
-            {
-                didContainersLayout: true,
-                didFinishInitialScroll: true,
-                didMeasureHeader: true,
-                props: {
-                    data: [1],
-                    maintainVisibleContentPosition: { data: false, size: true },
+    for (const platformOS of ["web", "ios", "android"] as const) {
+        it(`does not compensate MVCP header changes on ${platformOS} while the header is visible`, () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = platformOS;
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const ctx = createMockContext(
+                {
+                    headerSize: 60,
+                    readyToRender: true,
+                    totalSize: 1000,
                 },
-                scroll: 20,
-                scrollLength: 500,
-                totalSize: 1000,
-            },
-        );
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    didMeasureHeader: true,
+                    props: {
+                        data: [1],
+                        maintainVisibleContentPosition: { data: false, size: true },
+                    },
+                    scroll: 20,
+                    scrollLength: 500,
+                    totalSize: 1000,
+                },
+            );
 
-        try {
-            setHeaderSize(ctx, 120);
+            try {
+                setHeaderSize(ctx, 120);
 
-            expect(requestAdjustSpy).not.toHaveBeenCalled();
-        } finally {
-            requestAdjustSpy.mockRestore();
-            Platform.OS = prevPlatform;
-        }
-    });
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+            } finally {
+                requestAdjustSpy.mockRestore();
+                Platform.OS = prevPlatform;
+            }
+        });
+    }
 });
