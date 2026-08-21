@@ -1,3 +1,7 @@
+## 3.3.8
+
+- Feat: Add `experimental_hideItemsUntilMeasured` to make items never display at provisional layouts and wait for correct sizing, at the cost of an extra render per recycled row. This fixes cases where slow item renders could display with gaps/overlaps when scrolling up quickly on slow phones.
+
 ## 3.3.7
 
 - Fix: Recycled rows no longer briefly show content from the wrong item when data is prepended.
