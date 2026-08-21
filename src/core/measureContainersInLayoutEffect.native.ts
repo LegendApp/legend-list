@@ -44,7 +44,10 @@ export function measureContainersInLayoutEffect(
 ) {
     const state = ctx.state;
     const measurements: ItemSizeMeasurement[] = [];
-    const measuredGenerations: Array<{ containerId: number; generation: number; itemKey: string }> = [];
+    const measuredGenerations: Array<{ containerId: number; generation: number; itemKey: string }> | undefined = state
+        .props.hideItemsUntilMeasured
+        ? []
+        : undefined;
     // Fabric normally invokes measure callbacks inline. Keep those results together,
     // but let an unexpectedly late callback update independently after this pass closes.
     let isCollectingSynchronousMeasurements = true;
@@ -67,7 +70,9 @@ export function measureContainersInLayoutEffect(
                 state.sizesKnown.get(itemKey) === fixedItemSize + ctx.scrollAxisGap;
             if (canSkipMeasurement) {
                 resolveSkippedAnchorReset(ctx, itemKey);
-                revealMeasuredGeneration(ctx, containerId, itemKey, generation);
+                if (measuredGenerations) {
+                    revealMeasuredGeneration(ctx, containerId, itemKey, generation);
+                }
             } else if (view?.measure) {
                 view.measure((_x, _y, width, height) => {
                     const isCurrentGeneration = (ctx.state.containerItemGenerations[containerId] ?? 0) === generation;
@@ -79,14 +84,16 @@ export function measureContainersInLayoutEffect(
                         };
                         if (isCollectingSynchronousMeasurements) {
                             measurements.push(measurement);
-                            measuredGenerations.push({ containerId, generation, itemKey });
+                            measuredGenerations?.push({ containerId, generation, itemKey });
                         } else {
                             updateItemSizes(ctx, measurement);
-                            revealMeasuredGeneration(ctx, containerId, itemKey, generation);
+                            if (measuredGenerations) {
+                                revealMeasuredGeneration(ctx, containerId, itemKey, generation);
+                            }
                         }
                     }
                 });
-            } else {
+            } else if (measuredGenerations) {
                 // Nothing can measure this container, so a hidden row would stay hidden until
                 // its slot is recycled to another item. Show it at its estimated position
                 // instead: a row that is slightly misplaced beats a row that never appears.
@@ -98,8 +105,10 @@ export function measureContainersInLayoutEffect(
     isCollectingSynchronousMeasurements = false;
     if (measurements.length > 0) {
         updateItemSizesBatch(ctx, measurements);
-        for (const { containerId, generation, itemKey } of measuredGenerations) {
-            revealMeasuredGeneration(ctx, containerId, itemKey, generation);
+        if (measuredGenerations) {
+            for (const { containerId, generation, itemKey } of measuredGenerations) {
+                revealMeasuredGeneration(ctx, containerId, itemKey, generation);
+            }
         }
     }
 }

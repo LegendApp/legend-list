@@ -80,6 +80,38 @@ describe("measureContainersInLayoutEffect", () => {
         calculateSpy.mockRestore();
     });
 
+    it("skips per-container reveal bookkeeping when hiding is disabled", () => {
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        let hideItemsUntilMeasuredReads = 0;
+        Object.defineProperty(ctx.state.props, "hideItemsUntilMeasured", {
+            configurable: true,
+            get: () => {
+                hideItemsUntilMeasuredReads++;
+                return false;
+            },
+        });
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: any) => callback(0, 0, 400, 150),
+            },
+        } as any);
+        ctx.viewRefs.set(1, {
+            current: {
+                measure: (callback: any) => callback(0, 0, 400, 220),
+            },
+        } as any);
+
+        measureContainersInLayoutEffect(ctx);
+
+        expect(hideItemsUntilMeasuredReads).toBe(1);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(false);
+        expect(ctx.values.get("containerLayoutReady1")).toBe(false);
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(150);
+        expect(ctx.state.sizesKnown.get("item_1")).toBe(220);
+        expect(calculateSpy).toHaveBeenCalledTimes(1);
+        calculateSpy.mockRestore();
+    });
+
     it("measures only containers assigned since the previous commit", () => {
         const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
         ctx.viewRefs.set(0, {
