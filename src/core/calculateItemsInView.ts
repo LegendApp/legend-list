@@ -926,7 +926,10 @@ export function calculateItemsInView(
             scheduleContainerLayout(ctx, changedContainerIds);
         }
 
-        if (Platform.OS === "web" && didChangePositions) {
+        // Emitted on every platform, not just web: the web DOM sorter in `useDOMOrder` is no
+        // longer the only consumer — `Containers.native` needs it to re-render and re-sort its
+        // children when container assignments change.
+        if (didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
         }
 
