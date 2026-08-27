@@ -2188,6 +2188,25 @@ describe("calculateItemsInView", () => {
     });
 
     describe("minIndexSizeChanged optimization", () => {
+        it("recomputes the complete affected suffix when a size changes during scrolling", () => {
+            setupFixedSizeItems(100, 50);
+            mockState.props.getFixedItemSize = undefined;
+            mockState.minIndexSizeChanged = 10;
+            mockState.sizes.set("item_10", 1000);
+            mockState.sizesKnown.set("item_10", 1000);
+
+            calculateItemsInView(mockCtx, { scrollVelocity: 2 });
+
+            expect(mockState.positions[10]).toBe(500);
+            expect(mockState.positions[11]).toBe(1500);
+            expect(mockState.positions[99]).toBe(5900);
+            for (let index = 1; index < mockState.props.data.length; index++) {
+                const previousKey = mockState.idCache[index - 1];
+                const previousEnd = mockState.positions[index - 1] + mockState.sizes.get(previousKey)!;
+                expect(mockState.positions[index]).toBe(previousEnd);
+            }
+        });
+
         it("should use minIndexSizeChanged to optimize loop start", () => {
             mockState.props.data = Array.from({ length: 100 }, (_, i) => ({ id: i }));
             mockState.minIndexSizeChanged = 50;

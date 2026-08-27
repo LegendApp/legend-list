@@ -521,7 +521,9 @@ export function calculateItemsInView(
 
         updateItemPositions(ctx, dataChanged, {
             doMVCP,
-            forceFullUpdate: !!forceFullItemPositions,
+            // A changed size shifts every following position. The scrolling early-exit
+            // would leave the untouched suffix in the old coordinate space.
+            forceFullUpdate: !!forceFullItemPositions || minIndexSizeChanged !== undefined,
             optimizeForVisibleWindow,
             scrollBottomBuffered,
             scrollVelocity: speed,
