@@ -1,3 +1,7 @@
+## 3.3.9
+
+- Fix: Rows after an item that changes size stay in the correct positions while scrolling
+
 ## 3.3.8
 
 - Feat: Add `experimental_hideItemsUntilMeasured` to make items never display at provisional layouts and wait for correct sizing, at the cost of an extra render per recycled row. This fixes cases where slow item renders could display with gaps/overlaps when scrolling up quickly on slow phones.
