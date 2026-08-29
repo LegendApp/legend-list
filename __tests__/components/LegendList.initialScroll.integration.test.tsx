@@ -188,6 +188,7 @@ async function renderInitialScrollScenario(options: {
     importKey: string;
     legendListProps?: Record<string, unknown>;
     platform?: "ios" | "android" | "web";
+    strictMode?: boolean;
 }) {
     const previousPlatform = Platform.OS;
     Platform.OS = options.platform ?? "ios";
@@ -195,19 +196,22 @@ async function renderInitialScrollScenario(options: {
     const { LegendList } = await loadLegendList(options.importKey);
     const ref = React.createRef<LegendListRef>();
 
-    const renderList = (data: Array<{ id: string; label: string }>, legendListProps = options.legendListProps) => (
-        <LegendList
-            data={data}
-            drawDistance={0}
-            estimatedItemSize={100}
-            getFixedItemSize={() => 100}
-            keyExtractor={(item: { id: string }) => item.id}
-            ref={ref}
-            renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            renderScrollComponent={(props) => <ScrollHarness {...props} />}
-            {...legendListProps}
-        />
-    );
+    const renderList = (data: Array<{ id: string; label: string }>, legendListProps = options.legendListProps) => {
+        const list = (
+            <LegendList
+                data={data}
+                drawDistance={0}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                keyExtractor={(item: { id: string }) => item.id}
+                ref={ref}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                renderScrollComponent={(props) => <ScrollHarness {...props} />}
+                {...legendListProps}
+            />
+        );
+        return options.strictMode ? <React.StrictMode>{list}</React.StrictMode> : list;
+    };
 
     let renderer: TestRenderer.ReactTestRenderer;
     await act(async () => {
@@ -541,6 +545,36 @@ describe("LegendList initial scroll integration", () => {
             absent: ["Item 0"],
             present: ["Item 3", "Item 4"],
         });
+
+        await scenario.cleanup();
+    });
+
+    it("preserves a fresh dataKey transition across a render before parent layout effects", async () => {
+        const initialData = createItems(5).map((item) => ({ ...item, id: `initial-${item.id}` }));
+        const nextData = createItems(10).map((item) => ({ ...item, id: `next-${item.id}` }));
+        const scenario = await renderInitialScrollScenario({
+            data: initialData,
+            importKey: "initial-scroll-render-at-end-data-key-replacement",
+            legendListProps: {
+                dataKey: "initial",
+                getFixedItemSize: () => 100,
+                initialScrollOffset: 300,
+            },
+            platform: "ios",
+            strictMode: true,
+        });
+
+        await scenario.fireLayout();
+        expectScrollClose(scenario.ref, 300);
+
+        await scenario.rerender(nextData, {
+            dataKey: "next",
+            getFixedItemSize: () => 100,
+            initialScrollOffset: 800,
+        });
+
+        expectScrollClose(scenario.ref, 800);
+        expectScrollCallsContain(scenario.scrollCalls, 800);
 
         await scenario.cleanup();
     });

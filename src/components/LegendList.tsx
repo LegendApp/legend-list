@@ -427,6 +427,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const state = refState.current!;
+    const handledDataChangeEpochRef = useRef(state.dataChangeEpoch);
+    const handledFreshDataTransitionEpochRef = useRef(state.freshDataTransitionEpoch);
     const isFirstLocal = state.isFirst;
     const previousAdaptiveRender = state.props.adaptiveRender;
     const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
@@ -467,6 +469,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (shouldResetFreshDataLayout) {
         state.freshDataTransitionEpoch += 1;
     }
+    const dataChangeEpoch = state.dataChangeEpoch;
+    const freshDataTransitionEpoch = state.freshDataTransitionEpoch;
     const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
     const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
     const didAnchoredEndSpaceAnchorIndexChange =
@@ -620,7 +624,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     useLayoutEffect(() => {
-        if (shouldResetFreshDataLayout) {
+        // Data-change detection updates shared state during render, and React may restart that render
+        // before committing effects. Consume monotonic epochs so the committed render cannot lose the change.
+        const didDataChange = handledDataChangeEpochRef.current !== dataChangeEpoch;
+        const didStartFreshData = handledFreshDataTransitionEpochRef.current !== freshDataTransitionEpoch;
+        handledDataChangeEpochRef.current = dataChangeEpoch;
+        handledFreshDataTransitionEpochRef.current = freshDataTransitionEpoch;
+
+        if (didStartFreshData) {
             resetInitialRenderState(ctx, {
                 resetInitialScroll: !!initialScrollProp,
                 resetLayout: true,
@@ -628,8 +639,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
         handleInitialScrollDataChange(ctx, {
             dataLength: dataProp.length,
-            didDataChange: didDataChangeLocal,
-            didStartFreshData: shouldResetFreshDataLayout,
+            didDataChange,
+            didStartFreshData,
             initialScrollAtEnd,
             latestInitialScroll: initialScrollProp,
             latestInitialScrollSessionKind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
@@ -639,8 +650,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [
         dataProp.length,
         dataKey,
-        didDataChangeLocal,
-        shouldResetFreshDataLayout,
+        dataChangeEpoch,
+        freshDataTransitionEpoch,
         initialScrollAtEnd,
         stylePaddingEndState,
         usesBootstrapInitialScroll,
