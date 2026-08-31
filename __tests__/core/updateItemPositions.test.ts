@@ -10,6 +10,7 @@ import type { StateContext } from "../../src/state/state";
 import { listen$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { getKnownOrFixedItemSize } from "../../src/utils/getItemSize";
+import { roundSize } from "../../src/utils/helpers";
 import { createMockContext } from "../__mocks__/createMockContext";
 import {
     clearLayoutValues,
@@ -642,8 +643,8 @@ describe("updateItemPositions", () => {
 
             updateItemPositions(mockCtx, false);
 
-            // Should use rounded average size (125.5 rounds to 125.5 using roundSize)
-            const expectedRoundedSize = Math.floor(125.5 * 8) / 8; // 125.5
+            // The average size floors to the pixel grid
+            const expectedRoundedSize = roundSize(125.5);
             expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
             expect(getLayoutValue(mockState, "positions", "item2")).toBe(expectedRoundedSize);
             expect(getLayoutValue(mockState, "positions", "item3")).toBe(expectedRoundedSize * 2);
