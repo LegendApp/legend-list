@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { PixelRatio } from "@/platform/PixelRatio";
 import {
     comparatorDefault,
     extractPadding,
@@ -123,29 +124,36 @@ describe("helpers", () => {
     });
 
     describe("roundSize", () => {
-        it("should round to nearest eighth pixel", () => {
+        // The mock PixelRatio.get() returns 3, so the grid step is 1/3 dp.
+        it("should floor to the pixel grid", () => {
             expect(roundSize(10.1)).toBe(10);
-            expect(roundSize(10.125)).toBe(10.125); // Exactly 1/8
-            expect(roundSize(10.2)).toBe(10.125);
-            expect(roundSize(10.25)).toBe(10.25); // Exactly 2/8
-            expect(roundSize(10.3)).toBe(10.25);
+            expect(roundSize(10.5)).toBe(31 / 3); // 31 whole pixels
+            expect(roundSize(10.7)).toBe(32 / 3);
+            expect(roundSize(11)).toBe(11); // 33 whole pixels
+        });
+
+        it("should floor to the pixel grid at other device scales", () => {
+            const spy = spyOn(PixelRatio, "get").mockReturnValue(2);
+            expect(roundSize(10.3)).toBe(10);
+            expect(roundSize(10.5)).toBe(10.5);
+            expect(roundSize(10.6)).toBe(10.5);
+            spy.mockRestore();
         });
 
         it("should handle zero and negative numbers", () => {
             expect(roundSize(0)).toBe(0);
-            expect(roundSize(-5.3)).toBe(-5.375); // Rounds down for negatives
-            expect(roundSize(-10.125)).toBe(-10.125);
+            expect(roundSize(-5.3)).toBe(-16 / 3); // Rounds down for negatives
+            expect(roundSize(-11)).toBe(-11);
         });
 
         it("should handle large numbers", () => {
             expect(roundSize(1000.1)).toBe(1000);
-            expect(roundSize(1000.125)).toBe(1000.125);
-            expect(roundSize(999999.9)).toBe(999999.875);
+            expect(roundSize(1000.5)).toBe(3001 / 3);
         });
 
         it("should handle floating point precision", () => {
-            expect(roundSize(0.1 + 0.2)).toBe(0.25); // 0.1 + 0.2 = 0.30000000000000004
-            expect(roundSize(10.125000000001)).toBe(10.125);
+            expect(roundSize(0.1 + 0.2)).toBe(0); // 0.1 + 0.2 = 0.30000000000000004, under one pixel
+            expect(roundSize(10.000000000001)).toBe(10);
         });
 
         it("should handle edge cases", () => {
@@ -157,9 +165,8 @@ describe("helpers", () => {
         it("should prevent accumulating rounding errors", () => {
             // Simulate multiple operations that could accumulate errors
             let value = 0;
-            for (let i = 0; i < 8; i++) {
-                // Use 8 since it rounds to 1/8 pixels
-                value += 0.125; // Use 1/8 since that's what the function rounds to
+            for (let i = 0; i < 3; i++) {
+                value += 1 / 3; // One pixel at the mock scale of 3
                 value = roundSize(value);
             }
 
