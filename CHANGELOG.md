@@ -1,3 +1,7 @@
+## 3.3.10
+
+- Fix: Changing `dataKey` no longer loses the new dataset's initial scroll position when React retries a render.
+
 ## 3.3.9
 
 - Fix: Rows after an item that changes size stay in the correct positions while scrolling
