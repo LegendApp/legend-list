@@ -64,12 +64,27 @@ function installAnimationFrameQueue() {
     };
 }
 
-function renderPaddingAdjustment() {
+// Browsers keep about six significant digits for CSS lengths, so a written
+// "607.46875px" reads back as "607.469px". This style stand-in does the same.
+function createSerializingStyle(initialPaddingBottom: string) {
+    let paddingBottom = initialPaddingBottom;
+    return {
+        get paddingBottom() {
+            return paddingBottom;
+        },
+        set paddingBottom(value: string) {
+            const parsed = Number.parseFloat(value);
+            paddingBottom = Number.isFinite(parsed) ? `${Number(parsed.toPrecision(6))}px` : value;
+        },
+    };
+}
+
+function renderPaddingAdjustment(style: { paddingBottom: string } = { paddingBottom: "607px" }) {
     const contentNode = {
         offsetHeight: 0,
         parentElement: null,
         scrollHeight: 76723,
-        style: { paddingBottom: "607px" },
+        style,
     } as unknown as HTMLElement;
     const scrollElement = {
         clientHeight: 799,
@@ -433,6 +448,35 @@ describe("ScrollAdjust (web)", () => {
             act(() => animationFrames.flush());
 
             expect(rendered.contentNode.style.paddingBottom).toBe("586px");
+        } finally {
+            window.getComputedStyle = originalGetComputedStyle;
+            animationFrames.restore();
+            act(() => renderer?.unmount());
+        }
+    });
+    it("restores the baseline when the browser re-serializes the written padding", () => {
+        const animationFrames = installAnimationFrameQueue();
+        const originalGetComputedStyle = window.getComputedStyle;
+        window.getComputedStyle = ((element: HTMLElement) => element.style) as typeof window.getComputedStyle;
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            const rendered = renderPaddingAdjustment(createSerializingStyle("607px"));
+            renderer = rendered.renderer;
+            // A fractional scroll target (common at non-integer device pixel
+            // ratios) produces a padding value with more digits than the
+            // browser keeps: 607 + 0.46875 is written, 607.469px is stored.
+            rendered.ctx.state.scroll = 75924.234375;
+
+            act(() => {
+                set$(rendered.ctx, "scrollAdjust", -20.75);
+            });
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("607.469px");
+
+            act(() => animationFrames.flush());
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("607px");
         } finally {
             window.getComputedStyle = originalGetComputedStyle;
             animationFrames.restore();

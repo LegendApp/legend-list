@@ -99,8 +99,15 @@ export function ScrollAdjust() {
                             window.getComputedStyle(contentNode)[axis.paddingEndProp],
                         );
                         const temporaryPaddingEnd = `${(currentPaddingEnd || 0) + pad}px`;
-                        temporaryPaddingRef.current = { baseline: baselinePaddingEnd, value: temporaryPaddingEnd };
                         contentNode.style[axis.paddingEndProp] = temporaryPaddingEnd;
+                        // Record the value the browser kept, not the string written: CSS length
+                        // serialization trims long decimals ("607.46875px" reads back as "607.469px"),
+                        // so comparing against the written string would never match and the
+                        // temporary padding would stay in place.
+                        temporaryPaddingRef.current = {
+                            baseline: baselinePaddingEnd,
+                            value: contentNode.style[axis.paddingEndProp],
+                        };
                         // Force a layout update by reading from DOM
                         void contentNode.offsetHeight;
 
