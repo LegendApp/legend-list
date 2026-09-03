@@ -337,6 +337,26 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     experimental_adaptiveRender?: AdaptiveRenderConfig;
 
     /**
+     * Declares the exact initial viewport so a native Fabric list can render its initial scroll
+     * target in the first commit instead of waiting for measurement and bootstrap convergence.
+     *
+     * This is a correctness guarantee, not a hint: the declared size must match the measured
+     * layout, `getFixedItemSize` must return an exact size for every initial item, and an
+     * index-based `initialScrollIndex` (or `initialScrollAtEnd`) must be set. It is intentionally
+     * separate from `estimatedListSize`, which stays a performance hint.
+     *
+     * Unsupported configurations, the old architecture and web keep the existing behavior and warn
+     * once in development. A declared size that does not match the measured layout falls back to
+     * the normal initial-scroll path, but it cannot retract a frame that was already presented.
+     *
+     * @default undefined
+     */
+    experimental_exactInitialLayout?: {
+        height: number;
+        width: number;
+    };
+
+    /**
      * Keeps a newly recycled item laid out but invisible until its size has been measured, so it is never painted at
      * the estimated position it was recycled to. Only applies on the new architecture.
      *

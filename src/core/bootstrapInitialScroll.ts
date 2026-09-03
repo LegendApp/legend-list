@@ -1,3 +1,4 @@
+import { shouldFinishExactInitialScrollWithoutScroll } from "@/core/exactInitialLayout";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
@@ -898,6 +899,15 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
             const id = state.idCache[index] ?? getId(state, index);
             return state.sizesKnown.has(id);
         });
+    if (
+        shouldFinishExactInitialScrollWithoutScroll(ctx, resolvedOffset, {
+            areMountedBufferedIndicesMeasured,
+            areVisibleIndicesMeasured,
+        })
+    ) {
+        finishExactInitialScrollWithoutScroll(ctx, resolvedOffset);
+        return;
+    }
     const previousResolvedOffset = bootstrapInitialScroll.previousResolvedOffset;
     const previousVisibleIndices = bootstrapInitialScroll.visibleIndices;
 
@@ -964,6 +974,22 @@ function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOf
         recalculateItems: true,
         resolvedOffset,
         schedulePreservedTargetClear: shouldPreserveResizeTarget,
+    });
+}
+
+function finishExactInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
+    const state = ctx.state;
+    clearBootstrapInitialScrollSession(state);
+    const shouldPreserveResizeTarget =
+        !state.clearPreservedInitialScrollOnNextFinish &&
+        state.props.data.length > 0 &&
+        state.initialScroll?.viewPosition === 1;
+    finishInitialScroll(ctx, {
+        preserveTarget: shouldPreserveResizeTarget,
+        recalculateItems: true,
+        resolvedOffset,
+        schedulePreservedTargetClear: shouldPreserveResizeTarget,
+        setInitialScrollFinishedBeforeRecalculate: true,
     });
 }
 

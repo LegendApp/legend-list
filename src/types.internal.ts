@@ -126,6 +126,25 @@ type BootstrapOwnedInitialScrollSession = InternalInitialScrollSessionBase & {
 
 type InternalInitialScrollSession = OffsetInitialScrollSession | BootstrapOwnedInitialScrollSession;
 
+export interface ExactInitialLayoutSnapshot {
+    averageItemSize: number;
+    height: number;
+    positions: number[];
+    sizes: number[];
+    targetIndex: number;
+    targetOffset: number;
+    totalSize: number;
+    viewportLength: number;
+    width: number;
+}
+
+export interface ExactInitialLayoutState {
+    invalidated?: boolean;
+    observedNativeOffset?: number;
+    snapshot: ExactInitialLayoutSnapshot;
+    verified?: boolean;
+}
+
 type LegendListPropsInternal = LegendListPropsBase<any, Record<string, any>, string | undefined> & {
     data: readonly any[];
     renderItem: (props: LegendListRenderItemProps<any, string | undefined>) => React.ReactNode;
@@ -190,6 +209,7 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     indexByKey: Map<string, number>;
     clearPreservedInitialScrollOnNextFinish?: boolean;
+    exactInitialLayout?: ExactInitialLayoutState;
     initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
     isEndReached: boolean | null;
@@ -270,6 +290,7 @@ export interface InternalState {
         forceFullItemPositions?: boolean;
         mvcpAdjustmentSource?: ScrollAdjustmentSource;
         scrollVelocity?: number;
+        suppressInitialScrollSideEffects?: boolean;
     }) => void;
     userScrollAnchorReset?: {
         keys: Set<string>;

@@ -27,6 +27,13 @@ import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { resetContainerLayoutReady } from "@/core/containerLayoutReady";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import {
+    attachExactInitialLayout,
+    getExactInitialContentOffset,
+    isExactInitialLayoutActive,
+    seedExactInitialLayoutState,
+    useExactInitialLayoutFirstCommit,
+} from "@/core/exactInitialLayout";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
@@ -153,6 +160,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
         experimental_adaptiveRender,
+        experimental_exactInitialLayout,
         experimental_hideItemsUntilMeasured,
         itemsAreEqual,
         keyExtractor: keyExtractorProp,
@@ -297,7 +305,37 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
               }
             : undefined;
 
-    const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
+    const hasExactInitialLayout = useExactInitialLayoutFirstCommit(() => ({
+        alignItemsAtEnd,
+        anchoredEndSpace,
+        // createColumnWrapperStyle strips gaps from the content-container style.
+        columnWrapperStyle: columnWrapperStyle ?? contentContainerStyle,
+        contentInset,
+        contentInsetAdjustmentBehavior: (rest as { contentInsetAdjustmentBehavior?: string })
+            .contentInsetAdjustmentBehavior,
+        contentInsetEndAdjustment,
+        data: dataProp,
+        exactInitialLayout: experimental_exactInitialLayout,
+        getFixedItemSize,
+        getItemType,
+        hasActiveRefreshControl: !!refreshControl || (!!onRefresh && !!refreshing),
+        hasItemSeparator: !!props.ItemSeparatorComponent,
+        hasListFooter: !!ListFooterComponent,
+        hasListHeader: !!ListHeaderComponent,
+        horizontal: !!horizontal,
+        initialScroll: initialScrollProp,
+        isNewArchitecture: IsNewArchitecture,
+        isRTL: isHorizontalRTLProps({ horizontal, rtl }),
+        numColumns: numColumnsProp,
+        overrideItemLayout,
+        renderScrollComponent,
+        scrollAxisPaddingEnd: horizontal ? stylePaddingRightState : stylePaddingBottomState,
+        scrollAxisPaddingStart: horizontal ? stylePaddingLeftState : stylePaddingTopState,
+        snapToIndices,
+        stickyHeaderIndices: stickyHeaderIndicesProp,
+        useWindowScroll: !!useWindowScroll,
+    }));
+    const [canRender, setCanRender] = React.useState(hasExactInitialLayout || !IsNewArchitecture);
     const [, scheduleImperativeScrollCommit] = React.useReducer((value: number) => value + 1, 0);
 
     const ctx = useStateContext();
@@ -410,6 +448,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 totalSize: 0,
                 viewabilityConfigCallbackPairs: undefined as never,
             };
+            attachExactInitialLayout(ctx);
 
             const internalState = ctx.state;
             // Late-bind this command so updateScroll can maintain the end without importing back through scrollTo.
@@ -582,6 +621,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal) {
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
+        seedExactInitialLayoutState(ctx);
         updateItemPositions(ctx, /*dataChanged*/ true);
     }
 
@@ -589,6 +629,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const initialScroll = state.initialScroll;
         if (!initialScroll) {
             return undefined;
+        }
+
+        const exactContentOffset = getExactInitialContentOffset(ctx);
+        if (exactContentOffset !== undefined) {
+            return exactContentOffset;
         }
 
         const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
@@ -826,6 +871,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
     useInit(() => {
+        if (isExactInitialLayoutActive(ctx)) {
+            if (doInitialAllocateContainers(ctx)) {
+                calculateItemsInView(ctx, {
+                    dataChanged: true,
+                    doMVCP: true,
+                    suppressInitialScrollSideEffects: true,
+                });
+            }
+            return;
+        }
         if (!IsNewArchitecture) {
             doInitialAllocateContainers(ctx);
         }

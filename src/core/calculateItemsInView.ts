@@ -324,6 +324,7 @@ export function calculateItemsInView(
         forceFullItemPositions?: boolean;
         mvcpAdjustmentSource?: ScrollAdjustmentSource;
         scrollVelocity?: number;
+        suppressInitialScrollSideEffects?: boolean;
     } = {},
 ) {
     const state = ctx.state;
@@ -350,7 +351,8 @@ export function calculateItemsInView(
         const { dataChanged, doMVCP, forceFullItemPositions, mvcpAdjustmentSource } = params;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
-        const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
+        const suppressInitialScrollSideEffects =
+            !!bootstrapInitialScrollState || !!params.suppressInitialScrollSideEffects;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
@@ -933,6 +935,9 @@ export function calculateItemsInView(
         }
 
         if (suppressInitialScrollSideEffects) {
+            if (!bootstrapInitialScrollState) {
+                return;
+            }
             evaluateBootstrapInitialScroll(ctx);
             return;
         }

@@ -53,6 +53,7 @@ export function finishInitialScroll(
         resolvedOffset?: number;
         preserveTarget?: boolean;
         schedulePreservedTargetClear?: boolean;
+        setInitialScrollFinishedBeforeRecalculate?: boolean;
         syncObservedOffset?: boolean;
         waitForCompletionFrame?: boolean;
         onFinished?: () => void;
@@ -99,6 +100,10 @@ export function finishInitialScroll(
             }
         } else {
             clearPreservedInitialScrollTarget(state);
+        }
+
+        if (options?.setInitialScrollFinishedBeforeRecalculate) {
+            setInitialRenderState(ctx, { didInitialScroll: true });
         }
 
         if (options?.recalculateItems) {

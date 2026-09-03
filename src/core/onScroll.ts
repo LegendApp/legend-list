@@ -1,6 +1,7 @@
 import { clearFinishedBootstrapInitialScrollTargetIfMovedAway } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { recordExactInitialLayoutNativeOffset } from "@/core/exactInitialLayout";
 import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
@@ -88,6 +89,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     state.lastNativeScroll = newScroll;
     state.lastNativeScrollTime = Date.now();
+    recordExactInitialLayoutNativeOffset(ctx, newScroll);
 
     if (state.scrollingTo && state.scrollingTo.offset >= newScroll) {
         const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);
