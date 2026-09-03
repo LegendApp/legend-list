@@ -30,6 +30,7 @@ import { finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
     attachExactInitialLayout,
     getExactInitialContentOffset,
+    IS_EXACT_INITIAL_LAYOUT_SUPPORTED,
     isExactInitialLayoutActive,
     seedExactInitialLayoutState,
     useExactInitialLayoutFirstCommit,
@@ -305,37 +306,39 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
               }
             : undefined;
 
-    const hasExactInitialLayout = useExactInitialLayoutFirstCommit(() => ({
-        alignItemsAtEnd,
-        anchoredEndSpace,
-        // createColumnWrapperStyle strips gaps from the content-container style.
-        columnWrapperStyle: columnWrapperStyle ?? contentContainerStyle,
-        contentInset,
-        contentInsetAdjustmentBehavior: (rest as { contentInsetAdjustmentBehavior?: string })
-            .contentInsetAdjustmentBehavior,
-        contentInsetEndAdjustment,
-        data: dataProp,
-        exactInitialLayout: experimental_exactInitialLayout,
-        getFixedItemSize,
-        getItemType,
-        hasActiveRefreshControl: !!refreshControl || (!!onRefresh && !!refreshing),
-        hasItemSeparator: !!props.ItemSeparatorComponent,
-        hasListFooter: !!ListFooterComponent,
-        hasListHeader: !!ListHeaderComponent,
-        horizontal: !!horizontal,
-        initialScroll: initialScrollProp,
-        isNewArchitecture: IsNewArchitecture,
-        isRTL: isHorizontalRTLProps({ horizontal, rtl }),
-        numColumns: numColumnsProp,
-        overrideItemLayout,
-        renderScrollComponent,
-        scrollAxisPaddingEnd: horizontal ? stylePaddingRightState : stylePaddingBottomState,
-        scrollAxisPaddingStart: horizontal ? stylePaddingLeftState : stylePaddingTopState,
-        snapToIndices,
-        stickyHeaderIndices: stickyHeaderIndicesProp,
-        useWindowScroll: !!useWindowScroll,
-    }));
-    const [canRender, setCanRender] = React.useState(hasExactInitialLayout || !IsNewArchitecture);
+    const [canRender, setCanRender] = React.useState(
+        useExactInitialLayoutFirstCommit(() => ({
+            alignItemsAtEnd,
+            anchoredEndSpace,
+            // Read the gaps without `createColumnWrapperStyle`, which strips them from the
+            // content container style it is given.
+            columnWrapperStyle: columnWrapperStyle ?? contentContainerStyle,
+            contentInset,
+            contentInsetAdjustmentBehavior: (rest as { contentInsetAdjustmentBehavior?: string })
+                .contentInsetAdjustmentBehavior,
+            contentInsetEndAdjustment,
+            data: dataProp,
+            exactInitialLayout: experimental_exactInitialLayout,
+            getFixedItemSize,
+            getItemType,
+            hasActiveRefreshControl: !!refreshControl || (!!onRefresh && !!refreshing),
+            hasItemSeparator: !!props.ItemSeparatorComponent,
+            hasListFooter: !!ListFooterComponent,
+            hasListHeader: !!ListHeaderComponent,
+            horizontal: !!horizontal,
+            initialScroll: initialScrollProp,
+            isNewArchitecture: IsNewArchitecture,
+            isRTL: isHorizontalRTLProps({ horizontal, rtl }),
+            numColumns: numColumnsProp,
+            overrideItemLayout,
+            renderScrollComponent,
+            scrollAxisPaddingEnd: horizontal ? stylePaddingRightState : stylePaddingBottomState,
+            scrollAxisPaddingStart: horizontal ? stylePaddingLeftState : stylePaddingTopState,
+            snapToIndices,
+            stickyHeaderIndices: stickyHeaderIndicesProp,
+            useWindowScroll: !!useWindowScroll,
+        })) || !IsNewArchitecture,
+    );
     const [, scheduleImperativeScrollCommit] = React.useReducer((value: number) => value + 1, 0);
 
     const ctx = useStateContext();
@@ -448,7 +451,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 totalSize: 0,
                 viewabilityConfigCallbackPairs: undefined as never,
             };
-            attachExactInitialLayout(ctx);
+            if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED) {
+                attachExactInitialLayout(ctx);
+            }
 
             const internalState = ctx.state;
             // Late-bind this command so updateScroll can maintain the end without importing back through scrollTo.
@@ -621,7 +626,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal) {
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
-        seedExactInitialLayoutState(ctx);
+        if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED) {
+            seedExactInitialLayoutState(ctx);
+        }
         updateItemPositions(ctx, /*dataChanged*/ true);
     }
 
@@ -631,9 +638,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return undefined;
         }
 
-        const exactContentOffset = getExactInitialContentOffset(ctx);
-        if (exactContentOffset !== undefined) {
-            return exactContentOffset;
+        if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED) {
+            const exactContentOffset = getExactInitialContentOffset(ctx);
+            if (exactContentOffset !== undefined) {
+                return exactContentOffset;
+            }
         }
 
         const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
@@ -871,7 +880,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
     useInit(() => {
-        if (isExactInitialLayoutActive(ctx)) {
+        if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED && isExactInitialLayoutActive(ctx)) {
             if (doInitialAllocateContainers(ctx)) {
                 calculateItemsInView(ctx, {
                     dataChanged: true,

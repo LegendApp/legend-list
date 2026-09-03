@@ -1,6 +1,8 @@
 import type { StateContext } from "@/state/state";
 import type { LayoutRectangle } from "@/types.base";
 
+export const IS_EXACT_INITIAL_LAYOUT_SUPPORTED = false;
+
 export function useExactInitialLayoutFirstCommit(_getOptions: () => unknown) {
     return false;
 }

@@ -1,4 +1,7 @@
-import { shouldFinishExactInitialScrollWithoutScroll } from "@/core/exactInitialLayout";
+import {
+    IS_EXACT_INITIAL_LAYOUT_SUPPORTED,
+    shouldFinishExactInitialScrollWithoutScroll,
+} from "@/core/exactInitialLayout";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
@@ -900,6 +903,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
             return state.sizesKnown.has(id);
         });
     if (
+        IS_EXACT_INITIAL_LAYOUT_SUPPORTED &&
         shouldFinishExactInitialScrollWithoutScroll(ctx, resolvedOffset, {
             areMountedBufferedIndicesMeasured,
             areVisibleIndicesMeasured,

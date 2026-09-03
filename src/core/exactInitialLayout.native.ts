@@ -12,6 +12,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 
 const EXACT_INITIAL_LAYOUT_EPSILON = 1;
+export const IS_EXACT_INITIAL_LAYOUT_SUPPORTED = true;
 
 type ExactInitialLayoutOptions<ItemT> = {
     alignItemsAtEnd: boolean;
@@ -200,7 +201,8 @@ export function resolveExactInitialLayout<ItemT>(
 export function useExactInitialLayoutFirstCommit<ItemT>(getOptions: () => ExactInitialLayoutOptions<ItemT>) {
     const ctx = useStateContext();
     if (ctx.exactInitialLayout === undefined) {
-        const resolution = resolveExactInitialLayout(getOptions());
+        const options = getOptions();
+        const resolution = resolveExactInitialLayout(options);
         ctx.exactInitialLayout = resolution?.snapshot ?? null;
         if (IS_DEV && resolution?.reason) {
             warnDevOnce(
@@ -237,7 +239,8 @@ export function seedExactInitialLayoutState(ctx: StateContext) {
 
     const state = ctx.state;
     const { positions, sizes, targetOffset, totalSize, viewportLength } = exactInitialLayout.snapshot;
-    const { data, keyExtractor } = state.props;
+    const data = state.props.data;
+    const keyExtractor = state.props.keyExtractor;
     state.scrollLength = viewportLength;
 
     for (let index = 0; index < data.length; index++) {
