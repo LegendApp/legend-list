@@ -40,6 +40,7 @@ export function createMockState(
         endBuffered: 0,
         endNoBuffer: 0,
         endReachedSnapshot: undefined,
+        exactInitialLayout: undefined,
         firstFullyOnScreenIndex: 0,
         hasHadNonEmptyData: false,
         idCache: [],

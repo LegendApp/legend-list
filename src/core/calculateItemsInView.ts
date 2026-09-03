@@ -2,6 +2,7 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { createContainerItemMetadata, resolveContainerItemMetadata } from "@/core/containerItemMetadata";
+import { IS_EXACT_INITIAL_LAYOUT_SUPPORTED } from "@/core/exactInitialLayout";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
@@ -324,6 +325,7 @@ export function calculateItemsInView(
         forceFullItemPositions?: boolean;
         mvcpAdjustmentSource?: ScrollAdjustmentSource;
         scrollVelocity?: number;
+        suppressInitialScrollSideEffects?: boolean;
     } = {},
 ) {
     const state = ctx.state;
@@ -350,7 +352,9 @@ export function calculateItemsInView(
         const { dataChanged, doMVCP, forceFullItemPositions, mvcpAdjustmentSource } = params;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
-        const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
+        const suppressInitialScrollSideEffects = IS_EXACT_INITIAL_LAYOUT_SUPPORTED
+            ? !!bootstrapInitialScrollState || !!params.suppressInitialScrollSideEffects
+            : !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
@@ -933,6 +937,9 @@ export function calculateItemsInView(
         }
 
         if (suppressInitialScrollSideEffects) {
+            if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED && !bootstrapInitialScrollState) {
+                return;
+            }
             evaluateBootstrapInitialScroll(ctx);
             return;
         }

@@ -34,8 +34,17 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const animSize = useValue$("totalSize");
-    const [readyToRender, numColumns, otherAxisSize = 0] = useArr$(["readyToRender", "numColumns", "otherAxisSize"]);
-    const isVisible = useFreshDataTransitionVisibility(!!readyToRender, freshDataTransitionEpoch);
+    const [initialContentVisible, readyToRender, numColumns, otherAxisSize = 0] = useArr$([
+        "initialContentVisible",
+        "readyToRender",
+        "numColumns",
+        "otherAxisSize",
+    ]);
+    const isVisible = useFreshDataTransitionVisibility(
+        !!initialContentVisible || !!readyToRender,
+        freshDataTransitionEpoch,
+    );
+    const isInteractive = isVisible && !!readyToRender;
 
     const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
         ? {
@@ -70,7 +79,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     }
 
     return (
-        <Animated.View pointerEvents={isVisible ? undefined : "none"} style={style}>
+        <Animated.View pointerEvents={isInteractive ? undefined : "none"} style={style}>
             <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>
         </Animated.View>
     );

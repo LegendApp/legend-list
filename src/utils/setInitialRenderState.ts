@@ -1,4 +1,5 @@
 import { resetAdaptiveRender, setAdaptiveRender } from "@/core/adaptiveRender";
+import { IS_EXACT_INITIAL_LAYOUT_SUPPORTED, invalidateExactInitialLayout } from "@/core/exactInitialLayout";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { INITIAL_DRAW_DISTANCE, scheduleFullDrawDistancePrewarm } from "@/utils/getEffectiveDrawDistance";
 
@@ -19,6 +20,9 @@ export function resetInitialRenderState(
     }
     if (resetInitialScroll) {
         state.didFinishInitialScroll = false;
+    }
+    if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED && (resetLayout || resetInitialScroll)) {
+        invalidateExactInitialLayout(ctx);
     }
 
     set$(ctx, "readyToRender", false);

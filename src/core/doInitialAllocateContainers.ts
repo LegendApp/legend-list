@@ -1,6 +1,11 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import {
+    getExactInitialAverageItemSize,
+    IS_EXACT_INITIAL_LAYOUT_SUPPORTED,
+    isExactInitialLayoutActive,
+} from "@/core/exactInitialLayout";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getInitialContainerPoolSize } from "@/utils/containerPool";
 import { getEffectiveDrawDistance } from "@/utils/getEffectiveDrawDistance";
@@ -18,7 +23,9 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
 
     if (scrollLength > 0 && data.length > 0 && !hasContainers) {
         let averageItemSize: number;
-        if (getFixedItemSize) {
+        if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED && isExactInitialLayoutActive(ctx)) {
+            averageItemSize = getExactInitialAverageItemSize(ctx);
+        } else if (getFixedItemSize) {
             let totalSize = 0;
             const num = Math.min(20, data.length);
             for (let i = 0; i < num; i++) {

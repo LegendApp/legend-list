@@ -1,5 +1,6 @@
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { releaseDeferredPublicOnScroll } from "@/core/deferredPublicOnScroll";
+import { IS_EXACT_INITIAL_LAYOUT_SUPPORTED } from "@/core/exactInitialLayout";
 import { initialScrollCompletion, initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { Platform } from "@/platform/Platform";
@@ -53,6 +54,7 @@ export function finishInitialScroll(
         resolvedOffset?: number;
         preserveTarget?: boolean;
         schedulePreservedTargetClear?: boolean;
+        setInitialScrollFinishedBeforeRecalculate?: boolean;
         syncObservedOffset?: boolean;
         waitForCompletionFrame?: boolean;
         onFinished?: () => void;
@@ -99,6 +101,10 @@ export function finishInitialScroll(
             }
         } else {
             clearPreservedInitialScrollTarget(state);
+        }
+
+        if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED && options?.setInitialScrollFinishedBeforeRecalculate) {
+            setInitialRenderState(ctx, { didInitialScroll: true });
         }
 
         if (options?.recalculateItems) {

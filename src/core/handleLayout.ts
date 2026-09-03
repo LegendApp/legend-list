@@ -1,6 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { IS_EXACT_INITIAL_LAYOUT_SUPPORTED, verifyExactInitialLayoutOnMeasure } from "@/core/exactInitialLayout";
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { getWindowSize } from "@/platform/getWindowSize";
 import type { LayoutRectangle } from "@/platform/scrollview-types";
@@ -26,6 +27,10 @@ export function handleLayout(
         // so scrollLength matches what can actually be visible.
         const windowScrollAxisLength = getWindowSize()[scrollAxis];
         layout = windowScrollAxisLength > 0 ? { ...layoutParam, [scrollAxis]: windowScrollAxisLength } : layoutParam;
+    }
+
+    if (IS_EXACT_INITIAL_LAYOUT_SUPPORTED) {
+        verifyExactInitialLayoutOnMeasure(ctx, layout);
     }
 
     // Prefer a positive measured length, but avoid clobbering a previously known

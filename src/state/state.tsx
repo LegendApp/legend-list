@@ -32,6 +32,7 @@ export type ListenerType =
     | "extraData"
     | "footerSize"
     | "headerSize"
+    | "initialContentVisible"
     | "lastItemKeys"
     | "lastPositionUpdate"
     | "maintainVisibleContentPosition"
@@ -95,6 +96,7 @@ export type ListenerTypeValueMap = {
     extraData: any;
     footerSize: number;
     headerSize: number;
+    initialContentVisible: boolean;
     isAtEnd: boolean;
     isAtStart: boolean;
     isNearEnd: boolean;
@@ -139,6 +141,7 @@ export interface StateContext {
     columnWrapperStyle: ColumnWrapperStyle | undefined;
     containerLayoutTriggers: Map<number, () => void>;
     contextNum: number; // For debug checking that it's the right context
+    exactInitialLayout?: import("@/types.internal").ExactInitialLayoutSnapshot | null;
     listeners: Map<ListenerType, Set<(value: any) => void>>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
     mapViewabilityValues: Map<string, ViewToken>;

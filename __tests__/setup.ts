@@ -25,6 +25,7 @@ const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
 // Force Bun's resolver to use React Native specific entry points like Metro does
 const nativeModuleOverrides: Array<[string, string]> = [
     ["@/hooks/useOnLayoutSync", "../src/hooks/useOnLayoutSync.native.tsx"],
+    ["@/core/exactInitialLayout", "../src/core/exactInitialLayout.native.ts"],
     ["@/core/measureContainersInLayoutEffect", "../src/core/measureContainersInLayoutEffect.native.ts"],
     ["@/components/Containers", "../src/components/Containers.native.tsx"],
     ["@/components/ListComponentScrollView", "../src/components/ListComponentScrollView.native.tsx"],
