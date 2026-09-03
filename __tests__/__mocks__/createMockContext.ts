@@ -103,6 +103,7 @@ export function createMockContext(
         columnWrapperStyle: undefined,
         containerLayoutTriggers: new Map() as StateContext["containerLayoutTriggers"],
         contextNum: 0,
+        exactInitialLayout: undefined,
         listeners,
         mapViewabilityAmountCallbacks: new Map() as StateContext["mapViewabilityAmountCallbacks"],
         mapViewabilityAmountValues: new Map() as StateContext["mapViewabilityAmountValues"],

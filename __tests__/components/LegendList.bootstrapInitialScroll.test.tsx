@@ -173,6 +173,75 @@ afterEach(() => {
 });
 
 describe("LegendList bootstrap initial scroll", () => {
+    it("seeds exact fixed geometry and the target window before the first Fabric layout", async () => {
+        const data = Array.from({ length: 10 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?exact-initial-layout");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={80}
+                experimental_exactInitialLayout={{ height: 200, width: 320 }}
+                getFixedItemSize={() => 100}
+                horizontal
+                initialScrollIndex={5}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+
+        expect(lastListProps.canRender).toBe(true);
+        expect(lastListProps.initialContentOffset).toBe(500);
+        expect(ctx.values.get("initialContentVisible")).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+        expect(ctx.values.get("totalSize")).toBe(1_000);
+        expect(ctx.values.get("numContainers")).toBeGreaterThan(0);
+        expect(state.exactInitialLayout?.snapshot.targetIndex).toBe(5);
+        expect(state.scrollLength).toBe(320);
+        expect(state.scroll).toBe(500);
+        expect(state.positions).toEqual(data.map((_, index) => index * 100));
+        expect(state.sizesKnown).toEqual(new Map(data.map((item) => [item.id, 100])));
+        expect(state.startBuffered).toBeLessThanOrEqual(5);
+        expect(state.endBuffered).toBeGreaterThanOrEqual(5);
+        expect([...state.containerItemKeys.keys()]).toContain("item-5");
+    });
+
+    it("seeds exact initialScrollAtEnd geometry at the clamped end offset", async () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?exact-initial-layout-at-end");
+
+        render(
+            <LegendList
+                data={data}
+                experimental_exactInitialLayout={{ height: 200, width: 320 }}
+                getFixedItemSize={() => 100}
+                horizontal
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+
+        expect(lastListProps.initialContentOffset).toBe(180);
+        expect(state.exactInitialLayout?.snapshot.targetIndex).toBe(4);
+        expect(state.scroll).toBe(180);
+        expect(state.startBuffered).toBeLessThanOrEqual(4);
+        expect(state.endBuffered).toBe(4);
+    });
+
     it("short-circuits zero-valued targets without starting bootstrap", async () => {
         const data = [{ id: "item-0", label: "Item 0" }];
         const { LegendList } = await import("../../src/components/LegendList?bootstrap-zero");

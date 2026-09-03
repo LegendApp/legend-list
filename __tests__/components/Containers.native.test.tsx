@@ -28,6 +28,7 @@ function registerMeasureContainersMock() {
 
 type SetupProps = {
     columnWrapperStyle: Record<string, any>;
+    initialContentVisible?: boolean;
     numColumns: number;
     onContext?: (ctx: StateContext) => void;
     otherAxisSize?: number;
@@ -37,6 +38,7 @@ type SetupProps = {
 
 const Setup = ({
     columnWrapperStyle,
+    initialContentVisible = false,
     numColumns,
     onContext,
     otherAxisSize = 0,
@@ -49,6 +51,7 @@ const Setup = ({
     ctx.values.set("numColumns", numColumns);
     ctx.values.set("numContainersPooled", 1);
     ctx.values.set("otherAxisSize", otherAxisSize);
+    ctx.values.set("initialContentVisible", initialContentVisible);
     ctx.values.set("readyToRender", readyToRender);
     ctx.values.set("totalSize", 0);
     return <>{children}</>;
@@ -238,6 +241,28 @@ describe("Containers native", () => {
 
         const props = (toJSON() as any)?.props;
         expect(props?.style?.opacity).toBe(0);
+        expect(props?.pointerEvents).toBe("none");
+        unmount();
+    });
+
+    it("shows exact initial content without enabling interaction before readiness", async () => {
+        const { Containers } = await import("@/components/Containers");
+
+        const { toJSON, unmount } = render(
+            <StateProvider>
+                <Setup columnWrapperStyle={{}} initialContentVisible numColumns={1} readyToRender={false}>
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        recycleItems={false}
+                    />
+                </Setup>
+            </StateProvider>,
+        );
+
+        const props = (toJSON() as any)?.props;
+        expect(props?.style?.opacity).toBe(1);
         expect(props?.pointerEvents).toBe("none");
         unmount();
     });
