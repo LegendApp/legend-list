@@ -568,7 +568,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !isFirstLocal &&
         !didDataChangeLocal &&
         (state.props.estimatedItemSize !== estimatedItemSize ||
-            !!state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
+            !!state.props.hasReliableKeyExtractor !== (!!dataSource || !!keyExtractorProp) ||
             didScrollAxisChange ||
             didScrollAxisGapChange);
 

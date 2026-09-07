@@ -293,6 +293,60 @@ describe("LegendList props behavior", () => {
         expect(getKey.mock.calls.length - keyCallsBeforeMutation).toBeLessThan(10);
     });
 
+    it("preserves learned data-source layout on unrelated rerenders", async () => {
+        const source: LegendListDataSource<{ id: string }> = {
+            getItem: (index) => ({ id: `item-${index}` }),
+            getKey: (index) => `item-${index}`,
+            getLength: () => 10_000,
+            getRevision: () => 0,
+            subscribe: () => () => {},
+        };
+        const { LegendList } = await import("../../src/components/LegendList?props-test-data-source-rerender");
+        const renderList = (testID: string) => (
+            <LegendList
+                dataSource={source}
+                estimatedItemSize={20}
+                recycleItems={false}
+                renderItem={() => null}
+                testID={testID}
+            />
+        );
+        const rendered = render(renderList("before"));
+        const ctx = await getContextFromRender();
+        const state = ctx.state;
+        const store = state.layoutStoreRuntime!.store;
+
+        // The learned estimate can lag newer measurements until the next idle flush.
+        for (let index = 0; index < 20; index++) {
+            const key = `item-${index}`;
+            state.idCache[index] = key;
+            state.indexByKey.set(key, index);
+            state.sizesKnown.set(key, 40);
+            state.sizes.set(key, 40);
+            store.setMeasuredSize(index, 40);
+        }
+        store.setEstimatedSize(30);
+        const totalSize = store.getTotalSize();
+        const offset = store.getOffset(5_000);
+        const replaceKnownSizeEntries = store.replaceKnownSizeEntries.bind(store);
+        const rebuild = mock(replaceKnownSizeEntries);
+        store.replaceKnownSizeEntries = rebuild;
+
+        try {
+            rendered.rerender(renderList("after"));
+            await flushAsync();
+
+            expect(rebuild).not.toHaveBeenCalled();
+            expect(store.getEstimatedSize()).toBe(30);
+            expect(store.getTotalSize()).toBe(totalSize);
+            expect(store.getOffset(5_000)).toBe(offset);
+            expect(store.getSize(0)).toBe(40);
+        } finally {
+            store.replaceKnownSizeEntries = replaceKnownSizeEntries;
+            rendered.unmount();
+        }
+    });
+
     it("does not scan fixed-size hints on initial top-of-list mount", async () => {
         const data = Array.from({ length: 1000 }, (_, index) => ({ id: `item-${index}` }));
         const getFixedItemSize = mock(() => 64);
