@@ -437,7 +437,9 @@ function updateSpanTopologyTail(
     invalidationIndex: number,
 ) {
     const boundedIndex = Math.max(0, Math.min(length - 1, invalidationIndex));
-    const firstRowIndex = topology.itemRowIndexes[boundedIndex] ?? 0;
+    // A shrinking span at the start of a row may now fit in the preceding row.
+    // Include that row so incremental packing has the same boundary as a full rebuild.
+    const firstRowIndex = Math.max(0, (topology.itemRowIndexes[boundedIndex] ?? 0) - 1);
     const startIndex = topology.rowStartIndexes[firstRowIndex] ?? 0;
     topology.rowStartIndexes.length = firstRowIndex;
     topology.rowEndIndexes.length = firstRowIndex;

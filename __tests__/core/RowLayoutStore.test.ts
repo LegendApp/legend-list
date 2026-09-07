@@ -428,6 +428,45 @@ describe("RowLayoutStore", () => {
         expect(store.getColumn(90_001)).toBe(1);
     });
 
+    it("repacks a shrinking span into the preceding partially filled row", () => {
+        const spans = [2, 2, 1];
+        const store = new RowLayoutStore({ estimatedSize: 20, length: spans.length, numColumns: 3, spans });
+        store.setMeasuredSize(0, 30);
+        store.setMeasuredSize(1, 40);
+        store.setMeasuredSize(2, 50);
+        spans[1] = 1;
+
+        store.resize(spans.length, spans, 3, 1);
+
+        expect([0, 1, 2].map((index) => store.getColumn(index))).toEqual([1, 3, 1]);
+        expect([0, 1, 2].map((index) => store.getOffset(index))).toEqual([0, 0, 40]);
+        expect(store.getTotalSize()).toBe(90);
+        expect(store.findIndexRangeAtOffsets(0, 39)).toEqual({ end: 1, start: 0 });
+    });
+
+    it("matches full packing after successive partial span invalidations", () => {
+        let seed = 445566;
+        const spans = new Array<number>(32).fill(2);
+        const store = new RowLayoutStore({ estimatedSize: 20, length: spans.length, numColumns: 5, spans });
+        store.setMeasuredSize(10, 45);
+
+        for (let step = 0; step < 100; step++) {
+            seed = nextRandom(seed);
+            const index = seed % spans.length;
+            seed = nextRandom(seed);
+            spans[index] = (seed % 5) + 1;
+            store.resize(spans.length, spans, 5, index);
+
+            const rebuilt = new RowLayoutStore({ estimatedSize: 20, length: spans.length, numColumns: 5, spans });
+            rebuilt.setMeasuredSize(10, 45);
+            for (let itemIndex = 0; itemIndex < spans.length; itemIndex++) {
+                expect(store.getColumn(itemIndex)).toBe(rebuilt.getColumn(itemIndex));
+                expect(store.getOffset(itemIndex)).toBe(rebuilt.getOffset(itemIndex));
+            }
+            expect(store.getTotalSize()).toBe(rebuilt.getTotalSize());
+        }
+    });
+
     it("throws for invalid sizes, spans, indexes, and column counts", () => {
         const store = new RowLayoutStore({ estimatedSize: 100, length: 1, numColumns: 1 });
 
