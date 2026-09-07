@@ -63,6 +63,27 @@ function collectMaterializedEntries(ctx: StateContext) {
     return byIndex;
 }
 
+// A fully materialized update range can be checked without visiting unrelated keys.
+// Incomplete caches and structural batches retain the full reconciliation path.
+function collectUpdatedEntries(ctx: StateContext, operations: readonly DataSourceOperation[]) {
+    let count = 0;
+    for (const operation of operations) {
+        if (operation.type !== "update") return undefined;
+        count += operation.count;
+    }
+    if (count > ctx.state.indexByKey.size) return undefined;
+    const entries = new Map<number, MaterializedEntry>();
+    for (const operation of operations) {
+        if (operation.type !== "update") return undefined;
+        for (let index = operation.index; index < operation.index + operation.count; index++) {
+            const key = ctx.state.idCache[index];
+            if (key === undefined || ctx.state.indexByKey.get(key) !== index) return undefined;
+            entries.set(index, { index, key });
+        }
+    }
+    return entries;
+}
+
 function snapshotAnchorPositions(ctx: StateContext) {
     const state = ctx.state;
     const anchorKeys = new Set(state.idsInView);
@@ -225,7 +246,9 @@ export function applyDataSourceMutationBatches(
         return { applied: false, materializedCount: 0, resetReason: "the data source requested a reset" };
     }
 
-    let entries = collectMaterializedEntries(ctx);
+    const updatedEntries = collectUpdatedEntries(ctx, operations);
+    const isUpdateOnly = updatedEntries !== undefined;
+    let entries = updatedEntries ?? collectMaterializedEntries(ctx);
     const anchorPositions = snapshotAnchorPositions(ctx);
     const invalidatedKeys = new Set<string>();
     const removedKeys = new Set<string>();
@@ -235,7 +258,7 @@ export function applyDataSourceMutationBatches(
     }
 
     let resetReason: string | undefined;
-    const nextIndexByKey = new Map<string, number>();
+    const nextIndexByKey = isUpdateOnly ? state.indexByKey : new Map<string, number>();
     try {
         for (const entry of entries.values()) {
             const finalKey = source.getKey(entry.index);
@@ -243,11 +266,11 @@ export function applyDataSourceMutationBatches(
                 resetReason = `materialized key ${entry.key} changed at index ${entry.index}`;
                 break;
             }
-            if (nextIndexByKey.has(entry.key)) {
+            if (!isUpdateOnly && nextIndexByKey.has(entry.key)) {
                 resetReason = `materialized key ${entry.key} is duplicated`;
                 break;
             }
-            nextIndexByKey.set(entry.key, entry.index);
+            if (!isUpdateOnly) nextIndexByKey.set(entry.key, entry.index);
         }
     } catch (error) {
         resetReason = `reading a materialized key failed: ${error instanceof Error ? error.message : String(error)}`;
@@ -289,11 +312,13 @@ export function applyDataSourceMutationBatches(
     }
 
     state.dataSourceAnchorPositions ??= anchorPositions;
-    state.idCache.length = 0;
-    state.indexByKey.clear();
-    for (const entry of entries.values()) {
-        state.idCache[entry.index] = entry.key;
-        state.indexByKey.set(entry.key, entry.index);
+    if (!isUpdateOnly) {
+        state.idCache.length = 0;
+        state.indexByKey.clear();
+        for (const entry of entries.values()) {
+            state.idCache[entry.index] = entry.key;
+            state.indexByKey.set(entry.key, entry.index);
+        }
     }
 
     for (const key of removedKeys) {
@@ -364,5 +389,5 @@ export function applyDataSourceMutationBatches(
         state.firstFullyOnScreenIndex === undefined ? undefined : transformClampedIndex(state.firstFullyOnScreenIndex);
     state.scrollForNextCalculateItemsInView = undefined;
 
-    return { applied: true, materializedCount: entries.size };
+    return { applied: true, materializedCount: isUpdateOnly ? state.indexByKey.size : entries.size };
 }

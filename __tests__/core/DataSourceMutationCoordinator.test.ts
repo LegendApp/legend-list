@@ -195,6 +195,58 @@ describe("DataSourceMutationCoordinator", () => {
     });
 });
 
+it("validates only affected materialized keys for update-only batches", () => {
+    const getKey = mock((i: number) => `k${i}`);
+    const source = { ...createSource([]), getItem: (i: number) => ({ id: `k${i}` }), getKey, getLength: () => 1000000 };
+    const ctx = createMockContext({}, { props: { dataSource: source } });
+    for (let i = 0; i < 10000; i++) {
+        ctx.state.idCache[i] = `k${i}`;
+        ctx.state.indexByKey.set(`k${i}`, i);
+    }
+    const result = applyDataSourceMutationBatches(ctx, source, [
+        createBatch(1000000, 1000000, [
+            { count: 1, index: 12, layout: "preserve", type: "update" },
+            { count: 2, index: 13, layout: "invalidate", type: "update" },
+        ]),
+    ]);
+    expect(result).toEqual({ applied: true, materializedCount: 10000 });
+    expect(getKey.mock.calls.map(([index]) => index)).toEqual([12, 13, 14]);
+    expect(ctx.state.indexByKey.get("k9999")).toBe(9999);
+    expect(ctx.state.idCache[9999]).toBe("k9999");
+});
+
+it("preserves caches when an update changes an affected key", () => {
+    const source = createSource(["changed", "b"]);
+    const ctx = createMockContext(
+        {},
+        {
+            idCache: ["a", "b"],
+            indexByKey: new Map([
+                ["a", 0],
+                ["b", 1],
+            ]),
+            props: { dataSource: source },
+        },
+    );
+    const result = applyDataSourceMutationBatches(ctx, source, [
+        createBatch(2, 2, [{ count: 1, index: 0, layout: "invalidate", type: "update" }]),
+    ]);
+    expect(result.applied).toBe(false);
+    expect(result.resetReason).toContain("changed at index 0");
+    expect(ctx.state.idCache).toEqual(["a", "b"]);
+    expect(ctx.state.indexByKey.get("a")).toBe(0);
+});
+
+it("validates inverse-only cached keys through full reconciliation", () => {
+    const source = createSource(["changed"]);
+    const ctx = createMockContext({}, { idCache: [], indexByKey: new Map([["a", 0]]), props: { dataSource: source } });
+    expect(
+        applyDataSourceMutationBatches(ctx, source, [
+            createBatch(1, 1, [{ count: 1, index: 0, layout: "preserve", type: "update" }]),
+        ]).applied,
+    ).toBe(false);
+});
+
 it("invalidates fixed-size metadata for an in-place item update before publishing the new version", async () => {
     const { resolveContainerItemMetadata } = await import("../../src/core/containerItemMetadata");
     const item = { id: "a", size: 40 };
