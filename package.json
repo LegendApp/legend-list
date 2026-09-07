@@ -66,6 +66,7 @@
         "npm": ">=8.11.0"
     },
     "scripts": {
+        "bench:mutation-scaling": "bun run benchmarks/mutation-scaling.ts",
         "bench:data-source": "bun run benchmarks/data-source-baseline.ts",
         "bench:engines": "bun run benchmarks/profile-engines.ts",
         "bench:sparse-layout": "bun run benchmarks/sparse-sequence-layout.ts",
