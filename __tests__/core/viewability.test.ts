@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { hasViewabilityConsumers, setupViewability, updateViewableItems } from "../../src/core/viewability";
@@ -370,7 +370,7 @@ describe("viewability system", () => {
         });
 
         it("should keep a moved previous viewable item viewable at its current index", () => {
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
             expect(onViewableItemsChangedCalls[0].viewableItems.map((token: ViewToken) => token.key)).toContain(
                 "item-2",
@@ -382,11 +382,13 @@ describe("viewability system", () => {
             mockState.props.data = data;
             mockState.idCache = data.map((item) => `item-${item.id}`);
             mockState.indexByKey = new Map(data.map((item, index) => [`item-${item.id}`, index]));
-            mockState.positions = Array.from({ length: 13 }, (_, i) => i * 100);
+            Array.from({ length: 13 }, (_, i) => i * 100).forEach((offset, index) =>
+                setLayoutValue(mockState, "positions", index, offset),
+            );
             mockState.scroll = 1000;
             mockState.sizes.set("item-2", 100);
 
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 10, 12);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 10, 12);
 
             expect(onViewableItemsChangedCalls).toHaveLength(0);
             expect(mockCtx.mapViewabilityConfigStates?.get("test-config")?.viewableItems).toContainEqual(
@@ -398,7 +400,7 @@ describe("viewability system", () => {
         });
 
         it("should report a moved previous viewable item as not viewable when it leaves the range", () => {
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
             expect(onViewableItemsChangedCalls[0].viewableItems.map((token: ViewToken) => token.key)).toContain(
                 "item-2",
@@ -410,10 +412,12 @@ describe("viewability system", () => {
             mockState.props.data = data;
             mockState.idCache = data.map((item) => `item-${item.id}`);
             mockState.indexByKey = new Map(data.map((item, index) => [`item-${item.id}`, index]));
-            mockState.positions = Array.from({ length: 13 }, (_, i) => i * 100);
+            Array.from({ length: 13 }, (_, i) => i * 100).forEach((offset, index) =>
+                setLayoutValue(mockState, "positions", index, offset),
+            );
             mockState.sizes.set("item-2", 100);
 
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 1);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 1);
 
             expect(onViewableItemsChangedCalls).toHaveLength(1);
             expect(onViewableItemsChangedCalls[0].viewableItems.map((token: ViewToken) => token.key)).not.toContain(
@@ -425,7 +429,7 @@ describe("viewability system", () => {
         });
 
         it("should report a removed previous viewable item as not viewable", () => {
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
             expect(onViewableItemsChangedCalls[0].viewableItems.map((token: ViewToken) => token.key)).toContain(
                 "item-2",
@@ -442,9 +446,9 @@ describe("viewability system", () => {
                 ["item-3", 2],
                 ["item-4", 3],
             ]);
-            mockState.positions = [0, 100, 250, 450];
+            [0, 100, 250, 450].forEach((offset, index) => setLayoutValue(mockState, "positions", index, offset));
 
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 1);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 1);
 
             expect(onViewableItemsChangedCalls).toHaveLength(1);
             expect(onViewableItemsChangedCalls[0].changed).toContainEqual(
@@ -453,21 +457,26 @@ describe("viewability system", () => {
         });
 
         it("should report a previous viewable item with a missing current position as not viewable", () => {
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
             expect(onViewableItemsChangedCalls[0].viewableItems.map((token: ViewToken) => token.key)).toContain(
                 "item-2",
             );
 
             onViewableItemsChangedCalls.length = 0;
-            mockState.positions[2] = undefined as any;
+            const store = mockState.layoutStoreRuntime!.store;
+            const getOffset = store.getOffset.bind(store);
+            const offsetSpy = spyOn(store, "getOffset").mockImplementation((index) =>
+                index === 2 ? undefined : getOffset(index),
+            );
 
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 1);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 1);
 
             expect(onViewableItemsChangedCalls).toHaveLength(1);
             expect(onViewableItemsChangedCalls[0].changed).toContainEqual(
                 expect.objectContaining({ index: 2, isViewable: false, key: "item-2" }),
             );
+            offsetSpy.mockRestore();
         });
 
         it("should handle scroll position changes affecting viewability", () => {
@@ -658,7 +667,6 @@ describe("viewability system", () => {
                 updateMockViewableItems(corruptedState, mockCtx, pairs, 500, 0, 2);
             }).not.toThrow();
         });
-
     });
 
     describe("viewability calculations", () => {

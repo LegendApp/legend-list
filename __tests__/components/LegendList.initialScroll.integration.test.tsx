@@ -552,6 +552,7 @@ describe("LegendList initial scroll integration", () => {
     });
 
     it("preserves a fresh dataKey transition across a render before parent layout effects", async () => {
+        const firstVisible = mock(() => {});
         const initialData = createItems(5).map((item) => ({ ...item, id: `initial-${item.id}` }));
         const nextData = createItems(10).map((item) => ({ ...item, id: `next-${item.id}` }));
         const scenario = await renderInitialScrollScenario({
@@ -561,6 +562,8 @@ describe("LegendList initial scroll integration", () => {
                 dataKey: "initial",
                 getFixedItemSize: () => 100,
                 initialScrollOffset: 300,
+                onFirstVisibleItemChanged: firstVisible,
+                viewabilityConfig: { startOffset: 110 },
             },
             platform: "ios",
             strictMode: true,
@@ -573,10 +576,13 @@ describe("LegendList initial scroll integration", () => {
             dataKey: "next",
             getFixedItemSize: () => 100,
             initialScrollOffset: 800,
+            onFirstVisibleItemChanged: firstVisible,
+            viewabilityConfig: { startOffset: 110 },
         });
 
         expectScrollClose(scenario.ref, 800);
         expectScrollCallsContain(scenario.scrollCalls, 800);
+        expect(firstVisible.mock.calls.at(-1)?.[0]).toMatchObject({ index: 9 });
 
         await scenario.cleanup();
     });

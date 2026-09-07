@@ -1,3 +1,4 @@
+import { updateContainerItemMetadata } from "@/core/containerItemMetadata";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import { notifyPosition$, peek$, type StateContext, set$ } from "@/state/state";
 import type { DataSourceMutationBatch, DataSourceOperation, LegendListDataSource, ViewToken } from "@/types.base";
@@ -299,7 +300,6 @@ export function applyDataSourceMutationBatches(
         state.sizes.delete(key);
         state.sizesKnown.delete(key);
         state.containerItemKeys.delete(key);
-        state.pendingLayoutEffectMeasurements?.delete(key);
         state.userScrollAnchorReset?.keys.delete(key);
         state.layoutStoreRuntime?.positionListenerOffsets?.delete(key);
         notifyPosition$(ctx, key, undefined);
@@ -313,7 +313,11 @@ export function applyDataSourceMutationBatches(
         const containerId = state.containerItemKeys.get(key);
         const index = nextIndexByKey.get(key);
         if (containerId !== undefined && index !== undefined) {
-            set$(ctx, `containerItemData${containerId}`, source.getItem(index));
+            const item = source.getItem(index);
+            if (invalidatedKeys.has(key)) state.containerItemMetadata.delete(containerId);
+            updateContainerItemMetadata(state, containerId, index, item);
+            set$(ctx, `containerItemIndex${containerId}`, index);
+            set$(ctx, `containerItemData${containerId}`, item);
             const versionKey = `containerDataVersion${containerId}` as const;
             set$(ctx, versionKey, (peek$(ctx, versionKey) ?? 0) + 1);
         }

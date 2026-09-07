@@ -150,7 +150,7 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
                 peek$(ctx, `containerItemKey${measurement.containerId}`) === measurement.itemKey;
             if (ownsMeasuredItem) {
                 const index = state.indexByKey.get(measurement.itemKey);
-                const itemData = index === undefined ? undefined : state.props.data?.[index];
+                const itemData = index === undefined ? undefined : getDataItem(state, index);
                 const metadata =
                     measurement.containerId !== undefined && index !== undefined && itemData !== undefined
                         ? resolveContainerItemMetadata(state, measurement.containerId, index, itemData)

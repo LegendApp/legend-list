@@ -196,7 +196,6 @@ function shouldDeferPeriodicEstimateFlush(state: InternalState) {
         !!state.queuedInitialLayout ||
         !!state.scrollingTo ||
         !!state.pendingScrollToEnd ||
-        !!state.pendingLayoutEffectMeasurements?.size ||
         !!state.userScrollAnchorReset?.keys.size ||
         hasActiveMVCPAnchorLock(state) ||
         recentScrollAge < PERIODIC_ESTIMATE_FLUSH_DELAY ||
@@ -248,14 +247,16 @@ export function schedulePeriodicLayoutStoreEstimateFlush(ctx: StateContext) {
     const runtime = getActiveLayoutStoreRuntime(ctx);
     let didSchedule = false;
 
-    if (runtime && runtime.queuedEstimateFlush === undefined && hasEnoughNewMeasurementsForPeriodicFlush(runtime)) {
-        const timeout = setTimeout(() => {
-            runtime.queuedEstimateFlush = undefined;
-            state.timeouts.delete(timeout);
-            flushPeriodicLayoutStoreEstimate(ctx);
-        }, PERIODIC_ESTIMATE_FLUSH_DELAY) as unknown as number;
-        runtime.queuedEstimateFlush = timeout;
-        state.timeouts.add(timeout);
+    if (
+        runtime &&
+        !state.scheduledWork.has("layoutStoreEstimateFlush") &&
+        hasEnoughNewMeasurementsForPeriodicFlush(runtime)
+    ) {
+        state.scheduledWork.timeout(
+            () => flushPeriodicLayoutStoreEstimate(ctx),
+            PERIODIC_ESTIMATE_FLUSH_DELAY,
+            "layoutStoreEstimateFlush",
+        );
         didSchedule = true;
     }
 
@@ -263,7 +264,8 @@ export function schedulePeriodicLayoutStoreEstimateFlush(ctx: StateContext) {
 }
 
 export function resetLayoutStoreRuntimeState(state: InternalState) {
-    state.layoutStoreRuntime?.resetTransientState(state.timeouts);
+    state.scheduledWork.cancel("layoutStoreEstimateFlush");
+    state.layoutStoreRuntime?.resetTransientState();
 }
 
 export function setLayoutStoreMeasuredSize(ctx: StateContext, index: number | undefined, size: number) {

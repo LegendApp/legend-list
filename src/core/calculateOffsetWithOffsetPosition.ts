@@ -46,7 +46,9 @@ export function calculateOffsetWithOffsetPosition(
         }
         const isOutOfBounds = index < 0 || index >= dataLength;
         const fallbackEstimatedSize = state.props.estimatedItemSize ?? 0;
-        const measuredItemSize = isOutOfBounds ? fallbackEstimatedSize : (getLayoutSize(ctx, index) ?? fallbackEstimatedSize);
+        const measuredItemSize = isOutOfBounds
+            ? fallbackEstimatedSize
+            : (getLayoutSize(ctx, index) ?? fallbackEstimatedSize);
         const itemSize = Math.max(0, measuredItemSize - (isOutOfBounds ? 0 : ctx.scrollAxisGap));
         const trailingInset = getContentInsetEnd(ctx);
 

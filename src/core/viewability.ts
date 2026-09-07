@@ -196,10 +196,10 @@ function updateViewableItemsWithConfig(
         for (const viewToken of previousViewableItems) {
             previousViewableKeys.add(viewToken.key);
             const currentIndex = state.indexByKey.get(viewToken.key);
-            const currentItem = currentIndex !== undefined ? data[currentIndex] : undefined;
+            const currentItem = currentIndex !== undefined ? data.getItem(currentIndex) : undefined;
             const containerId = findContainerId(ctx, viewToken.key);
             let isStillViewable = false;
-            if (currentIndex !== undefined && currentItem !== undefined) {
+            if (currentIndex !== undefined && (currentItem !== undefined || data.kind === "dataSource")) {
                 isStillViewable = checkIsViewable(
                     state,
                     ctx,

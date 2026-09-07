@@ -57,6 +57,30 @@ describe("measureContainersInLayoutEffect", () => {
         Platform.OS = previousPlatform;
     });
 
+    it("skips already-known fixed source items without native measurement", () => {
+        const item = { id: "item_0" };
+        ctx.state.props.data = [];
+        ctx.state.props.dataSource = {
+            getItem: () => item,
+            getKey: () => item.id,
+            getLength: () => 1,
+            getRevision: () => 0,
+            subscribe: () => () => {},
+        };
+        ctx.state.props.getFixedItemSize = () => 100;
+        let measured = false;
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: () => {
+                    measured = true;
+                },
+            },
+        } as any);
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+        expect(measured).toBe(false);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(true);
+    });
+
     it("collects synchronous Fabric measurements before one recalculation", () => {
         const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
         ctx.viewRefs.set(0, {

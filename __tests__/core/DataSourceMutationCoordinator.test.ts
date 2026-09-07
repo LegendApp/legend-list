@@ -194,3 +194,26 @@ describe("DataSourceMutationCoordinator", () => {
         ]);
     });
 });
+
+it("invalidates fixed-size metadata for an in-place item update before publishing the new version", async () => {
+    const { resolveContainerItemMetadata } = await import("../../src/core/containerItemMetadata");
+    const item = { id: "a", size: 40 };
+    const source = { ...createSource(["a"]), getItem: () => item };
+    const ctx = createMockContext(
+        { containerItemData0: item, containerItemKey0: "a" },
+        {
+            containerItemKeys: new Map([["a", 0]]),
+            idCache: ["a"],
+            indexByKey: new Map([["a", 0]]),
+            props: { dataSource: source, getFixedItemSize: (value: typeof item) => value.size },
+        },
+    );
+    expect(resolveContainerItemMetadata(ctx.state, 0, 0, item).fixedItemSize).toBe(40);
+    item.size = 90;
+    applyDataSourceMutationBatches(ctx, source, [
+        createBatch(1, 1, [{ count: 1, index: 0, layout: "invalidate", type: "update" }]),
+    ]);
+    expect(ctx.values.get("containerDataVersion0")).toBe(1);
+    expect(ctx.values.get("containerItemIndex0")).toBe(0);
+    expect(resolveContainerItemMetadata(ctx.state, 0, 0, item).fixedItemSize).toBe(90);
+});

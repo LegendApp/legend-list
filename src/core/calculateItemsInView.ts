@@ -662,7 +662,10 @@ export function calculateItemsInView(
         ////// Sync layout store and do MVCP
         // Handle maintainVisibleContentPosition adjustment early, before data-change
         // reconciliation mutates offsets.
-        const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, didDataChange, mvcpAdjustmentSource) : undefined;
+        const checkMVCP =
+            doMVCP && !suppressInitialScrollSideEffects
+                ? prepareMVCP(ctx, didDataChange, mvcpAdjustmentSource)
+                : undefined;
 
         const hasActiveLayoutStore = !!getActiveLayoutStore(ctx);
         const didApplyDataSourceMutation = !!state.dataSourceMutationApplied && !state.dataSourceNeedsReset;
@@ -727,6 +730,18 @@ export function calculateItemsInView(
         // cached content size after positions update so the next scroll-range cache reflects
         // the new tail instead of the pre-update end-of-list.
         totalSize = getContentSize(ctx);
+        // Reapply the target after growth: the previous total may have clamped it.
+        const previousComputedScroll = scroll;
+        updateScroll(nativeScrollState);
+        updateScrollRange();
+        if (scroll !== previousComputedScroll) {
+            layoutStoreMaterializedRange = materializeLayoutStoreOffsetRange(
+                ctx,
+                scrollTopBuffered,
+                scrollBottomBuffered,
+            );
+            totalSize = getContentSize(ctx);
+        }
 
         if (positionRecalculationStartIndex !== undefined) {
             // Clear the invalidation marker after using it for position updates.
@@ -764,13 +779,13 @@ export function calculateItemsInView(
         if (didMVCPAdjustScroll) {
             updateScroll(state.scroll);
             updateScrollRange();
-            firstVisibleScroll =
-                firstVisibleItemStartOffset >= scrollLength
-                    ? null
-                    : firstVisibleItemStartOffset > 0
-                      ? scroll + firstVisibleItemStartOffset
-                      : undefined;
         }
+        firstVisibleScroll =
+            firstVisibleItemStartOffset >= scrollLength
+                ? null
+                : firstVisibleItemStartOffset > 0
+                  ? scroll + firstVisibleItemStartOffset
+                  : undefined;
 
         if (didDataChange) {
             stickyState = resolveStickyState();
@@ -795,14 +810,7 @@ export function calculateItemsInView(
             if (top === undefined) {
                 break;
             }
-            const size = getVisibleLoopItemSize(
-                ctx,
-                state,
-                layout,
-                i,
-                id,
-                isInitialLayout && hasActiveInitialScroll(state),
-            );
+            const size = getVisibleLoopItemSize(ctx, state, layout, i, id, hasActiveInitialScroll(state));
             const bottom = top + size;
 
             if (bottom > scrollTopBuffered) {
@@ -856,14 +864,7 @@ export function calculateItemsInView(
             if (top === undefined) {
                 continue;
             }
-            const size = getVisibleLoopItemSize(
-                ctx,
-                state,
-                layout,
-                i,
-                id,
-                isInitialLayout && hasActiveInitialScroll(state),
-            );
+            const size = getVisibleLoopItemSize(ctx, state, layout, i, id, hasActiveInitialScroll(state));
 
             if (!foundEnd) {
                 trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom, firstVisibleScroll);
@@ -1056,8 +1057,8 @@ export function calculateItemsInView(
                             // we would otherwise hide.
                             const isLayoutReady =
                                 state.sizesKnown.has(id) ||
-                                resolveContainerItemMetadata(state, containerIndex, i, indexedData.getItem(i)).fixedItemSize !==
-                                    undefined;
+                                resolveContainerItemMetadata(state, containerIndex, i, indexedData.getItem(i))
+                                    .fixedItemSize !== undefined;
                             set$(ctx, `containerLayoutReady${containerIndex}`, isLayoutReady);
                         }
                     }

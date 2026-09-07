@@ -8,8 +8,8 @@ export function createContainerItemMetadata(
 ): ContainerItemMetadata {
     return {
         data: state.props.data,
-        dataSource: state.props.dataSource,
         dataChangeEpoch: state.dataChangeEpoch,
+        dataSource: state.props.dataSource,
         getFixedItemSize: state.props.getFixedItemSize,
         getItemType: state.props.getItemType,
         itemData,
@@ -36,7 +36,8 @@ export function updateContainerItemMetadata(
         return previousMetadata;
     }
 
-    const resolvedItemType = itemType ?? (itemData !== undefined && getItemType ? (getItemType(itemData, itemIndex) ?? "") : undefined);
+    const resolvedItemType =
+        itemType ?? (itemData !== undefined && getItemType ? (getItemType(itemData, itemIndex) ?? "") : undefined);
     const metadata = createContainerItemMetadata(state, itemIndex, itemData, resolvedItemType);
     state.containerItemMetadata.set(containerId, metadata);
     return metadata;

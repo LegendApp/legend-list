@@ -9,10 +9,10 @@ let requestAdjustCalls: number[] = [];
 let scrollToCalls: any[] = [];
 let suppressScrollToImplementation = true;
 
-import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { getDataLength } from "../../src/core/IndexedData";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
 import type { DataSourceMutationBatch, LegendListDataSource } from "../../src/types.base";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";

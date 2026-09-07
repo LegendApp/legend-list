@@ -1,9 +1,9 @@
 import type { Key } from "react";
 import * as React from "react";
 
-import type { ScheduledWork } from "@/core/ScheduledWork";
 import type { IndexedData } from "@/core/IndexedData";
 import type { LayoutStoreRuntime } from "@/core/LayoutStoreRuntime";
+import type { ScheduledWork } from "@/core/ScheduledWork";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type {
     AlwaysRenderConfig,
@@ -142,7 +142,7 @@ type LegendListPropsInternal = LegendListPropsBase<any, Record<string, any>, str
 };
 
 export interface ContainerItemMetadata {
-    dataSource?: LegendListPropsInternal["dataSource"];
+    dataSource?: LegendListDataSource<any>;
     data: readonly any[];
     dataChangeEpoch: number;
     didResolveFixedItemSize?: boolean;

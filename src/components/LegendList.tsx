@@ -63,8 +63,19 @@ import { StyleSheet } from "@/platform/StyleSheet";
 import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from "@/platform/scrollview-types";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
-import type { LegendListDataSource, LegendListMetrics, LegendListRef, LegendListRenderItemProps, ViewabilityConfig, ViewabilityConfigCallbackPairs } from "@/types.base";
-import type { AnchoredEndSpaceOwner, InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
+import type {
+    LegendListDataSource,
+    LegendListMetrics,
+    LegendListRef,
+    ViewabilityConfig,
+    ViewabilityConfigCallbackPairs,
+} from "@/types.base";
+import type {
+    AnchoredEndSpaceOwner,
+    InternalState,
+    LegendListPropsBase,
+    LegendListScrollerRef,
+} from "@/types.internal";
 import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
@@ -421,7 +432,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 freshDataTransitionEpoch: 0,
                 handledDataChangeEpoch: 0,
                 handledFreshDataTransitionEpoch: 0,
-                hasHadNonEmptyData: dataLength > 0;
+                hasHadNonEmptyData: dataLength > 0,
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
@@ -594,8 +605,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getFixedItemSize: wrappedGetFixedItemSize,
         getItemType: wrappedGetItemType,
         hasExternalScroll,
-        hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         hasReliableKeyExtractor: !!dataSource || !!keyExtractorProp,
+        hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
         itemsAreEqual,
         keyExtractor: wrappedKeyExtractor,

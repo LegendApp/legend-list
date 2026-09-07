@@ -41,12 +41,11 @@ export function getRenderedItem(ctx: StateContext, key: string, containerId: num
             item,
             type: useAssignedGeneration
                 ? (metadata.itemType ?? "")
-                : item !== undefined && getItemType ? (getItemType(item, index) ?? "") : "",
+                : item !== undefined && getItemType
+                  ? (getItemType(item, index) ?? "")
+                  : "",
         };
-        const itemProps =
-            dataSource
-                ? { ...sharedItemProps, dataSource: dataSource! }
-                : { ...sharedItemProps, data };
+        const itemProps = dataSource ? { ...sharedItemProps, dataSource: dataSource! } : { ...sharedItemProps, data };
 
         renderedItem = renderItem(itemProps) as React.ReactNode;
     }

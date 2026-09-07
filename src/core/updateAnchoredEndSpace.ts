@@ -1,5 +1,5 @@
-import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { getDataLength } from "@/core/IndexedData";
+import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { updateScroll } from "@/core/updateScroll";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";

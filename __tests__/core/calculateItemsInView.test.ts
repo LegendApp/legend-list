@@ -1265,6 +1265,7 @@ describe("calculateItemsInView", () => {
 
         it("uses the adjusted MVCP scroll for the visible range after a prepend", () => {
             const itemSize = 60;
+            mockState.props.estimatedItemSize = itemSize;
             const prependCount = 42;
             const previousItems = Array.from({ length: 12 }, (_, i) => ({ id: `old-${i}` }));
             const prependedItems = Array.from({ length: prependCount }, (_, i) => ({ id: `new-${i}` }));
@@ -1379,6 +1380,7 @@ describe("calculateItemsInView", () => {
 
         it("does not preserve MVCP containers rejected by shouldRestorePosition", () => {
             const itemSize = 60;
+            mockState.props.estimatedItemSize = itemSize;
             const prependCount = 42;
             const previousItems = Array.from({ length: 12 }, (_, i) => ({ id: `old-${i}` }));
             const prependedItems = Array.from({ length: prependCount }, (_, i) => ({ id: `new-${i}` }));
@@ -1426,6 +1428,7 @@ describe("calculateItemsInView", () => {
 
         it("publishes viewability from the adjusted range when MVCP adjusts a prepend", () => {
             const itemSize = 60;
+            mockState.props.estimatedItemSize = itemSize;
             const prependCount = 42;
             const previousItems = Array.from({ length: 12 }, (_, i) => ({ id: `old-${i}` }));
             const prependedItems = Array.from({ length: prependCount }, (_, i) => ({ id: `new-${i}` }));
@@ -1473,7 +1476,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
 
                 expect(updateViewableItemsSpy).toHaveBeenCalledTimes(1);
-                expect(updateViewableItemsSpy.mock.calls[0].slice(3)).toEqual([600, 41, 51, 41, 51]);
+                expect(updateViewableItemsSpy.mock.calls[0].slice(2, 7)).toEqual([600, 41, 51, 41, 51]);
                 expect(viewabilityCalls).toHaveLength(1);
                 expect(viewabilityCalls[0]).toMatchObject({
                     end: 51,
@@ -1502,6 +1505,7 @@ describe("calculateItemsInView", () => {
 
         it("does not report stale prepend viewability after preserving existing visible items", () => {
             const itemSize = 60;
+            mockState.props.estimatedItemSize = itemSize;
             const prependCount = 42;
             const previousItems = Array.from({ length: 12 }, (_, i) => ({ id: `old-${i}` }));
             const prependedItems = Array.from({ length: prependCount }, (_, i) => ({ id: `new-${i}` }));
@@ -1554,6 +1558,7 @@ describe("calculateItemsInView", () => {
             ]);
 
             viewabilityCalls.length = 0;
+            mockState.previousData = previousItems;
             mockState.props.data = nextItems;
             mockState.idsInView = previousItems.slice(0, 11).map((item) => item.id);
             for (const item of prependedItems) {
@@ -2738,16 +2743,20 @@ describe("calculateItemsInView", () => {
             mockState.positionRecalculationStartIndex = 10;
             mockState.sizes.set("item_10", 1000);
             mockState.sizesKnown.set("item_10", 1000);
+            mockState.layoutStoreRuntime = undefined;
+            syncLayoutStoreStructure(mockCtx);
+            mockState.layoutStoreRuntime!.store.setMeasuredSize(10, 1000);
 
             calculateItemsInView(mockCtx, { scrollVelocity: 2 });
 
-            expect(mockState.positions[10]).toBe(500);
-            expect(mockState.positions[11]).toBe(1500);
-            expect(mockState.positions[99]).toBe(5900);
+            expect(mockState.layoutStoreRuntime!.store.getOffset(10)).toBe(500);
+            expect(mockState.layoutStoreRuntime!.store.getOffset(11)).toBe(1500);
+            expect(mockState.layoutStoreRuntime!.store.getOffset(99)).toBe(5900);
             for (let index = 1; index < mockState.props.data.length; index++) {
                 const previousKey = mockState.idCache[index - 1];
-                const previousEnd = mockState.positions[index - 1] + mockState.sizes.get(previousKey)!;
-                expect(mockState.positions[index]).toBe(previousEnd);
+                const previousEnd =
+                    mockState.layoutStoreRuntime!.store.getOffset(index - 1) + mockState.sizes.get(previousKey)!;
+                expect(mockState.layoutStoreRuntime!.store.getOffset(index)).toBe(previousEnd);
             }
         });
 

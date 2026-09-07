@@ -1,15 +1,16 @@
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
+import { getDataItem } from "@/core/IndexedData";
 import { type ItemSizeMeasurement, updateItemSizes, updateItemSizesBatch } from "@/core/updateItemSizes";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
 function resolveFixedItemSize(ctx: StateContext, containerId: number, itemKey: string) {
     const state = ctx.state;
-    const { data, getFixedItemSize } = state.props;
+    const { getFixedItemSize } = state.props;
     const index = state.indexByKey.get(itemKey);
     let fixedItemSize: number | undefined;
 
-    if (data && getFixedItemSize && index !== undefined) {
-        const itemData = data[index];
+    if (getFixedItemSize && index !== undefined) {
+        const itemData = getDataItem(state, index);
         if (itemData !== undefined) {
             fixedItemSize = resolveContainerItemMetadata(state, containerId, index, itemData)?.fixedItemSize;
         }

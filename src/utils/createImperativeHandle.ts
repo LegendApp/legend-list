@@ -3,10 +3,10 @@ import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata"
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { getDataLength, getIndexedData } from "@/core/IndexedData";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
-import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
-import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import { clearLayoutStoreKnownSizes, rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
+import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
+import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
 import { scrollToIndex } from "@/core/scrollToIndex";

@@ -4,13 +4,13 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
-import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import {
     materializeLayoutStoreRange,
     maybeFlushInitialLayoutStoreEstimate,
     syncLayoutStoreState,
     syncLayoutStoreStructure,
 } from "../../src/core/layoutStoreLifecycle";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";

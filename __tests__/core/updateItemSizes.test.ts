@@ -3,8 +3,8 @@ import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
-import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
+import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -141,7 +141,7 @@ describe("updateItemSizes", () => {
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
             expect(mockState.layoutStoreRuntime?.store.getOffset(2)).toBe(250);
-            expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+            expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true, mvcpAdjustmentSource: "item-size" });
         } finally {
             calculateSpy.mockRestore();
             requestAdjustSpy.mockRestore();
