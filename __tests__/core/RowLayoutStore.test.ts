@@ -467,6 +467,21 @@ describe("RowLayoutStore", () => {
         }
     });
 
+    it("handles large variable-span mutations under V8", async () => {
+        // Bun accepts argument spreads large enough to overflow V8's call stack.
+        const build = await Bun.build({
+            entrypoints: [new URL("./RowLayoutStore.largeMutations.cases.ts", import.meta.url).pathname],
+            target: "node",
+        });
+        expect(build.success).toBe(true);
+        const proc = Bun.spawnSync(["node", "--input-type=module"], {
+            stderr: "pipe",
+            stdin: new TextEncoder().encode(await build.outputs[0]!.text()),
+            stdout: "pipe",
+        });
+        expect({ exitCode: proc.exitCode, stderr: proc.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
+    });
+
     it("throws for invalid sizes, spans, indexes, and column counts", () => {
         const store = new RowLayoutStore({ estimatedSize: 100, length: 1, numColumns: 1 });
 
