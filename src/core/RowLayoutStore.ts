@@ -1,5 +1,6 @@
 import type { LayoutIndexRange, LayoutStoreSizeEntry, MutableLayoutStore } from "@/core/LayoutStore";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
+import { moveSpans, spliceSpans } from "@/core/rowSpanMutations";
 
 const SIZE_CACHED = 1;
 const SIZE_MEASURED = 2;
@@ -171,8 +172,7 @@ export class RowLayoutStore implements MutableLayoutStore {
             this.knownSizes = knownSizes;
             const spans = this.getMutableSpans();
             if (spans) {
-                const moved = spans.splice(from, count);
-                spans.splice(to, 0, ...moved);
+                moveSpans(spans, from, to, count);
                 this.spanInput = spans;
                 this.spanTopology = createSpanTopology(this.length, this.numColumns, spans);
             }
@@ -236,7 +236,7 @@ export class RowLayoutStore implements MutableLayoutStore {
             this.knownSizes = knownSizes;
             const spans = this.getMutableSpans();
             if (spans) {
-                spans.splice(index, deleteCount, ...new Array<number>(insertCount).fill(1));
+                spliceSpans(spans, index, deleteCount, insertCount, 1);
                 this.spanInput = spans;
             }
             this.lengthValue += insertCount - deleteCount;
