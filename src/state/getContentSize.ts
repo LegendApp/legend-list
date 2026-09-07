@@ -1,3 +1,4 @@
+import { getDataLength } from "@/core/IndexedData";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import type { StateContext } from "@/state/state";
@@ -16,7 +17,7 @@ export function getContentSize(ctx: StateContext, includeContentContainerMinSize
     const footerSize: number = values.get("footerSize") || 0;
     const contentInsetEnd = getContentInsetEnd(ctx);
     const totalSize: number = state.pendingTotalSize ?? state.totalSize ?? values.get("totalSize");
-    const layoutSize = Math.max(0, totalSize - (state.props.data.length > 0 ? ctx.scrollAxisGap : 0));
+    const layoutSize = Math.max(0, totalSize - (getDataLength(state) > 0 ? ctx.scrollAxisGap : 0));
     const contentSize =
         headerSize + footerSize + layoutSize + stylePaddingStart + alignItemsAtEndPadding + stylePaddingEnd;
     // Rendered end space is inside the minimum; native insets are outside it.
