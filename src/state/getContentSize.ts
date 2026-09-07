@@ -1,3 +1,4 @@
+import { getDataLength } from "@/core/IndexedData";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import type { StateContext } from "@/state/state";
 
@@ -14,7 +15,7 @@ export function getContentSize(ctx: StateContext) {
     const footerSize: number = values.get("footerSize") || 0;
     const contentInsetEnd = getContentInsetEnd(ctx);
     const totalSize: number = state.pendingTotalSize ?? state.totalSize ?? values.get("totalSize");
-    const layoutSize = Math.max(0, totalSize - (state.props.data.length > 0 ? ctx.scrollAxisGap : 0));
+    const layoutSize = Math.max(0, totalSize - (getDataLength(state) > 0 ? ctx.scrollAxisGap : 0));
     return (
         headerSize +
         footerSize +

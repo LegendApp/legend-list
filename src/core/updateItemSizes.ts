@@ -195,14 +195,10 @@ function applyItemSize(
     if (!state.props.dataSource && !state.props.data) return { didMeasureUserScrollAnchorResetItem };
 
     const index = state.indexByKey.get(itemKey)!;
-    if (getFixedItemSize) {
-        if (index === undefined) {
-            return { didMeasureUserScrollAnchorResetItem };
-        }
-        const itemData = getDataItem(state, index);
-        if (itemData === undefined) {
-            return { didMeasureUserScrollAnchorResetItem };
-        }
+    const itemData = index === undefined ? undefined : getDataItem(state, index);
+    // Unloaded placeholders still contribute measured geometry, but cannot be
+    // passed to callbacks whose contract requires a loaded item.
+    if (getFixedItemSize && itemData !== undefined) {
         if (!resolvedMeasurementItem?.didResolveFixedItemSize) {
             const type = resolvedMeasurementItem?.itemType ?? (getItemType ? (getItemType(itemData, index) ?? "") : "");
             resolvedMeasurementItem = {
@@ -311,7 +307,7 @@ export function updateOneItemSize(
     const itemData = getDataItem(state, itemIndex);
     let itemType = resolvedMeasurementItem?.itemType;
     let fixedItemSize = resolvedMeasurementItem?.fixedItemSize;
-    if (getFixedItemSize && !resolvedMeasurementItem?.didResolveFixedItemSize) {
+    if (itemData !== undefined && getFixedItemSize && !resolvedMeasurementItem?.didResolveFixedItemSize) {
         itemType = getItemType ? (getItemType(itemData, itemIndex) ?? "") : "";
         fixedItemSize = getFixedItemSize(itemData, itemIndex, itemType);
     }
@@ -341,7 +337,7 @@ export function updateOneItemSize(
     // Don't update averages if size is 0, because it likely is rendering conditionally
     // and that shouldn't affect averages.
     if (fixedItemSize === undefined && size > 0) {
-        itemType ??= getItemType ? (getItemType(itemData, itemIndex) ?? "") : "";
+        itemType ??= itemData !== undefined && getItemType ? (getItemType(itemData, itemIndex) ?? "") : "";
         let averages = averageSizes[itemType];
         if (!averages) {
             averages = averageSizes[itemType] = { avg: 0, num: 0 };

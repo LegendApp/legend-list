@@ -26,9 +26,9 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
             const num = Math.min(20, dataLength);
             for (let i = 0; i < num; i++) {
                 const item = getDataItem(state, i);
-                if (item !== undefined) {
-                    totalSize += getFixedItemLayoutSize(ctx, i, item) ?? estimatedItemSize! + ctx.scrollAxisGap;
-                }
+                totalSize +=
+                    (item !== undefined ? getFixedItemLayoutSize(ctx, i, item) : undefined) ??
+                    estimatedItemSize! + ctx.scrollAxisGap;
             }
             averageItemSize = totalSize / num;
         } else {
