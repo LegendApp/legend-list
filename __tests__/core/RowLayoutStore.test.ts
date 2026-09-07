@@ -501,3 +501,36 @@ describe("RowLayoutStore", () => {
         expect([spanStore.getSpan(0), spanStore.getSpan(1), spanStore.getSpan(2)]).toEqual([1, 1, 2]);
     });
 });
+
+it("invalidates affected row maxima and measured statistics incrementally", () => {
+    for (const spans of [undefined, [2, 1, 1, 3, 1, 2, 2]]) {
+        const store = new RowLayoutStore({ estimatedSize: 20, length: 7, numColumns: 4 });
+        if (spans) store.resize(7, spans);
+        const entries = [
+            { index: 0, size: 80, type: "measured" as const },
+            { index: 1, size: 30, type: "cached" as const },
+            { index: 3, size: 45, type: "measured" as const },
+            { index: 6, size: 60, type: "measured" as const },
+        ];
+        store.replaceKnownSizeEntries(entries);
+        for (const [index, count] of [
+            [0, 1],
+            [2, 3],
+            [0, 7],
+        ]) {
+            store.invalidateRange(index, count);
+            entries.splice(
+                0,
+                entries.length,
+                ...entries.filter((entry) => entry.index < index || entry.index >= index + count),
+            );
+            const expected = new RowLayoutStore({ estimatedSize: 20, length: 7, numColumns: 4 });
+            if (spans) expected.resize(7, spans);
+            expected.replaceKnownSizeEntries(entries);
+            expect(store.getTotalSize()).toBe(expected.getTotalSize());
+            expect(store.getMeasuredCount()).toBe(expected.getMeasuredCount());
+            expect(store.getMeasuredAverageSize()).toBe(expected.getMeasuredAverageSize());
+            for (let i = 0; i < 7; i++) expect(store.getOffset(i)).toBe(expected.getOffset(i));
+        }
+    }
+});
