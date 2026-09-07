@@ -210,11 +210,22 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         const end = Math.min(this.length - 1, Math.trunc(endIndex));
         if (start <= end) {
             let offset = this.getOffset(start);
-            for (let index = start; index <= end; index++) {
-                const size = this.getSize(index);
-                callback(index, offset, size);
-                offset += size;
-            }
+            const visit = (node: SequenceNode | undefined, baseIndex: number) => {
+                if (!node) return;
+                const pieceStart = baseIndex + getLogicalCount(node.left);
+                const pieceEnd = pieceStart + node.piece.count;
+                if (start < pieceStart) visit(node.left, baseIndex);
+                const first = Math.max(start, pieceStart);
+                const last = Math.min(end, pieceEnd - 1);
+                for (let index = first; index <= last; index++) {
+                    const size =
+                        node.piece.type === PIECE_KNOWN ? node.piece.sizes[index - pieceStart]! : this.estimatedSize;
+                    callback(index, offset, size);
+                    offset += size;
+                }
+                if (end >= pieceEnd) visit(node.right, pieceEnd);
+            };
+            visit(this.root, 0);
         }
     }
 
@@ -306,7 +317,7 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
     setMeasuredSize(index: number, size: number) {
         this.assertIndex(index);
         const normalizedSize = normalizeSize(size);
-        const located = findPieceAtIndex(this.root, index);
+        const located = findPieceAtIndexWithPath(this.root, index);
         const existingPiece = located?.node.piece;
         const existing =
             located && existingPiece?.type === PIECE_KNOWN
@@ -485,7 +496,20 @@ function getPiecePrefixSize(piece: SequencePiece, count: number, estimatedSize: 
 }
 
 function findPieceAtIndex(root: SequenceNode | undefined, index: number) {
-    return findPieceAtIndexWithPath(root, index);
+    let node = root;
+    let remaining = index;
+    while (node) {
+        const leftCount = getLogicalCount(node.left);
+        if (remaining < leftCount) {
+            node = node.left;
+        } else if (remaining < leftCount + node.piece.count) {
+            return { node, offset: remaining - leftCount };
+        } else {
+            remaining -= leftCount + node.piece.count;
+            node = node.right;
+        }
+    }
+    return undefined;
 }
 
 function findPieceAtIndexWithPath(root: SequenceNode | undefined, index: number) {

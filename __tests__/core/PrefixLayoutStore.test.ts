@@ -445,3 +445,25 @@ describe("PrefixLayoutStore", () => {
         expect(() => store.setMeasuredSize(0, -1)).toThrow(RangeError);
     });
 });
+
+it("walks mixed known and estimated pieces across mutations with contiguous offsets", () => {
+    const store = new PrefixLayoutStore(1000, 20);
+    for (let i = 0; i < 1000; i += 3) store.setMeasuredSize(i, i % 80);
+    store.splice(40, 15, 9);
+    store.move(200, 20, 90);
+    store.invalidateRange(32, 14);
+    for (const [start, end] of [
+        [0, 999],
+        [29, 113],
+        [800, 850],
+        [-10, 3],
+        [900, 890],
+    ]) {
+        const actual: number[][] = [];
+        store.forEachLayout(start, end, (index, offset, size) => actual.push([index, offset, size]));
+        const expected: number[][] = [];
+        for (let i = Math.max(0, start); i <= Math.min(store.length - 1, end); i++)
+            expected.push([i, store.getOffset(i), store.getSize(i)]);
+        expect(actual).toEqual(expected);
+    }
+});
