@@ -151,14 +151,36 @@ export class RowLayoutStore implements MutableLayoutStore {
 
     invalidateRange(index: number, count: number) {
         assertMutationRange(this.length, index, count, "invalidateRange");
-        if (count > 0) {
-            const end = index + count;
+        const end = index + count;
+        const changedRows = new Set<number>();
+        const invalidate = (knownIndex: number) => {
+            const entry = this.knownSizes.get(knownIndex);
+            if (entry) {
+                this.knownSizes.delete(knownIndex);
+                if (entry.kind === SIZE_MEASURED) {
+                    this.measuredCount--;
+                    this.measuredSizeTotal -= entry.size;
+                }
+                changedRows.add(this.getRowIndex(knownIndex));
+            }
+        };
+        // Visit the smaller of the requested range and the sparse measurement cache.
+        if (count < this.knownSizes.size) {
+            for (let knownIndex = index; knownIndex < end; knownIndex++) {
+                invalidate(knownIndex);
+            }
+        } else {
             for (const knownIndex of this.knownSizes.keys()) {
                 if (knownIndex >= index && knownIndex < end) {
-                    this.knownSizes.delete(knownIndex);
+                    invalidate(knownIndex);
                 }
             }
-            this.rebuildRowsAndTotals();
+        }
+        if (this.measuredCount === 0) {
+            this.measuredSizeTotal = 0;
+        }
+        for (const rowIndex of changedRows) {
+            this.syncRowHeight(rowIndex);
         }
     }
 
