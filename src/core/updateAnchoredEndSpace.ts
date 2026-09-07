@@ -1,5 +1,5 @@
-import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { getDataLength } from "@/core/IndexedData";
+import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";

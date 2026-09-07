@@ -7,9 +7,9 @@ import { createContainerItemMetadata } from "../../src/core/containerItemMetadat
 import { rearmEndFollowIfSettled } from "../../src/core/finishMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
+import { rebuildLayoutStoreExact } from "../../src/core/layoutStoreLifecycle";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
-import { rebuildLayoutStoreExact } from "../../src/core/layoutStoreLifecycle";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { updateScroll } from "../../src/core/updateScroll";

@@ -400,7 +400,7 @@ describe("mvcp helpers", () => {
 
             adjustFunction?.();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, "data");
         } finally {
             requestAdjustSpy.mockRestore();
         }

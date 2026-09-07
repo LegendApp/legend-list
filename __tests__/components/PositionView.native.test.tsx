@@ -41,12 +41,12 @@ function StickyHarness({
     if (!ctx.state) {
         const dataLength = Math.max(...stickyHeaderIndices, index) + 1;
         ctx.state = createMockState({
-            idCache: Array.from({ length: dataLength }, (_, itemIndex) =>
-                itemIndex === index ? itemKey : `item-${itemIndex}`,
+            idCache: Array.from({ length: dataLength }, (_, dataIndex) =>
+                dataIndex === index ? itemKey : `item-${dataIndex}`,
             ),
             positions: [],
             props: {
-                data: Array.from({ length: dataLength }, (_, itemIndex) => ({ id: `item-${itemIndex}` })),
+                data: Array.from({ length: dataLength }, (_, dataIndex) => ({ id: `item-${dataIndex}` })),
                 stickyHeaderIndicesArr: stickyHeaderIndices,
             },
         }) as any;
@@ -62,6 +62,7 @@ function StickyHarness({
     );
     ctx.state.props.stickyHeaderIndicesArr = stickyHeaderIndices;
     ctx.state.sizes.set(itemKey, currentSize);
+    ctx.state.layoutStoreRuntime!.store.setMeasuredSize(resolvedIndex, currentSize);
 
     ctx.values.set(`containerPosition7`, position);
     ctx.values.set(`containerItemKey7`, itemKey);

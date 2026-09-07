@@ -13,6 +13,7 @@ export type ScheduledWorkKey =
     | "fullDrawDistancePrewarm"
     | "ignoreScrollFromMVCP"
     | "imperativeScrollReady"
+    | "layoutStoreEstimateFlush"
     | "maintainScrollAtEnd"
     | "mvcpAutoscrollToStart"
     | "mvcpRecalculate"

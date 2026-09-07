@@ -1,4 +1,5 @@
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
+import { getDataItem } from "@/core/IndexedData";
 import {
     type ItemSizeMeasurement,
     isContainerItemCurrent,
@@ -52,7 +53,7 @@ export function measureContainersInLayoutEffect(
             state.containerItemGenerations[containerId] = generation;
             if (!isContainerItemCurrent(ctx, containerId, itemKey)) continue;
             const index = state.indexByKey.get(itemKey)!;
-            const itemData = state.props.data[index];
+            const itemData = getDataItem(state, index);
             const fixedItemSize =
                 state.props.getFixedItemSize && itemData !== undefined
                     ? resolveContainerItemMetadata(state, containerId, index, itemData)?.fixedItemSize

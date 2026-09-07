@@ -74,8 +74,19 @@ import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { getContentSize } from "@/state/getContentSize";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
-import type { LegendListDataSource, LegendListMetrics, LegendListRef, LegendListRenderItemProps, ViewabilityConfig, ViewabilityConfigCallbackPairs } from "@/types.base";
-import type { AnchoredEndSpaceOwner, InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
+import type {
+    LegendListDataSource,
+    LegendListMetrics,
+    LegendListRef,
+    ViewabilityConfig,
+    ViewabilityConfigCallbackPairs,
+} from "@/types.base";
+import type {
+    AnchoredEndSpaceOwner,
+    InternalState,
+    LegendListPropsBase,
+    LegendListScrollerRef,
+} from "@/types.internal";
 import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -651,6 +662,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         hasItemLayoutAnimationInternal,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         hasReliableKeyExtractor: !!dataSource || !!keyExtractorProp,
+        hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
         itemsAreEqual,
         keyExtractor: wrappedKeyExtractor,

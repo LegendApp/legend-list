@@ -288,7 +288,7 @@ describe("dataChanged prefix reconciliation", () => {
             try {
                 calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 100, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 100, "data");
                 expect(ctx.state.indexByKey.get("b")).toBe(2);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -317,7 +317,7 @@ describe("dataChanged prefix reconciliation", () => {
             try {
                 calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, "data");
                 expect(ctx.state.indexByKey.get("b")).toBe(2);
                 expect(ctx.state.layoutStoreRuntime?.store.getOffset(2)).toBe(65);
                 expect(countLayoutValues(ctx.state, "positions")).toBe(0);
@@ -350,7 +350,7 @@ describe("dataChanged prefix reconciliation", () => {
             try {
                 calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, -70, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, -70, "data");
                 expect(ctx.state.indexByKey.get("b")).toBeUndefined();
                 expect(ctx.state.indexByKey.get("c")).toBe(1);
                 expect(ctx.state.layoutStoreRuntime?.store.getOffset(1)).toBe(40);
@@ -514,7 +514,7 @@ describe("dataChanged prefix reconciliation", () => {
             try {
                 calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, "data");
                 expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -585,7 +585,9 @@ describe("dataChanged prefix reconciliation", () => {
             const scrollToEnd = mock(() => {});
             ctx.state.previousData = previousData;
             ctx.state.didContainersLayout = true;
-            ctx.state.props.maintainScrollAtEnd = { animated: false, on: { dataChange: true } };
+            ctx.state.didFinishInitialScroll = true;
+            ctx.state.props.maintainScrollAtEnd = { animated: false, onDataChange: true };
+            ctx.scrollToEnd = scrollToEnd;
             ctx.state.refScroller = {
                 current: {
                     scrollToEnd,

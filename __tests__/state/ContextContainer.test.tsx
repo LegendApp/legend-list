@@ -290,7 +290,7 @@ describe("ContextContainer hooks", () => {
         });
 
         it("should request a calculation when the first viewability consumer mounts", async () => {
-            const contextValue = createMockContextValue();
+            const contextValue = createContainerSignals();
             let calculations = 0;
 
             const TestComponent = () => {
