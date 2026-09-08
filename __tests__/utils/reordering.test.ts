@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 
 import "../setup";
 
@@ -65,4 +65,45 @@ describe("sortDOMElements", () => {
 
         expect(elements.map((element) => element.id)).toEqual(["second", "third", "first"]);
     });
+
+    for (const mode of ["atomic", "fallback", "detached"] as const) {
+        it(`preserves sorted order for every five-row permutation using ${mode} moves`, () => {
+            const rows = [0, 1, 2, 3, 4].map((id) => createElement(String(id)));
+            const indexByElement = new Map(rows.map((row, index) => [row, index]));
+            for (const order of permutations(rows)) {
+                const elements = [...order];
+                const container = createContainer(elements);
+                Object.defineProperty(container, "isConnected", { value: mode !== "detached" });
+                const atomicMove = mock(container.insertBefore);
+                if (mode !== "fallback") Object.assign(container, { moveBefore: atomicMove });
+                const insert = spyOn(container, "insertBefore");
+                const append = spyOn(container, "appendChild");
+
+                sortDOMElements(container, indexByElement);
+
+                expect(elements).toEqual(rows);
+                if (mode === "atomic") {
+                    expect(insert).not.toHaveBeenCalled();
+                    expect(append).not.toHaveBeenCalled();
+                } else {
+                    expect(atomicMove).not.toHaveBeenCalled();
+                }
+
+                atomicMove.mockClear();
+                insert.mockClear();
+                append.mockClear();
+                sortDOMElements(container, indexByElement);
+                expect(atomicMove).not.toHaveBeenCalled();
+                expect(insert).not.toHaveBeenCalled();
+                expect(append).not.toHaveBeenCalled();
+            }
+        });
+    }
 });
+
+function permutations<T>(items: T[]): T[][] {
+    if (items.length <= 1) return [items];
+    return items.flatMap((item, index) =>
+        permutations(items.filter((_, otherIndex) => index !== otherIndex)).map((rest) => [item, ...rest]),
+    );
+}
