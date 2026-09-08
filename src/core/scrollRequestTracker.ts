@@ -1,8 +1,10 @@
 import { settlePendingImperativeScroll } from "@/core/cancelImperativeScroll";
+import { finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
 
 export interface ScrollRequestTracker {
     isCurrent(token: number): boolean;
+    isWaitingToRun(): boolean;
     runNow(token: number, resolve: () => void, run: () => boolean): void;
     runNowIfIdle(run: () => boolean): Promise<void>;
     start(resolve: () => void): number;
@@ -11,14 +13,20 @@ export interface ScrollRequestTracker {
 export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker {
     if (!ctx.scrollRequestTracker) {
         let currentToken = 0;
+        let waitingToken: number | undefined;
 
-        const start = (resolve: () => void) => {
+        const start = (resolve: () => void, isInternal = false) => {
             const state = ctx.state;
+            // A newer explicit target supersedes automatic end-follow intent.
+            if (!isInternal && (state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd)) {
+                finishMaintainScrollAtEnd(ctx);
+            }
             state.scheduledWork.cancel("imperativeScrollReady");
             const token = ++currentToken;
 
             settlePendingImperativeScroll(state);
             state.pendingScrollResolve = resolve;
+            waitingToken = token;
 
             return token;
         };
@@ -29,6 +37,7 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
                 return;
             }
 
+            waitingToken = undefined;
             const didStartScroll = run();
             if (!didStartScroll || !state.scrollingTo) {
                 if (state.pendingScrollResolve === resolve) {
@@ -40,6 +49,7 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
 
         ctx.scrollRequestTracker = {
             isCurrent: (token) => token === currentToken,
+            isWaitingToRun: () => waitingToken === currentToken && !!ctx.state.pendingScrollResolve,
             runNow,
             runNowIfIdle: (run) => {
                 const state = ctx.state;
@@ -48,7 +58,7 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
                     return Promise.resolve();
                 }
                 return new Promise<void>((resolve) => {
-                    const token = start(resolve);
+                    const token = start(resolve, true);
                     runNow(token, resolve, run);
                 });
             },

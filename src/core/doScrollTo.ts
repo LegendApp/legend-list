@@ -32,11 +32,22 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
     if (isAnimated) {
+        // The DOM clamps the request to its current content size. An already
+        // aligned request emits no scroll/scrollend events, so finish it on the
+        // next frame rather than keeping end-follow work blocked until timeout.
+        const targetOffset = Math.max(0, Math.min(offset, scroller.getMaxScrollOffset?.() ?? offset));
+        if (Math.abs((scroller.getCurrentScrollOffset?.() ?? Number.NaN) - targetOffset) <= SCROLL_END_TARGET_EPSILON) {
+            const targetToken = state.scrollingTo;
+            state.scheduledWork.frame(() => {
+                if (targetToken === state.scrollingTo) finishScrollTo(ctx);
+            }, "platformScrollCompletion");
+            return;
+        }
         const target = scroller.getScrollEventTarget?.() ?? null;
         listenForScrollEnd(ctx, {
             readOffset: () => scroller.getCurrentScrollOffset!(),
             target,
-            targetOffset: offset,
+            targetOffset,
         });
     } else {
         state.scroll = offset;

@@ -1,5 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
@@ -9,8 +10,14 @@ export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
         cancelScrollCompletionChecks(state);
-        const resolvePendingScroll = state.pendingScrollResolve;
-        state.pendingScrollResolve = undefined;
+        // An older active scroll can finish while its replacement still waits for layout.
+        // Its completion must not settle or release the newer request's ownership.
+        const resolvePendingScroll = ctx.scrollRequestTracker?.isWaitingToRun()
+            ? undefined
+            : state.pendingScrollResolve;
+        if (resolvePendingScroll) {
+            state.pendingScrollResolve = undefined;
+        }
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
@@ -49,5 +56,9 @@ export function finishScrollTo(ctx: StateContext) {
 
         recalculateSettledScroll(ctx);
         resolvePendingScroll?.();
+        if (state.pendingMaintainScrollAtEnd) {
+            state.maintainingScrollAtEnd = undefined;
+            doMaintainScrollAtEnd(ctx);
+        }
     }
 }

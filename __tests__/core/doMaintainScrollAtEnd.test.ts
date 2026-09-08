@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import "../setup"; // Import global test setup
 
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
+import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import * as scrollToEndModule from "../../src/core/scrollToEnd";
 import { updateContentMetricsState } from "../../src/core/updateContentMetricsState";
+import { updateScroll } from "../../src/core/updateScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
@@ -80,6 +82,102 @@ describe("doMaintainScrollAtEnd", () => {
     };
 
     describe("basic functionality", () => {
+        it("preserves following when footer removal has already clamped the DOM", () => {
+            mockState.scroll = 131;
+            mockState.refScroller = {
+                current: {
+                    getCurrentScrollOffset: () => 83,
+                    getMaxScrollOffset: () => 83,
+                    getScrollableNode: () => null,
+                },
+            } as any;
+
+            doMaintainScrollAtEnd(mockCtx);
+            expect(mockState.scroll).toBe(83);
+            updateScroll(mockCtx, 83, true, { fromNativeScrollEvent: true });
+            expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+            rafCallback?.();
+            expect(scrollToEndSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it("still cancels following when the reader moves above the DOM end", () => {
+            mockState.scroll = 131;
+            mockState.refScroller = {
+                current: {
+                    getCurrentScrollOffset: () => 50,
+                    getMaxScrollOffset: () => 83,
+                    getScrollableNode: () => null,
+                },
+            } as any;
+
+            doMaintainScrollAtEnd(mockCtx);
+            expect(mockState.scroll).toBe(131);
+            updateScroll(mockCtx, 50, true, { fromNativeScrollEvent: true });
+            expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+            rafCallback?.();
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+        });
+
+        for (const withinThreshold of [true, false]) {
+            it(`replays content growth after scrollToEnd settles (within threshold: ${withinThreshold})`, () => {
+                mockState.isWithinMaintainScrollAtEndThreshold = withinThreshold;
+                mockState.scrollingTo = { animated: true, isScrollToEnd: true, offset: 500 };
+                const resolve = mock(() => {});
+                mockState.pendingScrollResolve = resolve;
+
+                expect(doMaintainScrollAtEnd(mockCtx)).toBe(false);
+                expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+                expect(scrollToEndSpy).not.toHaveBeenCalled();
+                expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+
+                finishScrollTo(mockCtx);
+                rafCallback?.();
+
+                expect(resolve).toHaveBeenCalledTimes(1);
+                expect(scrollToEndSpy).toHaveBeenCalledWith(mockCtx, { animated: false });
+            });
+        }
+
+        it("does not follow content growth while an explicit history target is outside the end threshold", () => {
+            mockState.isWithinMaintainScrollAtEndThreshold = false;
+            mockState.scrollingTo = { animated: true, index: 1, offset: 100 };
+
+            expect(doMaintainScrollAtEnd(mockCtx)).toBe(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+        });
+
+        it("does not queue end following while an explicit history target is still inside the end threshold", () => {
+            mockState.isWithinMaintainScrollAtEndThreshold = true;
+            mockState.scrollingTo = { animated: true, index: 1, offset: 100 };
+
+            expect(doMaintainScrollAtEnd(mockCtx)).toBe(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+            finishScrollTo(mockCtx);
+            rafCallback?.();
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+        });
+
+        it("discards deferred end following when a newer imperative request takes ownership", () => {
+            mockState.scrollingTo = { animated: true, isScrollToEnd: true, offset: 500 };
+            doMaintainScrollAtEnd(mockCtx);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+
+            getScrollRequestTracker(mockCtx).start(() => {});
+
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+            expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+        });
+
+        it("defers when an imperative request starts between scheduling and the maintain frame", () => {
+            doMaintainScrollAtEnd(mockCtx);
+            mockState.scrollingTo = { animated: true, isScrollToEnd: true, offset: 500 };
+            rafCallback?.();
+
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+        });
+
         it("should return true and trigger a non-animated scroll by default", () => {
             const result = doMaintainScrollAtEnd(mockCtx);
 

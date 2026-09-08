@@ -169,37 +169,39 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("cancels an active automatic end scroll when a native drag begins", async () => {
-        const data = [{ id: "item-1", label: "Alpha" }];
-        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
-        const resolveScroll = mock(() => {});
-        const { LegendList } = await import("../../src/components/LegendList?props-test-maintain-end-drag-cancel");
+    for (const maintaining of ["animated", "pending-animated"] as const) {
+        it(`cancels ${maintaining} end following when a native drag begins`, async () => {
+            const data = [{ id: "item-1", label: "Alpha" }];
+            const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+            const resolveScroll = mock(() => {});
+            const { LegendList } = await import("../../src/components/LegendList?props-test-maintain-end-drag-cancel");
 
-        const rendered = render(
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                keyExtractor={(item: { id: string }) => item.id}
-                recycleItems={false}
-                renderItem={renderItem}
-            />,
-        );
-        const state = await getStateFromRender();
-        state.maintainingScrollAtEnd = "animated";
-        state.pendingMaintainScrollAtEnd = true;
-        state.pendingScrollResolve = resolveScroll;
-        state.scrollingTo = { animated: true, offset: 100 };
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={renderItem}
+                />,
+            );
+            const state = await getStateFromRender();
+            state.maintainingScrollAtEnd = maintaining;
+            state.pendingMaintainScrollAtEnd = true;
+            state.pendingScrollResolve = resolveScroll;
+            state.scrollingTo = { animated: true, isScrollToEnd: true, offset: 100 };
 
-        act(() => {
-            lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+            act(() => {
+                lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+            });
+
+            expect(resolveScroll).toHaveBeenCalledTimes(1);
+            expect(state.scrollingTo).toBeUndefined();
+            expect(state.maintainingScrollAtEnd).toBeUndefined();
+            expect(state.pendingMaintainScrollAtEnd).toBe(false);
+            rendered.unmount();
         });
-
-        expect(resolveScroll).toHaveBeenCalledTimes(1);
-        expect(state.scrollingTo).toBeUndefined();
-        expect(state.maintainingScrollAtEnd).toBeUndefined();
-        expect(state.pendingMaintainScrollAtEnd).toBe(false);
-        rendered.unmount();
-    });
+    }
 
     it("does not cancel another imperative scroll while end maintenance is only pending", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];

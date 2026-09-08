@@ -18,5 +18,8 @@ export function scrollToEnd(ctx: StateContext, options?: ScrollToEndOptions) {
         viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
         viewPosition: 1,
     });
+    if (state.scrollingTo) {
+        state.scrollingTo.isScrollToEnd = true;
+    }
     return true;
 }

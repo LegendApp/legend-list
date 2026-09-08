@@ -59,6 +59,7 @@ export function finishInitialScroll(
     },
 ) {
     const state = ctx.state;
+    const freshDataTransitionEpoch = state.freshDataTransitionEpoch;
 
     if (options?.resolvedOffset !== undefined) {
         syncInitialScrollOffset(state, options.resolvedOffset);
@@ -70,6 +71,11 @@ export function finishInitialScroll(
     }
 
     const complete = () => {
+        // A queued completion belongs to the dataset that scheduled it.
+        if (freshDataTransitionEpoch !== state.freshDataTransitionEpoch) {
+            options?.onFinished?.();
+            return;
+        }
         const shouldReleaseDeferredPublicOnScroll =
             Platform.OS === "web" && state.initialScrollSession?.kind === "bootstrap";
         const finalScrollOffset = options?.resolvedOffset ?? state.scrollPending ?? state.scroll ?? 0;

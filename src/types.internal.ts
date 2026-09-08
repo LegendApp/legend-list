@@ -37,6 +37,7 @@ export interface ScrollableNodeLike {
 export interface LegendListScrollerRef {
     flashScrollIndicators(): void;
     getCurrentScrollOffset?(): number;
+    getMaxScrollOffset?(): number;
     getNativeScrollRef?(): unknown;
     getScrollEventTarget?(): ScrollEventTargetLike | null;
     getScrollableNode(): ScrollableNodeLike | null;
@@ -93,6 +94,7 @@ type BootstrapInitialScrollSession = {
 };
 
 type InternalScrollTarget = ScrollTarget & {
+    isScrollToEnd?: boolean;
     waitForInitialScrollCompletionFrame?: boolean;
 };
 
