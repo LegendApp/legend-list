@@ -72,10 +72,12 @@ type KeyboardChatComposerRef = {
 };
 
 export function useKeyboardChatComposerInset(
-    listRef: KeyboardChatComposerInsetListRef,
+    _listRef: KeyboardChatComposerInsetListRef,
     composerRef: KeyboardChatComposerRef,
     initialHeight = 0,
 ) {
+    // Keep the list ref parameter for compatibility. KeyboardChatScrollView owns reporting its
+    // combined keyboard + composer inset; this hook only updates the composer shared value.
     const contentInsetEndAdjustment = useSharedValue(initialHeight);
     const lastHeightRef = useRef<number | undefined>(undefined);
 
@@ -84,10 +86,9 @@ export function useKeyboardChatComposerInset(
             if (Number.isFinite(height) && height !== lastHeightRef.current) {
                 lastHeightRef.current = height;
                 contentInsetEndAdjustment.value = height;
-                listRef.current?.reportContentInset({ bottom: height });
             }
         },
-        [contentInsetEndAdjustment, listRef],
+        [contentInsetEndAdjustment],
     );
 
     useLayoutEffect(() => {
