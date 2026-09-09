@@ -17,4 +17,10 @@ export const ADVANCED_HOME_ENTRIES = [
         id: "advanced-reanimated-shared-values",
         title: "Reanimated SharedValues",
     },
+    {
+        description: "Color each separator from the leading and trailing items on either side of it.",
+        href: "/item-separators",
+        id: "advanced-item-separators",
+        title: "Item Separators",
+    },
 ];

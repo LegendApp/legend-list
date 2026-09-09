@@ -6,6 +6,7 @@ describe("advanced example config", () => {
             "/ai-chat-keyboard",
             "/visibility",
             "/reanimated-shared-values",
+            "/item-separators",
         ]);
         expect(new Set(ADVANCED_HOME_ENTRIES.map((entry) => entry.id)).size).toBe(ADVANCED_HOME_ENTRIES.length);
     });
