@@ -9,7 +9,7 @@ import { Platform } from "@/platform/Platform";
 import type { DimensionValue, LooseView, StyleProp, ViewStyle } from "@/platform/scrollview-types";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
-import type { ColumnWrapperStyle, StickyHeaderConfig } from "@/types.base";
+import type { ColumnWrapperStyle, LegendListItemSeparatorProps, StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 import { isHorizontalRTL } from "@/utils/rtl";
 
@@ -91,7 +91,7 @@ export const Container = typedMemo(function Container<ItemT>({
     recycleItems?: boolean;
     horizontal: boolean;
     getRenderedItem: GetRenderedItem;
-    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    ItemSeparatorComponent?: React.ComponentType<LegendListItemSeparatorProps<ItemT>>;
     stickyHeaderConfig?: StickyHeaderConfig;
 }) {
     const ctx = useStateContext();
@@ -186,7 +186,11 @@ export const Container = typedMemo(function Container<ItemT>({
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}
                 {renderedItemInfo && ItemSeparatorComponent && (
-                    <Separator ItemSeparatorComponent={ItemSeparatorComponent} leadingItem={renderedItemInfo.item} />
+                    <Separator
+                        containerId={id}
+                        ItemSeparatorComponent={ItemSeparatorComponent}
+                        leadingItem={renderedItemInfo.item}
+                    />
                 )}
             </ContextContainer.Provider>
         </PositionComponent>

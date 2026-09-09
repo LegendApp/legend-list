@@ -21,6 +21,7 @@ export type {
     Insets,
     LayoutRectangle,
     LegendListAverageItemSize,
+    LegendListItemSeparatorProps,
     LegendListMetrics,
     LegendListRecyclingState,
     LegendListRenderItemProps,

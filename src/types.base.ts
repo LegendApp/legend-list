@@ -174,9 +174,9 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     getItemType?: (item: ItemT, index: number) => TItemType;
 
     /**
-     * Component to render between items, receiving the leading item as prop.
+     * Component to render between items, receiving the items on both sides of the separator.
      */
-    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    ItemSeparatorComponent?: React.ComponentType<LegendListItemSeparatorProps<ItemT>>;
 
     /**
      * When true, the list initializes scrolled to the last item.
@@ -554,6 +554,13 @@ export interface LegendListMetrics {
 export interface LegendListAverageItemSize {
     average: number;
     count: number;
+}
+
+export interface LegendListItemSeparatorProps<ItemT> {
+    /** The item before the separator. */
+    leadingItem: ItemT;
+    /** The item after the separator, or undefined if it is not available. */
+    trailingItem?: ItemT;
 }
 
 export interface LegendListRenderItemProps<

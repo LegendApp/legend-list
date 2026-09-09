@@ -3,7 +3,7 @@ import * as React from "react";
 
 import { Container } from "@/components/Container";
 import { useArr$ } from "@/state/state";
-import type { StickyHeaderConfig } from "@/types.base";
+import type { LegendListItemSeparatorProps, StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 
 export interface ContainerComponentProps<ItemT> {
@@ -11,7 +11,7 @@ export interface ContainerComponentProps<ItemT> {
     id: number;
     itemKey: string;
     recycleItems: boolean;
-    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    ItemSeparatorComponent?: React.ComponentType<LegendListItemSeparatorProps<ItemT>>;
     getRenderedItem: GetRenderedItem;
     stickyHeaderConfig?: StickyHeaderConfig;
 }

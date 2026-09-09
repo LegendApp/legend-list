@@ -7,14 +7,14 @@ import { ContainerSlot } from "@/components/ContainerSlot";
 import { useFreshDataTransitionVisibility } from "@/hooks/useFreshDataTransitionVisibility";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
-import type { StickyHeaderConfig } from "@/types.base";
+import type { LegendListItemSeparatorProps, StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 
 interface ContainersProps<ItemT> {
     freshDataTransitionEpoch: number;
     horizontal: boolean;
     recycleItems: boolean;
-    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    ItemSeparatorComponent?: React.ComponentType<LegendListItemSeparatorProps<ItemT>>;
     getRenderedItem: GetRenderedItem;
     stickyHeaderConfig?: StickyHeaderConfig;
 }

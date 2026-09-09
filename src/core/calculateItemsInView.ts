@@ -2,6 +2,7 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { createContainerItemMetadata, resolveContainerItemMetadata } from "@/core/containerItemMetadata";
+import { clearContainerTrailingItem, updateContainerTrailingItem } from "@/core/containerTrailingItem";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
@@ -824,6 +825,7 @@ export function calculateItemsInView(
                     set$(ctx, `containerItemKey${containerIndex}`, id);
                     set$(ctx, `containerItemIndex${containerIndex}`, i);
                     set$(ctx, `containerItemData${containerIndex}`, data[i]);
+                    updateContainerTrailingItem(ctx, containerIndex, i);
 
                     // Update cache when adding new item
                     containerItemKeys!.set(id, containerIndex);
@@ -909,6 +911,7 @@ export function calculateItemsInView(
                 set$(ctx, `containerItemKey${i}`, undefined);
                 set$(ctx, `containerItemIndex${i}`, undefined);
                 set$(ctx, `containerItemData${i}`, undefined);
+                clearContainerTrailingItem(ctx, i);
                 set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                 set$(ctx, `containerColumn${i}`, -1);
                 set$(ctx, `containerSpan${i}`, 1);
