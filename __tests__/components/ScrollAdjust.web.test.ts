@@ -64,12 +64,18 @@ function installAnimationFrameQueue() {
     };
 }
 
-function renderPaddingAdjustment() {
+function renderPaddingAdjustment({
+    scroll = 75924.25,
+    style = { paddingBottom: "607px" },
+}: {
+    scroll?: number;
+    style?: { paddingBottom: string };
+} = {}) {
     const contentNode = {
         offsetHeight: 0,
         parentElement: null,
         scrollHeight: 76723,
-        style: { paddingBottom: "607px" },
+        style,
     } as unknown as HTMLElement;
     const scrollElement = {
         clientHeight: 799,
@@ -91,7 +97,7 @@ function renderPaddingAdjustment() {
                     getScrollableNode: () => scrollElement,
                 },
             } as any,
-            scroll: 75924.25,
+            scroll,
         });
 
         return React.createElement(ScrollAdjust);
@@ -373,6 +379,42 @@ describe("ScrollAdjust (web)", () => {
 
             expect(rendered.contentNode.style.paddingBottom).toBe("607.5px");
             expect(rendered.scrollElement.scrollTop).toBe(75924.25);
+
+            act(() => animationFrames.flush());
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("607px");
+        } finally {
+            window.getComputedStyle = originalGetComputedStyle;
+            animationFrames.restore();
+            act(() => renderer?.unmount());
+        }
+    });
+
+    it("restores temporary padding after the browser normalizes the assigned CSS value", () => {
+        const animationFrames = installAnimationFrameQueue();
+        const originalGetComputedStyle = window.getComputedStyle;
+        window.getComputedStyle = ((element: HTMLElement) => element.style) as typeof window.getComputedStyle;
+        let paddingBottom = "607px";
+        const style = {
+            get paddingBottom() {
+                return paddingBottom;
+            },
+            set paddingBottom(value: string) {
+                const numericValue = Number.parseFloat(value);
+                paddingBottom = Number.isInteger(numericValue) ? `${numericValue}px` : `${numericValue.toFixed(3)}px`;
+            },
+        };
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            const rendered = renderPaddingAdjustment({ scroll: 75924.123456, style });
+            renderer = rendered.renderer;
+
+            act(() => {
+                set$(rendered.ctx, "scrollAdjust", -20.75);
+            });
+
+            expect(rendered.contentNode.style.paddingBottom).toBe("607.247px");
 
             act(() => animationFrames.flush());
 

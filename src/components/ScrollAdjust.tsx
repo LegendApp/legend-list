@@ -99,8 +99,11 @@ export function ScrollAdjust() {
                             window.getComputedStyle(contentNode)[axis.paddingEndProp],
                         );
                         const temporaryPaddingEnd = `${(currentPaddingEnd || 0) + pad}px`;
-                        temporaryPaddingRef.current = { baseline: baselinePaddingEnd, value: temporaryPaddingEnd };
                         contentNode.style[axis.paddingEndProp] = temporaryPaddingEnd;
+                        temporaryPaddingRef.current = {
+                            baseline: baselinePaddingEnd,
+                            value: contentNode.style[axis.paddingEndProp],
+                        };
                         // Force a layout update by reading from DOM
                         void contentNode.offsetHeight;
 
