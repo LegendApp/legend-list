@@ -166,6 +166,8 @@ export interface InternalState {
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
     freshDataTransitionEpoch: number;
+    handledDataChangeEpoch: number;
+    handledFreshDataTransitionEpoch: number;
     deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;
     didColumnsChange?: boolean;
     didDataChange?: boolean;

@@ -362,6 +362,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 endReachedSnapshot: undefined,
                 firstFullyOnScreenIndex: -1,
                 freshDataTransitionEpoch: 0,
+                handledDataChangeEpoch: 0,
+                handledFreshDataTransitionEpoch: 0,
                 hasHadNonEmptyData: dataProp.length > 0,
                 idCache: [],
                 idsInView: [],
@@ -427,8 +429,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const state = refState.current!;
-    const handledDataChangeEpochRef = useRef(state.dataChangeEpoch);
-    const handledFreshDataTransitionEpochRef = useRef(state.freshDataTransitionEpoch);
     const isFirstLocal = state.isFirst;
     const previousAdaptiveRender = state.props.adaptiveRender;
     const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
@@ -626,10 +626,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         // Data-change detection updates shared state during render, and React may restart that render
         // before committing effects. Consume monotonic epochs so the committed render cannot lose the change.
-        const didDataChange = handledDataChangeEpochRef.current !== dataChangeEpoch;
-        const didStartFreshData = handledFreshDataTransitionEpochRef.current !== freshDataTransitionEpoch;
-        handledDataChangeEpochRef.current = dataChangeEpoch;
-        handledFreshDataTransitionEpochRef.current = freshDataTransitionEpoch;
+        const didDataChange = state.handledDataChangeEpoch !== dataChangeEpoch;
+        const didStartFreshData = state.handledFreshDataTransitionEpoch !== freshDataTransitionEpoch;
+        state.handledDataChangeEpoch = dataChangeEpoch;
+        state.handledFreshDataTransitionEpoch = freshDataTransitionEpoch;
 
         if (didStartFreshData) {
             resetInitialRenderState(ctx, {
