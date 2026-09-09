@@ -157,6 +157,7 @@ export type AnchoredEndSpaceOwner = "list" | "scroll";
 
 export interface InternalState {
     adjustingFromInitialMount?: number;
+    anchoredEndSpacePendingReady?: boolean;
     anchoredEndSpaceReadyAnchorIndex?: number;
     anchoredEndSpaceReadyAnchorKey?: string;
     averageSizes: AverageSizes;

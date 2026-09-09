@@ -269,6 +269,61 @@ describe("updateAnchoredEndSpace", () => {
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
     });
 
+    it("shrinks stale anchored end space to the largest value allowed by known tail sizes", () => {
+        const onReady = mock(() => {});
+        const onSizeChanged = mock(() => {});
+        const triggerCalculateItemsInView = mock(() => {});
+        mockState.hasScrolled = false;
+        mockState.props.anchoredEndSpace = { anchorIndex: 1, onReady, onSizeChanged };
+        mockState.sizesKnown.delete("item_2");
+        mockState.triggerCalculateItemsInView = triggerCalculateItemsInView;
+        set$(mockCtx, "anchoredEndSpaceSize", 250);
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(180);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(180);
+        expect(onSizeChanged).toHaveBeenCalledWith(180);
+        expect(onReady).not.toHaveBeenCalled();
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(mockState.hasScrolled).toBe(false);
+    });
+
+    it("reports readiness once when the measured tail confirms a provisional zero-sized space", () => {
+        const onReady = mock(() => {});
+        const onSizeChanged = mock(() => {});
+        mockState.props.anchoredEndSpace = { anchorIndex: 1, onReady, onSizeChanged };
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        onReady.mockClear();
+        onSizeChanged.mockClear();
+
+        mockState.props.data = [...mockState.props.data, { id: "item_3" }];
+        mockState.sizesKnown.set("item_1", 300);
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
+        expect(onSizeChanged).toHaveBeenCalledWith(0);
+        expect(onReady).not.toHaveBeenCalled();
+
+        mockState.sizesKnown.set("item_3", 80);
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
+        expect(onReady).toHaveBeenCalledWith({ anchorIndex: 1, anchorKey: "item_1", size: 0 });
+        maybeUpdateAnchoredEndSpace(mockCtx);
+        expect(onReady).toHaveBeenCalledTimes(1);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+    });
+
+    it("waits for an authoritative tail size before reporting an initial zero-sized space", () => {
+        const onReady = mock(() => {});
+        const onSizeChanged = mock(() => {});
+        const triggerCalculateItemsInView = mock(() => {});
+        mockState.props.anchoredEndSpace = { anchorIndex: 1, onReady, onSizeChanged };
+        mockState.sizesKnown.delete("item_2");
+        mockState.triggerCalculateItemsInView = triggerCalculateItemsInView;
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBeUndefined();
+        expect(onSizeChanged).not.toHaveBeenCalled();
+        expect(onReady).not.toHaveBeenCalled();
+        expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
+    });
+
     it("reports readiness when unknown tail item sizes become measurable", () => {
         const onSizeChanged = mock(() => {});
         const onReady = mock(() => {});
