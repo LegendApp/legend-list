@@ -216,7 +216,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             const shouldRetryUnalignedInitialScroll =
                 isStillScrollingTo.isInitialScroll && !completionState.isAtResolvedTarget && numChecks <= maxChecks;
             const shouldRetryUnalignedEndScroll =
-                Platform.OS === "ios" &&
+                Platform.OS !== "web" &&
                 !isStillScrollingTo.isInitialScroll &&
                 isEndAlignedLastItemTarget(ctx, isStillScrollingTo) &&
                 !completionState.isAtResolvedTarget &&
