@@ -29,7 +29,13 @@
       },
       "peerDependencies": {
         "react": "*",
+        "react-dom": "*",
+        "react-native": "*",
       },
+      "optionalPeers": [
+        "react-dom",
+        "react-native",
+      ],
     },
   },
   "packages": {

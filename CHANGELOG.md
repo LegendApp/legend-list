@@ -1,3 +1,12 @@
+## 3.3.11
+
+- Fix: `scrollToEnd` and `maintainScrollAtEnd` keep reaching the end as content changes, while scrolling away or requesting another position cancels automatic following.
+- Fix: Switching datasets cancels old scroll requests so they cannot override the new dataset's initial position.
+- Fix: `anchoredEndSpace` shrinks excess blank space as rows are measured instead of waiting for every remaining row.
+- Fix: Resizing the chat composer preserves the combined keyboard and composer spacing.
+- Fix: Web scroll adjustments no longer leave extra padding at the end of the list.
+- Fix: Web row reordering happens sooner when idle and preserves focus, animations, and embedded content state in browsers that support state-preserving moves.
+
 ## 3.3.10
 
 - Fix: Changing `dataKey` no longer loses the new dataset's initial scroll position when React retries a render.
