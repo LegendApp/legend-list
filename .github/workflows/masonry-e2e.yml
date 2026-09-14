@@ -1,0 +1,36 @@
+name: Masonry E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main, feat/masonry-list]
+
+permissions:
+  contents: read
+
+jobs:
+  masonry:
+    name: Chromium and WebKit masonry regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.6
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: example-web
+      - run: bun test __tests__/components/MasonryLegendList.test.tsx
+      - run: bunx playwright install --with-deps chromium webkit
+        working-directory: example-web
+      - run: bun run typecheck:e2e
+        working-directory: example-web
+      - run: bun run test:e2e
+        working-directory: example-web
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: masonry-browser-failures
+          path: example-web/test-results/
+          if-no-files-found: ignore

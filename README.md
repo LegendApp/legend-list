@@ -143,6 +143,29 @@ Masonry lists are vertical and support dynamically measured or fixed-size items.
 2. `bun i`
 3. `bun run ios`
 
+## Masonry regression checks
+
+From the repository root, run `bun install --frozen-lockfile` and `bun test`.
+For browser E2E checks:
+
+```sh
+cd example-web
+bun install --frozen-lockfile
+bunx playwright install chromium webkit
+bun run test:e2e
+```
+
+The runner starts and stops its own fixture server. Chromium and WebKit checks cover
+recycled-card identity, prepend anchoring, append, actual column placement, dynamic
+tall-card visibility during reverse scrolling, and reset at two viewport widths.
+Failures retain screenshots and traces in `example-web/test-results/`. The Masonry E2E
+workflow runs these checks for pull requests.
+
+For native interaction checks, run `bun run ios:fixtures` or `bun run android:fixtures`
+in `example`, then open Masonry. Scroll before tapping a card and check the Selected
+identity; exercise Prepend, Append, Columns, Toggle tall card, Reset, and Back. These
+fixture checks do not establish release performance or app-specific acceptance.
+
 ## PRs gladly accepted!
 
 There's not a ton of code so hopefully it's easy to contribute. If you want to add a missing feature or fix a bug please post an issue to see if development is already in progress so we can make sure to not duplicate work 😀.

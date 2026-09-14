@@ -1,6 +1,7 @@
 ## Unreleased
 
 - Feat: Add optional `MasonryLegendList` for vertical, variable-height columns.
+- Fix: Preserve pending column reflow across React render replay.
 
 ## 3.3.11
 

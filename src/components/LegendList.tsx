@@ -439,7 +439,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
 
     ctx.scrollAxisGap = nextScrollAxisGap;
-    state.didColumnsChange = numColumnsProp !== previousNumColumnsProp || didScrollAxisGapChange;
+    // Render replay can observe the new props before the layout effect has
+    // consumed this change. Keep the pending reflow until that effect clears it.
+    state.didColumnsChange ||= numColumnsProp !== previousNumColumnsProp || didScrollAxisGapChange;
     const previousDataLength = state.props.data?.length ?? 0;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataKeyChangeLocal = state.props.dataKey !== dataKey;
