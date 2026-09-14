@@ -72,3 +72,12 @@ export function invalidateContainerFixedItemSizes(state: InternalState) {
         metadata.fixedItemSize = undefined;
     }
 }
+
+// A reset can retain container keys while replacing the content they measured.
+// Revoke callbacks immediately, before the queued render/layout measures the new content.
+export function invalidateContainerMeasurements(state: InternalState) {
+    for (let id = 0; id < state.containerItemGenerations.length; id++) {
+        state.containerItemGenerations[id] = (state.containerItemGenerations[id] ?? 0) + 1;
+    }
+    state.containerItemMetadata.clear();
+}
