@@ -203,6 +203,56 @@ describe("updateItemSizes", () => {
         calculateSpy.mockRestore();
     });
 
+    for (const scenario of ["growth", "canceling changes", "initial estimate", "throwing callback"] as const) {
+        it(`batches total-size notifications through the real layout store: ${scenario}`, () => {
+            mockState.props.data = Array.from({ length: 3 }, (_, index) => ({ id: `item_${index}` }));
+            mockState.idCache = mockState.props.data.map((item) => item.id);
+            mockState.startNoBuffer = 0;
+            mockState.endNoBuffer = 1;
+            const store = syncLayoutStoreStructure(mockCtx)!;
+            mockState.layoutStoreRuntime!.didFlushInitialEstimate = scenario !== "initial estimate";
+            mockState.totalSize = 300;
+            mockCtx.values.set("totalSize", 300);
+            const totals: number[] = [];
+            listen$(mockCtx, "totalSize", (value) => totals.push(value));
+            const expectedTotal =
+                scenario === "canceling changes"
+                    ? 300
+                    : scenario === "initial estimate"
+                      ? 555
+                      : scenario === "throwing callback"
+                        ? 350
+                        : 470;
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {
+                expect(mockCtx.values.get("totalSize")).toBe(expectedTotal);
+            });
+            try {
+                if (scenario === "throwing callback") {
+                    mockState.props.onItemSizeChanged = () => {
+                        throw new Error("item callback failed");
+                    };
+                }
+                const measure = () =>
+                    updateItemSizesBatch(mockCtx, [
+                        { itemKey: "item_0", size: { height: 150, width: 400 } },
+                        {
+                            itemKey: "item_1",
+                            size: { height: scenario === "canceling changes" ? 50 : 220, width: 400 },
+                        },
+                    ]);
+                if (scenario === "throwing callback") expect(measure).toThrow("item callback failed");
+                else measure();
+                expect(store.getTotalSize()).toBe(expectedTotal);
+                expect(mockState.totalSize).toBe(expectedTotal);
+                expect(totals).toEqual(scenario === "canceling changes" ? [] : [expectedTotal]);
+                expect(calculateSpy).toHaveBeenCalledTimes(scenario === "throwing callback" ? 0 : 1);
+            } finally {
+                calculateSpy.mockRestore();
+                mockState.scheduledWork.dispose();
+            }
+        });
+    }
+
     it("publishes measured totals once before scroll recalculation", () => {
         mockCtx.values.set("totalSize", 300);
         for (let index = 0; index < 3; index++) {

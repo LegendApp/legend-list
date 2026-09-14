@@ -103,7 +103,7 @@ function flushLayoutStoreEstimate(
     ctx: StateContext,
     estimatedSize: number,
     anchorIndex: number,
-    options?: { requireAnchorCorrection?: boolean },
+    options?: { notifyTotalSize?: boolean; requireAnchorCorrection?: boolean },
 ) {
     const state = ctx.state;
     const store = getActiveLayoutStore(ctx);
@@ -119,7 +119,7 @@ function flushLayoutStoreEstimate(
             const clampedAnchorIndex = Math.min(Math.max(anchorIndex, 0), store.length - 1);
             const oldAnchorTop = store.getOffset(clampedAnchorIndex);
             store.setEstimatedSize(estimatedSize);
-            syncLayoutStoreState(ctx);
+            syncLayoutStoreState(ctx, options?.notifyTotalSize);
             const newAnchorTop = store.getOffset(clampedAnchorIndex);
             const positionDiff = newAnchorTop - oldAnchorTop;
 
@@ -136,7 +136,7 @@ function flushLayoutStoreEstimate(
     return didFlush;
 }
 
-export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext) {
+export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext, notifyTotalSize = true) {
     const state = ctx.state;
     const runtime = getActiveLayoutStoreRuntime(ctx);
     const store = runtime?.store;
@@ -174,7 +174,7 @@ export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext) {
             if (!state.scrollingTo) {
                 runtime.didFlushInitialEstimate = true;
                 runtime.pendingEstimateMeasurements = 0;
-                didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer);
+                didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer, { notifyTotalSize });
             }
         }
     }
@@ -267,7 +267,12 @@ export function resetLayoutStoreRuntimeState(state: InternalState) {
     state.layoutStoreRuntime?.resetTransientState();
 }
 
-export function setLayoutStoreMeasuredSize(ctx: StateContext, index: number | undefined, size: number) {
+export function setLayoutStoreMeasuredSize(
+    ctx: StateContext,
+    index: number | undefined,
+    size: number,
+    notifyTotalSize = true,
+) {
     const runtime = getActiveLayoutStoreRuntime(ctx);
     const store = runtime?.store;
     let didSet = false;
@@ -281,7 +286,7 @@ export function setLayoutStoreMeasuredSize(ctx: StateContext, index: number | un
             runtime.pendingEstimateMeasurements++;
         }
         if (didChange) {
-            syncLayoutStoreState(ctx);
+            syncLayoutStoreState(ctx, notifyTotalSize);
         }
         didSet = true;
     }
@@ -457,12 +462,12 @@ export function rebuildLayoutStoreExact(ctx: StateContext) {
     return state.layoutStoreRuntime?.store;
 }
 
-export function syncLayoutStoreState(ctx: StateContext) {
+export function syncLayoutStoreState(ctx: StateContext, notifyTotalSize = true) {
     const runtime = getActiveLayoutStoreRuntime(ctx);
     let didSync = false;
     if (runtime) {
         const store = runtime.store;
-        addTotalSize(ctx, null, store.getTotalSize());
+        addTotalSize(ctx, null, store.getTotalSize(), notifyTotalSize);
         if (ctx.state.props.snapToIndices) {
             updateSnapToOffsets(ctx);
         }
