@@ -129,6 +129,7 @@ export function updateViewableItems(
             state.scheduledWork.timeout(() => {
                 const currentPairs = state.viewabilityConfigCallbackPairs;
                 if (
+                    indexedData === getIndexedData(state) &&
                     (!currentPairs || currentPairs.includes(viewabilityConfigCallbackPair)) &&
                     hasViewabilityConsumers(ctx, currentPairs ?? [viewabilityConfigCallbackPair])
                 ) {

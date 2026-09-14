@@ -869,3 +869,51 @@ describe("viewability system", () => {
         });
     });
 });
+
+for (const useDataSource of [false, true]) {
+    it(`discards delayed viewability after replacing ${useDataSource ? "dataSource" : "data"}`, () => {
+        const source = (id: string) => ({ getItem: () => ({ id }), getKey: () => id, getLength: () => 1 });
+        const calls: OnViewableItemsChangedInfo[] = [];
+        const ctx = createMockContext(
+            {},
+            {
+                idCache: ["old"],
+                indexByKey: new Map([["old", 0]]),
+                props: {
+                    data: [{ id: "old" }],
+                    ...(useDataSource ? { dataSource: source("old") } : {}),
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: any) => item.id,
+                },
+                scrollLength: 500,
+            },
+        );
+        setLayoutValue(ctx.state, 0, 0, 100);
+        const pairs = setupViewability({
+            onViewableItemsChanged: (info) => calls.push(info),
+            viewabilityConfig: { minimumViewTime: 100 },
+        });
+        ctx.state.viewabilityConfigCallbackPairs = pairs;
+        const callbacks: Array<() => void> = [];
+        const timer = spyOn(ctx.state.scheduledWork, "timeout").mockImplementation((callback: any) => {
+            callbacks.push(callback);
+            return 1 as any;
+        });
+        try {
+            updateViewableItems(ctx, pairs, 500, 0, 0);
+            if (useDataSource) ctx.state.props.dataSource = source("new");
+            else ctx.state.props.data = [{ id: "new" }];
+            ctx.state.idCache = ["new"];
+            ctx.state.indexByKey = new Map([["new", 0]]);
+            callbacks.shift()!();
+            expect(calls).toHaveLength(0);
+            updateViewableItems(ctx, pairs, 500, 0, 0);
+            expect(calls).toHaveLength(0);
+            callbacks.shift()!();
+            expect(calls[0].viewableItems[0]).toMatchObject({ item: { id: "new" }, key: "new" });
+        } finally {
+            timer.mockRestore();
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+}
