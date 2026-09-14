@@ -5,6 +5,7 @@ import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { set$ } from "../../src/state/state";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValues } from "../helpers/layoutStore";
 
 describe("end following while an imperative request waits for layout", () => {
     const originalRAF = globalThis.requestAnimationFrame;
@@ -122,7 +123,7 @@ describe("end following while an imperative request waits for layout", () => {
         ctx.state.didDataChange = true;
         ctx.state.runPendingScrollToEnd?.();
         ctx.state.props.data = [...ctx.state.props.data, { id: "c" }];
-        ctx.state.positions = [0, 500, 1000];
+        setLayoutValues(ctx.state, "positions", [0, 500, 1000]);
         set$(ctx, "totalSize", 1500);
         doMaintainScrollAtEnd(ctx);
         expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
