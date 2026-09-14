@@ -52,7 +52,12 @@ import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdj
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
-import { hasViewabilityConsumers, requestViewabilityRecalculation, setupViewability } from "@/core/viewability";
+import {
+    hasViewabilityConsumers,
+    recordViewabilityInteraction,
+    requestViewabilityRecalculation,
+    setupViewability,
+} from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
@@ -1105,6 +1110,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
             onScrollBeginDrag: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
                 state.isDragging = true;
+                recordViewabilityInteraction(ctx);
                 interruptMaintainScrollAtEnd(ctx);
                 prepareReachedEdgeForNextUserScroll(ctx);
                 state.props.onScrollBeginDrag?.(event as any);

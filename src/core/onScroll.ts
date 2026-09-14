@@ -4,6 +4,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
+import { recordViewabilityInteraction } from "@/core/viewability";
 import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
@@ -105,9 +106,12 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         }
     }
 
+    const didInteract =
+        newScroll !== state.scroll && state.didFinishInitialScroll && !state.scrollingTo && !state.ignoreScrollFromMVCP;
     state.scrollPending = newScroll;
 
     updateScroll(ctx, newScroll, insetChanged, { fromNativeScrollEvent: true });
+    if (didInteract) recordViewabilityInteraction(ctx);
     trackInitialScrollNativeProgress(state, newScroll);
     clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx);
 

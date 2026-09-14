@@ -13,6 +13,7 @@ import { scrollToIndex } from "@/core/scrollToIndex";
 import { setContentInsetOverride } from "@/core/updateContentMetrics";
 import { updateItemSizes } from "@/core/updateItemSizes";
 import { updateScroll } from "@/core/updateScroll";
+import { recordViewabilityInteraction } from "@/core/viewability";
 import { getContentSize } from "@/state/getContentSize";
 import {
     type LegendListListenerType,
@@ -239,6 +240,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             start: state.startNoBuffer as number,
             startBuffered: state.startBuffered,
         }),
+        recordInteraction: () => recordViewabilityInteraction(ctx),
         reportContentInset: (inset) => {
             const didChange = setContentInsetOverride(ctx, inset);
             updateScroll(ctx, state.scroll, true, { markHasScrolled: false });

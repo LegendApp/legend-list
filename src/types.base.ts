@@ -695,6 +695,9 @@ export type LegendListState = {
 };
 
 export type LegendListRef = {
+    /** Releases waitForInteraction viewability tracking and recalculates the visible items. */
+    recordInteraction(): void;
+
     /**
      * Clears internal virtualization caches.
      * @param options - Cache clearing options.

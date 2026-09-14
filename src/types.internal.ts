@@ -203,6 +203,7 @@ export interface InternalState {
     };
     hasHadNonEmptyData: boolean;
     hasScrolled?: boolean;
+    hasViewabilityInteraction?: boolean;
     idCache: string[];
     indexedData?: IndexedData<any>;
     idsInView: string[];
