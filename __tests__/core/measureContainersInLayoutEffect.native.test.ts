@@ -3,6 +3,8 @@ import "../setup";
 
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
+import { applyDataSourceMutationBatches } from "../../src/core/DataSourceMutationCoordinator";
+import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { measureContainersInLayoutEffect } from "../../src/core/measureContainersInLayoutEffect.native";
 import { getContainerLayoutEffectScope, scheduleContainerLayout } from "../../src/core/scheduleContainerLayout";
 import { Platform } from "../../src/platform/Platform";
@@ -377,6 +379,100 @@ describe("measureContainersInLayoutEffect", () => {
 
         expect(measureCalls).toBe(1);
         expect(ctx.values.get("otherAxisSize")).toBe(450);
+    });
+
+    it("rejects a late measurement invalidated by a same-key source update", () => {
+        let inLayoutEffect = false;
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {
+            expect(inLayoutEffect).toBe(true);
+        });
+        const items = ctx.state.props.data;
+        const source = {
+            getItem: (index: number) => items[index],
+            getKey: (index: number) => items[index].id,
+            getLength: () => items.length,
+            getRevision: () => 1,
+            subscribe: () => () => {},
+        };
+        ctx.state.props.dataSource = source;
+        ctx.state.idCache = items.map((item) => item.id);
+        syncLayoutStoreStructure(ctx);
+        let oldMeasurement: (x: number, y: number, width: number, height: number) => void;
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: typeof oldMeasurement) => {
+                    oldMeasurement = callback;
+                },
+            },
+        } as any);
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+        applyDataSourceMutationBatches(ctx, source, [
+            {
+                length: 2,
+                operations: [{ count: 1, index: 0, layout: "invalidate", type: "update" }],
+                previousLength: 2,
+                previousRevision: 0,
+                revision: 1,
+            },
+        ]);
+        oldMeasurement!(0, 0, 400, 120);
+        expect(ctx.state.sizesKnown.has("item_0")).toBe(false);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(false);
+        expect(calculateSpy).not.toHaveBeenCalled();
+
+        ctx.viewRefs.set(0, {
+            current: { measure: (callback: typeof oldMeasurement) => callback(0, 0, 400, 220) },
+        } as any);
+        inLayoutEffect = true;
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+        inLayoutEffect = false;
+        oldMeasurement!(0, 0, 400, 120);
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(220);
+        expect(ctx.state.layoutStoreRuntime!.store.getSize(0)).toBe(220);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(true);
+        expect(calculateSpy).toHaveBeenCalledTimes(1);
+        calculateSpy.mockRestore();
+        ctx.state.scheduledWork.dispose();
+    });
+
+    it("rechecks collected measurements when a source update invalidates an earlier result in the same pass", () => {
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        const items = ctx.state.props.data;
+        const source = {
+            getItem: (index: number) => items[index],
+            getKey: (index: number) => items[index].id,
+            getLength: () => items.length,
+            getRevision: () => 1,
+            subscribe: () => () => {},
+        };
+        ctx.state.props.dataSource = source;
+        ctx.state.idCache = items.map((item) => item.id);
+        syncLayoutStoreStructure(ctx);
+        ctx.viewRefs.set(0, { current: { measure: (callback: any) => callback(0, 0, 400, 120) } } as any);
+        ctx.viewRefs.set(1, {
+            current: {
+                measure: (callback: any) => {
+                    applyDataSourceMutationBatches(ctx, source, [
+                        {
+                            length: 2,
+                            operations: [{ count: 1, index: 0, layout: "invalidate", type: "update" }],
+                            previousLength: 2,
+                            previousRevision: 0,
+                            revision: 1,
+                        },
+                    ]);
+                    callback(0, 0, 400, 230);
+                },
+            },
+        } as any);
+        measureContainersInLayoutEffect(ctx);
+        expect(ctx.state.sizesKnown.has("item_0")).toBe(false);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(false);
+        expect(ctx.state.sizesKnown.get("item_1")).toBe(230);
+        expect(ctx.values.get("containerLayoutReady1")).toBe(true);
+        expect(calculateSpy).toHaveBeenCalledTimes(1);
+        calculateSpy.mockRestore();
+        ctx.state.scheduledWork.dispose();
     });
 
     it("accepts the newest late measurement from consecutive same-key passes", () => {

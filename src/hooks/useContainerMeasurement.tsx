@@ -56,6 +56,7 @@ function scheduleWebShrinkMeasurement(state: ContainerMeasurementState, confirmM
 export function processContainerLayout({ containerId, ctx, rectangle, ref, state }: ProcessContainerLayoutOptions) {
     const listState = ctx.state;
     const currentItemKey = state.itemKey;
+    const generation = listState.containerItemGenerations[containerId] ?? 0;
     state.didLayout = true;
     let layout: { height: number; width: number } = rectangle;
     const axis = state.horizontal ? "width" : "height";
@@ -67,9 +68,13 @@ export function processContainerLayout({ containerId, ctx, rectangle, ref, state
     const previousSize = Platform.OS === "web" ? coreKnownSize : localPreviousSize;
 
     const applyLayout = () => {
+        if (state.itemKey !== currentItemKey || (listState.containerItemGenerations[containerId] ?? 0) !== generation) {
+            return;
+        }
         state.lastSize = layout;
         updateItemSizes(ctx, {
             containerId,
+            generation,
             itemKey: currentItemKey,
             size: layout,
         });

@@ -60,6 +60,7 @@ function updateOtherAxisSizeIfNeeded(
 
 export interface ItemSizeMeasurement {
     containerId?: number;
+    generation?: number;
     itemKey: string;
     size: { width: number; height: number };
 }
@@ -143,11 +144,13 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
 
     try {
         for (const measurement of measurements) {
-            // Measurements can arrive after recycling. Only explicit imperative sizes,
-            // which have no container id, bypass the current-assignment check.
+            // Recheck ownership after collection: recycling or invalidation can happen during a batch.
+            // Explicit imperative sizes have no container id and bypass the assignment check.
             const ownsMeasuredItem =
                 measurement.containerId === undefined ||
-                peek$(ctx, `containerItemKey${measurement.containerId}`) === measurement.itemKey;
+                (peek$(ctx, `containerItemKey${measurement.containerId}`) === measurement.itemKey &&
+                    (measurement.generation === undefined ||
+                        (state.containerItemGenerations[measurement.containerId] ?? 0) === measurement.generation));
             if (ownsMeasuredItem) {
                 const index = state.indexByKey.get(measurement.itemKey);
                 const itemData = index === undefined ? undefined : getDataItem(state, index);
