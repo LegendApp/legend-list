@@ -41,7 +41,8 @@ for (const knownCount of [1000, 10000, 100000]) {
         state.idCache[i] = `k${i}`;
         state.indexByKey.set(`k${i}`, i);
     }
-    for (const count of [1, 10]) {
+    for (const count of [1, 10, 100, 1000, 2000]) {
+        if (count > knownCount) continue;
         const batch = {
             length,
             operations: Array.from({ length: count }, (_, i) => ({
