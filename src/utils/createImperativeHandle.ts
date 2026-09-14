@@ -21,7 +21,7 @@ import { scrollToIndex } from "@/core/scrollToIndex";
 import { setContentInsetOverride } from "@/core/updateContentMetrics";
 import { updateItemSizes } from "@/core/updateItemSizes";
 import { updateScroll } from "@/core/updateScroll";
-import { updateViewableItems } from "@/core/viewability";
+import { recordViewabilityInteraction, updateViewableItems } from "@/core/viewability";
 import { isScreenReaderEnabled } from "@/platform/screenReader";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
@@ -337,6 +337,7 @@ export function createImperativeHandle(
             start: state.startNoBuffer as number,
             startBuffered: state.startBuffered,
         }),
+        recordInteraction: () => recordViewabilityInteraction(ctx),
         reportContentInset,
         reportContentInsetForScrollInternal: (inset) => reportContentInset(inset, false),
         reportViewabilityInsetEndInternal: (inset) => {
@@ -351,7 +352,6 @@ export function createImperativeHandle(
                 // A keyboard can cover stationary content without a scroll event.
                 // Refresh viewability only; occlusion must not initiate scrolling.
                 updateViewableItems(
-                    state,
                     ctx,
                     state.viewabilityConfigCallbackPairs,
                     state.scrollLength,

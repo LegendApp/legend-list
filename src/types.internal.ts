@@ -242,6 +242,7 @@ export interface InternalState {
     hasEstimatedInitialLayout?: boolean;
     hasHadNonEmptyData: boolean;
     hasScrolled?: boolean;
+    hasViewabilityInteraction?: boolean;
     idCache: string[];
     indexedData?: IndexedData<any>;
     idsInView: string[];

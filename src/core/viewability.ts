@@ -118,6 +118,13 @@ export function requestViewabilityRecalculation(ctx: StateContext) {
     }
 }
 
+export function recordViewabilityInteraction(ctx: StateContext) {
+    if (!ctx.state.hasViewabilityInteraction) {
+        ctx.state.hasViewabilityInteraction = true;
+        requestViewabilityRecalculation(ctx);
+    }
+}
+
 export function updateViewableItems(
     ctx: StateContext,
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPair<any>[],
@@ -131,6 +138,9 @@ export function updateViewableItems(
     const state = ctx.state;
     for (let pairIndex = 0; pairIndex < viewabilityConfigCallbackPairs.length; pairIndex++) {
         const viewabilityConfigCallbackPair = viewabilityConfigCallbackPairs[pairIndex];
+        if (viewabilityConfigCallbackPair.viewabilityConfig.waitForInteraction && !state.hasViewabilityInteraction) {
+            continue;
+        }
         const publishAmounts = pairIndex === viewabilityConfigCallbackPairs.length - 1;
         const viewabilityState = ensureViewabilityState(ctx, viewabilityConfigCallbackPair.viewabilityConfig.id!);
         viewabilityState.start = start;

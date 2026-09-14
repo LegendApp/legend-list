@@ -748,6 +748,9 @@ export type LegendListState = {
 };
 
 export type LegendListRef = {
+    /** Releases waitForInteraction viewability tracking and recalculates the visible items. */
+    recordInteraction(): void;
+
     /** Cancels queued and active scrolling, settles its promise, and stops at the observed offset. */
     cancelScroll(): void;
     /** Scrolls by stable item identity through prepends; resolves without scrolling if the key is missing or removed. */

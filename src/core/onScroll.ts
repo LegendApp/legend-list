@@ -7,6 +7,7 @@ import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateScroll } from "@/core/updateScroll";
+import { recordViewabilityInteraction } from "@/core/viewability";
 import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import { isScreenReaderEnabled } from "@/platform/screenReader";
@@ -191,6 +192,8 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         }
     }
 
+    const didInteract =
+        newScroll !== state.scroll && state.didFinishInitialScroll && !state.scrollingTo && !state.ignoreScrollFromMVCP;
     const previousScroll = state.scroll;
     const hadPreservedEndAnchorCorrection = !!state.preservedEndAnchorCorrection;
     state.scrollPending = newScroll;
@@ -200,6 +203,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         nativeGeometryChanged,
         previousNativeScroll,
     });
+    if (didInteract) recordViewabilityInteraction(ctx);
     trackInitialScrollNativeProgress(state, newScroll);
     // Rows measured at the new offset can start a correction; it must not pull back a scroll the list didn't make.
     clearFinishedBootstrapInitialScrollTargetIfMovedAway(
