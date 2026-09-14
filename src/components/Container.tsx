@@ -100,7 +100,7 @@ export const Container = typedMemo(function Container<ItemT>({
     const positionComponentInternal = ctx.state.props.positionComponentInternal;
     const stickyPositionComponentInternal = ctx.state.props.stickyPositionComponentInternal;
 
-    const [column = 0, span = 1, data, dataVersion, numColumns = 1, extraData, isSticky] = useArr$([
+    const [column = 0, span = 1, data, dataVersion, numColumns = 1, extraData, isSticky, itemIndex] = useArr$([
         `containerColumn${id}`,
         `containerSpan${id}`,
         `containerItemData${id}`,
@@ -108,6 +108,7 @@ export const Container = typedMemo(function Container<ItemT>({
         "numColumns",
         "extraData",
         `containerSticky${id}`,
+        `containerItemIndex${id}`,
     ]);
 
     const ref = useRef<LooseView>(null);
@@ -153,7 +154,7 @@ export const Container = typedMemo(function Container<ItemT>({
 
     const renderedItemInfo = useMemo(
         () => (itemKey !== undefined ? getRenderedItem(itemKey, id) : null),
-        [itemKey, data, dataVersion, extraData],
+        [itemKey, itemIndex, data, dataVersion, extraData],
     );
     const { renderedItem } = renderedItemInfo || {};
 
