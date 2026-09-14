@@ -213,6 +213,44 @@ describe("LegendList props behavior", () => {
         }
     });
 
+    it("reports unloaded rows in first-visible and viewability events", async () => {
+        const source: LegendListDataSource<{ id: string }> = {
+            getItem: () => undefined,
+            getKey: (index) => `item-${index}`,
+            getLength: () => 3,
+            getRevision: () => 0,
+            subscribe: () => () => {},
+        };
+        const onFirstVisibleItemChanged = mock(() => {});
+        const onViewableItemsChanged = mock(() => {});
+        const { LegendList } = await import("../../src/components/LegendList?source-unloaded-events");
+        const rendered = render(
+            <LegendList
+                dataSource={source}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                onFirstVisibleItemChanged={onFirstVisibleItemChanged}
+                onViewableItemsChanged={onViewableItemsChanged}
+                recycleItems={false}
+                renderItem={() => null}
+            />,
+        );
+        try {
+            await getContextFromRender();
+            await act(async () => lastListProps.onLayout(layoutEvent));
+            expect(onFirstVisibleItemChanged).toHaveBeenCalledWith({ index: 0, item: undefined, key: "item-0" });
+            expect(onViewableItemsChanged).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    viewableItems: expect.arrayContaining([
+                        expect.objectContaining({ index: 0, item: undefined, key: "item-0" }),
+                    ]),
+                }),
+            );
+        } finally {
+            rendered.unmount();
+        }
+    });
+
     it("mounts from an indexed data source without materializing its logical collection", async () => {
         let getItemCalls = 0;
         let getKeyCalls = 0;

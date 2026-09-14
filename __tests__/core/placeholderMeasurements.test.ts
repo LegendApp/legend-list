@@ -19,6 +19,7 @@ it("measures unloaded placeholders without calling loaded-item callbacks", () =>
     const getFixedItemSize = mock(() => {
         throw Error("unloaded item");
     });
+    const onItemSizeChanged = mock(() => {});
     const getItemType = mock(() => {
         throw Error("unloaded item");
     });
@@ -37,7 +38,7 @@ it("measures unloaded placeholders without calling loaded-item callbacks", () =>
                 ["k1", 1],
             ]),
             layoutStoreRuntime: new LayoutStoreRuntime(new PrefixLayoutStore(2, 20), 20),
-            props: { dataSource: source, getFixedItemSize, getItemType },
+            props: { dataSource: source, getFixedItemSize, getItemType, onItemSizeChanged },
             startBuffered: 0,
         },
     );
@@ -50,6 +51,14 @@ it("measures unloaded placeholders without calling loaded-item callbacks", () =>
     expect(checkAllSizesKnown(ctx.state, 0, 1)).toBe(true);
     expect(getFixedItemSize).not.toHaveBeenCalled();
     expect(getItemType).not.toHaveBeenCalled();
+    expect(onItemSizeChanged).toHaveBeenCalledWith(
+        expect.objectContaining({
+            index: 0,
+            itemData: undefined,
+            itemKey: "k0",
+            size: 30,
+        }),
+    );
     ctx.state.scheduledWork.dispose();
 });
 

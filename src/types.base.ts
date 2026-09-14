@@ -542,14 +542,26 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     useWindowScroll?: boolean;
 }
 
-// Clean final type composition
+type ItemEventCallbackKeys =
+    | "onFirstVisibleItemChanged"
+    | "onItemSizeChanged"
+    | "onViewableItemsChanged"
+    | "viewabilityConfigCallbackPairs";
+
+type ItemEventCallbacks<ItemT> = Pick<LegendListSpecificProps<ItemT, string | undefined>, ItemEventCallbackKeys>;
+
+// Only source event payloads include unloaded items. Item-dependent layout callbacks
+// still require loaded items, and array/children callbacks retain their existing contract.
 export type LegendListPropsBase<
     ItemT,
     TScrollViewProps = Record<string, any>,
     TItemType extends string | undefined = string | undefined,
 > = BaseScrollViewProps<TScrollViewProps> &
-    LegendListSpecificProps<ItemT, TItemType> &
-    (LegendListDataMode<ItemT, TItemType> | ChildrenModeProps);
+    Omit<LegendListSpecificProps<ItemT, TItemType>, ItemEventCallbackKeys> &
+    (
+        | ((LegendListArrayDataModeProps<ItemT, TItemType> | ChildrenModeProps) & ItemEventCallbacks<ItemT>)
+        | (LegendListDataSourceModeProps<ItemT, TItemType> & ItemEventCallbacks<ItemT | undefined>)
+    );
 
 export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;

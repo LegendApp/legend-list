@@ -113,6 +113,13 @@ The data-source render callback exposes that state:
 
 Unloaded rows participate in estimated layout. Item-dependent callbacks such as fixed-size, type, and span lookup are not invoked until an item is available; unloaded variable-span grid items use span 1. When loading an item can change geometry, emit an `update` with `layout: "invalidate"`.
 
+Event callbacks also describe unloaded rows: `onFirstVisibleItemChanged`,
+`onItemSizeChanged` (`itemData`), `onViewableItemsChanged`, and
+`viewabilityConfigCallbackPairs` expose `ItemT | undefined` in data-source mode.
+Check the item before reading its fields. For row-level viewability hooks, use
+`useViewability<ItemT | undefined>` or `useViewabilityAmount<ItemT | undefined>`
+to express the same payload contract. Array-mode event types remain unchanged.
+
 Unknown variable-height rows cannot have exact positions without more information. Distant jumps use aggregate estimated layout, materialize the target window first, and correct as measurements arrive.
 
 ## Minimal source example
