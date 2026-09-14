@@ -4,12 +4,14 @@ import { Animated, type ViewStyle } from "react-native";
 
 import { ContainerLayoutCoordinator } from "@/components/ContainerLayoutCoordinator";
 import { ContainerSlot } from "@/components/ContainerSlot";
+import { useFreshDataTransitionVisibility } from "@/hooks/useFreshDataTransitionVisibility";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 
 interface ContainersProps<ItemT> {
+    freshDataTransitionEpoch: number;
     horizontal: boolean;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
@@ -19,24 +21,30 @@ interface ContainersProps<ItemT> {
 
 interface ContainersLayerProps {
     children: React.ReactNode;
+    freshDataTransitionEpoch: number;
     horizontal: boolean;
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-const ContainersLayer = typedMemo(function ContainersLayer({ children, horizontal }: ContainersLayerProps) {
+const ContainersLayer = typedMemo(function ContainersLayer({
+    children,
+    freshDataTransitionEpoch,
+    horizontal,
+}: ContainersLayerProps) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const animSize = useValue$("totalSize");
     const [readyToRender, numColumns, otherAxisSize = 0] = useArr$(["readyToRender", "numColumns", "otherAxisSize"]);
+    const isVisible = useFreshDataTransitionVisibility(!!readyToRender, freshDataTransitionEpoch);
 
     const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
         ? {
               height: otherAxisSize || "100%",
               minHeight: otherAxisSize,
-              opacity: readyToRender ? 1 : 0,
+              opacity: isVisible ? 1 : 0,
               width: animSize,
           }
-        : { height: animSize, minWidth: otherAxisSize, opacity: readyToRender ? 1 : 0 };
+        : { height: animSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0 };
 
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
@@ -62,7 +70,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({ children, horizonta
     }
 
     return (
-        <Animated.View style={style}>
+        <Animated.View pointerEvents={isVisible ? undefined : "none"} style={style}>
             <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>
         </Animated.View>
     );
@@ -70,6 +78,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({ children, horizonta
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Containers = typedMemo(function Containers<ItemT>({
+    freshDataTransitionEpoch,
     horizontal,
     recycleItems,
     ItemSeparatorComponent,
@@ -95,5 +104,9 @@ export const Containers = typedMemo(function Containers<ItemT>({
         );
     }
 
-    return <ContainersLayer horizontal={horizontal}>{containers}</ContainersLayer>;
+    return (
+        <ContainersLayer freshDataTransitionEpoch={freshDataTransitionEpoch} horizontal={horizontal}>
+            {containers}
+        </ContainersLayer>
+    );
 });

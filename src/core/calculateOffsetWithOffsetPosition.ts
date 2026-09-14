@@ -1,4 +1,4 @@
-import { getTopOffsetAdjustment } from "@/core/getTopOffsetAdjustment";
+import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetPosition } from "@/types.base";
@@ -21,9 +21,9 @@ export function calculateOffsetWithOffsetPosition(
     // Header/footer adjustments are index-based. Absolute offsets (for scrollToOffset
     // and MVCP/requestAdjust paths) should not be shifted by header/footer sizes.
     if (index !== undefined) {
-        const topOffsetAdjustment = getTopOffsetAdjustment(ctx);
-        if (topOffsetAdjustment) {
-            offset += topOffsetAdjustment;
+        const startOffsetAdjustment = getStartOffsetAdjustment(ctx);
+        if (startOffsetAdjustment) {
+            offset += startOffsetAdjustment;
         }
     }
 
@@ -34,9 +34,10 @@ export function calculateOffsetWithOffsetPosition(
         }
         const isOutOfBounds = index < 0 || index >= dataLength;
         const fallbackEstimatedSize = state.props.estimatedItemSize ?? 0;
-        const itemSize = isOutOfBounds
+        const measuredItemSize = isOutOfBounds
             ? fallbackEstimatedSize
             : getItemSize(ctx, getId(state, index), index, state.props.data[index]!);
+        const itemSize = Math.max(0, measuredItemSize - (isOutOfBounds ? 0 : ctx.scrollAxisGap));
         const trailingInset = getContentInsetEnd(ctx);
 
         offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);

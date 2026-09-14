@@ -1,6 +1,57 @@
+## Unreleased
+
+- Feat: Add optional `MasonryLegendList` for vertical, variable-height columns.
+
+## 3.3.11
+
+- Fix: `scrollToEnd` and `maintainScrollAtEnd` keep reaching the end as content changes, while scrolling away or requesting another position cancels automatic following.
+- Fix: Switching datasets cancels old scroll requests so they cannot override the new dataset's initial position.
+- Fix: `anchoredEndSpace` shrinks excess blank space as rows are measured instead of waiting for every remaining row.
+- Fix: Resizing the chat composer preserves the combined keyboard and composer spacing.
+- Fix: Web scroll adjustments no longer leave extra padding at the end of the list.
+- Fix: Web row reordering happens sooner when idle and preserves focus, animations, and embedded content state in browsers that support state-preserving moves.
+
+## 3.3.10
+
+- Fix: Changing `dataKey` no longer loses the new dataset's initial scroll position when React retries a render.
+
+## 3.3.9
+
+- Fix: Rows after an item that changes size stay in the correct positions while scrolling
+
+## 3.3.8
+
+- Feat: Add `experimental_hideItemsUntilMeasured` to make items never display at provisional layouts and wait for correct sizing, at the cost of an extra render per recycled row. This fixes cases where slow item renders could display with gaps/overlaps when scrolling up quickly on slow phones.
+
+## 3.3.7
+
+- Fix: Recycled rows no longer briefly show content from the wrong item when data is prepended.
+
+## 3.3.6
+
+- Fix: Animated `maintainScrollAtEnd` follows rapid and first-load content growth, including short `alignItemsAtEnd` lists, and stops when the user scrolls away.
+- Fix: Item size changes no longer interrupt momentum scrolling when `maintainVisibleContentPosition` adjusts the scroll position.
+- Fix: A numeric `initialScrollIndex` targeting the last item stays at the end when the viewport is measured or resized, while object targets and explicit offsets keep their requested alignment.
+
+## 3.3.5
+
+- Fix: Changing `dataKey` no longer leaves the new dataset invisible. #519
+- Fix: `maintainScrollAtEnd` stays pinned as newly inserted rows are measured, and scroll corrections preserve `anchoredEndSpace` padding. #520
+- Fix: Programmatic scrolls no longer throw in browsers, get lost when they replace unfinished initial scrolling, or stop working after a previous request is canceled. #518
+
+## 3.3.4
+
+- Feat: `getState().indexByKey(key)` looks up an item’s current index by key.
+- Feat: `anchoredEndSpace` now works with standard React Native `LegendList`, including horizontal and RTL lists, and stays accurate after content measurements change. It supports single-column lists only.
+- Fix: `maintainScrollAtEnd` continues following content growth unless the user scrolls away.
+- Fix: Changing `dataKey` no longer briefly displays stale rows from the previous dataset.
+- Fix: Initial scrolling and `scrollToIndex` correctly account for padding, direction, and final-item gaps.
+- Fix: Web content-container sizing remains correct when callers provide padding or `content-box` styles.
+- Fix: `useRecyclingEffect` and `useRecyclingState` no longer crash outside a `LegendList`. #498
+- Fix: Programmatic scrolls settle reliably when superseded, already aligned on iOS, or interrupted by unmounting. #508
+-
 ## 3.3.3
 
-- Feat: Add `MasonryLegendList` at `@legendapp/list/masonry` for vertically balancing dynamic items across columns without bundling the masonry implementation into the core entrypoint.
 - Fix: Row measurements are applied together in a batch, so item positions don't sometimes move after rendering.
 - Fix: `onStartReached` and `onEndReached` no longer bounce between opposite edges during the same scroll gesture after data changes, MVCP adjustments, or residual scroll events.
 - Fix: Prepending items with `maintainVisibleContentPosition` was sometimes flashing the wrong items for one frame

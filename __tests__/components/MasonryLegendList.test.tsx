@@ -186,7 +186,8 @@ describe("MasonryLegendList", () => {
 
         const state = ref.current?.getState();
         expect([0, 1, 2].map((index) => state?.positionAtIndex(index))).toEqual([0, 0, 60]);
-        expect(state?.contentLength).toBe(170);
+        // Content metrics exclude the trailing row gap, matching the current core.
+        expect(state?.contentLength).toBe(160);
 
         await act(async () => {
             renderer?.unmount();
@@ -332,6 +333,60 @@ describe("MasonryLegendList", () => {
         expect(state?.contentLength).toBe(Math.max(...columnHeights));
         expect(getFixedItemSize).toHaveBeenCalledTimes(data.length);
 
+        await act(async () => {
+            renderer?.unmount();
+        });
+    });
+    it.each([
+        [2, 1],
+        [3, 2],
+        [4, 3],
+    ])("keeps a tall card visible on reverse scroll with %i columns", async (columns, tallIndex) => {
+        const { LegendList } = await import("../../src/components/LegendList?masonry-tall-core");
+        mock.module("@legendapp/list/react-native", () => ({ LegendList }));
+        const { MasonryLegendList } = await import("../../src/integrations/masonry?tall-reverse");
+        const { calculateItemsInView } = await import("../../src/core/calculateItemsInView");
+        const ref = React.createRef<LegendListRef>();
+        const data = Array.from({ length: 100 }, (_, index) => ({
+            height: index === tallIndex ? 2000 : 100,
+            id: String(index),
+        }));
+        let renderer: ReturnType<typeof TestRenderer.create> | undefined;
+        await act(async () => {
+            renderer = TestRenderer.create(
+                <MasonryLegendList
+                    data={data}
+                    drawDistance={0}
+                    getFixedItemSize={(item) => item.height}
+                    keyExtractor={(item) => item.id}
+                    numColumns={columns}
+                    recycleItems
+                    ref={ref}
+                    renderItem={() => null}
+                />,
+            );
+        });
+        await act(async () => {
+            lastListProps?.onLayout?.({ nativeEvent: { layout: { height: 300, width: 320, x: 0, y: 0 } } });
+        });
+        const ctx = (handlerInstances.at(-1) as any).context as StateContext;
+        ctx.state.didContainersLayout = true;
+        for (const scroll of [2500, 1500, 1400, 1600, 1450]) {
+            await act(async () => {
+                ctx.state.scroll = scroll;
+                ctx.state.scrollHistory.length = 0;
+                calculateItemsInView(ctx);
+            });
+            for (let index = 0; index < data.length; index++) {
+                const top = ctx.state.positions[index]!;
+                if (top + data[index].height > scroll && top <= scroll + 300) {
+                    expect(ctx.state.containerItemKeys.has(data[index].id)).toBe(true);
+                }
+            }
+        }
+        expect(ctx.state.startNoBuffer).toBe(tallIndex);
+        expect(ctx.state.containerItemKeys.has(String(tallIndex))).toBe(true);
+        expect(ctx.values.get("numContainers")).toBeLessThanOrEqual(32);
         await act(async () => {
             renderer?.unmount();
         });

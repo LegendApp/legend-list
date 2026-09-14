@@ -132,4 +132,59 @@ describe("LegendList imperative scrolls", () => {
             renderer?.unmount();
         });
     });
+
+    it("coalesces batched scrollToEnd requests onto the latest committed data", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?imperative-scroll-batched-commit");
+        let sendBurst: () => void = () => {};
+        const scrollPromises: Promise<void>[] = [];
+
+        function Harness() {
+            const [data, setData] = React.useState(() => createData(2));
+            const listRef = React.useRef<LegendListRef>(null);
+
+            sendBurst = () => {
+                setData((current) => [...current, { id: `item-${current.length}`, label: `Item ${current.length}` }]);
+                scrollPromises.push(listRef.current!.scrollToEnd({ animated: true }));
+                setData((current) => [...current, { id: `item-${current.length}`, label: `Item ${current.length}` }]);
+                scrollPromises.push(listRef.current!.scrollToEnd({ animated: true }));
+            };
+
+            return (
+                <LegendList
+                    data={data}
+                    estimatedItemSize={50}
+                    getFixedItemSize={() => 50}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    ref={listRef}
+                    renderItem={() => null}
+                />
+            );
+        }
+
+        let renderer: ReturnType<typeof TestRenderer.create> | undefined;
+        await act(async () => {
+            renderer = TestRenderer.create(<Harness />);
+        });
+        const state = await getStateFromRender();
+
+        await act(async () => {
+            sendBurst();
+        });
+        await Promise.all(scrollPromises);
+
+        expect(state.props.data.length).toBe(4);
+        expect(scrollPromises).toHaveLength(2);
+        expect(scrollToIndexCalls).toEqual([
+            expect.objectContaining({
+                animated: true,
+                index: 3,
+                viewPosition: 1,
+            }),
+        ]);
+
+        await act(async () => {
+            renderer?.unmount();
+        });
+    });
 });

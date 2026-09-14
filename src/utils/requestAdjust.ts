@@ -2,10 +2,12 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
+import type { ScrollAdjustmentSource } from "@/types.internal";
 
-export function requestAdjust(ctx: StateContext, positionDiff: number, dataChanged?: boolean) {
+export function requestAdjust(ctx: StateContext, positionDiff: number, source?: ScrollAdjustmentSource) {
     const state = ctx.state;
     if (Math.abs(positionDiff) > 0.1) {
+        const dataChanged = source === "data";
         const needsScrollWorkaround =
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;
 
@@ -28,7 +30,10 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
         if (readyToRender) {
             doit();
 
-            if (Platform.OS !== "web") {
+            // Item-size MVCP corrections preserve the native coordinate space and can arrive during
+            // real momentum, so suppressing their events can mute legitimate scrolling. Other callers
+            // keep the existing protection because they may temporarily expose a stale native offset.
+            if (Platform.OS !== "web" && source !== "item-size") {
                 // Calculate a threshold to ignore scroll jumps for a short period of time
                 // This is to avoid the case where a scroll event comes in that was relevant from before
                 // the requestAdjust. So we ignore scroll events that are closer to the previous
@@ -43,22 +48,22 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
                     state.ignoreScrollFromMVCP.gt = threshold;
                 }
 
-                if (state.ignoreScrollFromMVCPTimeout) {
-                    clearTimeout(state.ignoreScrollFromMVCPTimeout);
-                }
-
                 const delay = needsScrollWorkaround ? 250 : 100;
-                state.ignoreScrollFromMVCPTimeout = setTimeout(() => {
-                    state.ignoreScrollFromMVCP = undefined;
-                    const shouldForceUpdate =
-                        state.ignoreScrollFromMVCPIgnored && state.scrollProcessingEnabled !== false;
+                state.scheduledWork.timeout(
+                    () => {
+                        state.ignoreScrollFromMVCP = undefined;
+                        const shouldForceUpdate =
+                            state.ignoreScrollFromMVCPIgnored && state.scrollProcessingEnabled !== false;
 
-                    if (shouldForceUpdate) {
-                        state.ignoreScrollFromMVCPIgnored = false;
-                        state.scrollPending = state.scroll;
-                        state.reprocessCurrentScroll?.();
-                    }
-                }, delay);
+                        if (shouldForceUpdate) {
+                            state.ignoreScrollFromMVCPIgnored = false;
+                            state.scrollPending = state.scroll;
+                            state.reprocessCurrentScroll?.();
+                        }
+                    },
+                    delay,
+                    "ignoreScrollFromMVCP",
+                );
             }
         } else {
             state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 0) + 1;

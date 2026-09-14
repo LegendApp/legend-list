@@ -85,7 +85,7 @@ describe("updateContentInsetEndAdjustment", () => {
     it("does not update when the effective end inset is unchanged", () => {
         mockState.props.contentInset = { bottom: 20, left: 0, right: 0, top: 0 };
         mockState.props.contentInsetEndAdjustment = 60;
-        mockState.props.anchoredEndSpace = { anchorIndex: 1, includeInEndInset: true };
+        mockState.props.anchoredEndSpace = { anchorIndex: 1 };
         mockCtx.values.set("anchoredEndSpaceSize", 100);
 
         updateContentInsetEndAdjustment(mockCtx, 40);

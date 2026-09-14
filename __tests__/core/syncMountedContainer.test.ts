@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import "../setup";
 
 import { checkStructuralDataChange } from "../../src/core/checkStructuralDataChange";
+import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
 import { syncMountedContainer } from "../../src/core/syncMountedContainer";
 import { peek$, set$ } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -109,5 +110,41 @@ describe("syncMountedContainer", () => {
 
         expect(result.didChangePosition).toBe(true);
         expect(peek$(ctx, "containerPosition0")).toBe(750);
+    });
+
+    it("advances container metadata without invalidating a row whose item identity is unchanged", () => {
+        const retainedItem = { id: "retained", label: "Retained" };
+        const previousData = [retainedItem, { id: "tail", label: "Tail" }];
+        const nextData = [{ id: "prepended", label: "Prepended" }, ...previousData];
+        const ctx = createMockContext(
+            {},
+            {
+                dataChangeEpoch: 0,
+                idCache: ["retained", "tail"],
+                props: {
+                    data: previousData,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+            },
+        );
+        ctx.state.containerItemMetadata.set(0, createContainerItemMetadata(ctx.state, 0, retainedItem, "row"));
+        set$(ctx, "containerItemKey0", "retained");
+        set$(ctx, "containerItemIndex0", 0);
+        set$(ctx, "containerItemData0", retainedItem);
+
+        ctx.state.dataChangeEpoch = 1;
+        ctx.state.idCache = ["prepended", "retained", "tail"];
+        ctx.state.props.data = nextData;
+
+        const result = syncMountedContainer(ctx, 0, 1, { updateLayout: false });
+        const metadata = ctx.state.containerItemMetadata.get(0);
+
+        expect(result.didRefreshData).toBe(false);
+        expect(peek$(ctx, "containerItemIndex0")).toBe(1);
+        expect(peek$(ctx, "containerItemData0")).toBe(retainedItem);
+        expect(metadata?.dataChangeEpoch).toBe(1);
+        expect(metadata?.itemIndex).toBe(1);
+        expect(metadata?.itemData).toBe(retainedItem);
+        expect(metadata?.data).toBe(nextData);
     });
 });

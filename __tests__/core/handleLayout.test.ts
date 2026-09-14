@@ -4,6 +4,7 @@ import { Dimensions } from "react-native";
 
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { handleLayout } from "../../src/core/handleLayout";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -218,6 +219,43 @@ describe("handleLayout", () => {
     });
 
     describe("maintain scroll at end", () => {
+        it("maintains the end when the viewport shrinks beyond the threshold before the scheduled scroll", () => {
+            const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+            let animationFrameCallback: FrameRequestCallback | undefined;
+            let scrollToEndCalls = 0;
+
+            globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+                animationFrameCallback = callback;
+                return 1;
+            };
+            try {
+                mockState.lastLayout = { height: 600, width: 400, x: 0, y: 0 };
+                mockState.scrollLength = 600;
+                mockState.scroll = 400;
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.props.maintainScrollAtEnd = true;
+                getScrollRequestTracker(mockCtx).runNowIfIdle = () => {
+                    return new Promise<void>(() => {
+                        scrollToEndCalls++;
+                    });
+                };
+                mockCtx.values.set("isWithinMaintainScrollAtEndThreshold", true);
+                mockLayout.height = 400;
+
+                handleLayout(mockCtx, mockLayout, setCanRender);
+
+                expect(mockState.isWithinMaintainScrollAtEndThreshold).toBe(false);
+                expect(animationFrameCallback).toBeDefined();
+
+                animationFrameCallback?.(0);
+
+                expect(scrollToEndCalls).toBe(1);
+            } finally {
+                globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            }
+        });
+
         it("should handle maintainScrollAtEnd as boolean true", () => {
             mockState.props.maintainScrollAtEnd = true;
 

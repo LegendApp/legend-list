@@ -1,5 +1,5 @@
 import { updateAdaptiveRender } from "@/core/adaptiveRender";
-import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { doMaintainScrollAtEnd, finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import type { StateContext } from "@/state/state";
@@ -75,6 +75,13 @@ export function updateScroll(
         !adjustChanged &&
         scrollingTo === undefined &&
         !state.pendingNativeMVCPAdjust;
+    const didCancelMaintainScrollAtEnd =
+        isUserScrollEvent &&
+        newScroll < prevScroll &&
+        !!(state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd);
+    if (didCancelMaintainScrollAtEnd) {
+        finishMaintainScrollAtEnd(ctx);
+    }
     const allowedEdge = isUserScrollEvent ? beginReachedEdgeUserScroll(ctx, newScroll - prevScroll) : undefined;
     const didResolvePendingNativeMVCPAdjust = resolvePendingNativeMVCPAdjust(ctx, newScroll);
     const scrollLength = state.scrollLength;
@@ -89,6 +96,7 @@ export function updateScroll(
     const shouldUpdate =
         useAggressiveItemRecalculation ||
         didResolvePendingNativeMVCPAdjust ||
+        didCancelMaintainScrollAtEnd ||
         allowedEdge !== undefined ||
         forceUpdate ||
         lastCalculated === undefined ||
@@ -120,10 +128,7 @@ export function updateScroll(
             state.mvcpAnchorLock = undefined;
             state.pendingNativeMVCPAdjust = undefined;
             state.userScrollAnchorReset = { keys: new Set() };
-            if (state.queuedMVCPRecalculate !== undefined) {
-                cancelAnimationFrame(state.queuedMVCPRecalculate);
-                state.queuedMVCPRecalculate = undefined;
-            }
+            state.scheduledWork.cancel("mvcpRecalculate");
             flushSync(runCalculateItems);
             scheduleFullDrawDistancePrewarm(ctx);
         } else {

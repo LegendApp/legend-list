@@ -72,4 +72,50 @@ describe("doScrollTo (native)", () => {
         expect(scrollTo).toHaveBeenCalledWith({ animated: true, x: 600, y: 0 });
         expect(ctx.state.horizontalRTLScrollType).toBeUndefined();
     });
+
+    for (const platform of ["ios", "android"] as const) {
+        it(`finishes an animated ${platform} request that is already at its target`, () => {
+            Platform.OS = platform;
+            const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+            let pendingFrame: FrameRequestCallback | undefined;
+            globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+                pendingFrame = callback;
+                return 1;
+            }) as typeof requestAnimationFrame;
+            const resolveScroll = mock();
+            const scrollTo = mock();
+            const ctx = createMockContext(
+                { totalSize: 1000 },
+                {
+                    hasScrolled: true,
+                    pendingScrollResolve: resolveScroll,
+                    refScroller: {
+                        current: {
+                            scrollTo,
+                        },
+                    } as any,
+                    scroll: 100,
+                    scrollingTo: {
+                        animated: true,
+                        offset: 100,
+                        targetOffset: 100,
+                    } as any,
+                    scrollLength: 300,
+                    scrollPending: 100,
+                },
+            );
+
+            try {
+                doScrollTo(ctx, { animated: true, horizontal: false, offset: 100 });
+                pendingFrame?.(0);
+            } finally {
+                globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            }
+
+            expect(scrollTo).toHaveBeenCalledWith({ animated: true, x: 0, y: 100 });
+            expect(resolveScroll).toHaveBeenCalledTimes(1);
+            expect(ctx.state.pendingScrollResolve).toBeUndefined();
+            expect(ctx.state.scrollingTo).toBeUndefined();
+        });
+    }
 });

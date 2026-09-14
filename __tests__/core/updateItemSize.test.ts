@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -271,6 +272,97 @@ describe("item size update functions", () => {
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
+        it("anchors on a first measurement, which has no previously known size", () => {
+            // Rows added by a prepend are measured for the first time, so requiring a previously
+            // known size made maintainScrollAtEnd blind to the content they add and left the list
+            // parked short of its end.
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = {
+                animated: true,
+                on: { itemLayout: true },
+            };
+            expect(mockState.sizesKnown.has("item_0")).toBe(false);
+
+            updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            doMaintainScrollAtEndSpy.mockRestore();
+        });
+
+        describe("first-measurement end-maintenance safety", () => {
+            const originalRAF = globalThis.requestAnimationFrame;
+            let rafCallback: FrameRequestCallback | undefined;
+            let runTrackedScrollToEnd: ReturnType<typeof mock>;
+
+            beforeEach(() => {
+                rafCallback = undefined;
+                globalThis.requestAnimationFrame = mock((callback: FrameRequestCallback) => {
+                    rafCallback = callback;
+                    return 1;
+                });
+                runTrackedScrollToEnd = mock(() => new Promise<void>(() => {}));
+
+                mockState.props.maintainScrollAtEnd = {
+                    animated: false,
+                    on: { itemLayout: true },
+                };
+                getScrollRequestTracker(mockCtx).runNowIfIdle = () => runTrackedScrollToEnd();
+                mockState.totalSize = 1000;
+                mockCtx.values.set("totalSize", 1000);
+                mockState.scroll = 400;
+            });
+
+            afterEach(() => {
+                globalThis.requestAnimationFrame = originalRAF;
+            });
+
+            it("does not pull back to the end when a first measurement arrives after scrolling away", () => {
+                mockState.isWithinMaintainScrollAtEndThreshold = false;
+
+                updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(mockState.sizesKnown.get("item_0")).toBe(150);
+                expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+                expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
+                expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+            });
+
+            it("cancels a first-measurement maintain request when the user scrolls away before its frame", () => {
+                mockState.isWithinMaintainScrollAtEndThreshold = true;
+
+                updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+                expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+
+                mockState.scroll = 250;
+                mockState.isWithinMaintainScrollAtEndThreshold = false;
+                rafCallback?.(0);
+
+                expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
+                expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+                expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+            });
+
+            it("preserves a first-measurement maintain request when only geometry moves beyond the threshold", () => {
+                mockState.isWithinMaintainScrollAtEndThreshold = true;
+
+                updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+                mockState.isWithinMaintainScrollAtEndThreshold = false;
+                rafCallback?.(0);
+
+                expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(1);
+                expect(runTrackedScrollToEnd).toHaveBeenCalledWith();
+                expect(mockState.maintainingScrollAtEnd).toBe("instant");
+            });
+        });
+
         it("skips item-layout anchoring when on excludes it", () => {
             const doMaintainScrollAtEndSpy = spyOn(
                 doMaintainScrollAtEndModule,
@@ -421,13 +513,16 @@ describe("item size update functions", () => {
 
                     expect(calculateSpy).not.toHaveBeenCalled();
                     expect(rafCallbacks.length).toBe(1);
-                    expect(mockState.queuedMVCPRecalculate).toBe(1);
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(true);
 
                     rafCallbacks[0](0);
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
+                        doMVCP: true,
+                        mvcpAdjustmentSource: "item-size",
+                    });
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     rafSpy.mockRestore();
                     calculateSpy.mockRestore();
@@ -459,15 +554,18 @@ describe("item size update functions", () => {
                     };
 
                     updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
-                    expect(mockState.queuedMVCPRecalculate).toBe(42);
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(true);
 
                     mockState.mvcpAnchorLock = undefined;
                     updateItemAndFlush(mockCtx, "item_0", { height: 180, width: 400 });
 
                     expect(cancelCalls).toEqual([42]);
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
+                        doMVCP: true,
+                        mvcpAdjustmentSource: "item-size",
+                    });
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
                     rafSpy.mockRestore();
@@ -502,7 +600,7 @@ describe("item size update functions", () => {
                         expect(calculateSpy).toHaveBeenNthCalledWith(1, mockCtx);
                         expect(calculateSpy).toHaveBeenNthCalledWith(2, mockCtx);
                         expect(mockState.userScrollAnchorReset).toBeUndefined();
-                        expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                        expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                     } finally {
                         rafSpy.mockRestore();
                         calculateSpy.mockRestore();
@@ -540,7 +638,7 @@ describe("item size update functions", () => {
                     expect(calculateSpy).toHaveBeenNthCalledWith(2, mockCtx);
                     expect(rafCallbacks.length).toBe(0);
                     expect(mockState.userScrollAnchorReset?.keys).toEqual(new Set(["item_2", "item_3"]));
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     rafSpy.mockRestore();
                     calculateSpy.mockRestore();
@@ -575,7 +673,7 @@ describe("item size update functions", () => {
                     expect(calculateSpy).toHaveBeenCalledTimes(2);
                     expect(rafCallbacks.length).toBe(0);
                     expect(mockState.userScrollAnchorReset?.keys).toEqual(new Set(["item_2", "item_3"]));
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
 
                     for (let i = 2; i < 4; i++) {
                         updateItemAndFlush(mockCtx, `item_${i}`, { height: 150 + i * 10, width: 400 });
@@ -620,7 +718,7 @@ describe("item size update functions", () => {
                     expect(calculateSpy).toHaveBeenNthCalledWith(2, mockCtx);
                     expect(rafCallbacks.length).toBe(0);
                     expect(mockState.userScrollAnchorReset?.keys).toEqual(new Set(["item_2", "item_3"]));
-                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                    expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
                 } finally {
                     rafSpy.mockRestore();
                     calculateSpy.mockRestore();

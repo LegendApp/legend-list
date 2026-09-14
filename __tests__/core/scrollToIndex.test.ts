@@ -234,6 +234,37 @@ describe("scrollToIndex", () => {
             expect(mockScrollCalls[0].x).toBe(250); // position - viewOffset = 300 - 50 = 250
             expect(mockScrollCalls[0].y).toBe(0);
         });
+
+        it("uses logical start padding for horizontal alignment", () => {
+            mockState.props.stylePaddingLeft = 12;
+            mockState.props.stylePaddingRight = 20;
+            mockState.scrollLength = 200;
+
+            scrollToIndex(mockCtx, { index: 3, viewPosition: 1 });
+
+            expect(mockScrollCalls[0].x).toBe(212);
+            expect(mockScrollCalls[0].y).toBe(0);
+
+            mockScrollCalls = [];
+            mockState.props.rtl = true;
+            mockState.props.stylePaddingRight = 20;
+
+            scrollToIndex(mockCtx, { index: 3, viewPosition: 1 });
+
+            expect(mockScrollCalls[0].x).toBe(220);
+            expect(mockScrollCalls[0].y).toBe(0);
+        });
+
+        it("excludes the following gap from item alignment", () => {
+            mockState.scrollLength = 200;
+            mockState.sizesKnown.set("item_3", 108);
+            mockCtx.scrollAxisGap = 8;
+
+            scrollToIndex(mockCtx, { index: 3, viewPosition: 1 });
+
+            expect(mockScrollCalls[0].x).toBe(200);
+            expect(mockScrollCalls[0].y).toBe(0);
+        });
     });
 
     describe("state management", () => {

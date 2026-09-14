@@ -1,0 +1,26 @@
+steps:
+  - echo: Launch the fixture catalog at its deterministic top position.
+  - launch: com.legendapp.listtest
+  - await: { visible: { id: open-scroll-regression-qa }, timeout: 15000 }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open the isolated scroll regression fixture.
+  - tap: { id: open-scroll-regression-qa }
+  - await: { visible: { id: qa-open-short-keyboard } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open the short keyboard runway scenario.
+  - tap: { id: qa-open-short-keyboard }
+  - await: { visible: { id: qa-short-keyboard-input } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Focus the composer to resize the short list around the software keyboard.
+  - tap: { id: qa-short-keyboard-input }
+  # The flow tree excludes the system keyboard, so retain the recorded accessibility wait.
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: Return
+  - await: { visible: { id: qa-short-keyboard-action } }
+  - echo: Append one reply; expect native telemetry to observe runway travel and its
+      completed release.
+  - tap: { id: qa-short-keyboard-action }
+  - await: { visible: { id: qa-short-keyboard-pass } }

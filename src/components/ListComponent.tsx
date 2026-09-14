@@ -8,7 +8,6 @@ import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { getAutoOtherAxisStyle } from "@/components/listComponentStyles";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
-import { WebAnchoredEndSpace } from "@/components/WebAnchoredEndSpace";
 import { ENABLE_DEVMODE } from "@/constants";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -16,6 +15,7 @@ import { setFooterSize, setHeaderSize } from "@/core/updateContentMetrics";
 import { useStableRenderComponent } from "@/hooks/useStableRenderComponent";
 import { LayoutView } from "@/platform/LayoutView";
 import { Platform } from "@/platform/Platform";
+import { StyleSheet } from "@/platform/StyleSheet";
 import type {
     LayoutChangeEvent,
     LayoutRectangle,
@@ -30,6 +30,8 @@ import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
+import { extractPadding } from "@/utils/helpers";
+import { isHorizontalRTL } from "@/utils/rtl";
 
 interface ListComponentProps<ItemT>
     extends Omit<
@@ -46,6 +48,7 @@ interface ListComponentProps<ItemT>
     > {
     horizontal: boolean;
     initialContentOffset: number | undefined;
+    freshDataTransitionEpoch: number;
     refScrollView: React.Ref<LooseScrollView | null>;
     getRenderedItem: GetRenderedItem;
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
@@ -86,6 +89,7 @@ const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizon
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
     canRender,
+    freshDataTransitionEpoch,
     style,
     contentContainerStyle,
     horizontal,
@@ -115,8 +119,21 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
-    const [otherAxisSize = 0] = useArr$(["otherAxisSize"]);
+    const [anchoredEndSpaceSize = 0, otherAxisSize = 0] = useArr$(["anchoredEndSpaceSize", "otherAxisSize"]);
     const shouldRenderAlignItemsAtEndSpacer = ctx.state.props.alignItemsAtEndPaddingEnabled;
+    const shouldMaterializeAnchoredEndSpace =
+        !!ctx.state.props.anchoredEndSpace &&
+        ctx.state.props.anchoredEndSpaceOwner === "list" &&
+        anchoredEndSpaceSize > 0;
+    let anchoredEndSpaceStyle: ViewStyle | undefined;
+    if (shouldMaterializeAnchoredEndSpace) {
+        const paddingEnd = horizontal ? (isHorizontalRTL(ctx.state) ? "Left" : "Right") : "Bottom";
+        const flattenedContentContainerStyle = StyleSheet.flatten(contentContainerStyle) as ViewStyle | undefined;
+        anchoredEndSpaceStyle = {
+            [`padding${paddingEnd}`]:
+                extractPadding({}, flattenedContentContainerStyle || {}, paddingEnd) + anchoredEndSpaceSize,
+        };
+    }
     const autoOtherAxisStyle = getAutoOtherAxisStyle({
         horizontal,
         needsOtherAxisSize: ctx.state.needsOtherAxisSize,
@@ -184,12 +201,10 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     : {}
                 : { onScrollBeginDrag: onInternalScrollBeginDrag })}
             contentContainerStyle={[
-                horizontal
-                    ? {
-                          height: "100%",
-                      }
-                    : {},
+                horizontal ? { height: "100%" } : {},
                 contentContainerStyle,
+                anchoredEndSpaceStyle,
+                Platform.OS === "web" ? { boxSizing: "border-box" } : undefined,
             ]}
             contentOffset={
                 initialContentOffset !== undefined
@@ -221,6 +236,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 
             {canRender && !ListEmptyComponent && (
                 <Containers
+                    freshDataTransitionEpoch={freshDataTransitionEpoch}
                     getRenderedItem={getRenderedItem}
                     horizontal={horizontal!}
                     ItemSeparatorComponent={ItemSeparatorComponent}
@@ -233,7 +249,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     {getComponent(ListFooterComponent)}
                 </LayoutView>
             )}
-            {Platform.OS === "web" && <WebAnchoredEndSpace horizontal={horizontal} />}
             {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>
     );

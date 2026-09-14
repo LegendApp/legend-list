@@ -1,4 +1,4 @@
-import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
+import { checkFinishedScroll, checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import type { DoScrollToParams } from "@/core/doScrollParams";
 import { initialScrollCompletion } from "@/core/initialScrollSession";
 import { getContentSize } from "@/state/getContentSize";
@@ -27,6 +27,10 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     });
     if (isInitialScroll) {
         initialScrollCompletion.markInitialScrollNativeDispatch(state);
+    }
+
+    if (isAnimated && Math.abs(state.scroll - offset) <= 1) {
+        checkFinishedScroll(ctx);
     }
 
     // If it's animated we can rely on onMomentumScrollEnd to call finishScrollTo

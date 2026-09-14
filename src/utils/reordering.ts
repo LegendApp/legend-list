@@ -50,7 +50,10 @@ export function sortDOMElements(container: HTMLDivElement, indexByElement: Map<H
                 }
             }
 
-            if (nextStableElement) {
+            // Preserve focus and animation state when reordering connected rows.
+            if ("moveBefore" in container && typeof container.moveBefore === "function" && container.isConnected) {
+                container.moveBefore(element, nextStableElement);
+            } else if (nextStableElement) {
                 container.insertBefore(element, nextStableElement);
             } else {
                 container.appendChild(element);

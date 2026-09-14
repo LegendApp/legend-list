@@ -34,10 +34,11 @@ describe("scrollTo", () => {
         updateScrollSpy.mockRestore();
     });
 
-    it("cancels pending finish checks before starting a new scroll", () => {
+    it("cancels pending completion work before starting a new scroll", () => {
         const cancelCalls: number[] = [];
         const clearTimeoutCalls: Array<ReturnType<typeof setTimeout>> = [];
         const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const platformCleanup = mock(() => {});
         const clearTimeoutSpy = spyOn(globalThis, "clearTimeout").mockImplementation((timeout) => {
             clearTimeoutCalls.push(timeout);
         });
@@ -45,8 +46,10 @@ describe("scrollTo", () => {
         globalThis.cancelAnimationFrame = ((id: number) => {
             cancelCalls.push(id);
         }) as typeof cancelAnimationFrame;
-        mockCtx.state.animFrameCheckFinishedScroll = 11 as never;
-        mockCtx.state.timeoutCheckFinishedScrollFallback = 22 as never;
+        mockCtx.state.scheduledWork.frame(() => {}, "checkFinishedScrollFrame");
+        mockCtx.state.scheduledWork.frame(() => {}, "checkFinishedScrollRetryFrame");
+        mockCtx.state.scheduledWork.timeout(() => {}, 100, "checkFinishedScrollFallback");
+        mockCtx.state.scheduledWork.register("platformScrollCompletion", platformCleanup);
 
         try {
             scrollTo(mockCtx, { animated: true, offset: 60 });
@@ -55,8 +58,13 @@ describe("scrollTo", () => {
             clearTimeoutSpy.mockRestore();
         }
 
-        expect(cancelCalls).toEqual([11]);
-        expect(clearTimeoutCalls).toEqual([22]);
+        expect(cancelCalls).toHaveLength(2);
+        expect(clearTimeoutCalls).toHaveLength(1);
+        expect(platformCleanup).toHaveBeenCalledTimes(1);
+        expect(mockCtx.state.scheduledWork.has("checkFinishedScrollFrame")).toBe(false);
+        expect(mockCtx.state.scheduledWork.has("checkFinishedScrollRetryFrame")).toBe(false);
+        expect(mockCtx.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(false);
+        expect(mockCtx.state.scheduledWork.has("platformScrollCompletion")).toBe(false);
     });
 
     it("keeps initial iOS scrolls local while arming the native watchdog", () => {

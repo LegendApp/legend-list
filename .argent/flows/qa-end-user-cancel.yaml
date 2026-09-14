@@ -1,0 +1,30 @@
+steps:
+  - echo: Launch the fixture catalog at its deterministic top position.
+  - launch: com.legendapp.listtest
+  - await: { visible: { id: open-scroll-regression-qa }, timeout: 15000 }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open the isolated scroll regression fixture.
+  - tap: { id: open-scroll-regression-qa }
+  - await: { visible: { id: qa-open-user-cancel } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open user cancellation and prove the original tail is visible.
+  - tap: { id: qa-open-user-cancel }
+  - await: { visible: { id: qa-user-original-tail } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Scroll away from the end; this raw gesture is the cancellation action
+      under test.
+  - tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.45
+      toX: 0.5
+      toY: 0.85
+      durationMs: 400
+      settle: true
+  - await: { visible: { id: qa-user-away } }
+  - echo: Append while away, then verify the settled position was not pulled back to
+      the end.
+  - tap: { id: qa-user-cancel-append }
+  - await: { visible: { id: qa-user-append-observed } }
+  - tap: { id: qa-user-cancel-verify }
+  - await: { visible: { id: qa-user-cancel-pass } }

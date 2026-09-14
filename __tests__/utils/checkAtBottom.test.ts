@@ -80,7 +80,25 @@ describe("checkAtBottom", () => {
         expect(state.endReachedSnapshot).toBeUndefined();
     });
 
-    it("returns early when maintainingScrollAtEnd is active", () => {
+    it("owns the end when an empty list fits before container layout", () => {
+        const ctx = createMockContext({ totalSize: 0 });
+        const state = createMockState({
+            props: { data: [], maintainScrollAtEnd: true },
+            queuedInitialLayout: false,
+            scrollLength: 300,
+        });
+
+        ctx.state = state;
+
+        checkAtBottom(ctx);
+
+        expect(ctx.values.get("isAtEnd")).toBe(true);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+        expect(state.isEndReached).toBeNull();
+    });
+
+    it("keeps the end threshold active during animated end maintenance", () => {
         const ctx = createMockContext({ totalSize: 1000 });
         const state = createMockState({
             isEndReached: null,
@@ -94,6 +112,8 @@ describe("checkAtBottom", () => {
 
         expect(state.isEndReached).toBeNull();
         expect(state.endReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
     });
 
     it("fires after leaving and re-entering the threshold window", () => {

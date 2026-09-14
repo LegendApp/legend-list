@@ -22,19 +22,16 @@ export function runOrScheduleMVCPRecalculate(ctx: StateContext) {
         }
     } else if (Platform.OS === "web") {
         if (!state.mvcpAnchorLock) {
-            if (state.queuedMVCPRecalculate !== undefined) {
-                cancelAnimationFrame(state.queuedMVCPRecalculate);
-                state.queuedMVCPRecalculate = undefined;
-            }
-            calculateItemsInView(ctx, { doMVCP: true });
-        } else if (state.queuedMVCPRecalculate === undefined) {
-            state.queuedMVCPRecalculate = requestAnimationFrame(() => {
-                state.queuedMVCPRecalculate = undefined;
-                calculateItemsInView(ctx, { doMVCP: true });
-            });
+            state.scheduledWork.cancel("mvcpRecalculate");
+            calculateItemsInView(ctx, { doMVCP: true, mvcpAdjustmentSource: "item-size" });
+        } else if (!state.scheduledWork.has("mvcpRecalculate")) {
+            state.scheduledWork.frame(
+                () => calculateItemsInView(ctx, { doMVCP: true, mvcpAdjustmentSource: "item-size" }),
+                "mvcpRecalculate",
+            );
         }
     } else {
-        calculateItemsInView(ctx, { doMVCP: true });
+        calculateItemsInView(ctx, { doMVCP: true, mvcpAdjustmentSource: "item-size" });
     }
 }
 
@@ -100,6 +97,9 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
         runOrScheduleMVCPRecalculate(ctx);
     } else if (result.didMeasureUserScrollAnchorResetItem && state.userScrollAnchorReset?.keys.size === 0) {
         state.userScrollAnchorReset = undefined;
+    }
+    if (result.didChange) {
+        maybeUpdateAnchoredEndSpace(ctx);
     }
     if (result.didChange && result.shouldMaintainScrollAtEnd) {
         doMaintainScrollAtEnd(ctx);
@@ -205,8 +205,10 @@ function applyItemSize(
             needsRecalculate = true;
         }
 
-        // Check if we should maintain scroll at end
-        if (prevSizeKnown !== undefined && Math.abs(prevSizeKnown - size) > 5) {
+        // Check if we should maintain scroll at end. A first measurement counts too: rows
+        // inserted by a prepend have no previously known size, so requiring one left their
+        // growth unfollowed and parked the list short of its end.
+        if (prevSizeKnown === undefined || Math.abs(prevSizeKnown - size) > 5) {
             shouldMaintainScrollAtEnd = true;
         }
 
@@ -218,8 +220,6 @@ function applyItemSize(
             previous: size - diff,
             size,
         });
-
-        maybeUpdateAnchoredEndSpace(ctx);
     }
 
     // Update state with minimum changed index

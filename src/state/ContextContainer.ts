@@ -19,7 +19,8 @@ import type {
     ViewabilityAmountCallback,
     ViewabilityCallback,
 } from "@/types.base";
-import { isFunction, isNullOrUndefined } from "@/utils/helpers";
+import { IS_DEV } from "@/utils/devEnvironment";
+import { isFunction, isNullOrUndefined, warnDevOnce } from "@/utils/helpers";
 
 export interface ContextContainerType {
     containerId: number;
@@ -46,6 +47,39 @@ function useContainerItemSignals(containerContext: ContextContainerType | null) 
         item,
         itemIndex,
         itemKey,
+    };
+}
+
+function scheduleViewabilityConfigWarning(
+    ctx: ReturnType<typeof useStateContext>,
+    hookName: "useViewability" | "useViewabilityAmount",
+    configId?: string,
+) {
+    let cancelled = false;
+
+    Promise.resolve().then(() => {
+        const viewabilityConfigCallbackPairs = ctx.state?.viewabilityConfigCallbackPairs;
+        if (!cancelled && ctx.state) {
+            if (!viewabilityConfigCallbackPairs?.length) {
+                warnDevOnce(
+                    `${hookName}-missing-viewability-config`,
+                    `${hookName} requires viewability to be configured on the owning LegendList. Add viewabilityConfig with a visibility threshold.`,
+                );
+            } else if (
+                hookName === "useViewability" &&
+                !viewabilityConfigCallbackPairs.some((pair) => pair.viewabilityConfig.id === (configId ?? ""))
+            ) {
+                const configDescription = configId ? ` for configId "${configId}"` : "";
+                warnDevOnce(
+                    `${hookName}-missing-viewability-config-${configId ?? "default"}`,
+                    `${hookName}${configDescription} requires a matching viewabilityConfig.id on the owning LegendList. Add an id to viewabilityConfig and pass the same id to useViewability.`,
+                );
+            }
+        }
+    });
+
+    return () => {
+        cancelled = true;
     };
 }
 
@@ -97,8 +131,12 @@ export function useViewability<ItemT = any>(callback: ViewabilityCallback<ItemT>
         const { containerId } = containerContext;
         const key = containerId + (configId ?? "");
         ctx.mapViewabilityCallbacks.set(key, callback);
+        const cancelConfigWarning = IS_DEV
+            ? scheduleViewabilityConfigWarning(ctx, "useViewability", configId)
+            : undefined;
 
         return () => {
+            cancelConfigWarning?.();
             ctx.mapViewabilityCallbacks.delete(key);
         };
     }, [ctx, callback, configId, containerContext]);
@@ -129,8 +167,10 @@ export function useViewabilityAmount<ItemT = any>(callback: ViewabilityAmountCal
 
         const { containerId } = containerContext;
         ctx.mapViewabilityAmountCallbacks.set(containerId, callback);
+        const cancelConfigWarning = IS_DEV ? scheduleViewabilityConfigWarning(ctx, "useViewabilityAmount") : undefined;
 
         return () => {
+            cancelConfigWarning?.();
             ctx.mapViewabilityAmountCallbacks.delete(containerId);
         };
     }, [ctx, callback, containerContext]);

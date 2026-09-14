@@ -8,6 +8,39 @@ import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("updateContentMetrics", () => {
+    it("counts padding on the active scroll axis", () => {
+        const ctx = createMockContext(
+            {
+                footerSize: 20,
+                headerSize: 10,
+                stylePaddingTop: 100,
+                totalSize: 100,
+            },
+            {
+                props: {
+                    horizontal: true,
+                    stylePaddingBottom: 200,
+                    stylePaddingLeft: 12,
+                    stylePaddingRight: 18,
+                },
+            },
+        );
+
+        expect(getContentSize(ctx)).toBe(160);
+    });
+
+    it("excludes the trailing gap removed by the containers layer", () => {
+        const ctx = createMockContext(
+            { totalSize: 108 },
+            {
+                props: { data: [1] },
+            },
+        );
+        ctx.scrollAxisGap = 8;
+
+        expect(getContentSize(ctx)).toBe(100);
+    });
+
     it("uses leading padding to absorb end inset for short vertical alignItemsAtEnd content", () => {
         const ctx = createMockContext(
             {
@@ -75,6 +108,83 @@ describe("updateContentMetrics", () => {
         updateContentMetricsState(ctx);
 
         expect(ctx.values.get("alignItemsAtEndPadding")).toBe(0);
+    });
+
+    it("releases animation runway when no maintain pass claims it", async () => {
+        const ctx = createMockContext(
+            { alignItemsAtEndPadding: 250, totalSize: 200 },
+            {
+                didContainersLayout: true,
+                isWithinMaintainScrollAtEndThreshold: true,
+                props: {
+                    alignItemsAtEnd: true,
+                    alignItemsAtEndPaddingEnabled: true,
+                    data: [1],
+                    maintainScrollAtEnd: { animated: true },
+                },
+                scrollLength: 400,
+                totalSize: 200,
+            },
+        );
+
+        updateContentMetricsState(ctx);
+        expect(ctx.values.get("alignItemsAtEndPadding")).toBe(250);
+
+        await Promise.resolve();
+
+        expect(ctx.values.get("alignItemsAtEndPadding")).toBe(200);
+    });
+
+    it("coalesces animation runway fallback across synchronous content growth", async () => {
+        const ctx = createMockContext(
+            { alignItemsAtEndPadding: 250, totalSize: 200 },
+            {
+                didContainersLayout: true,
+                isWithinMaintainScrollAtEndThreshold: true,
+                props: {
+                    alignItemsAtEnd: true,
+                    alignItemsAtEndPaddingEnabled: true,
+                    data: [1],
+                    maintainScrollAtEnd: { animated: true },
+                },
+                scrollLength: 400,
+                totalSize: 200,
+            },
+        );
+
+        updateContentMetricsState(ctx);
+        ctx.values.set("totalSize", 240);
+        updateContentMetricsState(ctx);
+
+        expect(ctx.state.scheduledWork.has("alignItemsAtEndPaddingFallback")).toBe(true);
+        await Promise.resolve();
+
+        expect(ctx.values.get("alignItemsAtEndPadding")).toBe(160);
+        expect(ctx.state.scheduledWork.has("alignItemsAtEndPaddingFallback")).toBe(false);
+    });
+
+    it("does not schedule fallback work after animated maintenance claims the runway", async () => {
+        const ctx = createMockContext(
+            { alignItemsAtEndPadding: 250, totalSize: 240 },
+            {
+                didContainersLayout: true,
+                maintainingScrollAtEnd: "animated",
+                props: {
+                    alignItemsAtEnd: true,
+                    alignItemsAtEndPaddingEnabled: true,
+                    data: [1],
+                    maintainScrollAtEnd: { animated: true },
+                },
+                scrollLength: 400,
+                totalSize: 240,
+            },
+        );
+
+        updateContentMetricsState(ctx);
+        ctx.state.maintainingScrollAtEnd = undefined;
+        await Promise.resolve();
+
+        expect(ctx.values.get("alignItemsAtEndPadding")).toBe(250);
     });
 
     it("updates content metrics when header size changes through the domain setter", () => {

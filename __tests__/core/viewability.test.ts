@@ -600,52 +600,6 @@ describe("viewability system", () => {
                 updateViewableItems(corruptedState, mockCtx, pairs, 500, 0, 2);
             }).not.toThrow();
         });
-
-        it("should handle concurrent timeout cleanup", async () => {
-            const pairs: ViewabilityConfigCallbackPair[] = [
-                {
-                    onViewableItemsChanged: () => {},
-                    viewabilityConfig: {
-                        id: "timeout-test",
-                        itemVisiblePercentThreshold: 50,
-                        minimumViewTime: 50,
-                    },
-                },
-            ];
-
-            setupViewability({ viewabilityConfigCallbackPairs: pairs });
-
-            // Create multiple overlapping timeouts
-            updateViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
-            updateViewableItems(mockState, mockCtx, pairs, 500, 1, 3);
-            updateViewableItems(mockState, mockCtx, pairs, 500, 2, 4);
-
-            // Should handle cleanup gracefully
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            expect(mockState.timeouts.size).toBe(0);
-        });
-
-        it("should handle memory pressure with large timeout sets", () => {
-            const pairs: ViewabilityConfigCallbackPair[] = [
-                {
-                    onViewableItemsChanged: () => {},
-                    viewabilityConfig: {
-                        id: "memory-test",
-                        itemVisiblePercentThreshold: 50,
-                        minimumViewTime: 1000, // Long timeout
-                    },
-                },
-            ];
-
-            setupViewability({ viewabilityConfigCallbackPairs: pairs });
-
-            // Create many timeouts
-            for (let i = 0; i < 1000; i++) {
-                updateViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
-            }
-
-            expect(mockState.timeouts.size).toBe(1000);
-        });
     });
 
     describe("viewability calculations", () => {

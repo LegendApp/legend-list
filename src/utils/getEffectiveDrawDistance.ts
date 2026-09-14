@@ -16,12 +16,9 @@ export function getEffectiveDrawDistance(ctx: StateContext, mode?: DrawDistanceM
 
 export function scheduleFullDrawDistancePrewarm(ctx: StateContext) {
     const { state } = ctx;
-    if (state.props.drawDistance <= INITIAL_DRAW_DISTANCE || state.queuedFullDrawDistancePrewarm !== undefined) {
+    if (state.props.drawDistance <= INITIAL_DRAW_DISTANCE || state.scheduledWork.has("fullDrawDistancePrewarm")) {
         return;
     }
 
-    state.queuedFullDrawDistancePrewarm = requestAnimationFrame(() => {
-        state.queuedFullDrawDistancePrewarm = undefined;
-        state.triggerCalculateItemsInView?.();
-    });
+    state.scheduledWork.frame(() => state.triggerCalculateItemsInView?.(), "fullDrawDistancePrewarm");
 }

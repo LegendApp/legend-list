@@ -12,6 +12,9 @@ interface CardsProps {
 
 export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
     const listRef = useRef<LegendListRef>(null);
+    const didUnmountList = useRef(false);
+    const [isListMounted, setIsListMounted] = useState(true);
+    const [status, setStatus] = useState("Ready");
 
     const [data, _setData] = useState<Item[]>(() =>
         Array.from({ length: 1000 }, (_, i) => ({
@@ -20,6 +23,32 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
     );
 
     const buttonText = useRef<string>("");
+
+    const runRapidSequence = () => {
+        const list = listRef.current;
+        if (list) {
+            setStatus("Rapid sequence pending");
+            void Promise.all([
+                list.scrollToIndex({ animated: true, index: 900 }),
+                list.scrollToIndex({ animated: true, index: 0 }),
+                list.scrollToEnd({ animated: true }),
+            ]).then(() => setStatus("Rapid sequence resolved"));
+        }
+    };
+
+    const scrollThenUnmount = () => {
+        const scrollPromise = listRef.current?.scrollToIndex({ animated: true, index: 999 });
+        if (scrollPromise) {
+            setStatus("Unmount pending");
+            requestAnimationFrame(() => {
+                didUnmountList.current = true;
+                setIsListMounted(false);
+            });
+            void scrollPromise.then(() => {
+                setStatus(didUnmountList.current ? "Resolved after unmount" : "Resolved before unmount");
+            });
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -39,7 +68,10 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                         const index = Number(buttonText.current) || 0;
                         console.log("scrolling to index", index);
                         if (index !== -1) {
-                            listRef.current?.scrollToIndex({ animated: true, index });
+                            setStatus(`Index ${index} pending`);
+                            void listRef.current
+                                ?.scrollToIndex({ animated: true, index })
+                                .then(() => setStatus(`Index ${index} resolved`));
                         }
                     }}
                     title="Scroll to item"
@@ -47,38 +79,57 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                 <Button
                     onPress={() => {
                         console.log("scrolling to end");
-                        listRef.current?.scrollToEnd({ animated: true });
+                        setStatus("End pending");
+                        void listRef.current?.scrollToEnd({ animated: true }).then(() => setStatus("End resolved"));
                     }}
                     title="Scroll to end"
                 />
             </View>
-            <LegendList
-                contentContainerStyle={styles.contentContainer}
-                data={data}
-                drawDistance={DRAW_DISTANCE}
-                estimatedItemSize={ESTIMATED_ITEM_LENGTH + 120}
-                keyExtractor={(item) => `id${item.id}`}
-                ListEmptyComponent={
-                    <View style={styles.listEmpty}>
-                        <Text style={{ color: "white" }}>Empty</Text>
-                    </View>
-                }
-                maintainVisibleContentPosition
-                numColumns={numColumns}
-                recycleItems={true}
-                ref={listRef}
-                renderItem={({ item, index }) => (
-                    <ItemCard
-                        data={data}
-                        extraData={undefined}
-                        index={index}
-                        item={item}
-                        numSentences={(indexForData) => ((indexForData * 7919) % 40) + 40}
-                        type={undefined}
+            <View style={styles.lifecycleControls}>
+                <Button onPress={runRapidSequence} title="Rapid 900, 0, end" />
+                {isListMounted ? (
+                    <Button onPress={scrollThenUnmount} title="Scroll then unmount" />
+                ) : (
+                    <Button
+                        onPress={() => {
+                            didUnmountList.current = false;
+                            setIsListMounted(true);
+                            setStatus("Ready");
+                        }}
+                        title="Mount list"
                     />
                 )}
-                style={styles.list}
-            />
+                <Text>{status}</Text>
+            </View>
+            {isListMounted && (
+                <LegendList
+                    contentContainerStyle={styles.contentContainer}
+                    data={data}
+                    drawDistance={DRAW_DISTANCE}
+                    estimatedItemSize={ESTIMATED_ITEM_LENGTH + 120}
+                    keyExtractor={(item) => `id${item.id}`}
+                    ListEmptyComponent={
+                        <View style={styles.listEmpty}>
+                            <Text style={{ color: "white" }}>Empty</Text>
+                        </View>
+                    }
+                    maintainVisibleContentPosition
+                    numColumns={numColumns}
+                    recycleItems={true}
+                    ref={listRef}
+                    renderItem={({ item, index }) => (
+                        <ItemCard
+                            data={data}
+                            extraData={undefined}
+                            index={index}
+                            item={item}
+                            numSentences={(indexForData) => ((indexForData * 7919) % 40) + 40}
+                            type={undefined}
+                        />
+                    )}
+                    style={styles.list}
+                />
+            )}
         </View>
     );
 }
@@ -92,6 +143,15 @@ const styles = StyleSheet.create({
         marginHorizontal: "auto",
         maxWidth: "100%",
         width: 400,
+    },
+    lifecycleControls: {
+        alignItems: "center",
+        backgroundColor: "#fff",
+        flexDirection: "row",
+        gap: 8,
+        justifyContent: "space-between",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
     list: {
         flex: 1,

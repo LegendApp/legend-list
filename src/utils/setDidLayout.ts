@@ -1,3 +1,4 @@
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -8,4 +9,7 @@ export function setDidLayout(ctx: StateContext) {
     checkAtBottom(ctx);
 
     setInitialRenderState(ctx, { didLayout: true });
+    if (state.pendingMaintainScrollAtEnd) {
+        doMaintainScrollAtEnd(ctx);
+    }
 }

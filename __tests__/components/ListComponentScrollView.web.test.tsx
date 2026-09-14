@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import * as maintainModule from "../../src/core/doMaintainScrollAtEnd";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
@@ -26,7 +27,7 @@ const mockCtx = {
         initialScrollSession: undefined as { kind?: string } | undefined,
         mvcpAnchorLock: undefined as { expiresAt: number } | undefined,
         props: {
-            anchoredEndSpace: undefined as { includeInEndInset?: boolean } | undefined,
+            anchoredEndSpace: undefined as { anchorIndex: number } | undefined,
             contentInsetEndAdjustment: undefined as number | undefined,
         },
         scrollingTo: undefined as { animated?: boolean } | undefined,
@@ -93,11 +94,48 @@ function resetMocks() {
     mockCtx.state.props.anchoredEndSpace = undefined;
     mockCtx.state.props.contentInsetEndAdjustment = undefined;
     mockCtx.state.scrollingTo = undefined;
+    mockCtx.state.maintainingScrollAtEnd = undefined;
+    mockCtx.state.pendingMaintainScrollAtEnd = false;
 }
 
 describe("ListComponentScrollView (web)", () => {
     beforeEach(() => {
         registerWebScrollMocks();
+    });
+
+    it("interrupts end following only for a wheel gesture away from the end and cleans up the listener", async () => {
+        resetMocks();
+        const interrupt = spyOn(maintainModule, "interruptMaintainScrollAtEnd").mockReturnValue(true);
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-wheel-cancel"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView onLayout={() => {}} style={{}}>
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+            const wheel = scrollListeners.get("wheel");
+            expect(wheel).toBeDefined();
+            expect(addEventListener).toHaveBeenCalledWith("wheel", expect.any(Function), { passive: true });
+            const event = { ctrlKey: false, defaultPrevented: false, deltaX: 0, deltaY: -40 };
+            wheel?.(event as WheelEvent);
+            expect(interrupt).not.toHaveBeenCalled();
+            mockCtx.state.maintainingScrollAtEnd = "pending-animated";
+            wheel?.({ ...event, deltaY: 40 } as WheelEvent);
+            wheel?.({ ...event, ctrlKey: true } as WheelEvent);
+            wheel?.({ ...event, defaultPrevented: true } as WheelEvent);
+            expect(interrupt).not.toHaveBeenCalled();
+            wheel?.(event as WheelEvent);
+            expect(interrupt).toHaveBeenCalledTimes(1);
+        } finally {
+            act(() => renderer?.unmount());
+            interrupt.mockRestore();
+        }
+        expect(scrollListeners.has("wheel")).toBe(false);
     });
 
     it("keeps RAF coalescing during steady-state user scrolling", async () => {
@@ -826,7 +864,7 @@ describe("ListComponentScrollView (web)", () => {
     it("does not double count anchored end space that already renders into the DOM", async () => {
         resetMocks();
         mockCtx.state.anchoredEndSpaceSize = 24;
-        mockCtx.state.props.anchoredEndSpace = { includeInEndInset: true };
+        mockCtx.state.props.anchoredEndSpace = { anchorIndex: 0 };
         mockCtx.state.props.contentInsetEndAdjustment = 40;
         const { ListComponentScrollView } = await import(
             "../../src/components/ListComponentScrollView?web-scroll-overlay-inset-anchored"

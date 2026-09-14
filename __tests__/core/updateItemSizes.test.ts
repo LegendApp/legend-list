@@ -102,7 +102,10 @@ describe("updateItemSizes", () => {
 
         expect(mockState.sizesKnown.get("item_1")).toBe(100);
         expect(calculateSpy).toHaveBeenCalledTimes(1);
-        expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+        expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
+            doMVCP: true,
+            mvcpAdjustmentSource: "item-size",
+        });
 
         calculateSpy.mockRestore();
     });

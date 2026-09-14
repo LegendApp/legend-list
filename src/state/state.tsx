@@ -1,10 +1,12 @@
 import * as React from "react";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
+import type { ScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type { LooseView } from "@/platform/scrollview-types";
 import type {
     ColumnWrapperStyle,
+    ScrollToEndOptions,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
@@ -56,6 +58,7 @@ export type ListenerType =
     | `containerItemData${number}`
     | `containerItemIndex${number}`
     | `containerItemKey${number}`
+    | `containerLayoutReady${number}`
     | `containerPosition${number}`
     | `containerSticky${number}`;
 
@@ -116,6 +119,8 @@ export type ListenerTypeValueMap = {
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {
+    [K in ListenerType as K extends `containerLayoutReady${number}` ? K : never]: boolean;
+} & {
     [K in ListenerType as K extends `containerItemData${number}` ? K : never]: any;
 } & {
     [K in ListenerType as K extends `containerItemIndex${number}` ? K : never]: number;
@@ -155,6 +160,8 @@ export interface StateContext {
     positionListeners: Map<string, Set<(value: any) => void>>;
     state: InternalState;
     scrollAxisGap: number;
+    scrollRequestTracker?: ScrollRequestTracker;
+    scrollToEnd?: (options?: ScrollToEndOptions) => boolean;
     values: Map<ListenerType, any>;
     viewRefs: Map<number, React.RefObject<LooseView | null>>;
 }
@@ -206,7 +213,15 @@ export function useStateContext() {
     return React.useContext(ContextState)!;
 }
 
-function createSelectorFunctionsArr(ctx: StateContext, signalNames: readonly ListenerType[]) {
+function createSelectorFunctionsArr(ctx: StateContext | null, signalNames: readonly ListenerType[]) {
+    if (!ctx) {
+        const emptyValues: any[] = [];
+        return {
+            get: () => emptyValues,
+            subscribe: () => () => {},
+        };
+    }
+
     let lastValues: any[] = [];
     let lastSignalValues: any[] = [];
 
@@ -417,7 +432,7 @@ export function useArr$<
     ListenerTypeValueMap[T8],
 ];
 export function useArr$<T extends ListenerType>(signalNames: readonly [T, ...T[]]): ListenerTypeValueMap[T][] {
-    const ctx = React.useContext(ContextState)!;
+    const ctx = React.useContext(ContextState);
     const signalNamesKey = getSignalNamesKey(signalNames);
     const { subscribe, get } = React.useMemo(
         () => createSelectorFunctionsArr(ctx, getSignalNamesFromKey(signalNamesKey)),
@@ -431,7 +446,7 @@ export function useSelector$<T extends ListenerType, T2>(
     signalName: T,
     selector: (value: ListenerTypeValueMap[T]) => T2,
 ): T2 {
-    const ctx = React.useContext(ContextState)!;
+    const ctx = React.useContext(ContextState);
     const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, [signalName]), [ctx, signalName]);
     const getSelectedValue = React.useCallback(() => selector(get()[0]), [get, selector]);
 

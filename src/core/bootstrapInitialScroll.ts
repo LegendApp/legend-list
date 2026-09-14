@@ -1,6 +1,6 @@
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
-import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
+import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -10,6 +10,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { getStylePaddingEnd } from "@/utils/rtl";
 
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
@@ -274,15 +275,15 @@ function createInitialScrollAtEndTarget(options: {
     dataLength: number;
     footerSize: number;
     preserveForFooterLayout?: boolean;
-    stylePaddingBottom: number;
+    stylePaddingEnd: number;
 }) {
-    const { dataLength, footerSize, preserveForFooterLayout, stylePaddingBottom } = options;
+    const { dataLength, footerSize, preserveForFooterLayout, stylePaddingEnd } = options;
     return {
         contentOffset: undefined,
         index: Math.max(0, dataLength - 1),
         preserveForBottomPadding: true,
         preserveForFooterLayout,
-        viewOffset: -stylePaddingBottom - footerSize,
+        viewOffset: -stylePaddingEnd - footerSize,
         viewPosition: 1 as const,
     };
 }
@@ -307,10 +308,10 @@ function createRetargetedBottomAlignedInitialScroll(options: {
     dataLength: number;
     footerSize: number;
     initialScrollAtEnd: boolean;
-    stylePaddingBottom: number;
+    stylePaddingEnd: number;
     target: InternalInitialScrollTarget;
 }) {
-    const { dataLength, footerSize, initialScrollAtEnd, stylePaddingBottom, target } = options;
+    const { dataLength, footerSize, initialScrollAtEnd, stylePaddingEnd, target } = options;
     const preserveForFooterLayout = shouldPreserveInitialScrollForFooterLayout(target);
     return {
         ...target,
@@ -318,7 +319,7 @@ function createRetargetedBottomAlignedInitialScroll(options: {
         index: initialScrollAtEnd ? Math.max(0, dataLength - 1) : target.index,
         preserveForBottomPadding: true,
         preserveForFooterLayout,
-        viewOffset: -stylePaddingBottom - (preserveForFooterLayout ? footerSize : 0),
+        viewOffset: -stylePaddingEnd - (preserveForFooterLayout ? footerSize : 0),
         viewPosition: 1 as const,
     };
 }
@@ -340,11 +341,11 @@ function clearPendingInitialScrollFooterLayout(
     ctx: StateContext,
     options: {
         dataLength: number;
-        stylePaddingBottom: number;
+        stylePaddingEnd: number;
         target: InternalInitialScrollTarget;
     },
 ) {
-    const { dataLength, stylePaddingBottom, target } = options;
+    const { dataLength, stylePaddingEnd, target } = options;
     /*
      * Only initialScrollAtEnd creates a footer-preserved target. Plain
      * bottom-aligned targets do not need this downgrade step.
@@ -362,7 +363,7 @@ function clearPendingInitialScrollFooterLayout(
         dataLength,
         footerSize: 0,
         preserveForFooterLayout: undefined,
-        stylePaddingBottom,
+        stylePaddingEnd,
     });
 
     setInitialScrollTarget(ctx, clearedFooterTarget);
@@ -496,7 +497,7 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateC
             if (shouldPreserveInitialScrollForFooterLayout(initialScroll)) {
                 clearPendingInitialScrollFooterLayout(ctx, {
                     dataLength: state.props.data.length,
-                    stylePaddingBottom: state.props.stylePaddingBottom ?? 0,
+                    stylePaddingEnd: getStylePaddingEnd(state.props),
                     target: initialScroll,
                 });
             } else {
@@ -567,10 +568,10 @@ export function handleBootstrapInitialScrollDataChange(
         didDataChange: boolean;
         initialScrollAtEnd: boolean;
         previousDataLength: number;
-        stylePaddingBottom: number;
+        stylePaddingEnd: number;
     },
 ) {
-    const { dataLength, didDataChange, initialScrollAtEnd, previousDataLength, stylePaddingBottom } = options;
+    const { dataLength, didDataChange, initialScrollAtEnd, previousDataLength, stylePaddingEnd } = options;
     const state = ctx.state;
     const initialScroll = state.initialScroll;
     if (isOffsetInitialScrollSession(state) || !initialScroll) {
@@ -621,13 +622,13 @@ export function handleBootstrapInitialScrollDataChange(
                   dataLength,
                   footerSize: peek$(ctx, "footerSize") || 0,
                   preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
-                  stylePaddingBottom,
+                  stylePaddingEnd,
               })
             : createRetargetedBottomAlignedInitialScroll({
                   dataLength,
                   footerSize: peek$(ctx, "footerSize") || 0,
                   initialScrollAtEnd,
-                  stylePaddingBottom,
+                  stylePaddingEnd,
                   target: initialScroll,
               });
 
@@ -638,7 +639,7 @@ export function handleBootstrapInitialScrollDataChange(
         if (!shouldResetDidFinish && didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
             clearPendingInitialScrollFooterLayout(ctx, {
                 dataLength,
-                stylePaddingBottom,
+                stylePaddingEnd,
                 target: initialScroll,
             });
             return;
@@ -702,10 +703,10 @@ export function handleBootstrapInitialScrollFooterLayout(
         dataLength: number;
         footerSize: number;
         initialScrollAtEnd: boolean;
-        stylePaddingBottom: number;
+        stylePaddingEnd: number;
     },
 ) {
-    const { dataLength, footerSize, initialScrollAtEnd, stylePaddingBottom } = options;
+    const { dataLength, footerSize, initialScrollAtEnd, stylePaddingEnd } = options;
     const state = ctx.state;
     /*
      * Only initialScrollAtEnd uses footer size as part of its target math.
@@ -739,7 +740,7 @@ export function handleBootstrapInitialScrollFooterLayout(
     if (didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
         clearPendingInitialScrollFooterLayout(ctx, {
             dataLength,
-            stylePaddingBottom,
+            stylePaddingEnd,
             target: initialScroll,
         });
     } else {
@@ -752,7 +753,7 @@ export function handleBootstrapInitialScrollFooterLayout(
             dataLength,
             footerSize,
             preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
-            stylePaddingBottom,
+            stylePaddingEnd,
         });
         const didTargetChange =
             initialScroll.index !== updatedInitialScroll.index ||
@@ -766,7 +767,7 @@ export function handleBootstrapInitialScrollFooterLayout(
         if (!didTargetChange) {
             clearPendingInitialScrollFooterLayout(ctx, {
                 dataLength,
-                stylePaddingBottom,
+                stylePaddingEnd,
                 target: initialScroll,
             });
         } else {
@@ -804,10 +805,7 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
         const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
         const scrollingTo = state.scrollingTo?.isInitialScroll ? state.scrollingTo : undefined;
 
-        /*
-         * Once bootstrap has already dispatched or finished, late viewport changes
-         * should correct the existing position instead of starting another scrollTo.
-         */
+        // Late viewport changes retarget the active or preserved position without rearming bootstrap.
         if (!bootstrapInitialScroll && (scrollingTo || state.didFinishInitialScroll)) {
             const currentOffset = scrollingTo
                 ? (scrollingTo.targetOffset ?? scrollingTo.offset)
@@ -818,22 +816,15 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
                 if (state.didFinishInitialScroll) {
                     schedulePreservedEndAnchorCorrection(ctx);
                 } else if (scrollingTo) {
-                    const existingWatchdog = initialScrollWatchdog.get(state);
-                    scrollingTo.offset = resolvedOffset;
-                    scrollingTo.targetOffset = resolvedOffset;
-                    // Prevent the normal measured-initial-scroll path from redispatching the same correction.
                     state.initialScroll = {
                         ...initialScroll,
                         contentOffset: resolvedOffset,
                     };
-                    // The native scroll still belongs to the old target; retarget the watchdog so that
-                    // partial progress cannot finish the adjusted initial scroll too early.
-                    state.hasScrolled = false;
-                    initialScrollWatchdog.set(state, {
-                        startScroll: existingWatchdog?.startScroll ?? state.scroll,
-                        targetOffset: resolvedOffset,
+                    dispatchInitialScroll(ctx, {
+                        forceScroll: true,
+                        resolvedOffset,
+                        target: state.initialScroll,
                     });
-                    requestAdjust(ctx, offsetDiff);
                 }
             }
         } else {

@@ -13,6 +13,7 @@ import {
     useRef,
 } from "react";
 
+import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useArr$, useStateContext } from "@/state/state";
@@ -45,6 +46,7 @@ export type LayoutChangeEvent = NativeSyntheticEvent<{ layout: LayoutRectangle }
 export interface ScrollViewMethods {
     getBoundingClientRect(): DOMRect | null | undefined;
     getCurrentScrollOffset(): number;
+    getMaxScrollOffset(): number;
     getScrollableNode(): HTMLElement;
     getScrollEventTarget(): ScrollEventTarget | null;
     getScrollResponder(): HTMLElement | null;
@@ -235,6 +237,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         const api: ScrollViewMethods = {
             getBoundingClientRect: () => scrollRef.current?.getBoundingClientRect(),
             getCurrentScrollOffset,
+            getMaxScrollOffset,
             getScrollableNode: () => resolveScrollableNode(scrollRef.current, isWindowScroll)!,
             getScrollEventTarget: () => getScrollTarget(),
             getScrollResponder: () => resolveScrollableNode(scrollRef.current, isWindowScroll),
@@ -357,6 +360,30 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         };
     }, [emitScrollEnd, getScrollTarget, handleScroll, scrollEventCoalescer]);
 
+    useEffect(() => {
+        const target = getScrollTarget();
+        if (!target) return;
+        const onWheel = (nativeEvent: Event) => {
+            const event = nativeEvent as WheelEvent;
+            const delta = horizontal ? event.deltaX || (event.shiftKey ? event.deltaY : 0) : event.deltaY;
+            if (
+                delta < 0 &&
+                !event.ctrlKey &&
+                !event.defaultPrevented &&
+                (ctx.state.maintainingScrollAtEnd || ctx.state.pendingMaintainScrollAtEnd)
+            ) {
+                const offset = getCurrentScrollOffset();
+                // A wheel gesture away from the end supersedes queued following.
+                // Stop the browser animation too, without consuming the gesture.
+                if (interruptMaintainScrollAtEnd(ctx)) {
+                    scrollToLocalOffset(offset, false);
+                }
+            }
+        };
+        target.addEventListener("wheel", onWheel, { passive: true });
+        return () => target.removeEventListener("wheel", onWheel);
+    }, [ctx, getCurrentScrollOffset, getScrollTarget, horizontal, scrollToLocalOffset]);
+
     // Set initial scroll offset
     useEffect(() => {
         const doScroll = () => {
@@ -437,8 +464,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     };
 
     const contentInsetEndAdjustment = getContentInsetEndAdjustmentEnd(ctx);
-    const anchoredEndInset =
-        ctx.state?.props?.anchoredEndSpace?.includeInEndInset && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
+    const anchoredEndInset = ctx.state?.props?.anchoredEndSpace && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
     const renderedContentInsetEndAdjustment = Math.max(0, contentInsetEndAdjustment - anchoredEndInset);
     const contentInsetEndAdjustmentSpacerStyle: CSSProperties | undefined = renderedContentInsetEndAdjustment
         ? horizontal

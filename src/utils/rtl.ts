@@ -14,6 +14,12 @@ type RTLPropsLike = {
     rtl?: boolean;
 };
 
+type StylePaddingPropsLike = RTLPropsLike & {
+    stylePaddingBottom?: number;
+    stylePaddingLeft?: number;
+    stylePaddingRight?: number;
+};
+
 function clampHorizontalOffset(offset: number, maxOffset: number | undefined): number {
     if (maxOffset === undefined) {
         return offset;
@@ -63,6 +69,13 @@ export function isHorizontalRTL(state: Pick<InternalState, "props"> | undefined)
 
 export function isHorizontalRTLProps(props: RTLPropsLike | undefined): boolean {
     return !!props?.horizontal && isRTLProps(props);
+}
+
+export function getStylePaddingEnd(props: StylePaddingPropsLike | undefined): number {
+    if (!props?.horizontal) {
+        return props?.stylePaddingBottom || 0;
+    }
+    return (isHorizontalRTLProps(props) ? props.stylePaddingLeft : props.stylePaddingRight) || 0;
 }
 
 export function getLogicalHorizontalMaxOffset(

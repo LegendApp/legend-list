@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import { checkFinishedScroll, checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
@@ -140,52 +140,173 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 
-    it("retries an unresolved iOS scroll to end at the current measured end target", () => {
+    it("settles an interrupted non-end request after observing native movement", () => {
+        Platform.OS = "ios";
+        const resolveScroll = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                hasScrolled: true,
+                pendingScrollResolve: resolveScroll,
+                scroll: 300,
+                scrollingTo: {
+                    animated: true,
+                    index: 5,
+                    offset: 500,
+                    targetOffset: 500,
+                    viewPosition: 0,
+                } as any,
+                scrollLength: 200,
+                scrollPending: 300,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+        flushTimers(1);
+
+        expect(resolveScroll).toHaveBeenCalledTimes(1);
+        expect(ctx.state.pendingScrollResolve).toBeUndefined();
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
+    it("preserves the retry budget when momentum completion re-enters the fallback", () => {
         Platform.OS = "ios";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
-        const data = Array.from({ length: 1000 }, (_, index) => ({ id: index }));
-        const positions = Array.from({ length: 1000 }, (_, index) => index * 401);
-        positions[999] = 394259;
-
         const ctx = createMockContext(
-            { totalSize: 394700 },
+            { totalSize: 500 },
             {
                 didContainersLayout: true,
                 hasScrolled: true,
-                positions,
+                positions: [400],
                 props: {
-                    data,
-                    estimatedItemSize: 401,
+                    data: [{ id: 0 }],
+                    estimatedItemSize: 100,
                 } as any,
                 refScroller: {
                     current: {
                         scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
                     },
                 } as any,
-                scroll: 393753.3333333333,
+                scroll: 268,
                 scrollingTo: {
-                    animated: true,
-                    index: 999,
-                    offset: 397479,
-                    targetOffset: 397179,
-                    viewOffset: 0,
+                    animated: false,
+                    index: 0,
+                    offset: 332,
+                    targetOffset: 332,
+                    viewOffset: -32,
                     viewPosition: 1,
                 } as any,
-                scrollLength: 701,
-                scrollPending: 393753.3333333333,
-                sizesKnown: new Map([["item_999", 441]]),
+                scrollLength: 200,
+                scrollPending: 268,
+                sizesKnown: new Map([["item_0", 100]]),
             },
         );
 
         checkFinishedScrollFallback(ctx);
 
-        flushTimers(1);
-        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 393999 }]);
-        expect(ctx.state.scrollingTo).toBeDefined();
+        for (let i = 0; i < 8 && ctx.state.scrollingTo; i++) {
+            flushTimers(1);
+            if (ctx.state.scrollingTo) {
+                checkFinishedScrollFallback(ctx);
+            }
+        }
 
-        ctx.state.scroll = 393999;
-        ctx.state.scrollPending = 393999;
+        expect(scrollToCalls).toHaveLength(5);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
+    it.each(["ios", "android"] as const)(
+        "retries an unresolved %s scroll to end at the current measured end target",
+        (platform) => {
+            Platform.OS = platform;
+            const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+            const data = Array.from({ length: 1000 }, (_, index) => ({ id: index }));
+            const positions = Array.from({ length: 1000 }, (_, index) => index * 401);
+            positions[999] = 394259;
+
+            const ctx = createMockContext(
+                { totalSize: 394700 },
+                {
+                    didContainersLayout: true,
+                    hasScrolled: true,
+                    positions,
+                    props: {
+                        data,
+                        estimatedItemSize: 401,
+                    } as any,
+                    refScroller: {
+                        current: {
+                            scrollTo: (params: { animated: boolean; x: number; y: number }) =>
+                                scrollToCalls.push(params),
+                        },
+                    } as any,
+                    scroll: 393753.3333333333,
+                    scrollingTo: {
+                        animated: true,
+                        index: 999,
+                        offset: 397479,
+                        targetOffset: 397179,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                    scrollLength: 701,
+                    scrollPending: 393753.3333333333,
+                    sizesKnown: new Map([["item_999", 441]]),
+                },
+            );
+
+            checkFinishedScrollFallback(ctx);
+
+            flushTimers(1);
+            expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 393999 }]);
+            expect(ctx.state.scrollingTo).toBeDefined();
+
+            ctx.state.scroll = 393999;
+            ctx.state.scrollPending = 393999;
+            flushTimers(1);
+            expect(ctx.state.scrollingTo).toBeUndefined();
+        },
+    );
+
+    it("keeps an Android end request active when an earlier momentum callback fires during its animation", () => {
+        Platform.OS = "android";
+        const scrollToNative = mock(() => {});
+        const resolveScroll = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 1551100 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                pendingScrollResolve: resolveScroll,
+                positions: [0, 1550100],
+                props: { data: [{ id: "0" }, { id: "1" }], estimatedItemSize: 1000 } as any,
+                refScroller: { current: { scrollTo: scrollToNative } } as any,
+                scroll: 535184,
+                scrollingTo: { animated: true, index: 1, offset: 1548100, targetOffset: 1548500, viewPosition: 1 },
+                scrollLength: 600,
+                scrollPending: 535184,
+                sizesKnown: new Map([["item_1", 1000]]),
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
         flushTimers(1);
+        expect(scrollToNative).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 1550500 });
+        expect(resolveScroll).not.toHaveBeenCalled();
+
+        // More rows measure after that correction, moving the actual end again.
+        ctx.values.set("totalSize", 1551208);
+        ctx.state.positions[1] = 1550208;
+        ctx.state.scroll = 1550500;
+        ctx.state.scrollPending = 1550500;
+        flushTimers(1);
+        expect(scrollToNative).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 1550608 });
+        expect(resolveScroll).not.toHaveBeenCalled();
+
+        ctx.state.scroll = 1550608;
+        ctx.state.scrollPending = 1550608;
+        flushTimers(1);
+        expect(resolveScroll).toHaveBeenCalledTimes(1);
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 
@@ -517,22 +638,40 @@ describe("checkFinishedScrollFallback", () => {
 
 describe("checkFinishedScroll", () => {
     let originalPlatform: typeof Platform.OS;
+    let originalCancelAnimationFrame: typeof globalThis.cancelAnimationFrame;
     let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
+    let cancelCalls: number[];
     let pendingFrame: FrameRequestCallback | undefined;
 
     beforeEach(() => {
         originalPlatform = Platform.OS;
+        originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
         originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        cancelCalls = [];
         pendingFrame = undefined;
+        globalThis.cancelAnimationFrame = ((id: number) => {
+            cancelCalls.push(id);
+        }) as typeof globalThis.cancelAnimationFrame;
         globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
             pendingFrame = callback;
-            return 1;
+            return 0;
         }) as typeof globalThis.requestAnimationFrame;
     });
 
     afterEach(() => {
         Platform.OS = originalPlatform;
+        globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    });
+
+    it("replaces an existing completion frame even when its handle is zero", () => {
+        const ctx = createMockContext({}, { scrollingTo: { animated: true, offset: 100 } as any });
+
+        checkFinishedScroll(ctx);
+        checkFinishedScroll(ctx);
+
+        expect(cancelCalls).toEqual([0]);
+        expect(ctx.state.scheduledWork.has("checkFinishedScrollFrame")).toBe(true);
     });
 
     it("finishes when the scroll reaches the resolved end clamp target", () => {

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup"; // Import global test setup
 import { Text } from "react-native";
 
+import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { getRenderedItem } from "../../src/utils/getRenderedItem";
@@ -21,6 +22,7 @@ const ThrowingRenderItem = () => {
 };
 
 describe("getRenderedItem", () => {
+    const containerId = 0;
     let mockCtx: StateContext;
     let mockState: InternalState;
 
@@ -50,7 +52,7 @@ describe("getRenderedItem", () => {
 
     describe("basic functionality", () => {
         it("should return rendered item with correct structure", () => {
-            const result = getRenderedItem(mockCtx, "item_1");
+            const result = getRenderedItem(mockCtx, "item_1", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(1);
@@ -63,7 +65,7 @@ describe("getRenderedItem", () => {
             const renderItem = mock((props: any) => React.createElement("div", null, props.item.name));
             mockState.props.renderItem = renderItem;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).not.toBeNull();
             expect(renderItem).toHaveBeenCalledWith({
@@ -84,7 +86,7 @@ describe("getRenderedItem", () => {
             mockState.props.renderItem = renderItem;
             mockCtx.values.set("extraData", extraData);
 
-            const result = getRenderedItem(mockCtx, "item_1");
+            const result = getRenderedItem(mockCtx, "item_1", containerId);
 
             expect(result).not.toBeNull();
             expect(renderItem).toHaveBeenCalledWith(
@@ -105,7 +107,7 @@ describe("getRenderedItem", () => {
                 ["fruit_2", 2],
             ]);
 
-            const result = getRenderedItem(mockCtx, "fruit_1");
+            const result = getRenderedItem(mockCtx, "fruit_1", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(1);
@@ -116,20 +118,20 @@ describe("getRenderedItem", () => {
     describe("edge cases", () => {
         it("should return null when state is null", () => {
             mockCtx.state = null as any;
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).toBeNull();
         });
 
         it("should return null when state is undefined", () => {
             mockCtx.state = undefined as any;
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).toBeNull();
         });
 
         it("should return null when key is not found in indexByKey", () => {
-            const result = getRenderedItem(mockCtx, "non_existent_key");
+            const result = getRenderedItem(mockCtx, "non_existent_key", containerId);
 
             expect(result).toBeNull();
         });
@@ -137,7 +139,7 @@ describe("getRenderedItem", () => {
         it("should return null when index is undefined in indexByKey", () => {
             mockState.indexByKey.set("undefined_index", undefined as any);
 
-            const result = getRenderedItem(mockCtx, "undefined_index");
+            const result = getRenderedItem(mockCtx, "undefined_index", containerId);
 
             expect(result).toBeNull();
         });
@@ -145,7 +147,7 @@ describe("getRenderedItem", () => {
         it("should handle empty indexByKey map", () => {
             mockState.indexByKey = new Map();
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).toBeNull();
         });
@@ -153,7 +155,7 @@ describe("getRenderedItem", () => {
         it("should handle null renderItem", () => {
             (mockState.props as any).renderItem = null;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(0);
@@ -164,7 +166,7 @@ describe("getRenderedItem", () => {
         it("should handle undefined renderItem", () => {
             mockState.props.renderItem = undefined;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(0);
@@ -175,7 +177,7 @@ describe("getRenderedItem", () => {
         it("should handle index out of bounds", () => {
             mockState.indexByKey.set("out_of_bounds", 10);
 
-            const result = getRenderedItem(mockCtx, "out_of_bounds");
+            const result = getRenderedItem(mockCtx, "out_of_bounds", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(10);
@@ -186,7 +188,7 @@ describe("getRenderedItem", () => {
         it("should handle negative index", () => {
             mockState.indexByKey.set("negative", -1);
 
-            const result = getRenderedItem(mockCtx, "negative");
+            const result = getRenderedItem(mockCtx, "negative", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(-1);
@@ -198,13 +200,13 @@ describe("getRenderedItem", () => {
         it("should handle renderItem throwing an error", () => {
             mockState.props.renderItem = ThrowingRenderItem;
 
-            expect(() => getRenderedItem(mockCtx, "item_0")).toThrow("Render error");
+            expect(() => getRenderedItem(mockCtx, "item_0", containerId)).toThrow("Render error");
         });
 
         it("should handle renderItem returning null", () => {
             mockState.props.renderItem = () => null;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.renderedItem).toBeNull();
@@ -213,7 +215,7 @@ describe("getRenderedItem", () => {
         it("should handle renderItem returning undefined", () => {
             mockState.props.renderItem = () => undefined;
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.renderedItem).toBeUndefined();
@@ -222,7 +224,7 @@ describe("getRenderedItem", () => {
         it("should handle renderItem returning non-React element", () => {
             mockState.props.renderItem = () => "plain string";
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.renderedItem).toBe("plain string");
@@ -246,7 +248,7 @@ describe("getRenderedItem", () => {
             mockState.props.renderItem = complexRenderItem;
             mockCtx.values.set("extraData", { theme: "dark" });
 
-            const result = getRenderedItem(mockCtx, "item_1");
+            const result = getRenderedItem(mockCtx, "item_1", containerId);
 
             expect(result).not.toBeNull();
             expect(complexRenderItem).toHaveBeenCalledWith({
@@ -269,13 +271,16 @@ describe("getRenderedItem", () => {
                 return React.createElement(Text, null, label);
             };
             const MemoContainer = () => {
-                const renderedItem = React.useMemo(() => getRenderedItem(mockCtx, "item_0")?.renderedItem ?? null, []);
+                const renderedItem = React.useMemo(
+                    () => getRenderedItem(mockCtx, "item_0", containerId)?.renderedItem ?? null,
+                    [],
+                );
                 return React.createElement(React.Fragment, null, renderedItem);
             };
 
             mockState.props.renderItem = ({ item }: any) => React.createElement(HookItem, { item });
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).not.toBeNull();
             expect(React.isValidElement(result!.renderedItem)).toBe(true);
@@ -291,7 +296,7 @@ describe("getRenderedItem", () => {
         it("should handle missing extraData in context", () => {
             mockCtx.values.delete("extraData");
 
-            const result = getRenderedItem(mockCtx, "item_0");
+            const result = getRenderedItem(mockCtx, "item_0", containerId);
 
             expect(result).not.toBeNull();
             expect(React.isValidElement(result!.renderedItem)).toBe(true);
@@ -303,7 +308,7 @@ describe("getRenderedItem", () => {
             testCases.forEach((extraData, _idx) => {
                 mockCtx.values.set("extraData", extraData);
 
-                const result = getRenderedItem(mockCtx, "item_0");
+                const result = getRenderedItem(mockCtx, "item_0", containerId);
 
                 expect(result).not.toBeNull();
                 expect(React.isValidElement(result!.renderedItem)).toBe(true);
@@ -316,7 +321,7 @@ describe("getRenderedItem", () => {
             mockState.props.data = [];
             mockState.indexByKey.set("empty", 0);
 
-            const result = getRenderedItem(mockCtx, "empty");
+            const result = getRenderedItem(mockCtx, "empty", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(0);
@@ -328,7 +333,7 @@ describe("getRenderedItem", () => {
 
             // This will throw because data[index] tries to access null[index]
             expect(() => {
-                getRenderedItem(mockCtx, "item_0");
+                getRenderedItem(mockCtx, "item_0", containerId);
             }).toThrow();
         });
 
@@ -348,7 +353,7 @@ describe("getRenderedItem", () => {
             const testKeys = ["null_item", "undefined_item", "empty_string", "zero", "false_item", "object", "array"];
 
             testKeys.forEach((key, idx) => {
-                const result = getRenderedItem(mockCtx, key);
+                const result = getRenderedItem(mockCtx, key, containerId);
 
                 expect(result).not.toBeNull();
                 expect(result!.index).toBe(idx);
@@ -365,7 +370,7 @@ describe("getRenderedItem", () => {
 
             mockState.props.renderItem = ({ item }: any) => React.createElement("div", null, `Value: ${item}`);
 
-            const result = getRenderedItem(mockCtx, "zero");
+            const result = getRenderedItem(mockCtx, "zero", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.item).toBe(0);
@@ -374,6 +379,95 @@ describe("getRenderedItem", () => {
             const element = result!.renderedItem as React.ReactElement;
             expect(element.type).toBe("div");
             expect(element.props.children).toBe("Value: 0");
+        });
+    });
+
+    describe("container assignment metadata", () => {
+        it("renders the container's coherent previous assignment while a prepended data generation is pending", () => {
+            const previousData = Array.from({ length: 4 }, (_, index) => ({
+                id: `existing-${index}`,
+                name: `Existing ${index}`,
+            }));
+            const prependedData = Array.from({ length: 2 }, (_, index) => ({
+                id: `prepended-${index}`,
+                name: `Prepended ${index}`,
+            }));
+            const renderItem = mock((props: any) => props.item.id);
+            mockState.props.data = previousData;
+            mockState.props.renderItem = renderItem;
+            mockState.indexByKey = new Map(previousData.map((item, index) => [item.id, index]));
+            mockState.containerItemMetadata.set(
+                7,
+                createContainerItemMetadata(mockState, 1, previousData[1], "existing"),
+            );
+
+            mockState.dataChangeEpoch += 1;
+            mockState.props.data = [...prependedData, ...previousData];
+
+            const result = getRenderedItem(mockCtx, "existing-1", 7);
+
+            expect(result).toEqual({
+                index: 1,
+                item: previousData[1],
+                renderedItem: "existing-1",
+            });
+            expect(renderItem).toHaveBeenCalledWith({
+                data: previousData,
+                extraData: null,
+                index: 1,
+                item: previousData[1],
+                type: "existing",
+            });
+        });
+
+        it("uses refreshed container metadata after the new layout generation is synchronized", () => {
+            const previousData = Array.from({ length: 4 }, (_, index) => ({
+                id: `existing-${index}`,
+                name: `Existing ${index}`,
+            }));
+            const prependedData = Array.from({ length: 2 }, (_, index) => ({
+                id: `prepended-${index}`,
+                name: `Prepended ${index}`,
+            }));
+            const nextData = [...prependedData, ...previousData];
+            mockState.dataChangeEpoch = 1;
+            mockState.props.data = nextData;
+            mockState.indexByKey = new Map(previousData.map((item, index) => [item.id, index]));
+            mockState.containerItemMetadata.set(
+                7,
+                createContainerItemMetadata(mockState, 3, previousData[1], "existing"),
+            );
+
+            const result = getRenderedItem(mockCtx, "existing-1", 7);
+
+            expect(result?.index).toBe(3);
+            expect(result?.item).toBe(previousData[1]);
+        });
+
+        it("can render a current container assignment when the global key-index map is empty", () => {
+            const data = [{ id: "assigned", name: "Assigned" }];
+            mockState.props.data = data;
+            mockState.indexByKey.clear();
+            mockState.containerItemMetadata.set(4, createContainerItemMetadata(mockState, 0, data[0], "row"));
+
+            const result = getRenderedItem(mockCtx, "assigned", 4);
+
+            expect(result?.index).toBe(0);
+            expect(result?.item).toBe(data[0]);
+        });
+
+        it("uses current data for a non-structural replacement in the same data epoch", () => {
+            const previousData = [{ id: "stable", name: "Before" }];
+            const nextData = [{ id: "stable", name: "After" }];
+            mockState.props.data = previousData;
+            mockState.indexByKey = new Map([["stable", 0]]);
+            mockState.containerItemMetadata.set(2, createContainerItemMetadata(mockState, 0, previousData[0], "row"));
+            mockState.props.data = nextData;
+
+            const result = getRenderedItem(mockCtx, "stable", 2);
+
+            expect(result?.item).toBe(nextData[0]);
+            expect(result?.index).toBe(0);
         });
     });
 
@@ -394,7 +488,7 @@ describe("getRenderedItem", () => {
             // Test multiple calls
             for (let i = 0; i < 100; i++) {
                 const key = `large_item_${i * 100}`;
-                const result = getRenderedItem(mockCtx, key);
+                const result = getRenderedItem(mockCtx, key, containerId);
                 expect(result).not.toBeNull();
             }
 
@@ -407,7 +501,7 @@ describe("getRenderedItem", () => {
 
             for (let i = 0; i < 1000; i++) {
                 const key = `item_${i % 3}`;
-                getRenderedItem(mockCtx, key);
+                getRenderedItem(mockCtx, key, containerId);
             }
 
             const duration = Date.now() - start;
@@ -419,7 +513,7 @@ describe("getRenderedItem", () => {
 
             // Generate many rendered items
             for (let i = 0; i < 1000; i++) {
-                getRenderedItem(mockCtx, `item_${i % 3}`);
+                getRenderedItem(mockCtx, `item_${i % 3}`, containerId);
             }
 
             const finalMemory = process.memoryUsage().heapUsed;
@@ -435,7 +529,7 @@ describe("getRenderedItem", () => {
             mockState.indexByKey = null as any;
 
             expect(() => {
-                getRenderedItem(mockCtx, "item_0");
+                getRenderedItem(mockCtx, "item_0", containerId);
             }).toThrow();
         });
 
@@ -443,14 +537,14 @@ describe("getRenderedItem", () => {
             mockState.props = null as any;
 
             expect(() => {
-                getRenderedItem(mockCtx, "item_0");
+                getRenderedItem(mockCtx, "item_0", containerId);
             }).toThrow();
         });
 
         it("should handle string keys", () => {
             mockState.indexByKey.set("string_key", 1);
 
-            const result = getRenderedItem(mockCtx, "string_key");
+            const result = getRenderedItem(mockCtx, "string_key", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(1);
@@ -459,7 +553,7 @@ describe("getRenderedItem", () => {
         it("should handle numeric string keys", () => {
             mockState.indexByKey.set("123", 2);
 
-            const result = getRenderedItem(mockCtx, "123");
+            const result = getRenderedItem(mockCtx, "123", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(2);
@@ -468,7 +562,7 @@ describe("getRenderedItem", () => {
         it("should handle empty string key", () => {
             mockState.indexByKey.set("", 0);
 
-            const result = getRenderedItem(mockCtx, "");
+            const result = getRenderedItem(mockCtx, "", containerId);
 
             expect(result).not.toBeNull();
             expect(result!.index).toBe(0);
@@ -480,7 +574,7 @@ describe("getRenderedItem", () => {
             specialKeys.forEach((key, idx) => {
                 mockState.indexByKey.set(key, idx);
 
-                const result = getRenderedItem(mockCtx, key);
+                const result = getRenderedItem(mockCtx, key, containerId);
 
                 expect(result).not.toBeNull();
                 expect(result!.index).toBe(idx);

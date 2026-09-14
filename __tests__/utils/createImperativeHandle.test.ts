@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import { cancelImperativeScroll } from "../../src/core/cancelImperativeScroll";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
+import { scrollToEnd } from "../../src/core/scrollToEnd";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -65,6 +68,95 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 viewPosition: 1,
             }),
         );
+    });
+
+    it("runs tracked internal end scrolls without creating the imperative handle", async () => {
+        const ctx = createMockContext({}, {
+            didDataChange: true,
+            didFinishInitialScroll: true,
+            props: { data: [1] },
+        } as any);
+
+        await getScrollRequestTracker(ctx).runNowIfIdle(() => scrollToEnd(ctx, { animated: false }));
+
+        expect(scrollToIndexSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ animated: false, index: 0, viewPosition: 1 }),
+        );
+        expect(ctx.state.scheduledWork.has("imperativeScrollReady")).toBe(false);
+        expect(ctx.state.pendingScrollToEnd).toBeUndefined();
+        expect(ctx.state.runPendingScrollToEnd).toBeUndefined();
+    });
+
+    it("resolves tracked internal end scrolls through the shared completion owner", async () => {
+        scrollToIndexSpy.mockImplementation((nextCtx) => {
+            nextCtx.state.scrollingTo = { offset: 100 };
+        });
+        const ctx = createMockContext({}, { didFinishInitialScroll: true, props: { data: [1] } });
+        createImperativeHandle(ctx);
+
+        const scrollPromise = getScrollRequestTracker(ctx).runNowIfIdle(() => scrollToEnd(ctx, { animated: true }));
+        let resolved = false;
+        void scrollPromise.then(() => {
+            resolved = true;
+        });
+        await Promise.resolve();
+
+        expect(resolved).toBe(false);
+        expect(ctx.state.pendingScrollToEnd).toBeUndefined();
+
+        finishScrollTo(ctx);
+        await scrollPromise;
+        expect(resolved).toBe(true);
+    });
+
+    it("does not let a tracked internal end scroll supersede an active imperative scroll", async () => {
+        scrollToIndexSpy.mockImplementation((nextCtx, params) => {
+            nextCtx.state.scrollingTo = { animated: params.animated, index: params.index, offset: 100 };
+        });
+        const ctx = createMockContext({}, { didFinishInitialScroll: true, props: { data: [1, 2] } });
+        const handle = createImperativeHandle(ctx);
+        const imperativePromise = handle.scrollToIndex({ animated: true, index: 0 });
+        const imperativeTarget = ctx.state.scrollingTo;
+        let imperativeResolved = false;
+        void imperativePromise.then(() => {
+            imperativeResolved = true;
+        });
+
+        await getScrollRequestTracker(ctx).runNowIfIdle(() => scrollToEnd(ctx, { animated: true }));
+
+        expect(imperativeResolved).toBe(false);
+        expect(ctx.state.scrollingTo).toBe(imperativeTarget);
+        expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+
+        finishScrollTo(ctx);
+        await imperativePromise;
+        expect(imperativeResolved).toBe(true);
+    });
+
+    it("does not let a tracked internal end scroll supersede an imperative request awaiting commit", async () => {
+        scrollToIndexSpy.mockImplementation((nextCtx, params) => {
+            nextCtx.state.scrollingTo = { animated: params.animated, index: params.index, offset: 100 };
+        });
+        const scheduleCommit = mock(() => {});
+        const ctx = createMockContext({}, { didFinishInitialScroll: true, props: { data: [1, 2] } });
+        const handle = createImperativeHandle(ctx, scheduleCommit);
+        const imperativePromise = handle.scrollToEnd({ animated: true });
+        let imperativeResolved = false;
+        void imperativePromise.then(() => {
+            imperativeResolved = true;
+        });
+
+        await getScrollRequestTracker(ctx).runNowIfIdle(() => scrollToEnd(ctx, { animated: true }));
+
+        expect(imperativeResolved).toBe(false);
+        expect(ctx.state.pendingScrollToEnd).toBeDefined();
+        expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+        ctx.state.runPendingScrollToEnd?.();
+        finishScrollTo(ctx);
+        await imperativePromise;
+        expect(imperativeResolved).toBe(true);
     });
 
     it("returns full content size in getState().contentLength", () => {
@@ -204,7 +296,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
         retargetSpy.mockRestore();
     });
 
-    it("does not expose positions from getState and uses accessors instead", () => {
+    it("exposes positions and indices through accessors", () => {
         const ctx = createMockContext(
             {},
             {
@@ -223,6 +315,8 @@ describe("createImperativeHandle.scrollToEnd", () => {
         const state = createImperativeHandle(ctx).getState();
 
         expect((state as Record<string, unknown>).positions).toBeUndefined();
+        expect(state.indexByKey("b")).toBe(1);
+        expect(state.indexByKey("missing")).toBeUndefined();
         expect(state.positionAtIndex(0)).toBe(10);
         expect(state.positionByKey("b")).toBe(40);
     });
@@ -416,6 +510,115 @@ describe("createImperativeHandle.scrollToEnd", () => {
         await secondPromise;
     });
 
+    it("supersedes unfinished initial scroll ownership before queuing scrollToEnd", async () => {
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const canceledFrames: number[] = [];
+        globalThis.cancelAnimationFrame = ((frame: number) => {
+            canceledFrames.push(frame);
+        }) as typeof cancelAnimationFrame;
+
+        try {
+            const scheduleCommit = mock(() => {});
+            const ctx = createMockContext({}, {
+                didFinishInitialScroll: false,
+                initialScroll: {
+                    index: 2,
+                    viewPosition: 1,
+                },
+                initialScrollSession: {
+                    bootstrap: {
+                        frameHandle: 42,
+                        mountFrameCount: 1,
+                        passCount: 1,
+                        scroll: 100,
+                        seedContentOffset: 0,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: 3,
+                },
+                props: {
+                    data: [1, 2, 3],
+                },
+                scrollingTo: {
+                    index: 2,
+                    isInitialScroll: true,
+                    offset: 100,
+                },
+            } as any);
+            const handle = createImperativeHandle(ctx, scheduleCommit);
+            const promise = handle.scrollToEnd({ animated: true });
+
+            expect(canceledFrames).toContain(42);
+            expect(ctx.state.didFinishInitialScroll).toBe(true);
+            expect(ctx.state.initialScroll).toBeUndefined();
+            expect(ctx.state.initialScrollSession).toBeUndefined();
+            expect(ctx.state.scrollingTo).toBeUndefined();
+            expect(ctx.state.pendingScrollToEnd).toBeDefined();
+            expect(scheduleCommit).toHaveBeenCalledTimes(1);
+
+            cancelImperativeScroll(ctx.state);
+            await promise;
+        } finally {
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
+    it("does not let stale completion work resolve a superseding request", async () => {
+        const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const scheduledFrames: FrameRequestCallback[] = [];
+        let nextFrameId = 0;
+
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            scheduledFrames.push(callback);
+            return nextFrameId++;
+        }) as typeof requestAnimationFrame;
+        globalThis.cancelAnimationFrame = (() => {}) as typeof cancelAnimationFrame;
+        scrollToIndexSpy.mockImplementation((nextCtx, params) => {
+            nextCtx.state.scrollingTo = {
+                animated: true,
+                index: params.index,
+                offset: params.index * 100,
+            };
+            nextCtx.state.scheduledWork.frame(() => finishScrollTo(nextCtx), "checkFinishedScrollFrame");
+        });
+
+        try {
+            const ctx = createMockContext({}, { props: { data: [1, 2, 3] } } as any);
+            const handle = createImperativeHandle(ctx);
+            let firstResolveCount = 0;
+            let secondResolveCount = 0;
+
+            const firstPromise = handle.scrollToIndex({ animated: true, index: 1 }).then(() => {
+                firstResolveCount++;
+            });
+            const staleCompletionFrame = scheduledFrames[0]!;
+            const secondPromise = handle.scrollToIndex({ animated: true, index: 2 }).then(() => {
+                secondResolveCount++;
+            });
+
+            await firstPromise;
+            expect(firstResolveCount).toBe(1);
+            expect(secondResolveCount).toBe(0);
+            expect(ctx.state.scrollingTo?.index).toBe(2);
+
+            staleCompletionFrame(0);
+            await Promise.resolve();
+
+            expect(secondResolveCount).toBe(0);
+            expect(ctx.state.scrollingTo?.index).toBe(2);
+
+            scheduledFrames[1]!(0);
+            await secondPromise;
+
+            expect(secondResolveCount).toBe(1);
+            expect(ctx.state.scrollingTo).toBeUndefined();
+        } finally {
+            globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
     it("waits for data and MVCP settling before starting imperative scroll", async () => {
         const originalRAF = globalThis.requestAnimationFrame;
         const rafCallbacks: FrameRequestCallback[] = [];
@@ -473,7 +676,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
             props: {
                 data: [1, 2, 3],
             },
-            queuedMVCPRecalculate: undefined,
         } as any);
 
         const handle = createImperativeHandle(ctx);
@@ -923,5 +1125,118 @@ describe("createImperativeHandle.scrollToEnd", () => {
         } finally {
             restore();
         }
+    });
+
+    it("cancels readiness polling and settles its promise during disposal", async () => {
+        const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        const callbacks = new Map<number, FrameRequestCallback>();
+        const cancelCalls: number[] = [];
+        let lateCallback: FrameRequestCallback | undefined;
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            lateCallback = callback;
+            callbacks.set(0, callback);
+            return 0;
+        }) as typeof requestAnimationFrame;
+        globalThis.cancelAnimationFrame = ((id: number) => {
+            cancelCalls.push(id);
+            callbacks.delete(id);
+        }) as typeof cancelAnimationFrame;
+
+        try {
+            const ctx = createMockContext({}, { didDataChange: true, props: { data: [1, 2, 3] } } as any);
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 2 });
+            let resolved = false;
+            void promise.then(() => {
+                resolved = true;
+            });
+
+            cancelImperativeScroll(ctx.state);
+            lateCallback?.(0);
+            await Promise.resolve();
+
+            expect(cancelCalls).toEqual([0]);
+            expect(callbacks.size).toBe(0);
+            expect(resolved).toBe(true);
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+        } finally {
+            globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
+    it("settles a scrollToEnd promise that is pending a layout commit during disposal", async () => {
+        const scheduleCommit = mock(() => {});
+        const ctx = createMockContext({}, { props: { data: [1, 2, 3] } } as any);
+        const handle = createImperativeHandle(ctx, scheduleCommit);
+        const promise = handle.scrollToEnd({ animated: false });
+        let resolveCount = 0;
+        void promise.then(() => {
+            resolveCount++;
+        });
+
+        expect(scheduleCommit).toHaveBeenCalledTimes(1);
+        expect(ctx.state.pendingScrollToEnd).toBeDefined();
+
+        cancelImperativeScroll(ctx.state);
+        cancelImperativeScroll(ctx.state);
+        await promise;
+
+        expect(resolveCount).toBe(1);
+        expect(ctx.state.pendingScrollToEnd).toBeUndefined();
+        expect(ctx.state.pendingScrollResolve).toBeUndefined();
+        expect(scrollToIndexSpy).not.toHaveBeenCalled();
+    });
+
+    it("keeps the deferred scroll runner installed when cleanup replays on a live state", async () => {
+        const ctx = createMockContext({}, { props: { data: [1, 2, 3] } } as any);
+        const handle = createImperativeHandle(ctx);
+        const runner = ctx.state.runPendingScrollToEnd;
+
+        cancelImperativeScroll(ctx.state);
+        const promise = handle.scrollToEnd({ animated: true });
+
+        expect(ctx.state.runPendingScrollToEnd).toBe(runner);
+        expect(scrollToIndexSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                animated: true,
+                index: 2,
+                viewPosition: 1,
+            }),
+        );
+        await promise;
+    });
+
+    it("settles an active scrollToOffset promise during cancellation", async () => {
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                didFinishInitialScroll: true,
+                refScroller: {
+                    current: {
+                        getScrollableNode: () => ({}),
+                        scrollTo: mock(() => {}),
+                    },
+                } as any,
+                scrollLength: 200,
+            },
+        );
+        const handle = createImperativeHandle(ctx);
+        const promise = handle.scrollToOffset({ animated: false, offset: 300 });
+        let resolveCount = 0;
+        void promise.then(() => {
+            resolveCount++;
+        });
+
+        expect(ctx.state.scrollingTo).toBeDefined();
+
+        cancelImperativeScroll(ctx.state);
+        await promise;
+
+        expect(resolveCount).toBe(1);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.pendingScrollResolve).toBeUndefined();
     });
 });

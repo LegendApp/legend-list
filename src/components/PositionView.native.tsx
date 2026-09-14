@@ -25,9 +25,22 @@ const PositionViewState = typedMemo(function PositionViewState({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, _itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
+    const [position = POSITION_OUT_OF_VIEW, _itemKey, layoutReady = true] = useArr$([
+        `containerPosition${id}`,
+        `containerItemKey${id}`,
+        `containerLayoutReady${id}`,
+    ]);
 
-    return <View ref={refView} style={[style, horizontal ? { left: position } : { top: position }]} {...rest} />;
+    // Fabric cannot re-enter the current commit when layout measurement corrects an estimated
+    // position. Keep an unknown-size assignment laid out but invisible until that correction lands.
+    return (
+        <View
+            ref={refView}
+            style={[style, horizontal ? { left: position } : { top: position }, !layoutReady && { opacity: 0 }]}
+            {...rest}
+            pointerEvents={layoutReady ? undefined : "none"}
+        />
+    );
 });
 
 // The Animated version is better on old arch but worse on new arch.

@@ -16,6 +16,8 @@ type ScrollEventTarget = {
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;
     const { animated, horizontal, offset } = params;
+    state.scheduledWork.cancel("platformScrollCompletion");
+
     const scroller = state.refScroller.current;
     const node = scroller?.getScrollableNode();
     if (!scroller || !node) {
@@ -30,17 +32,35 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
     if (isAnimated) {
+        // The DOM clamps the request to its current content size. An already
+        // aligned request emits no scroll/scrollend events, so finish it on the
+        // next frame rather than keeping end-follow work blocked until timeout.
+        const targetOffset = Math.max(0, Math.min(offset, scroller.getMaxScrollOffset?.() ?? offset));
+        if (Math.abs((scroller.getCurrentScrollOffset?.() ?? Number.NaN) - targetOffset) <= SCROLL_END_TARGET_EPSILON) {
+            const targetToken = state.scrollingTo;
+            state.scheduledWork.frame(() => {
+                if (targetToken === state.scrollingTo) finishScrollTo(ctx);
+            }, "platformScrollCompletion");
+            return;
+        }
         const target = scroller.getScrollEventTarget?.() ?? null;
         listenForScrollEnd(ctx, {
             readOffset: () => scroller.getCurrentScrollOffset!(),
             target,
-            targetOffset: offset,
+            targetOffset,
         });
     } else {
         state.scroll = offset;
-        setTimeout(() => {
-            finishScrollTo(ctx);
-        }, 100);
+        const targetToken = state.scrollingTo;
+        state.scheduledWork.timeout(
+            () => {
+                if (targetToken === state.scrollingTo) {
+                    finishScrollTo(ctx);
+                }
+            },
+            100,
+            "platformScrollCompletion",
+        );
     }
 }
 
@@ -61,7 +81,7 @@ function listenForScrollEnd(
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     let settled = false;
     // Bind completion to the current scroll target so stale listeners cannot finish a newer scrollTo.
-    const targetToken = ctx.state.scrollingTo;
+    const { scheduledWork, scrollingTo: targetToken } = ctx.state;
     // Fallback in case scrollend fires late or never fires in this browser.
     const maxTimeout = setTimeout(() => finish("max"), SCROLL_END_MAX_MS);
 
@@ -72,17 +92,23 @@ function listenForScrollEnd(
             target.removeEventListener("scrollend", onScrollEnd);
         }
 
-        if (idleTimeout) {
+        if (idleTimeout !== undefined) {
             clearTimeout(idleTimeout);
         }
         clearTimeout(maxTimeout);
     };
 
+    const cancel = () => {
+        if (!settled) {
+            settled = true;
+            cleanup();
+        }
+    };
+
     const finish = (reason: "scrollend" | "idle" | "max") => {
         if (settled) return;
         if (targetToken !== ctx.state.scrollingTo) {
-            settled = true;
-            cleanup();
+            scheduledWork.cancel("platformScrollCompletion");
             return;
         }
         const currentOffset = readOffset();
@@ -93,13 +119,12 @@ function listenForScrollEnd(
             return;
         }
 
-        settled = true;
-        cleanup();
+        scheduledWork.cancel("platformScrollCompletion");
         finishScrollTo(ctx);
     };
 
     const onScroll = () => {
-        if (idleTimeout) {
+        if (idleTimeout !== undefined) {
             clearTimeout(idleTimeout);
         }
         idleTimeout = setTimeout(() => finish("idle"), SCROLL_END_IDLE_MS);
@@ -114,4 +139,5 @@ function listenForScrollEnd(
     } else {
         idleTimeout = setTimeout(() => finish("idle"), SMOOTH_SCROLL_DURATION_MS);
     }
+    scheduledWork.register("platformScrollCompletion", cancel);
 }

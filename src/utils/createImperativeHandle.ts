@@ -1,7 +1,9 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
+import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
+import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
 import { scrollToIndex } from "@/core/scrollToIndex";
@@ -54,14 +56,14 @@ function triggerMountedContainerLayouts(ctx: StateContext) {
 
 export function createImperativeHandle(ctx: StateContext, scheduleImperativeScrollCommit?: () => void): LegendListRef {
     const state = ctx.state;
+    const scrollRequestTracker = getScrollRequestTracker(ctx);
     const IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS = 800;
     const IMPERATIVE_SCROLL_SETTLE_STABLE_FRAMES = 2;
-    let imperativeScrollToken = 0;
 
     const isSettlingAfterDataChange = () =>
         !!state.didDataChange ||
         !!state.didColumnsChange ||
-        state.queuedMVCPRecalculate !== undefined ||
+        state.scheduledWork.has("mvcpRecalculate") ||
         state.ignoreScrollFromMVCP !== undefined;
 
     const isScrollToIndexReady = (targetIndex: number, allowEmpty = false) => {
@@ -87,7 +89,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         let stableFrames = 0;
 
         const check = () => {
-            if (token !== imperativeScrollToken) {
+            if (!scrollRequestTracker.isCurrent(token)) {
                 return;
             }
 
@@ -103,26 +105,14 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
                 return;
             }
 
-            requestAnimationFrame(check);
+            state.scheduledWork.frame(check, "imperativeScrollReady");
         };
 
-        requestAnimationFrame(check);
+        state.scheduledWork.frame(check, "imperativeScrollReady");
     };
 
     const runScrollRequest = (token: number, resolve: () => void, run: () => boolean, isReady = () => true) => {
-        const runNow = () => {
-            if (token !== imperativeScrollToken) {
-                return;
-            }
-
-            const didStartScroll = run();
-            if (!didStartScroll || !state.scrollingTo) {
-                if (state.pendingScrollResolve === resolve) {
-                    state.pendingScrollResolve = undefined;
-                }
-                resolve();
-            }
-        };
+        const runNow = () => scrollRequestTracker.runNow(token, resolve, run);
 
         if (isSettlingAfterDataChange() || !isReady()) {
             runWhenReady(token, runNow, isReady);
@@ -130,20 +120,11 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             runNow();
         }
     };
-    const startImperativeScroll = (resolve: () => void) => {
-        // A new imperative scroll supersedes any previous unresolved one.
-        const token = ++imperativeScrollToken;
-
-        state.pendingScrollToEnd = undefined;
-        state.pendingScrollResolve?.();
-        state.pendingScrollResolve = resolve;
-
-        return token;
-    };
     const runScrollWithPromise = (run: () => boolean, isReady = () => true) =>
         new Promise<void>((resolve) => {
-            const token = startImperativeScroll(resolve);
+            const token = scrollRequestTracker.start(resolve);
 
+            supersedeInitialScroll(ctx);
             runScrollRequest(token, resolve, run, isReady);
         });
 
@@ -153,7 +134,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         if (pendingScroll) {
             state.pendingScrollToEnd = undefined;
 
-            if (pendingScroll.token === imperativeScrollToken) {
+            if (scrollRequestTracker.isCurrent(pendingScroll.token)) {
                 runScrollRequest(
                     pendingScroll.token,
                     pendingScroll.resolve,
@@ -225,6 +206,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             end: state.endNoBuffer,
             endBuffered: state.endBuffered,
             getAverageItemSizes: () => getAverageItemSizes(state),
+            indexByKey: (key: string) => state.indexByKey.get(key),
             isAtEnd: peek$(ctx, "isAtEnd"),
             isAtStart: peek$(ctx, "isAtStart"),
             isEndReached: state.isEndReached!,
@@ -268,16 +250,16 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             }),
         scrollToEnd: (options) =>
             new Promise<void>((resolve) => {
-                const token = startImperativeScroll(resolve);
+                const token = scrollRequestTracker.start(resolve);
                 state.pendingScrollToEnd = {
                     options,
                     resolve,
                     token,
                 };
 
-                if (scheduleImperativeScrollCommit) {
-                    scheduleImperativeScrollCommit();
-                } else {
+                scheduleImperativeScrollCommit?.();
+                supersedeInitialScroll(ctx);
+                if (!scheduleImperativeScrollCommit) {
                     state.runPendingScrollToEnd?.();
                 }
             }),

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, type Mock, mock, spyOn } from "bun:test";
 import "../setup";
 
 import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
@@ -38,6 +38,39 @@ describe("initialScrollLifecycle", () => {
         checkFinishedScrollSpy.mockRestore();
     });
 
+    for (const didStartFreshData of [false, true]) {
+        it(`only cancels previous scroll ownership for a fresh dataset (${didStartFreshData})`, () => {
+            const ctx = createMockContext();
+            const state = ctx.state;
+            const resolve = mock(() => {});
+            const cancelCompletion = mock(() => {});
+            const oldTarget = { animated: false, index: 3, isInitialScroll: true, offset: 6 };
+            state.hasHadNonEmptyData = true;
+            state.initialScroll = { index: 3, viewPosition: 1 };
+            state.scrollingTo = oldTarget;
+            state.pendingScrollResolve = resolve;
+            state.maintainingScrollAtEnd = "pending-instant";
+            state.pendingMaintainScrollAtEnd = true;
+            state.scheduledWork.register("platformScrollCompletion", cancelCompletion);
+
+            handleInitialScrollDataChange(ctx, {
+                dataLength: 25,
+                didDataChange: true,
+                didStartFreshData,
+                initialScrollAtEnd: true,
+                latestInitialScroll: { index: 24, viewPosition: 1 },
+                latestInitialScrollSessionKind: "bootstrap",
+                stylePaddingEnd: 0,
+                useBootstrapInitialScroll: false,
+            });
+
+            expect(state.scrollingTo).toBe(didStartFreshData ? undefined : oldTarget);
+            expect(state.pendingMaintainScrollAtEnd).toBe(!didStartFreshData);
+            expect(resolve).toHaveBeenCalledTimes(didStartFreshData ? 1 : 0);
+            expect(cancelCompletion).toHaveBeenCalledTimes(didStartFreshData ? 1 : 0);
+        });
+    }
+
     it("replays finished offset-only initial scrolls when data arrives after an empty mount", () => {
         const ctx = createMockContext(
             {
@@ -72,7 +105,7 @@ describe("initialScrollLifecycle", () => {
             initialScrollAtEnd: false,
             latestInitialScroll: ctx.state.initialScroll,
             latestInitialScrollSessionKind: "offset",
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
             useBootstrapInitialScroll: false,
         });
 
@@ -238,10 +271,7 @@ describe("initialScrollLifecycle", () => {
 
         expect(retargetActiveInitialScrollAtEnd(ctx)).toBe(true);
         rafCallbacks.shift()?.(0);
-        if (ctx.state.ignoreScrollFromMVCPTimeout) {
-            clearTimeout(ctx.state.ignoreScrollFromMVCPTimeout);
-            ctx.state.ignoreScrollFromMVCPTimeout = undefined;
-        }
+        ctx.state.scheduledWork.cancel("ignoreScrollFromMVCP");
         expect(advanceCurrentInitialScrollSessionSpy).not.toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({ forceScroll: true }),
@@ -294,7 +324,7 @@ describe("initialScrollLifecycle", () => {
             initialScrollAtEnd: true,
             latestInitialScroll: ctx.state.initialScroll,
             latestInitialScrollSessionKind: "bootstrap",
-            stylePaddingBottom: 0,
+            stylePaddingEnd: 0,
             useBootstrapInitialScroll: true,
         });
 

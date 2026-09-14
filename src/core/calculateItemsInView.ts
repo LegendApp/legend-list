@@ -1,7 +1,7 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
-import { createContainerItemMetadata } from "@/core/containerItemMetadata";
+import { createContainerItemMetadata, resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
@@ -14,7 +14,7 @@ import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types.internal";
+import type { InternalState, ScrollAdjustmentSource } from "@/types.internal";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getExpandedContainerPoolSize } from "@/utils/containerPool";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
@@ -42,20 +42,14 @@ function getProjectedBufferAdjustment(scrollVelocity: number, trailingBuffer: nu
 
 function scheduleRenderRangeProjectionSettle(ctx: StateContext) {
     const state = ctx.state;
-    const previousTimeout = state.timeoutRenderRangeProjectionSettle;
-    if (previousTimeout !== undefined) {
-        clearTimeout(previousTimeout);
-        state.timeouts.delete(previousTimeout);
-    }
-
-    const timeout: any = setTimeout(() => {
-        state.timeoutRenderRangeProjectionSettle = undefined;
-        state.timeouts.delete(timeout);
-        state.scrollHistory.length = 0;
-        state.triggerCalculateItemsInView?.();
-    }, RENDER_RANGE_PROJECTION_SETTLE_DELAY);
-    state.timeoutRenderRangeProjectionSettle = timeout;
-    state.timeouts.add(timeout);
+    state.scheduledWork.timeout(
+        () => {
+            state.scrollHistory.length = 0;
+            state.triggerCalculateItemsInView?.();
+        },
+        RENDER_RANGE_PROJECTION_SETTLE_DELAY,
+        "renderRangeProjection",
+    );
 }
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
@@ -328,6 +322,7 @@ export function calculateItemsInView(
         dataChanged?: boolean;
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
+        mvcpAdjustmentSource?: ScrollAdjustmentSource;
         scrollVelocity?: number;
     } = {},
 ) {
@@ -352,7 +347,7 @@ export function calculateItemsInView(
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
-        const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const { dataChanged, doMVCP, forceFullItemPositions, mvcpAdjustmentSource } = params;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
@@ -474,6 +469,7 @@ export function calculateItemsInView(
 
         // Check precomputed scroll range to see if we can skip this check
         if (
+            !state.props.layoutStrategyInternal?.findStartIndex &&
             enableScrollForNextCalculateItemsInView &&
             !suppressInitialScrollSideEffects &&
             !dataChanged &&
@@ -508,7 +504,10 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
+        const checkMVCP =
+            doMVCP && !suppressInitialScrollSideEffects
+                ? prepareMVCP(ctx, dataChanged, mvcpAdjustmentSource)
+                : undefined;
 
         if (dataChanged) {
             resetLayoutCachesForDataChange(state);
@@ -523,7 +522,9 @@ export function calculateItemsInView(
 
         updateItemPositions(ctx, dataChanged, {
             doMVCP,
-            forceFullUpdate: !!forceFullItemPositions,
+            // A changed size shifts every following position. The scrolling early-exit
+            // would leave the untouched suffix in the old coordinate space.
+            forceFullUpdate: !!forceFullItemPositions || minIndexSizeChanged !== undefined,
             optimizeForVisibleWindow,
             scrollBottomBuffered,
             scrollVelocity: speed,
@@ -582,29 +583,34 @@ export function calculateItemsInView(
             (suppressInitialScrollSideEffects ? bootstrapInitialScrollState?.targetIndexSeed : undefined) ??
             (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
-        // Go backwards from the last start position to find the first item that is in view
-        // This is an optimization to avoid looping through all items, which could slow down
-        // when scrolling at the end of a long list.
-        for (let i = loopStart; i >= 0; i--) {
-            const id = idCache[i] ?? getId(state, i);
-            const top = positions[i]!;
-            const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-            const bottom = top + size;
+        const findLayoutStart = state.props.layoutStrategyInternal?.findStartIndex;
+        if (findLayoutStart) {
+            loopStart = findLayoutStart(ctx, loopStart, scrollTopBuffered);
+        } else {
+            // Go backwards from the last start position to find the first item that is in view
+            // This is an optimization to avoid looping through all items, which could slow down
+            // when scrolling at the end of a long list.
+            for (let i = loopStart; i >= 0; i--) {
+                const id = idCache[i] ?? getId(state, i);
+                const top = positions[i]!;
+                const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+                const bottom = top + size;
 
-            if (bottom > scrollTopBuffered) {
-                loopStart = i;
-            } else {
-                break;
-            }
-        }
-
-        if (numColumns > 1) {
-            while (loopStart > 0) {
-                const loopColumn = columns[loopStart];
-                if (loopColumn === 1 || loopColumn === undefined) {
+                if (bottom > scrollTopBuffered) {
+                    loopStart = i;
+                } else {
                     break;
                 }
-                loopStart -= 1;
+            }
+
+            if (numColumns > 1) {
+                while (loopStart > 0) {
+                    const loopColumn = columns[loopStart];
+                    if (loopColumn === 1 || loopColumn === undefined) {
+                        break;
+                    }
+                    loopStart -= 1;
+                }
             }
         }
 
@@ -675,7 +681,14 @@ export function calculateItemsInView(
 
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
-        if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
+        // The row cache has one top/bottom boundary; independent columns need
+        // separate boundaries or small reverse scrolls can skip newly visible cells.
+        if (
+            !findLayoutStart &&
+            enableScrollForNextCalculateItemsInView &&
+            nextTop !== undefined &&
+            nextBottom !== undefined
+        ) {
             state.scrollForNextCalculateItemsInView =
                 isNullOrUndefined(nextTop) && isNullOrUndefined(nextBottom)
                     ? undefined
@@ -712,6 +725,31 @@ export function calculateItemsInView(
             alwaysRenderIndicesSet.has(index) ||
             (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
+        // Independent-height columns can leave offscreen items between the first
+        // and last visible indices. They must not occupy the recycled pool just
+        // because an earlier tall item still intersects the viewport.
+        const isOutsideLayoutBuffer = findLayoutStart
+            ? (index: number) => {
+                  const id = idCache[index] ?? getId(state, index);
+                  const size = sizes.get(id) ?? getItemSize(ctx, id, index, data[index]);
+                  const top = positions[index]!;
+                  return top + size <= scrollTopBuffered || top > scrollBottomBuffered;
+              }
+            : undefined;
+        if (isOutsideLayoutBuffer) {
+            for (const [key, containerIndex] of containerItemKeys) {
+                const index = indexByKey.get(key);
+                if (
+                    index !== undefined &&
+                    !isPinnedRenderIndex(index) &&
+                    !state.stickyContainerPool.has(containerIndex) &&
+                    isOutsideLayoutBuffer(index)
+                ) {
+                    pendingRemoval.push(containerIndex);
+                }
+            }
+        }
+
         // Place newly added items into containers
         if (startBuffered !== null && endBuffered !== null) {
             const needNewContainers: number[] = [];
@@ -730,6 +768,7 @@ export function calculateItemsInView(
             };
 
             for (let i = startBuffered; i <= endBuffered; i++) {
+                if (isOutsideLayoutBuffer?.(i) && !isPinnedRenderIndex(i)) continue;
                 const id = idCache[i] ?? getId(state, i);
                 if (!containerItemKeys.has(id)) {
                     needNewContainersSet.add(i);
@@ -789,6 +828,13 @@ export function calculateItemsInView(
                     if (oldKey && oldKey !== id) {
                         containerItemKeys!.delete(oldKey);
                     }
+                    // Publish coherent assignment metadata before reactive signals can render the container.
+                    // The allocated type also seeds fixed-size resolution without calling getItemType again.
+                    state.containerItemMetadata.set(
+                        containerIndex,
+                        createContainerItemMetadata(state, i, data[i], allocation.itemType),
+                    );
+
                     if (oldKey !== id) {
                         changedContainerIds ??= new Set();
                         changedContainerIds.add(containerIndex);
@@ -796,18 +842,27 @@ export function calculateItemsInView(
                         // assignment even if this physical slot later returns to the same key.
                         state.containerItemGenerations[containerIndex] =
                             (state.containerItemGenerations[containerIndex] ?? 0) + 1;
+
+                        // Opted-out lists never publish this signal at all. Containers left
+                        // undefined default to ready in the position components, so an opted-out
+                        // list pays nothing for the feature.
+                        if (state.props.hideItemsUntilMeasured) {
+                            // A dynamic row must stay measurable without painting at its
+                            // provisional recycled position. A cached size or a fixed size means
+                            // measurement has nothing to correct, so those render immediately. The
+                            // cheap check runs first so getFixedItemSize is only called for rows
+                            // we would otherwise hide.
+                            const isLayoutReady =
+                                state.sizesKnown.has(id) ||
+                                resolveContainerItemMetadata(state, containerIndex, i, data[i]).fixedItemSize !==
+                                    undefined;
+                            set$(ctx, `containerLayoutReady${containerIndex}`, isLayoutReady);
+                        }
                     }
 
                     set$(ctx, `containerItemKey${containerIndex}`, id);
                     set$(ctx, `containerItemIndex${containerIndex}`, i);
                     set$(ctx, `containerItemData${containerIndex}`, data[i]);
-
-                    // The allocated type also seeds fixed-size resolution without
-                    // calling getItemType again after this container commits.
-                    state.containerItemMetadata.set(
-                        containerIndex,
-                        createContainerItemMetadata(state, i, data[i], allocation.itemType),
-                    );
 
                     // Update cache when adding new item
                     containerItemKeys!.set(id, containerIndex);

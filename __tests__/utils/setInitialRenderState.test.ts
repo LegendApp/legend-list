@@ -125,10 +125,9 @@ describe("setInitialRenderState", () => {
                         onChange: (mode, reason) => changes.push([mode, reason]),
                     },
                 },
-                timeoutAdaptiveRender: 123 as any,
-                timeouts: new Set([123 as any]),
             },
         );
+        ctx.state.scheduledWork.timeout(() => {}, 1000, "adaptiveRender");
 
         resetInitialRenderState(ctx, {
             resetInitialScroll: true,
@@ -140,8 +139,7 @@ describe("setInitialRenderState", () => {
         expect(ctx.state.queuedInitialLayout).toBe(false);
         expect(ctx.values.get("readyToRender")).toBe(false);
         expect(ctx.values.get("adaptiveRender")).toBe("light");
-        expect(ctx.state.timeoutAdaptiveRender).toBeUndefined();
-        expect(ctx.state.timeouts.size).toBe(0);
+        expect(ctx.state.scheduledWork.has("adaptiveRender")).toBe(false);
         expect(changes).toEqual([["light", "initial"]]);
 
         setInitialRenderState(ctx, { didLayout: true });

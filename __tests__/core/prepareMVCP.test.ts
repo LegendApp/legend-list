@@ -35,6 +35,7 @@ describe("prepareMVCP", () => {
     };
 
     beforeEach(() => {
+        Platform.OS = "ios";
         const positions = [0, 100, 250, 450, 550];
 
         const indexByKey = new Map([
@@ -105,6 +106,44 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+        });
+
+        it("should not suppress native scroll events for item-size MVCP", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, undefined, "item-size"));
+
+            setLayoutValue(mockState, "positions", "item-1", 150);
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, "item-size");
+            expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
+            expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(false);
+        });
+
+        it("should preserve suppression for MVCP adjustments from other triggers", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            setLayoutValue(mockState, "positions", "item-1", 150);
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(mockState.ignoreScrollFromMVCP).toEqual({ lt: 25 });
+            expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
+            mockState.scheduledWork.cancel("ignoreScrollFromMVCP");
+        });
+
+        it("should suppress stale native scroll events for data MVCP", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+            setLayoutValue(mockState, "positions", "item-1", 150);
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, "data");
+            expect(mockState.ignoreScrollFromMVCP).toEqual({ lt: 25 });
+            expect(mockState.scheduledWork.has("ignoreScrollFromMVCP")).toBe(true);
+            mockState.scheduledWork.cancel("ignoreScrollFromMVCP");
         });
 
         it("should not adjust while an animated maintainScrollAtEnd is holding the end", () => {
@@ -244,7 +283,7 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, "data");
             });
         });
 
@@ -261,7 +300,7 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, "data");
             });
         });
 
@@ -301,7 +340,7 @@ describe("prepareMVCP", () => {
             setLayoutValue(mockState, "positions", "item-1", 150);
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, "data");
         });
 
         it("predicts the native end clamp immediately when the shrink is already known", () => {
@@ -334,7 +373,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, "data");
             expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
             expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
             expect(mockState.pendingNativeMVCPAdjust?.furthestProgressTowardAmount).toBe(0);
@@ -376,7 +415,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, "data");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -406,7 +445,7 @@ describe("prepareMVCP", () => {
             const adjustFunction = prepareMVCP(mockCtx);
 
             expect(adjustFunction).toBeUndefined();
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, "data");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -439,7 +478,7 @@ describe("prepareMVCP", () => {
             const adjustFunction = prepareMVCP(mockCtx);
 
             expect(adjustFunction).toBeUndefined();
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, "data");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -508,7 +547,7 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -300, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -300, "data");
             });
         });
 
@@ -526,7 +565,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, "data");
         });
 
         it("restores position when idsInView already contains an oversized visible row", () => {
@@ -553,7 +592,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 200, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 200, "data");
         });
     });
 
@@ -845,12 +884,12 @@ describe("prepareMVCP", () => {
                 setLayoutValue(mockState, "positions", "item-1", 170);
                 setLayoutValue(mockState, "positions", "item-2", 330);
 
-                const adjustAfterLayout = expectAdjustFunction(prepareMVCP(mockCtx));
+                const adjustAfterLayout = expectAdjustFunction(prepareMVCP(mockCtx, undefined, "item-size"));
                 adjustAfterLayout();
 
                 expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 60, true);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 10, undefined);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 60, "data");
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 10, "item-size");
             });
         });
 
@@ -894,7 +933,7 @@ describe("prepareMVCP", () => {
 
                 adjust();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, "data");
                 expect(mockState.mvcpAnchorLock?.id).toBe("item-2");
             });
         });
@@ -922,7 +961,7 @@ describe("prepareMVCP", () => {
                 adjust();
 
                 expect(requestAdjustSpy).toHaveBeenCalledTimes(1);
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, "data");
                 expect(mockState.mvcpAnchorLock?.id).toBe("item-2");
             });
         });

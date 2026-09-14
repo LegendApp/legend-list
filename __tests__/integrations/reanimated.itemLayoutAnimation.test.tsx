@@ -104,11 +104,13 @@ mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModul
 function PositionComponentHarness({
     containerId,
     itemKey,
+    layoutReady,
     position,
     PositionComponent,
 }: {
     containerId: number;
     itemKey: string;
+    layoutReady?: boolean;
     position: number;
     PositionComponent: React.ComponentType<any>;
 }) {
@@ -119,7 +121,10 @@ function PositionComponentHarness({
         set$(ctx, `containerItemKey${containerId}` as any, itemKey as any);
         set$(ctx, `containerItemIndex${containerId}` as any, 0 as any);
         set$(ctx, `containerPosition${containerId}` as any, position as any);
-    }, [containerId, ctx, itemKey, position]);
+        if (layoutReady !== undefined) {
+            set$(ctx, `containerLayoutReady${containerId}` as any, layoutReady as any);
+        }
+    }, [containerId, ctx, itemKey, layoutReady, position]);
 
     return (
         <PositionComponent horizontal={false} id={containerId} onLayout={() => {}} refView={refView} style={{}}>
@@ -503,6 +508,58 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         });
 
         expect(reanimatedScrollViewRenders.at(-1)?.contentContainerStyle).toBe(contentContainerStyle);
+    });
+
+    it("keeps an unmeasured row laid out but invisible until its layout is ready", async () => {
+        const transition = { __transition: true } as any;
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?position-layout-ready");
+
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList
+                    data={[{ id: "a" }]}
+                    estimatedItemSize={10}
+                    itemLayoutAnimation={transition}
+                    recycleItems
+                    renderItem={() => null}
+                />,
+            );
+        });
+
+        const props = legendListPropsRenders.at(-1);
+        const PositionComponent = props.positionComponentInternal as React.ComponentType<any>;
+        const flattenLastStyle = () => {
+            const style = reanimatedViewRenders.at(-1)?.style;
+            return Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+        };
+        const renderHarness = (layoutReady: boolean) => (
+            <StateProvider>
+                <PositionComponentHarness
+                    containerId={5}
+                    itemKey="a"
+                    layoutReady={layoutReady}
+                    PositionComponent={PositionComponent}
+                    position={40}
+                />
+            </StateProvider>
+        );
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(renderHarness(false));
+        });
+
+        // Still positioned, so it measures where it will actually land.
+        expect(flattenLastStyle()).toMatchObject({ opacity: 0, top: 40 });
+        expect(reanimatedViewRenders.at(-1)?.pointerEvents).toBe("none");
+
+        act(() => {
+            renderer.update(renderHarness(true));
+        });
+
+        expect(flattenLastStyle()?.opacity).toBeUndefined();
+        expect(flattenLastStyle()?.top).toBe(40);
+        expect(reanimatedViewRenders.at(-1)?.pointerEvents).toBeUndefined();
     });
 
     it("uses transform-based sticky styles for the reanimated sticky bridge", async () => {

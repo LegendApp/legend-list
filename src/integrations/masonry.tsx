@@ -23,6 +23,7 @@ type MasonryLayoutState = {
         getAdjust: () => number;
     };
     scrollingTo?: unknown;
+    sizes: Map<string, number>;
     sizesKnown: Map<string, number>;
 };
 
@@ -207,6 +208,33 @@ function updateMasonryItemPositions(
         dependencies.setTotalSize(ctx, Math.max(...columnHeights));
     }
 }
+
+// Masonry item bottoms are not ordered across columns. A short offscreen card
+// cannot prove that an earlier tall card in another column is also offscreen.
+updateMasonryItemPositions.findStartIndex = (ctx: MasonryLayoutContext, startIndex: number, scrollTop: number) => {
+    const { columns, positions, idCache, sizes } = ctx.state;
+    const numColumns = ctx.values.get("numColumns") as number;
+    const completedColumns = new Set<number>();
+    let firstIndex = startIndex;
+    for (let index = startIndex; index >= 0 && completedColumns.size < numColumns; index--) {
+        const column = columns[index];
+        const position = positions[index];
+        if (column === undefined || position === undefined) {
+            firstIndex = index;
+            continue;
+        }
+        if (completedColumns.has(column)) continue;
+        const key = idCache[index];
+        const size = sizes.get(key) ?? ctx.state.sizesKnown.get(key);
+        // Unknown measurements must not exclude a potentially visible item.
+        if (size === undefined || position + size > scrollTop) {
+            firstIndex = index;
+        } else {
+            completedColumns.add(column);
+        }
+    }
+    return firstIndex;
+};
 
 const MasonryLegendList = React.forwardRef(function MasonryLegendListComponent<ItemT>(
     { numColumns, ...rest }: MasonryLegendListProps<ItemT>,

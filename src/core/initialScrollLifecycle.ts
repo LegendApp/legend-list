@@ -3,6 +3,7 @@ import {
     schedulePreservedEndAnchorCorrection,
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
+import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
@@ -112,7 +113,7 @@ export function handleInitialScrollDataChange(
         initialScrollAtEnd: boolean;
         latestInitialScroll: StateContext["state"]["initialScroll"];
         latestInitialScrollSessionKind: "bootstrap" | "offset";
-        stylePaddingBottom: number;
+        stylePaddingEnd: number;
         useBootstrapInitialScroll: boolean;
     },
 ) {
@@ -123,12 +124,19 @@ export function handleInitialScrollDataChange(
         initialScrollAtEnd,
         latestInitialScroll,
         latestInitialScrollSessionKind,
-        stylePaddingBottom,
+        stylePaddingEnd,
         useBootstrapInitialScroll,
     } = options;
     const state = ctx.state;
     const previousInitialScrollDataLength = state.initialScrollSession?.previousDataLength ?? 0;
     const shouldUseLatestInitialScroll = dataLength > 0 && (!state.hasHadNonEmptyData || didStartFreshData);
+
+    if (didStartFreshData) {
+        // The previous dataset's scroll must not block or finish the new bootstrap.
+        cancelImperativeScroll(state);
+        state.maintainingScrollAtEnd = undefined;
+        state.pendingMaintainScrollAtEnd = false;
+    }
 
     if (dataLength > 0) {
         state.hasHadNonEmptyData = true;
@@ -157,7 +165,7 @@ export function handleInitialScrollDataChange(
             didDataChange,
             initialScrollAtEnd,
             previousDataLength: previousInitialScrollDataLength,
-            stylePaddingBottom,
+            stylePaddingEnd,
         });
         return;
     }

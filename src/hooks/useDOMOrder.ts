@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, useEffect } from "react";
 
 import { Platform } from "@/platform/Platform";
 import { listen$, peek$, useStateContext } from "@/state/state";
@@ -6,21 +6,34 @@ import { sortDOMElements } from "@/utils/reordering";
 
 export function useDOMOrder(ref: RefObject<HTMLDivElement | null>) {
     const ctx = useStateContext();
-    const debounceRef = useRef<number | undefined>(undefined);
 
     useEffect(() => {
         if (Platform.OS !== "web") {
             return;
         }
 
-        const unsubscribe = listen$(ctx, "lastPositionUpdate", () => {
-            // Clear existing timeout
-            if (debounceRef.current !== undefined) {
-                clearTimeout(debounceRef.current);
-            }
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let lastUpdateTime = 0;
+        let delay = 500;
 
-            // Schedule reordering to run 500ms after the last position change
-            debounceRef.current = setTimeout(() => {
+        const unsubscribe = listen$(ctx, "lastPositionUpdate", () => {
+            const container = ref.current;
+            const now = Date.now();
+            // Keep an immediate batch immediate. A 1s quiet period avoids jitter
+            // around the 500ms debounce boundary turning bursts into eager work.
+            delay =
+                container &&
+                "moveBefore" in container &&
+                typeof container.moveBefore === "function" &&
+                container.isConnected &&
+                (now - lastUpdateTime >= 1000 || (timeoutId !== undefined && delay === 0)) &&
+                now - ctx.state.scrollTime >= 500
+                    ? 0
+                    : 500;
+            lastUpdateTime = now;
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                timeoutId = undefined;
                 const parent = ref.current;
                 if (parent) {
                     const indexByElement = new Map<HTMLElement, number>();
@@ -33,15 +46,12 @@ export function useDOMOrder(ref: RefObject<HTMLDivElement | null>) {
                     }
                     sortDOMElements(parent, indexByElement);
                 }
-                debounceRef.current = undefined;
-            }, 500) as unknown as number;
+            }, delay);
         });
 
         return () => {
             unsubscribe();
-            if (debounceRef.current !== undefined) {
-                clearTimeout(debounceRef.current);
-            }
+            clearTimeout(timeoutId);
         };
     }, [ctx]);
 }

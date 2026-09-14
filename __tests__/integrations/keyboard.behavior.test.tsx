@@ -160,7 +160,8 @@ describe("KeyboardAwareLegendList", () => {
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorIndex).toBe(0);
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorMaxSize).toBe(44);
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorOffset).toBe(12);
-        expect(lastAnimatedLegendListProps.anchoredEndSpace.includeInEndInset).toBe(true);
+        expect(lastAnimatedLegendListProps.anchoredEndSpace.includeInEndInset).toBeUndefined();
+        expect(lastAnimatedLegendListProps.anchoredEndSpaceOwnerInternal).toBe("scroll");
 
         const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({ testID: "list" });
 
@@ -221,7 +222,7 @@ describe("KeyboardAwareLegendList", () => {
         expect(lastAnimatedLegendListProps.onContentInsetChange).toBeUndefined();
     });
 
-    it("reports measured composer height as bottom content inset", async () => {
+    it("updates composer padding without overwriting the controller-reported content inset", async () => {
         const { useKeyboardChatComposerInset } = await import("../../src/integrations/keyboard?composer-inset-test");
         let hookResult: ReturnType<typeof useKeyboardChatComposerInset> | undefined;
 
@@ -239,14 +240,13 @@ describe("KeyboardAwareLegendList", () => {
         });
 
         expect(hookResult?.contentInsetEndAdjustment.value).toBe(42);
-        expect(reportContentInsetMock).toHaveBeenCalledTimes(1);
-        expect(reportContentInsetMock).toHaveBeenNthCalledWith(1, { bottom: 42 });
+        expect(reportContentInsetMock).not.toHaveBeenCalled();
 
         act(() => {
             hookResult?.onComposerLayout({ nativeEvent: { layout: { height: 42 } } } as LayoutChangeEvent);
         });
 
-        expect(reportContentInsetMock).toHaveBeenCalledTimes(1);
+        expect(reportContentInsetMock).not.toHaveBeenCalled();
         expect(hookResult?.contentInsetEndAdjustment.value).toBe(42);
 
         act(() => {
@@ -254,11 +254,10 @@ describe("KeyboardAwareLegendList", () => {
         });
 
         expect(hookResult?.contentInsetEndAdjustment.value).toBe(64);
-        expect(reportContentInsetMock).toHaveBeenCalledTimes(2);
-        expect(reportContentInsetMock).toHaveBeenNthCalledWith(2, { bottom: 64 });
+        expect(reportContentInsetMock).not.toHaveBeenCalled();
     });
 
-    it("reports the initial composer inset when measurement matches the initial height", async () => {
+    it("keeps matching initial composer padding without reporting it as the full content inset", async () => {
         const { useKeyboardChatComposerInset } = await import(
             "../../src/integrations/keyboard?composer-inset-initial-test"
         );
@@ -278,7 +277,6 @@ describe("KeyboardAwareLegendList", () => {
         });
 
         expect(hookResult?.contentInsetEndAdjustment.value).toBe(42);
-        expect(reportContentInsetMock).toHaveBeenCalledTimes(1);
-        expect(reportContentInsetMock).toHaveBeenNthCalledWith(1, { bottom: 42 });
+        expect(reportContentInsetMock).not.toHaveBeenCalled();
     });
 });

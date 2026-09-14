@@ -14,10 +14,16 @@ const layoutEvent = {
 let lastListProps: any;
 const handlerInstances: Array<{ context: StateContext }> = [];
 
-function IntegrationContainer({ getRenderedItem, id }: { getRenderedItem: (key: string) => any; id: number }) {
+function IntegrationContainer({
+    getRenderedItem,
+    id,
+}: {
+    getRenderedItem: (key: string, containerId: number) => any;
+    id: number;
+}) {
     const [data, itemKey, extraData] = useArr$([`containerItemData${id}`, `containerItemKey${id}`, "extraData"]);
     const renderedItemInfo = React.useMemo(
-        () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),
+        () => (itemKey !== undefined ? getRenderedItem(itemKey, id) : null),
         [data, extraData, getRenderedItem, itemKey],
     );
 
@@ -147,6 +153,47 @@ afterEach(() => {
 });
 
 describe("LegendList data refresh integration", () => {
+    it("keeps a physical container assignment coherent while prepended data is pending", async () => {
+        const data = [
+            { id: "existing-0", label: "Existing 0" },
+            { id: "existing-1", label: "Existing 1" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?prepend-assignment-integration");
+        const renderer = await createRenderer(
+            <LegendList
+                data={data}
+                drawDistance={0}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushFrames();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await flushFrames(8);
+
+        const state = await getStateFromRender(renderer);
+        const assignment = Array.from(state.containerItemMetadata.entries())[0];
+        expect(assignment).toBeDefined();
+
+        const [containerId, metadata] = assignment!;
+        state.dataChangeEpoch += 1;
+        state.props.data = [{ id: "prepended", label: "Prepended" }, ...data];
+
+        const renderedItemInfo = lastListProps.getRenderedItem(metadata.itemData.id, containerId);
+
+        expect(renderedItemInfo?.index).toBe(metadata.itemIndex);
+        expect(renderedItemInfo?.item).toBe(metadata.itemData);
+
+        await cleanupRenderer(renderer);
+    });
+
     it("updates rendered content for same-key replacements and increments dataChangeEpoch", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
 

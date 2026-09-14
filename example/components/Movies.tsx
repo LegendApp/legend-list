@@ -1,179 +1,221 @@
 // Forked from https://github.com/Almouro/rn-list-comparison-movies
 // Full credit to Alex Moreaux (@Almouro) for the original code
 
-import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react-native";
-import { FlashList } from "@shopify/flash-list";
-import * as React from "react";
-import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
-import { IMAGE_SIZE, type Movie, type Playlist, getImageUrl } from "../api";
-import { playlists as playlistData } from "../api/data/playlist";
+import { Image } from "expo-image";
+import type * as React from "react";
+import { useEffect, useRef } from "react";
+import { Dimensions, FlatList, type StyleProp, StyleSheet, Text, View, type ViewStyle } from "react-native";
 
-const itemCount = 0;
+import { LegendList } from "@legendapp/list/react-native";
+import { FlashList } from "@shopify/flash-list";
+import type { DemoMetricStore } from "~/lib/demoMetrics";
+import { getImageUrl, IMAGE_SIZE, type Movie, type Playlist } from "../api";
+import { playlists as playlistData } from "../api/data/playlist";
+import playlists from "../api/data/rows.json";
+
+export type MovieListLibrary = "flatlist" | "flashlist" | "legendlist";
+
+const margins = {
+    l: 20,
+    m: 10,
+    s: 5,
+};
 
 const cardStyles = StyleSheet.create({
-    image: {
-        width: IMAGE_SIZE.width,
-        height: IMAGE_SIZE.height,
-        borderRadius: 5,
-    },
     background: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: "#272829",
     },
+    image: {
+        borderRadius: 5,
+        height: IMAGE_SIZE.height,
+        width: IMAGE_SIZE.width,
+    },
 });
 
-const MoviePortrait = ({ movie }: { movie: Movie }) => {
-    return (
-        <View style={cardStyles.image}>
-            <View style={cardStyles.background} />
-            <Image
-                key={movie.id}
-                source={{ uri: getImageUrl(movie.poster_path) }}
-                style={cardStyles.image}
-                fadeDuration={0}
-            />
-        </View>
-    );
-};
-
-const MarginBetweenItems = () => <View style={{ width: margins.s }} />;
-
-const margins = {
-    s: 5,
-    m: 10,
-    l: 20,
-};
-
 const rowStyles = StyleSheet.create({
-    title: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "white",
-        marginHorizontal: margins.m,
-        marginBottom: margins.s,
-    },
     container: {
-        minHeight: cardStyles.image.height,
         marginBottom: margins.l,
+        minHeight: cardStyles.image.height,
         width: Dimensions.get("window").width,
     },
     listContainer: {
         paddingHorizontal: margins.m,
     },
+    title: {
+        color: "white",
+        fontSize: 20,
+        fontWeight: "bold",
+        marginBottom: margins.s,
+        marginHorizontal: margins.m,
+    },
 });
-
-const rowCount = 0;
-
-const MovieRow = ({
-    playlist,
-    ListComponent,
-    isLegend,
-}: {
-    playlist: Playlist;
-    ListComponent: typeof FlashList | typeof LegendList;
-    isLegend: boolean;
-}) => {
-    const movies = playlistData[playlist.id]();
-    const DRAW_DISTANCE_ROW = 500;
-    // let opacity = 0;
-    // if (isLegend) {
-    //     const [_opacity, setOpacity] = useRecyclingState<number>(() => {
-    //         if (setOpacity) {
-    //             requestAnimationFrame(() => setOpacity(1));
-    //             return 0;
-    //         }
-    //         return 1;
-    //     });
-    //     opacity = _opacity;
-    // } else {
-    // opacity = 1;
-    // }
-
-    // const listRef = useRef<FlashList<Movie>>(null);
-
-    //   const {onMomentumScrollBegin, onScroll} = useRememberListScroll(
-    //     listRef,
-    //     playlist.id,
-    //   );
-
-    // useEffect(() => {
-    //     rowCount++;
-    //     console.log("rowCount", rowCount);
-    // }, []);
-
-    // const fadeAnim = useRef(new Animated.Value(0)).current;
-    // // useEffect(() => {
-    // //     itemCount++;
-    // //     console.log("itemCount", itemCount);
-    // // }, []);
-
-    // useRecyclingEffect(() => {
-    //     console.log("useRecyclingEffect");
-    //     fadeAnim.setValue(0);
-    //     Animated.timing(fadeAnim, {
-    //         toValue: 1,
-    //         duration: 2000,
-    //         useNativeDriver: true,
-    //     }).start();
-    // });
-
-    return (
-        <React.Fragment>
-            <Text numberOfLines={1} style={rowStyles.title}>
-                {playlist.title}
-            </Text>
-            <View style={[rowStyles.container]}>
-                <ListComponent
-                    contentContainerStyle={rowStyles.listContainer}
-                    // See https://shopify.github.io/flash-list/docs/fundamentals/performant-components/#remove-key-prop
-                    // keyExtractor={(movie: Movie, index: number) => (isLegend ? movie.id.toString() : index.toString())}
-                    // keyExtractor={(movie: Movie, index: number) => index.toString()}
-                    ItemSeparatorComponent={MarginBetweenItems}
-                    horizontal
-                    estimatedItemSize={cardStyles.image.width + 5}
-                    data={movies}
-                    //   recycleItems
-                    renderItem={({ item }: { item: Movie }) => <MoviePortrait movie={item} />}
-                    // ref={listRef}
-                    //   onMomentumScrollBegin={onMomentumScrollBegin}
-                    //   onScroll={onScroll}
-                    drawDistance={DRAW_DISTANCE_ROW}
-                />
-            </View>
-        </React.Fragment>
-    );
-};
 
 const listStyles = StyleSheet.create({
     container: {
         backgroundColor: "black",
         paddingVertical: margins.m,
     },
+    fill: {
+        ...StyleSheet.absoluteFillObject,
+    },
 });
 
-const Movies = ({ isLegend, recycleItems }: { isLegend: boolean; recycleItems?: boolean }) => {
-    const playlists = require("../api/data/rows.json");
+function MoviePortrait({ metrics, movie }: { metrics?: DemoMetricStore; movie: Movie }) {
+    const previousMovieId = useRef(movie.id);
 
-    const ListComponent: typeof LegendList = isLegend ? LegendList : (FlashList as any);
+    metrics?.increment("rowRenders");
+    if (previousMovieId.current !== movie.id) {
+        previousMovieId.current = movie.id;
+        metrics?.increment("reassignments");
+    }
 
-    // Flashlist appears to internally multiple the draw distance by 2-3 so increase the draw distance
-    // for the Legend version to get the same effect
-    const DRAW_DISTANCE = 500;
-    console.log("is legend", isLegend, DRAW_DISTANCE);
+    useEffect(() => {
+        return metrics?.trackMount("mounted");
+    }, [metrics]);
 
     return (
-        <ListComponent
-            data={playlists}
-            keyExtractor={(playlist: Playlist) => playlist.id}
-            estimatedItemSize={cardStyles.image.height + 52}
-            renderItem={({ item: playlist }: LegendListRenderItemProps<Playlist>) => (
-                <MovieRow ListComponent={ListComponent} isLegend={isLegend} playlist={playlist} />
-            )}
-            contentContainerStyle={listStyles.container}
-            drawDistance={DRAW_DISTANCE}
-            recycleItems={recycleItems}
-        />
+        <View style={cardStyles.image}>
+            <View style={cardStyles.background} />
+            <Image source={getImageUrl(movie.poster_path)} style={cardStyles.image} transition={0} />
+        </View>
     );
+}
+
+function MarginBetweenItems() {
+    return <View style={{ width: margins.s }} />;
+}
+
+type LibraryListProps<ItemT> = {
+    contentContainerStyle?: StyleProp<ViewStyle>;
+    data: readonly ItemT[];
+    drawDistance: number;
+    estimatedItemSize: number;
+    horizontal?: boolean;
+    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    keyExtractor?: (item: ItemT, index: number) => string;
+    library: MovieListLibrary;
+    recycleItems?: boolean;
+    renderItem: (info: { index: number; item: ItemT }) => React.ReactElement;
+    style?: StyleProp<ViewStyle>;
 };
 
-export default Movies;
+function LibraryList<ItemT>({
+    contentContainerStyle,
+    data,
+    drawDistance,
+    estimatedItemSize,
+    horizontal,
+    ItemSeparatorComponent,
+    keyExtractor,
+    library,
+    recycleItems,
+    renderItem,
+    style,
+}: LibraryListProps<ItemT>) {
+    let list = (
+        <LegendList
+            contentContainerStyle={contentContainerStyle}
+            data={data}
+            drawDistance={drawDistance}
+            estimatedItemSize={estimatedItemSize}
+            horizontal={horizontal}
+            ItemSeparatorComponent={ItemSeparatorComponent}
+            keyExtractor={keyExtractor}
+            recycleItems={recycleItems}
+            renderItem={renderItem}
+            style={style}
+        />
+    );
+
+    if (library === "flatlist") {
+        list = (
+            <FlatList
+                contentContainerStyle={contentContainerStyle}
+                data={data}
+                horizontal={horizontal}
+                ItemSeparatorComponent={ItemSeparatorComponent}
+                keyExtractor={keyExtractor}
+                renderItem={renderItem}
+                style={style}
+            />
+        );
+    } else if (library === "flashlist") {
+        list = (
+            <FlashList
+                contentContainerStyle={contentContainerStyle}
+                data={data}
+                drawDistance={drawDistance}
+                horizontal={horizontal}
+                ItemSeparatorComponent={ItemSeparatorComponent}
+                keyExtractor={keyExtractor}
+                renderItem={renderItem}
+                style={style}
+            />
+        );
+    }
+
+    return list;
+}
+
+function MovieRow({
+    library,
+    metrics,
+    playlist,
+    recycleItems,
+}: {
+    library: MovieListLibrary;
+    metrics?: DemoMetricStore;
+    playlist: Playlist;
+    recycleItems?: boolean;
+}) {
+    const movies = playlistData[playlist.id]();
+
+    return (
+        <>
+            <Text numberOfLines={1} style={rowStyles.title}>
+                {playlist.title}
+            </Text>
+            <View style={rowStyles.container}>
+                <LibraryList
+                    contentContainerStyle={rowStyles.listContainer}
+                    data={movies}
+                    drawDistance={500}
+                    estimatedItemSize={cardStyles.image.width + margins.s}
+                    horizontal
+                    ItemSeparatorComponent={MarginBetweenItems}
+                    keyExtractor={(movie) => movie.id.toString()}
+                    library={library}
+                    recycleItems={recycleItems}
+                    renderItem={({ item }) => <MoviePortrait metrics={metrics} movie={item} />}
+                />
+            </View>
+        </>
+    );
+}
+
+export default function Movies({
+    library,
+    metrics,
+    recycleItems,
+}: {
+    library: MovieListLibrary;
+    metrics?: DemoMetricStore;
+    recycleItems?: boolean;
+}) {
+    return (
+        <LibraryList
+            contentContainerStyle={listStyles.container}
+            data={playlists}
+            drawDistance={500}
+            estimatedItemSize={cardStyles.image.height + 52}
+            keyExtractor={(playlist) => playlist.id}
+            library={library}
+            recycleItems={recycleItems}
+            renderItem={({ item }) => (
+                <MovieRow library={library} metrics={metrics} playlist={item} recycleItems={recycleItems} />
+            )}
+            style={listStyles.fill}
+        />
+    );
+}

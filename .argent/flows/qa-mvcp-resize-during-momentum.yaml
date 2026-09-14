@@ -1,0 +1,26 @@
+steps:
+  - echo: Launch the fixture catalog at its deterministic top position.
+  - launch: com.legendapp.listtest
+  - await: { visible: { id: open-scroll-regression-qa }, timeout: 15000 }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open the isolated scroll regression fixture.
+  - tap: { id: open-scroll-regression-qa }
+  - await: { visible: { id: qa-open-mvcp-momentum } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open MVCP momentum resize and arm an item-size change for momentum start.
+  - tap: { id: qa-open-mvcp-momentum }
+  - await: { visible: { id: qa-mvcp-arm } }
+  - await: { idle: true, stableFor: 600 }
+  - tap: { id: qa-mvcp-arm }
+  - await: { visible: { id: qa-mvcp-armed } }
+  - echo: Fling forward; this velocity-sensitive raw swipe is the momentum behavior
+      under test.
+  - tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.82
+      toX: 0.5
+      toY: 0.3
+      durationMs: 180
+  - await: { visible: { id: qa-mvcp-resize-applied } }
+  - await: { visible: { id: qa-mvcp-momentum-pass } }

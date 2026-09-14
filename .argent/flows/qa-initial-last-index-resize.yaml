@@ -1,0 +1,18 @@
+steps:
+  - echo: Launch the fixture catalog at its deterministic top position.
+  - launch: com.legendapp.listtest
+  - await: { visible: { id: open-scroll-regression-qa }, timeout: 15000 }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open the isolated scroll regression fixture.
+  - tap: { id: open-scroll-regression-qa }
+  - await: { visible: { id: qa-open-initial-last } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open last-index resize and prove numeric initialScrollIndex bottom-aligns
+      the final item.
+  - tap: { id: qa-open-initial-last }
+  - await: { visible: { id: qa-initial-last-baseline } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Expand the viewport; expect the preserved last target to remain
+      bottom-aligned.
+  - tap: { id: qa-initial-last-resize-action }
+  - await: { visible: { id: qa-initial-last-resize-pass } }

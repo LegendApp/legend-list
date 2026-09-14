@@ -1,0 +1,16 @@
+steps:
+  - echo: Launch the fixture catalog at its deterministic top position.
+  - launch: com.legendapp.listtest
+  - await: { visible: { id: open-scroll-regression-qa }, timeout: 15000 }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open the isolated scroll regression fixture.
+  - tap: { id: open-scroll-regression-qa }
+  - await: { visible: { id: qa-open-rapid-append } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Open rapid appends and prove the list initially owns the end.
+  - tap: { id: qa-open-rapid-append }
+  - await: { visible: { id: qa-rapid-baseline-tail } }
+  - await: { idle: true, stableFor: 600 }
+  - echo: Append four overlapping batches; expect the final tail to remain visible.
+  - tap: { id: qa-rapid-append-action }
+  - await: { visible: { id: qa-rapid-append-pass } }

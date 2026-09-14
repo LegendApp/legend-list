@@ -10,9 +10,12 @@ const currentVersion = packageJson.version;
 const changelog = readFileSync("./CHANGELOG.md", "utf-8");
 const prompt = [
     "Update CHANGELOG.md with the changes in the latest version.",
-    "Write entries in plain, human language that explains what users should notice.",
+    "Treat the changelog as curated release notes, not a commit inventory.",
+    "Group related commits into one entry for each user-facing change and use the fewest entries that remain complete.",
+    "Write each entry as one concise sentence in plain language that explains what users should notice.",
     "Avoid buzzwords and vague release-note phrasing like optimized, enhanced, improved, streamlined, or robust unless the sentence says what actually changed.",
-    "Keep useful implementation details only when they make the behavior clearer.",
+    "Omit implementation details, exhaustive platform or edge-case lists, tests, fixtures, diagnostics, and internal refactors unless users need them to understand the behavior.",
+    "Include an important limitation in the relevant entry instead of giving its development warning or enforcement a separate entry.",
     "If a commit message includes an issue reference like #123, include that issue reference in the relevant changelog entry.",
     "Use the existing changelog format and see changelog.mdc for more details.",
 ].join(" ");

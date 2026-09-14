@@ -3,16 +3,18 @@ import { LogBox, StyleSheet, View } from "react-native";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
+import type { DemoMetricStore } from "~/lib/demoMetrics";
 import { type Item, renderFixedCardItem, renderItem } from "~/screens/fixtures/shared/cardsRenderItem";
 
 LogBox.ignoreLogs(["Open debugger"]);
 
 interface CardsProps {
     fixedItemSize?: number;
+    metrics?: DemoMetricStore;
     numColumns?: number;
 }
 
-export default function Cards({ fixedItemSize, numColumns = 1 }: CardsProps) {
+export default function Cards({ fixedItemSize, metrics, numColumns = 1 }: CardsProps) {
     const listRef = useRef<LegendListRef>(null);
 
     const [data, _setData] = useState<Item[]>(
@@ -28,7 +30,7 @@ export default function Cards({ fixedItemSize, numColumns = 1 }: CardsProps) {
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={fixedItemSize ?? ESTIMATED_ITEM_LENGTH}
-                extraData={{ recycleState: true }}
+                extraData={{ metrics, recycleState: true }}
                 getFixedItemSize={fixedItemSize !== undefined ? () => fixedItemSize : undefined}
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={<View />}

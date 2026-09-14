@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import { finishInitialScroll } from "../../src/core/finishInitialScroll";
@@ -8,6 +8,34 @@ import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("initialScrollSession", () => {
+    for (const changedDataset of [false, true]) {
+        it(`does not commit an old completion frame into a fresh dataset (${changedDataset})`, () => {
+            const ctx = createMockContext();
+            const onFinished = mock(() => {});
+            const originalRAF = globalThis.requestAnimationFrame;
+            let complete: FrameRequestCallback | undefined;
+            globalThis.requestAnimationFrame = (callback) => {
+                complete = callback;
+                return 1;
+            };
+            ctx.state.didFinishInitialScroll = false;
+            ctx.state.freshDataTransitionEpoch = 0;
+            try {
+                finishInitialScroll(ctx, { onFinished, waitForCompletionFrame: true });
+                if (changedDataset) ctx.state.freshDataTransitionEpoch += 1;
+                const target = { index: 24, viewPosition: 1 };
+                ctx.state.initialScroll = target;
+                expect(complete).toBeDefined();
+                complete?.(0);
+                expect(ctx.state.didFinishInitialScroll).toBe(!changedDataset);
+                expect(ctx.state.initialScroll).toBe(changedDataset ? target : undefined);
+                expect(onFinished).toHaveBeenCalledTimes(1);
+            } finally {
+                globalThis.requestAnimationFrame = originalRAF;
+            }
+        });
+    }
+
     it("derives an offset session from legacy offset-only state", () => {
         const state = createMockState({
             initialScroll: {
