@@ -61,7 +61,6 @@ export function createMockState(
         // Required by CheckAtBottom and SetDidLayout
         loadStartTime: Date.now(),
         maintainingScrollAtEnd: undefined,
-        minIndexSizeChanged: undefined,
         nativeContentInset: undefined,
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
@@ -69,6 +68,7 @@ export function createMockState(
         pendingDataComparison: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
+        positionRecalculationStartIndex: undefined,
         positions: [],
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,

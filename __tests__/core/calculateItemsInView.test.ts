@@ -2187,11 +2187,11 @@ describe("calculateItemsInView", () => {
         });
     });
 
-    describe("minIndexSizeChanged optimization", () => {
+    describe("positionRecalculationStartIndex optimization", () => {
         it("recomputes the complete affected suffix when a size changes during scrolling", () => {
             setupFixedSizeItems(100, 50);
             mockState.props.getFixedItemSize = undefined;
-            mockState.minIndexSizeChanged = 10;
+            mockState.positionRecalculationStartIndex = 10;
             mockState.sizes.set("item_10", 1000);
             mockState.sizesKnown.set("item_10", 1000);
 
@@ -2207,9 +2207,9 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("should use minIndexSizeChanged to optimize loop start", () => {
+        it("should use positionRecalculationStartIndex to optimize loop start", () => {
             mockState.props.data = Array.from({ length: 100 }, (_, i) => ({ id: i }));
-            mockState.minIndexSizeChanged = 50;
+            mockState.positionRecalculationStartIndex = 50;
             mockState.startBufferedId = "item_80";
             mockState.indexByKey.set("item_80", 80);
 
@@ -2224,7 +2224,7 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx);
 
             expect(mockState.idsInView).toBeDefined();
-            expect(mockState.minIndexSizeChanged).toBeUndefined(); // Should be cleared
+            expect(mockState.positionRecalculationStartIndex).toBeUndefined(); // Should be cleared
         });
     });
 

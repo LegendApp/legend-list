@@ -188,7 +188,7 @@ function applyItemSize(
     // Need to calculate if haven't all laid out yet
     let needsRecalculate = !didContainersLayout;
     let shouldMaintainScrollAtEnd = false;
-    let minIndexSizeChanged: number | undefined;
+    let positionRecalculationStartIndex: number | undefined;
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -196,7 +196,8 @@ function applyItemSize(
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
     if (diff !== 0) {
-        minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
+        positionRecalculationStartIndex =
+            positionRecalculationStartIndex !== undefined ? Math.min(positionRecalculationStartIndex, index) : index;
 
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
@@ -223,11 +224,11 @@ function applyItemSize(
     }
 
     // Update state with minimum changed index
-    if (minIndexSizeChanged !== undefined) {
-        state.minIndexSizeChanged =
-            state.minIndexSizeChanged !== undefined
-                ? Math.min(state.minIndexSizeChanged, minIndexSizeChanged)
-                : minIndexSizeChanged;
+    if (positionRecalculationStartIndex !== undefined) {
+        state.positionRecalculationStartIndex =
+            state.positionRecalculationStartIndex !== undefined
+                ? Math.min(state.positionRecalculationStartIndex, positionRecalculationStartIndex)
+                : positionRecalculationStartIndex;
     }
 
     updateOtherAxisSizeIfNeeded(ctx, sizeObj, horizontal);

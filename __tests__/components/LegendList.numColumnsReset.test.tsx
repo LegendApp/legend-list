@@ -25,7 +25,7 @@ function callThroughCheckResetContainers(
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }
-        state.minIndexSizeChanged = 0;
+        state.positionRecalculationStartIndex = 0;
         state.scrollForNextCalculateItemsInView = undefined;
     }
 

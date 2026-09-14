@@ -209,7 +209,7 @@ export interface InternalState {
     lastScrollDelta: number;
     loadStartTime: number;
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
-    minIndexSizeChanged: number | undefined;
+    positionRecalculationStartIndex: number | undefined;
     mvcpAnchorLock?: {
         id: string;
         position: number;

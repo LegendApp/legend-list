@@ -130,7 +130,7 @@ describe("checkResetContainers", () => {
         state.sizes.set("item-1", 120);
         state.sizesKnown.set("item-1", 120);
         state.averageSizes[""] = { avg: 120, num: 1 };
-        state.minIndexSizeChanged = 4;
+        state.positionRecalculationStartIndex = 4;
         state.scrollForNextCalculateItemsInView = { bottom: 100, top: 0 };
 
         checkResetContainers(ctx, newData, { didColumnsChange: true });
@@ -142,7 +142,7 @@ describe("checkResetContainers", () => {
         expect(state.sizes.size).toBe(0);
         expect(state.sizesKnown.size).toBe(0);
         expect(Object.keys(state.averageSizes)).toEqual([]);
-        expect(state.minIndexSizeChanged).toBe(0);
+        expect(state.positionRecalculationStartIndex).toBe(0);
         expect(state.scrollForNextCalculateItemsInView).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         expect(checkThresholdsSpy).toHaveBeenCalledWith(ctx);

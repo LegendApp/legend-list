@@ -334,7 +334,7 @@ export function calculateItemsInView(
             enableScrollForNextCalculateItemsInView,
             idCache,
             indexByKey,
-            minIndexSizeChanged,
+            positionRecalculationStartIndex,
             positions,
             props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
@@ -513,17 +513,17 @@ export function calculateItemsInView(
         }
 
         // Update all positions upfront so we can assume they're correct
-        // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
+        // Start at the earliest invalidated position instead of recalculating from index 0.
         const startIndex =
-            forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
+            forceFullItemPositions || dataChanged ? 0 : (positionRecalculationStartIndex ?? state.startBuffered ?? 0);
         const optimizeForVisibleWindow =
-            !forceFullItemPositions && !dataChanged && numColumns > 1 && minIndexSizeChanged !== undefined;
+            !forceFullItemPositions && !dataChanged && numColumns > 1 && positionRecalculationStartIndex !== undefined;
 
         updateItemPositions(ctx, dataChanged, {
             doMVCP,
             // A changed size shifts every following position. The scrolling early-exit
             // would leave the untouched suffix in the old coordinate space.
-            forceFullUpdate: !!forceFullItemPositions || minIndexSizeChanged !== undefined,
+            forceFullUpdate: !!forceFullItemPositions || positionRecalculationStartIndex !== undefined,
             optimizeForVisibleWindow,
             scrollBottomBuffered,
             scrollVelocity: speed,
@@ -535,9 +535,9 @@ export function calculateItemsInView(
         // the new tail instead of the pre-update end-of-list.
         totalSize = getContentSize(ctx);
 
-        if (minIndexSizeChanged !== undefined) {
-            // Clear minIndexSizeChanged after using it for position updates
-            state.minIndexSizeChanged = undefined;
+        if (positionRecalculationStartIndex !== undefined) {
+            // Clear the invalidation marker after using it for position updates.
+            state.positionRecalculationStartIndex = undefined;
         }
 
         let protectedContainerKeys: Set<string> | undefined;
