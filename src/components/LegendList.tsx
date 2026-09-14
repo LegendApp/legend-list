@@ -27,7 +27,7 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { getContentInsetTop } from "@/core/clampScrollOffset";
-import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
+import { invalidateContainerMeasurements, invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { resetContainerLayoutReady } from "@/core/containerLayoutReady";
 import { applyDataSourceMutationBatches } from "@/core/DataSourceMutationCoordinator";
 import { DataSourceObserver } from "@/core/DataSourceObserver";
@@ -573,6 +573,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const isFirstLocal = state.isFirst;
     const didDataSourceChangeLocal = state.props.dataSource !== dataSource;
     if (didDataSourceChangeLocal) {
+        invalidateContainerMeasurements(state);
         state.dataSourceNeedsReset = false;
         state.dataSourceAnchorPositions = undefined;
         state.dataSourceMutationApplied = false;
@@ -756,6 +757,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                             }
                         }
                         if (result.resetReason) {
+                            invalidateContainerMeasurements(state);
                             state.dataSourceNeedsReset = true;
                             state.dataSourceResetReason = result.resetReason;
                             state.dataSourceSpanInvalidationIndex = 0;
@@ -771,6 +773,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     scheduleDataSourceCommit();
                 },
                 onReset: ({ batch, reason }) => {
+                    invalidateContainerMeasurements(state);
                     state.pendingDataSourceBatches ??= [];
                     state.pendingDataSourceBatches.push(batch);
                     state.dataSourcePreviousLength ??= batch.previousLength;
