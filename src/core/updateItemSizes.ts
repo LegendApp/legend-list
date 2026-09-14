@@ -125,21 +125,31 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
     const result: ItemSizeUpdateResult = {};
     const previousTotalSize = state.totalSize;
 
-    for (const measurement of measurements) {
-        // Measurements can arrive after recycling. Only explicit imperative sizes,
-        // which have no container id, bypass the current-assignment check.
-        const ownsMeasuredItem =
-            measurement.containerId === undefined ||
-            peek$(ctx, `containerItemKey${measurement.containerId}`) === measurement.itemKey;
-        if (ownsMeasuredItem) {
-            const index = state.indexByKey.get(measurement.itemKey);
-            const itemData = index === undefined ? undefined : state.props.data?.[index];
-            const metadata =
-                measurement.containerId !== undefined && index !== undefined && itemData !== undefined
-                    ? resolveContainerItemMetadata(state, measurement.containerId, index, itemData)
-                    : undefined;
-            const nextResult = applyItemSize(ctx, measurement.itemKey, measurement.size, metadata);
-            mergeItemSizeUpdateResult(result, nextResult);
+    try {
+        for (const measurement of measurements) {
+            // Measurements can arrive after recycling. Only explicit imperative sizes,
+            // which have no container id, bypass the current-assignment check.
+            const ownsMeasuredItem =
+                measurement.containerId === undefined ||
+                peek$(ctx, `containerItemKey${measurement.containerId}`) === measurement.itemKey;
+            if (ownsMeasuredItem) {
+                const index = state.indexByKey.get(measurement.itemKey);
+                const itemData = index === undefined ? undefined : state.props.data?.[index];
+                const metadata =
+                    measurement.containerId !== undefined && index !== undefined && itemData !== undefined
+                        ? resolveContainerItemMetadata(state, measurement.containerId, index, itemData)
+                        : undefined;
+                const nextResult = applyItemSize(ctx, measurement.itemKey, measurement.size, metadata);
+                mergeItemSizeUpdateResult(result, nextResult);
+            }
+        }
+    } finally {
+        // Keep the internal total current while measuring, but publish only the batch result.
+        // Publish before scroll recalculation, including when an item callback interrupts the batch.
+        // An unchanged total can include old-architecture pending shrink or temporary padding;
+        // leave those published sizes alone.
+        if (state.totalSize !== previousTotalSize) {
+            set$(ctx, "totalSize", state.totalSize);
         }
     }
 

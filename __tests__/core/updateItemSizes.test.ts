@@ -204,6 +204,19 @@ describe("updateItemSizes", () => {
         }
     });
 
+    it("publishes applied measurements even if onItemSizeChanged throws", () => {
+        const totals: number[] = [];
+        listen$(mockCtx, "totalSize", (value) => totals.push(value));
+        mockState.props.onItemSizeChanged = () => {
+            throw new Error("item callback failed");
+        };
+        expect(() => updateItemSizesBatch(mockCtx, [{ itemKey: "item_0", size: { height: 150, width: 400 } }])).toThrow(
+            "item callback failed",
+        );
+        expect(totals).toEqual([150]);
+        expect(mockCtx.values.get("totalSize")).toBe(mockState.totalSize);
+    });
+
     it("keeps an old-architecture initial shrink pending instead of publishing it", () => {
         mock.module("@/constants-platform", () => ({ IsNewArchitecture: false }));
         mockCtx.values.set("totalSize", 300);
