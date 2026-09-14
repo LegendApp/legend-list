@@ -12,7 +12,7 @@ import {
 
 import { IsNewArchitecture } from "@/constants-platform";
 import { hasViewabilityConsumers, requestViewabilityRecalculation } from "@/core/viewability";
-import { useInit } from "@/hooks/useInit";
+import { useLatestRef } from "@/hooks/useLatestRef";
 import { listen$, peek$, useArr$, useSelector$, useStateContext } from "@/state/state";
 import type {
     AdaptiveRender,
@@ -109,30 +109,22 @@ export function useViewability<ItemT = any>(callback: ViewabilityCallback<ItemT>
     const ctx = useStateContext();
     const containerContext = useContextContainer();
 
-    useInit(() => {
-        // Fail gracefully if used outside context
-        if (!containerContext) {
-            return;
-        }
-
-        const { containerId } = containerContext;
-        const key = containerId + (configId ?? "");
-        const value = ctx.mapViewabilityValues.get(key);
-        if (value) {
-            callback(value);
-        }
-    });
+    const callbackRef = useLatestRef(callback);
+    const containerId = containerContext?.containerId;
 
     useEffect(() => {
         // Fail gracefully if used outside context
-        if (!containerContext) {
+        if (containerId === undefined) {
             return;
         }
 
-        const { containerId } = containerContext;
         const key = containerId + (configId ?? "");
         const hadConsumers = hasViewabilityConsumers(ctx);
-        ctx.mapViewabilityCallbacks.set(key, callback);
+        ctx.mapViewabilityCallbacks.set(key, (nextValue) => callbackRef.current(nextValue));
+        // An earlier sibling may have calculated visibility after this row rendered
+        // but before its effect subscribed. Replay the current snapshot at subscription.
+        const value = ctx.mapViewabilityValues.get(key);
+        if (value) callbackRef.current(value);
         const cancelConfigWarning = IS_DEV
             ? scheduleViewabilityConfigWarning(ctx, "useViewability", configId)
             : undefined;
@@ -144,35 +136,26 @@ export function useViewability<ItemT = any>(callback: ViewabilityCallback<ItemT>
             cancelConfigWarning?.();
             ctx.mapViewabilityCallbacks.delete(key);
         };
-    }, [ctx, callback, configId, containerContext]);
+    }, [ctx, callbackRef, configId, containerId]);
 }
 
 export function useViewabilityAmount<ItemT = any>(callback: ViewabilityAmountCallback<ItemT>) {
     const ctx = useStateContext();
     const containerContext = useContextContainer();
 
-    useInit(() => {
-        // Fail gracefully if used outside context
-        if (!containerContext) {
-            return;
-        }
-
-        const { containerId } = containerContext;
-        const value = ctx.mapViewabilityAmountValues.get(containerId);
-        if (value) {
-            callback(value);
-        }
-    });
+    const callbackRef = useLatestRef(callback);
+    const containerId = containerContext?.containerId;
 
     useEffect(() => {
         // Fail gracefully if used outside context
-        if (!containerContext) {
+        if (containerId === undefined) {
             return;
         }
 
-        const { containerId } = containerContext;
         const hadConsumers = hasViewabilityConsumers(ctx);
-        ctx.mapViewabilityAmountCallbacks.set(containerId, callback);
+        ctx.mapViewabilityAmountCallbacks.set(containerId, (nextValue) => callbackRef.current(nextValue));
+        const value = ctx.mapViewabilityAmountValues.get(containerId);
+        if (value) callbackRef.current(value);
         const cancelConfigWarning = IS_DEV ? scheduleViewabilityConfigWarning(ctx, "useViewabilityAmount") : undefined;
         if (!hadConsumers) {
             requestViewabilityRecalculation(ctx);
@@ -182,7 +165,7 @@ export function useViewabilityAmount<ItemT = any>(callback: ViewabilityAmountCal
             cancelConfigWarning?.();
             ctx.mapViewabilityAmountCallbacks.delete(containerId);
         };
-    }, [ctx, callback, containerContext]);
+    }, [ctx, callbackRef, containerId]);
 }
 
 export function useRecyclingEffect(effect: (info: LegendListRecyclingState<unknown>) => void | (() => void)) {

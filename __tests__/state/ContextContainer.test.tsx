@@ -345,7 +345,7 @@ describe("ContextContainer hooks", () => {
             // Verify callback was registered
             const key = `${signals.containerId}`;
             expect(capturedCtx.mapViewabilityCallbacks.has(key)).toBe(true);
-            expect(capturedCtx.mapViewabilityCallbacks.get(key)).toBe(callback);
+            expect(capturedCtx.mapViewabilityCallbacks.get(key)).toBeFunction();
 
             unmount();
         });
@@ -473,7 +473,7 @@ describe("ContextContainer hooks", () => {
 
             // Verify callback was registered
             expect(capturedCtx.mapViewabilityAmountCallbacks.has(signals.containerId)).toBe(true);
-            expect(capturedCtx.mapViewabilityAmountCallbacks.get(signals.containerId)).toBe(callback);
+            expect(capturedCtx.mapViewabilityAmountCallbacks.get(signals.containerId)).toBeFunction();
 
             unmount();
         });
