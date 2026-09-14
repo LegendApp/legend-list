@@ -185,6 +185,9 @@ function updateViewabilityState(
             ? -1
             : Math.min(sourceLength - 1, Math.max(0, transformDataSourceIndex(index, operations)));
     for (const [configId, viewabilityState] of ctx.mapViewabilityConfigStates) {
+        for (const key of viewabilityState.minimumViewTime?.since.keys() ?? []) {
+            if (!nextIndexByKey.has(key)) viewabilityState.minimumViewTime!.since.delete(key);
+        }
         const changed: ViewToken[] = [];
         const viewableItems: ViewToken[] = [];
         for (const token of viewabilityState.viewableItems) {

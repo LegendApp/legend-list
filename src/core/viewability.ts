@@ -1,5 +1,5 @@
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
-import { getIndexedData } from "@/core/IndexedData";
+import { getIndexedData, type IndexedData } from "@/core/IndexedData";
 import { getLayoutOffset, getLayoutSize, type LayoutAccess } from "@/core/layoutAccessors";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import type { StateContext } from "@/state/state";
@@ -14,11 +14,10 @@ import type { InternalState, LegendListPropsBase } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { findContainerId, warnDevOnce } from "@/utils/helpers";
 
-type ViewabilityConfigState = StateContext["mapViewabilityConfigStates"] extends Map<string, infer State>
-    ? State
-    : never;
-
-function ensureViewabilityState(ctx: StateContext, configId: string): ViewabilityConfigState {
+function ensureViewabilityState(
+    ctx: StateContext,
+    configId: string,
+): StateContext["mapViewabilityConfigStates"] extends Map<string, infer Value> ? Value : never {
     // Lazily initialize the per-list map if absent (e.g., in tests with manual contexts)
     let map = ctx.mapViewabilityConfigStates;
     if (!map) {
@@ -66,13 +65,11 @@ export function setupViewability(
             warnDevOnce("viewability-duplicate-config-id", "Each viewability config must have a unique id.");
         }
         configIds.add(id);
-        const viewabilityState = ctx?.mapViewabilityConfigStates.get(id);
-        if (viewabilityState) viewabilityState.pair = pair;
     }
     if (ctx) {
         for (const id of ctx.mapViewabilityConfigStates.keys()) {
             if (!configIds.has(id)) {
-                ctx.state.scheduledWork.cancel(`viewability${id}`);
+                ctx.state.scheduledWork.cancel(`viewability:${id}`);
                 ctx.mapViewabilityConfigStates.delete(id);
             }
         }
@@ -136,9 +133,13 @@ export function updateViewableItems(
     layout?: LayoutAccess,
 ) {
     const state = ctx.state;
+    const indexedData = getIndexedData(state);
     for (let pairIndex = 0; pairIndex < viewabilityConfigCallbackPairs.length; pairIndex++) {
         const viewabilityConfigCallbackPair = viewabilityConfigCallbackPairs[pairIndex];
         if (viewabilityConfigCallbackPair.viewabilityConfig.waitForInteraction && !state.hasViewabilityInteraction) {
+            state.scheduledWork.cancel(`viewability:${viewabilityConfigCallbackPair.viewabilityConfig.id!}`);
+            const configState = ctx.mapViewabilityConfigStates.get(viewabilityConfigCallbackPair.viewabilityConfig.id!);
+            if (configState) configState.minimumViewTime = undefined;
             continue;
         }
         const publishAmounts = pairIndex === viewabilityConfigCallbackPairs.length - 1;
@@ -147,41 +148,49 @@ export function updateViewableItems(
         viewabilityState.end = end;
         viewabilityState.startBuffered = startBuffered;
         viewabilityState.endBuffered = endBuffered;
-        viewabilityState.pair = viewabilityConfigCallbackPair;
-        viewabilityState.scrollSize = scrollSize;
-        updateViewableItemsWithConfig(viewabilityState, state, ctx, layout, publishAmounts);
+        updateViewableItemsWithConfig(
+            indexedData,
+            viewabilityConfigCallbackPair,
+            state,
+            ctx,
+            scrollSize,
+            layout,
+            publishAmounts,
+        );
     }
 }
 
 function updateViewableItemsWithConfig(
-    viewabilityState: ViewabilityConfigState,
+    data: IndexedData<any>,
+    viewabilityConfigCallbackPair: ViewabilityConfigCallbackPair<any>,
     state: InternalState,
     ctx: StateContext,
+    scrollSize: number,
     layout?: LayoutAccess,
     publishAmounts = false,
 ) {
-    // Always read the latest data, range and pair: a minimumViewTime timer runs this
-    // after data or props may have changed since it was scheduled.
-    const data = getIndexedData(state);
-    const { viewabilityConfig, onViewableItemsChanged } = viewabilityState.pair!;
-    const scrollSize = viewabilityState.scrollSize!;
+    const { viewabilityConfig, onViewableItemsChanged } = viewabilityConfigCallbackPair;
     const configId = viewabilityConfig.id!;
-    const timerKey = `viewability${configId}` as const;
+    const viewabilityState = ensureViewabilityState(ctx, configId);
     const { viewableItems: previousViewableItems, start, end, startBuffered, endBuffered } = viewabilityState;
 
-    // With minimumViewTime, a key becomes viewable only after staying visible for that long
-    // without interruption. `since` records when each visible key entered; leaving clears it.
-    const minimumViewTime = Math.max(0, Number(viewabilityConfig.minimumViewTime) || 0);
-    let since = viewabilityState.since;
-    if (minimumViewTime) {
-        since ??= viewabilityState.since = new Map();
-    } else if (since) {
-        since = viewabilityState.since = viewabilityState.deadline = undefined;
+    // Credit only uninterrupted time above the threshold for this key and config.
+    // One timer per configuration wakes the earliest pending row; exits clear its clock.
+    const minimumViewTime = Math.max(0, viewabilityConfig.minimumViewTime ?? 0);
+    const timerKey = `viewability:${configId}` as const;
+    let timing = viewabilityState.minimumViewTime;
+    if (minimumViewTime > 0) {
+        if (!timing || timing.data !== data || !areViewabilityConfigsEqual(timing.config, viewabilityConfig)) {
+            state.scheduledWork.cancel(timerKey);
+            timing = viewabilityState.minimumViewTime = { config: viewabilityConfig, data, since: new Map() };
+        }
+    } else if (timing) {
         state.scheduledWork.cancel(timerKey);
+        timing = viewabilityState.minimumViewTime = undefined;
     }
-    const now = since ? performance.now() : 0;
-    const visibleKeys = since && new Set<string>();
-    let nextDeadline = Number.POSITIVE_INFINITY;
+    const now = timing ? Date.now() : 0;
+    const visibleKeys = timing ? new Set<string>() : undefined;
+    let nextDeadline: number | undefined;
 
     let staleViewabilityAmountIds: number[] | undefined;
     for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
@@ -225,6 +234,12 @@ function updateViewableItemsWithConfig(
                     publishAmounts,
                 );
             }
+            if (
+                timing &&
+                (!timing.since.has(viewToken.key) || now - timing.since.get(viewToken.key)! < minimumViewTime)
+            ) {
+                isStillViewable = false;
+            }
             if (!isStillViewable) {
                 changed.push({
                     ...viewToken,
@@ -247,29 +262,29 @@ function updateViewableItemsWithConfig(
         if (item !== undefined || data.kind === "dataSource") {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
-            if (
-                checkIsViewable(
-                    state,
-                    ctx,
-                    layout,
-                    viewabilityConfig,
-                    containerId,
-                    key,
-                    scrollSize,
-                    item,
-                    i,
-                    publishAmounts,
-                )
-            ) {
-                if (since) {
+            const amount = computeViewability(
+                state,
+                ctx,
+                layout,
+                viewabilityConfig,
+                containerId,
+                key,
+                scrollSize,
+                item,
+                i,
+                publishAmounts && !timing,
+            );
+            if (amount.isViewable) {
+                if (timing) {
                     visibleKeys!.add(key);
-                    const visibleSince = since.get(key) ?? now;
-                    since.set(key, visibleSince);
-                    const deadline = visibleSince + minimumViewTime;
-                    if (!previousViewableKeys.has(key) && now < deadline) {
-                        nextDeadline = Math.min(nextDeadline, deadline);
+                    const since = timing.since.get(key) ?? now;
+                    timing.since.set(key, since);
+                    const deadline = since + minimumViewTime;
+                    if (now < deadline) {
+                        nextDeadline = Math.min(nextDeadline ?? deadline, deadline);
                         continue;
                     }
+                    if (publishAmounts) publishViewabilityAmount(ctx, amount);
                 }
                 const viewToken: ViewToken = {
                     containerId,
@@ -286,27 +301,37 @@ function updateViewableItemsWithConfig(
         }
     }
 
-    if (since) {
-        for (const key of since.keys()) {
-            if (!visibleKeys!.has(key)) {
-                since.delete(key);
-            }
+    if (timing) {
+        for (const key of timing.since.keys()) {
+            if (!visibleKeys!.has(key)) timing.since.delete(key);
         }
-        // One timer per config, for the earliest key still waiting out its minimumViewTime.
-        if (nextDeadline !== viewabilityState.deadline || !state.scheduledWork.has(timerKey)) {
-            if (nextDeadline === Number.POSITIVE_INFINITY) {
-                viewabilityState.deadline = undefined;
-                state.scheduledWork.cancel(timerKey);
-            } else {
-                viewabilityState.deadline = nextDeadline;
+        if (nextDeadline !== timing.deadline) {
+            state.scheduledWork.cancel(timerKey);
+            timing.deadline = nextDeadline;
+            if (nextDeadline !== undefined) {
+                const scheduledTiming = timing;
                 state.scheduledWork.timeout(
                     () => {
-                        viewabilityState.deadline = undefined;
-                        if (getIndexedData(state) === data) {
-                            updateViewableItemsWithConfig(viewabilityState, state, ctx, undefined, publishAmounts);
+                        if (viewabilityState.minimumViewTime !== scheduledTiming || getIndexedData(state) !== data)
+                            return;
+                        scheduledTiming.deadline = undefined;
+                        const currentPairs = state.viewabilityConfigCallbackPairs;
+                        const currentPair = currentPairs
+                            ? currentPairs.find((pair) => pair.viewabilityConfig.id === configId)
+                            : viewabilityConfigCallbackPair;
+                        if (currentPair && hasViewabilityConsumers(ctx, currentPairs ?? [currentPair])) {
+                            updateViewableItemsWithConfig(
+                                data,
+                                currentPair,
+                                state,
+                                ctx,
+                                state.scrollLength,
+                                undefined,
+                                publishAmounts,
+                            );
                         }
                     },
-                    Math.min(nextDeadline - now, 2147483647),
+                    Math.max(0, nextDeadline - now),
                     timerKey,
                 );
             }
@@ -483,4 +508,22 @@ function maybeUpdateViewabilityCallback(
 
     const cb = ctx.mapViewabilityCallbacks.get(key);
     cb?.(viewToken);
+}
+
+export function areViewabilityConfigsEqual(a: ViewabilityConfig | undefined, b: ViewabilityConfig | undefined) {
+    return (
+        a?.id === b?.id &&
+        a?.itemVisiblePercentThreshold === b?.itemVisiblePercentThreshold &&
+        a?.minimumViewTime === b?.minimumViewTime &&
+        a?.startOffset === b?.startOffset &&
+        a?.viewAreaCoveragePercentThreshold === b?.viewAreaCoveragePercentThreshold &&
+        a?.waitForInteraction === b?.waitForInteraction
+    );
+}
+
+export function resetViewabilityTimers(ctx: StateContext) {
+    for (const [configId, value] of ctx.mapViewabilityConfigStates) {
+        value.minimumViewTime = undefined;
+        ctx.state.scheduledWork.cancel(`viewability:${configId}`);
+    }
 }

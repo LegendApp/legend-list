@@ -1014,6 +1014,8 @@ for (const useDataSource of [false, true]) {
             viewabilityConfig: { minimumViewTime: 100 },
         });
         ctx.state.viewabilityConfigCallbackPairs = pairs;
+        let now = 0;
+        const clock = spyOn(Date, "now").mockImplementation(() => now);
         const callbacks: Array<() => void> = [];
         const timer = spyOn(ctx.state.scheduledWork, "timeout").mockImplementation((callback: any) => {
             callbacks.push(callback);
@@ -1029,10 +1031,12 @@ for (const useDataSource of [false, true]) {
             expect(calls).toHaveLength(0);
             updateViewableItems(ctx, pairs, 500, 0, 0);
             expect(calls).toHaveLength(0);
+            now = 100;
             callbacks.shift()!();
             expect(calls[0].viewableItems[0]).toMatchObject({ item: { id: "new" }, key: "new" });
         } finally {
             timer.mockRestore();
+            clock.mockRestore();
             ctx.state.scheduledWork.dispose();
         }
     });

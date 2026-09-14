@@ -61,9 +61,11 @@ import { updateScroll } from "@/core/updateScroll";
 import { armUserScrollSettle, settleUserScroll } from "@/core/userMomentum";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import {
+    areViewabilityConfigsEqual,
     hasViewabilityConsumers,
     recordViewabilityInteraction,
     requestViewabilityRecalculation,
+    resetViewabilityTimers,
     setupViewability,
 } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
@@ -83,7 +85,6 @@ import type {
     LegendListDataSource,
     LegendListMetrics,
     LegendListRef,
-    ViewabilityConfig,
     ViewabilityConfigCallbackPairs,
 } from "@/types.base";
 import type {
@@ -152,17 +153,6 @@ type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>
     dataSource?: LegendListDataSource<T>;
     renderItem: (props: any) => React.ReactNode;
 };
-
-function areViewabilityConfigsEqual(a: ViewabilityConfig | undefined, b: ViewabilityConfig | undefined) {
-    return (
-        a?.id === b?.id &&
-        a?.itemVisiblePercentThreshold === b?.itemVisiblePercentThreshold &&
-        a?.minimumViewTime === b?.minimumViewTime &&
-        a?.startOffset === b?.startOffset &&
-        a?.viewAreaCoveragePercentThreshold === b?.viewAreaCoveragePercentThreshold &&
-        a?.waitForInteraction === b?.waitForInteraction
-    );
-}
 
 function areViewabilityConfigPairsEqual(
     a: ViewabilityConfigCallbackPairs<any> | undefined,
@@ -579,6 +569,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didDataSourceChangeLocal = state.props.dataSource !== dataSource;
     if (didDataSourceChangeLocal) {
         invalidateContainerMeasurements(state);
+        resetViewabilityTimers(ctx);
         state.dataSourceNeedsReset = false;
         state.dataSourceAnchorPositions = undefined;
         state.dataSourceMutationApplied = false;
@@ -763,6 +754,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         }
                         if (result.resetReason) {
                             invalidateContainerMeasurements(state);
+                            resetViewabilityTimers(ctx);
                             state.dataSourceNeedsReset = true;
                             state.dataSourceResetReason = result.resetReason;
                             state.dataSourceSpanInvalidationIndex = 0;
@@ -779,6 +771,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 },
                 onReset: ({ batch, reason }) => {
                     invalidateContainerMeasurements(state);
+                    resetViewabilityTimers(ctx);
                     state.pendingDataSourceBatches ??= [];
                     state.pendingDataSourceBatches.push(batch);
                     state.dataSourcePreviousLength ??= batch.previousLength;
@@ -1234,6 +1227,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.enableScrollForNextCalculateItemsInView = true;
         state.scrollForNextCalculateItemsInView = undefined;
         const hasViewabilityConsumersNow = hasViewabilityConsumers(ctx, viewability);
+        if (didViewabilityConfigChange || (!hadViewabilityConsumers && hasViewabilityConsumersNow)) {
+            resetViewabilityTimers(ctx);
+        }
         if (
             (!hadViewabilityConsumers && hasViewabilityConsumersNow) ||
             (didViewabilityConfigChange && (onFirstVisibleItemChanged || hasViewabilityConsumersNow))
