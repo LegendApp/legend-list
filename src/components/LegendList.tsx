@@ -158,6 +158,35 @@ function areViewabilityConfigPairsEqual(
     );
 }
 
+function shouldIgnoreTransientMacOSScrollMeasurement({
+    horizontal,
+    layout,
+    usesBootstrapInitialScroll,
+}: {
+    horizontal: boolean | undefined;
+    layout: LayoutRectangle;
+    usesBootstrapInitialScroll: boolean;
+}) {
+    if (Platform.OS !== "macos" || !usesBootstrapInitialScroll) {
+        return false;
+    }
+    const scrollAxis = horizontal ? "width" : "height";
+    const otherAxis = horizontal ? "height" : "width";
+    const measuredLength = layout[scrollAxis];
+    const measuredOtherAxisLength = layout[otherAxis];
+    const windowLength = getWindowSize()[scrollAxis];
+
+    // Fabric can report padding- or content-sized bounds during bootstrap.
+    // These are not viewport measurements and would disable virtualization.
+    return (
+        (Number.isFinite(measuredOtherAxisLength) && measuredOtherAxisLength <= 0) ||
+        (Number.isFinite(measuredLength) &&
+            Number.isFinite(windowLength) &&
+            windowLength > 0 &&
+            measuredLength > windowLength + 1)
+    );
+}
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const LegendListInner = typedForwardRef(function LegendListInner<T>(
     props: LegendListInnerProps<T>,
@@ -880,6 +909,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onLayoutChange = useCallback(
         (layout: LayoutRectangle, fromLayoutEffect: boolean) => {
+            if (shouldIgnoreTransientMacOSScrollMeasurement({ horizontal, layout, usesBootstrapInitialScroll })) {
+                return;
+            }
             const previousScrollLength = state.scrollLength;
             const previousOtherAxisSize = state.otherAxisSize;
             handleLayout(ctx, layout, setCanRender);
@@ -895,7 +927,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             advanceCurrentInitialScrollSession(ctx);
         },
-        [dataLength, initialScrollAtEnd, stylePaddingEndState, usesBootstrapInitialScroll],
+        [dataLength, horizontal, initialScrollAtEnd, stylePaddingEndState, usesBootstrapInitialScroll],
     );
 
     const { onLayout } = useOnLayoutSync({

@@ -6,6 +6,7 @@ import { Text } from "react-native";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { getWindowSize } from "../../src/platform/getWindowSize.native";
 import { Platform } from "../../src/platform/Platform";
 import { type StateContext, set$ } from "../../src/state/state";
 import { setDidLayout } from "../../src/utils/setDidLayout";
@@ -219,6 +220,80 @@ describe("LegendList bootstrap initial scroll", () => {
             expect(ctx.state.initialScroll?.viewPositionFallback).toBe("end");
             expect(resolveInitialScrollOffset(ctx, ctx.state.initialScroll!)).toBe(650);
             rendered.unmount();
+        });
+    }
+
+    for (const horizontal of [false, true]) {
+        it(`rejects transient macOS bootstrap viewport measurements (horizontal=${horizontal})`, async () => {
+            Platform.OS = "macos";
+            const { LegendList } = await import("../../src/components/LegendList?macos-bootstrap-viewport");
+            const data = Array.from({ length: 100 }, (_, index) => ({ id: String(index) }));
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={50}
+                    estimatedListSize={{ height: 200, width: 200 }}
+                    horizontal={horizontal}
+                    initialScrollIndex={50}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={() => null}
+                />,
+            );
+            const state = await getStateFromRender();
+            const axis = horizontal ? "width" : "height";
+            const crossAxis = horizontal ? "height" : "width";
+            const sendLayout = async (layout: { height: number; width: number }) => {
+                await act(async () => {
+                    lastListProps.onLayout({ nativeEvent: { layout: { x: 0, y: 0, ...layout } } });
+                });
+            };
+            try {
+                await sendLayout({ height: 200, width: 200 });
+                const previousLayout = state.lastLayout;
+                const previousScroll = state.scroll;
+                for (const layout of [
+                    { height: 200, width: 200, [axis]: getWindowSize()[axis] + 10000 },
+                    { height: 200, width: 200, [crossAxis]: 0 },
+                ]) {
+                    await sendLayout(layout);
+                    expect(state.scrollLength).toBe(200);
+                    expect(state.otherAxisSize).toBe(200);
+                    expect(state.lastLayout).toBe(previousLayout);
+                    expect(state.scroll).toBe(previousScroll);
+                }
+                // A real resize must still update the viewport.
+                await sendLayout({ height: 200, width: 200, [axis]: 250 });
+                expect(state.scrollLength).toBe(250);
+            } finally {
+                rendered.unmount();
+            }
+        });
+    }
+
+    for (const platform of ["ios", "macos"] as const) {
+        it(`keeps ordinary layout handling outside macOS bootstrap (${platform})`, async () => {
+            Platform.OS = platform;
+            const { LegendList } = await import("../../src/components/LegendList?ordinary-viewport");
+            const rendered = render(
+                <LegendList
+                    data={Array.from({ length: 100 }, (_, index) => ({ id: String(index) }))}
+                    estimatedItemSize={50}
+                    estimatedListSize={{ height: 200, width: 200 }}
+                    initialScrollIndex={platform === "ios" ? 50 : undefined}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={() => null}
+                />,
+            );
+            try {
+                const state = await getStateFromRender();
+                const height = getWindowSize().height + 10000;
+                await act(async () => {
+                    lastListProps.onLayout({ nativeEvent: { layout: { height, width: 200, x: 0, y: 0 } } });
+                });
+                expect(state.scrollLength).toBe(height);
+            } finally {
+                rendered.unmount();
+            }
         });
     }
 
