@@ -8,6 +8,7 @@ import AddToEndExample from "./AddToEndExample";
 import AiChatFloatingComposerExample from "./AiChatFloatingComposerExample";
 import AlwaysRenderExample from "./AlwaysRenderExample";
 import BidirectionalInfiniteListExample from "./BidirectionalInfiniteListExample";
+import ChatEndFollowExample from "./ChatEndFollowExample";
 import ChatExample from "./ChatExample";
 import ChatFloatingComposerExample from "./ChatFloatingComposerExample";
 import ColumnsExample from "./ColumnsExample";
@@ -35,6 +36,13 @@ export type FixtureRoute = {
 };
 
 export const FIXTURE_ROUTES: FixtureRoute[] = [
+    {
+        description: "Regresses typing during animated end scrolling, footer removal, and history-target priority.",
+        element: () => <ChatEndFollowExample />,
+        group: "Chat & Messaging",
+        path: "chat-end-follow",
+        title: "Chat End Follow",
+    },
     {
         description: "Verifies indexed scrollTo accuracy on variable-height content.",
         element: () => <AccurateScrollToExample />,
