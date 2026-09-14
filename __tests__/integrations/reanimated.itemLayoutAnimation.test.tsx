@@ -13,6 +13,7 @@ import { peek$, StateProvider, set$, useArr$, useStateContext } from "../../src/
 import { typedMemo } from "../../src/types.internal";
 import { getComponent } from "../../src/utils/getComponent";
 import { createMockState } from "../__mocks__/createMockState";
+import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let legendListPropsRenders: any[] = [];
@@ -59,7 +60,7 @@ const ReanimatedScrollViewMock = React.forwardRef(function ReanimatedScrollViewS
 });
 
 const createAnimatedComponentMock = <T extends React.ComponentType<any>>(Component: T): T => Component;
-const createReanimatedModuleMock = () => {
+const createReanimatedOverrides = () => {
     const shared = {
         createAnimatedComponent: createAnimatedComponentMock,
         ScrollView: ReanimatedScrollViewMock,
@@ -70,11 +71,7 @@ const createReanimatedModuleMock = () => {
         View: ReanimatedViewMock,
     };
 
-    return {
-        __esModule: true,
-        ...shared,
-        default: shared,
-    };
+    return shared;
 };
 
 function registerLegendListModuleMock(isNewArchitecture = IsNewArchitecture) {
@@ -98,8 +95,7 @@ function registerLegendListModuleMock(isNewArchitecture = IsNewArchitecture) {
 
 registerLegendListModuleMock();
 
-mock.module("react-native-reanimated", createReanimatedModuleMock);
-mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
+beforeEach(() => registerReanimatedModuleMock(createReanimatedOverrides()));
 
 function PositionComponentHarness({
     containerId,

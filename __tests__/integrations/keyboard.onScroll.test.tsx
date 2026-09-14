@@ -1,7 +1,9 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import * as React from "react";
+
+import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
 
 mock.module("react-native-keyboard-controller", () => ({
     KeyboardChatScrollView: (props: any) => React.createElement("keyboard-chat-scroll-view", props),
@@ -11,7 +13,7 @@ mock.module("react-native-keyboard-controller", () => ({
     useKeyboardHandler: () => {},
 }));
 
-const createReanimatedModuleMock = () => {
+const createReanimatedOverrides = () => {
     const shared = {
         isWorkletFunction: () => false,
         runOnJS:
@@ -27,15 +29,10 @@ const createReanimatedModuleMock = () => {
         useSharedValue: (value: unknown) => ({ get: () => value, set: () => {}, value }),
     };
 
-    return {
-        __esModule: true,
-        ...shared,
-        default: shared,
-    };
+    return shared;
 };
 
-mock.module("react-native-reanimated", createReanimatedModuleMock);
-mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
+beforeEach(() => registerReanimatedModuleMock(createReanimatedOverrides()));
 
 mock.module("@legendapp/list/reanimated", () => ({
     AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(_props: any, _ref) {

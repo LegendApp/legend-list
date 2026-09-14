@@ -1,5 +1,6 @@
 // Global test setup for Legend List tests
-import { afterAll, afterEach, mock } from "bun:test";
+import { afterEach, mock } from "bun:test";
+import { registerReanimatedModuleMock } from "./__mocks__/reanimated";
 import { cleanupRenders } from "./helpers/testingLibrary";
 
 // Define React Native globals that the source code expects
@@ -21,6 +22,23 @@ const originalSetTimeout = globalThis.setTimeout;
 const originalClearTimeout = globalThis.clearTimeout;
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+const pendingAnimationFrames = new Set<ReturnType<typeof setTimeout>>();
+const testRequestAnimationFrame: typeof requestAnimationFrame = (callback) => {
+    const handle = originalSetTimeout(() => {
+        pendingAnimationFrames.delete(handle);
+        callback(Date.now());
+    }, 0);
+    pendingAnimationFrames.add(handle);
+    return handle as unknown as number;
+};
+const testCancelAnimationFrame: typeof cancelAnimationFrame = (id) => {
+    const handle = id as unknown as ReturnType<typeof setTimeout>;
+    pendingAnimationFrames.delete(handle);
+    originalClearTimeout(handle);
+};
+
+globalThis.requestAnimationFrame = originalRequestAnimationFrame ?? testRequestAnimationFrame;
+globalThis.cancelAnimationFrame = originalCancelAnimationFrame ?? testCancelAnimationFrame;
 
 // Force Bun's resolver to use React Native specific entry points like Metro does
 const nativeModuleOverrides: Array<[string, string]> = [
@@ -46,21 +64,64 @@ const nativeModuleOverrides: Array<[string, string]> = [
     ["@/constants-platform", "../src/constants-platform.native.ts"],
 ];
 
+// Bun's mock.restore() restores spies, but not mock.module() replacements. Snapshot
+// the original exports before any test runs, including the native alias targets.
+// Requiring them again during cleanup would just capture the last test's mock.
+let baseModuleExports: Array<[string, Record<string, unknown>]> | undefined;
+
 export function registerBaseModuleMocks() {
+    registerReanimatedModuleMock();
     // Mock react-native module for all tests to avoid loading the real RN package
     mock.module("react-native", () => require("./__mocks__/react-native.ts"));
     mock.module("react-native/index.js", () => require("./__mocks__/react-native.ts"));
 
-    for (const [moduleSpecifier, nativePath] of nativeModuleOverrides) {
-        mock.module(moduleSpecifier, () => require(nativePath));
+    if (baseModuleExports) {
+        for (const [moduleSpecifier, exports] of baseModuleExports) {
+            mock.module(moduleSpecifier, () => exports);
+        }
+    } else {
+        for (const [moduleSpecifier, nativePath] of nativeModuleOverrides) {
+            mock.module(moduleSpecifier, () => require(nativePath));
+        }
     }
 }
 
 registerBaseModuleMocks();
+const nativeMocks = require("./__mocks__/react-native.ts");
+const defaultPlatform = { ...nativeMocks.Platform };
+const defaultI18nManager = { ...nativeMocks.I18nManager };
+baseModuleExports = nativeModuleOverrides.map(([moduleSpecifier]) => [
+    moduleSpecifier,
+    { ...require(moduleSpecifier) },
+]);
+for (const moduleSpecifier of [
+    "@/components/ListComponent",
+    "@/components/Container",
+    "@/components/LegendList",
+    "@/components/webScrollUtils",
+    "@/core/ScrollAdjustHandler",
+    "@/core/scrollToIndex",
+    "@/core/checkResetContainers",
+    "@/core/scrollTo",
+    "@/utils/requestAdjust",
+    "@/utils/useRafCoalescer",
+    "@/state/state",
+    "@/hooks/createResizeObserver",
+    "@/hooks/useAnimatedValue",
+    "@legendapp/list/react-native",
+    "@legendapp/list/react",
+]) {
+    baseModuleExports.push([moduleSpecifier, { ...require(moduleSpecifier) }]);
+}
 
 // Global cleanup between tests to prevent contamination
 afterEach(() => {
     cleanupRenders();
+
+    for (const handle of pendingAnimationFrames) {
+        originalClearTimeout(handle);
+    }
+    pendingAnimationFrames.clear();
 
     // Restore any potentially mocked functions
     if (globalThis.setTimeout !== originalSetTimeout) {
@@ -69,30 +130,11 @@ afterEach(() => {
     if (globalThis.clearTimeout !== originalClearTimeout) {
         globalThis.clearTimeout = originalClearTimeout;
     }
-    // Keep requestAnimationFrame fallback in place between tests
-
-    // Clear any pending timers
-    // This is a simple approach - in production you'd use jest.clearAllTimers() or similar
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame ?? testRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame ?? testCancelAnimationFrame;
 
     mock.restore();
+    Object.assign(nativeMocks.Platform, defaultPlatform);
+    Object.assign(nativeMocks.I18nManager, defaultI18nManager);
     registerBaseModuleMocks();
 });
-
-afterAll(() => {
-    // Force restore any mocked functions to originals
-    globalThis.setTimeout = originalSetTimeout;
-    globalThis.clearTimeout = originalClearTimeout;
-    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
-    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
-});
-
-// Provide raf fallback for code paths that expect it
-if (typeof globalThis.requestAnimationFrame !== "function") {
-    // @ts-ignore
-    globalThis.requestAnimationFrame = (cb: (timestamp: number) => void) =>
-        setTimeout(() => cb(Date.now()), 0) as unknown as number;
-}
-
-if (typeof globalThis.cancelAnimationFrame !== "function") {
-    globalThis.cancelAnimationFrame = (id: number) => clearTimeout(id);
-}

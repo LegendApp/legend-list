@@ -6,6 +6,7 @@ import type { LayoutChangeEvent } from "react-native";
 
 import { useCombinedRef } from "../../src/hooks/useCombinedRef";
 import { typedForwardRef } from "../../src/types.internal";
+import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastAnimatedLegendListProps: any;
@@ -45,7 +46,7 @@ mock.module("react-native-keyboard-controller", () => ({
     useKeyboardHandler: () => {},
 }));
 
-const createReanimatedModuleMock = () => {
+const createReanimatedOverrides = () => {
     const shared = {
         isWorkletFunction: () => false,
         runOnJS:
@@ -61,15 +62,10 @@ const createReanimatedModuleMock = () => {
         useSharedValue: createSharedValue,
     };
 
-    return {
-        __esModule: true,
-        ...shared,
-        default: shared,
-    };
+    return shared;
 };
 
-mock.module("react-native-reanimated", createReanimatedModuleMock);
-mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
+beforeEach(() => registerReanimatedModuleMock(createReanimatedOverrides()));
 
 mock.module("@legendapp/list/react-native", () => ({
     internal: {

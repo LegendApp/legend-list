@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import {
+    clearWarnDevOnceForTests,
     comparatorDefault,
     extractPadding,
     isArray,
@@ -10,6 +11,10 @@ import {
     roundSize,
     warnDevOnce,
 } from "../../src/utils/helpers";
+
+beforeEach(() => {
+    clearWarnDevOnceForTests();
+});
 
 describe("helpers", () => {
     describe("isFunction", () => {

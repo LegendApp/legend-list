@@ -21,7 +21,7 @@ export function createMockContext(
         activeStickyIndex: state.activeStickyIndex ?? -1,
         adaptiveRender: "normal",
         alignItemsAtEndPadding: 0,
-        contentInset: DEFAULT_CONTENT_INSET,
+        contentInset: { ...DEFAULT_CONTENT_INSET },
         isAtEnd: state.isAtEnd ?? false,
         isAtStart: state.isAtStart ?? false,
         isNearEnd: state.isNearEnd ?? false,

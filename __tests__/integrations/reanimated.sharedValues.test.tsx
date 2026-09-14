@@ -12,6 +12,7 @@ import { useStableRenderComponent } from "../../src/hooks/useStableRenderCompone
 import { peek$, useArr$, useStateContext } from "../../src/state/state";
 import { typedForwardRef, typedMemo } from "../../src/types.internal";
 import { getComponent } from "../../src/utils/getComponent";
+import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 type SharedValueMock<T> = {
@@ -90,7 +91,7 @@ const ReanimatedScrollViewMock = React.forwardRef(function ReanimatedScrollViewS
 });
 
 const createAnimatedComponentMock = <T extends React.ComponentType<any>>(Component: T): T => Component;
-const createReanimatedModuleMock = () => {
+const createReanimatedOverrides = () => {
     const shared = {
         createAnimatedComponent: createAnimatedComponentMock,
         isWorkletFunction: () => false,
@@ -135,11 +136,7 @@ const createReanimatedModuleMock = () => {
         View: (props: any) => React.createElement("reanimated-view", props),
     };
 
-    return {
-        __esModule: true,
-        ...shared,
-        default: shared,
-    };
+    return shared;
 };
 
 function registerLegendListModuleMock(isNewArchitecture = IsNewArchitecture) {
@@ -164,8 +161,7 @@ function registerLegendListModuleMock(isNewArchitecture = IsNewArchitecture) {
 
 registerLegendListModuleMock();
 
-mock.module("react-native-reanimated", createReanimatedModuleMock);
-mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
+beforeEach(() => registerReanimatedModuleMock(createReanimatedOverrides()));
 
 describe("AnimatedLegendList sharedValues integration", () => {
     beforeEach(() => {

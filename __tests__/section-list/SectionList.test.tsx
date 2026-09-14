@@ -5,6 +5,7 @@ import { render } from "../helpers/testingLibrary";
 
 import "../setup";
 
+import { internal } from "../../src/react-native";
 import { buildSectionListData } from "../../src/section-list/flattenSections";
 import type { SectionListRef } from "../../src/section-list/SectionList";
 
@@ -12,7 +13,7 @@ const legendListProps: any[] = [];
 const scrollCalls: any[] = [];
 
 function registerLegendListMock() {
-    mock.module("@/components/LegendList", () => {
+    mock.module("@legendapp/list/react-native", () => {
         const LegendList = React.forwardRef((props: any, ref) => {
             legendListProps.push(props);
             React.useImperativeHandle(ref, () => ({
@@ -30,7 +31,7 @@ function registerLegendListMock() {
             return null;
         });
         LegendList.displayName = "LegendListMock";
-        return { LegendList };
+        return { internal, LegendList };
     });
 }
 

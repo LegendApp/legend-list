@@ -3,6 +3,7 @@ import "../setup";
 
 import * as React from "react";
 
+import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastAnimatedLegendListProps: any;
@@ -65,7 +66,7 @@ mock.module("react-native-keyboard-controller", () => ({
     },
 }));
 
-const createReanimatedModuleMock = () => {
+const createReanimatedOverrides = () => {
     const shared = {
         isWorkletFunction: () => false,
         runOnJS: runOnJSMock,
@@ -78,15 +79,10 @@ const createReanimatedModuleMock = () => {
         useSharedValue: createSharedValue,
     };
 
-    return {
-        __esModule: true,
-        ...shared,
-        default: shared,
-    };
+    return shared;
 };
 
-mock.module("react-native-reanimated", createReanimatedModuleMock);
-mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
+beforeEach(() => registerReanimatedModuleMock(createReanimatedOverrides()));
 
 mock.module("@legendapp/list/reanimated", () => ({
     AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(props: any, ref) {
