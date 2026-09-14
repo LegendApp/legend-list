@@ -9,6 +9,7 @@ let requestAdjustCalls: number[] = [];
 let scrollToCalls: any[] = [];
 let suppressScrollToImplementation = true;
 
+import { MutationDataSource } from "../../example/screens/fixtures/MutationDataSource";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { getDataLength } from "../../src/core/IndexedData";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
@@ -150,6 +151,26 @@ afterEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("updates last-item identity after same-length source moves and replacements", async () => {
+        const source = new MutationDataSource({
+            generatedItemFactory: (index) => ({ id: `item-${index}` }),
+            generatedKeyPrefix: "item-",
+            length: 3,
+        });
+        const { LegendList } = await import("../../src/components/LegendList?source-tail-identity");
+        const rendered = render(<LegendList dataSource={source} recycleItems={false} renderItem={() => null} />);
+        const ctx = await getContextFromRender();
+        try {
+            expect(peek$(ctx, "lastItemKeys")).toEqual(["item-2"]);
+            await act(async () => source.move(2, 0, 1));
+            expect(peek$(ctx, "lastItemKeys")).toEqual(["item-1"]);
+            await act(async () => source.splice(2, 1, [{ item: { id: "replacement" }, key: "replacement" }]));
+            expect(peek$(ctx, "lastItemKeys")).toEqual(["replacement"]);
+        } finally {
+            rendered.unmount();
+        }
+    });
+
     it("mounts from an indexed data source without materializing its logical collection", async () => {
         let getItemCalls = 0;
         let getKeyCalls = 0;

@@ -745,7 +745,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataLength) return [];
         return Array.from({ length: Math.min(numColumnsProp, dataLength) }, (_, i) => getId(state, dataLength - 1 - i));
-    }, [dataLength, dataProp, dataKey, dataSource, dataVersion, numColumnsProp]);
+    }, [dataLength, dataProp, dataKey, dataSource, dataSourceRevision, dataVersion, numColumnsProp]);
 
     // Run first time and whenever data changes
     const initializeStateVars = (shouldAdjustPadding: boolean) => {
@@ -948,7 +948,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             dataKey,
             dataVersion,
             horizontal,
-            memoizedLastItemKeys.join(","),
+            memoizedLastItemKeys,
             numColumnsProp,
             nextScrollAxisGap,
             stylePaddingBottomState,
