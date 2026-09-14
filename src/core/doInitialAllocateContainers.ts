@@ -34,6 +34,11 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         } else {
             averageItemSize = estimatedItemSize! + ctx.scrollAxisGap;
         }
+        // An all-zero fixed-size sample must not turn allocation into an infinite loop.
+        // Continue with a finite estimate until the visible range is measured.
+        if (!(averageItemSize > 0)) {
+            averageItemSize = (estimatedItemSize! > 0 ? estimatedItemSize! : 100) + ctx.scrollAxisGap;
+        }
         const numContainers = Math.max(
             1,
             Math.ceil(((scrollLength + drawDistance * 2) / averageItemSize!) * numColumns),

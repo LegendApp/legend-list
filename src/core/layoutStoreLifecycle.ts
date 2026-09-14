@@ -173,7 +173,7 @@ export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext) {
             const nextEstimate = totalMeasuredSize / measuredCount;
             if (!state.scrollingTo) {
                 runtime.didFlushInitialEstimate = true;
-                runtime.lastFlushedEstimateMeasurementCount = store.getMeasuredCount();
+                runtime.pendingEstimateMeasurements = 0;
                 didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer);
             }
         }
@@ -183,9 +183,7 @@ export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext) {
 }
 
 function hasEnoughNewMeasurementsForPeriodicFlush(runtime: LayoutStoreRuntime) {
-    const store = runtime.store;
-    const lastMeasuredCount = runtime.lastFlushedEstimateMeasurementCount;
-    return store.getMeasuredCount() - lastMeasuredCount >= PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS;
+    return runtime.pendingEstimateMeasurements >= PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS;
 }
 
 function shouldDeferPeriodicEstimateFlush(state: InternalState) {
@@ -227,9 +225,10 @@ function flushPeriodicLayoutStoreEstimate(ctx: StateContext) {
             schedulePeriodicLayoutStoreEstimateFlush(ctx);
         } else {
             const store = runtime.store;
-            const measuredAverage = store.getMeasuredAverageSize();
+            // Hidden zero-size items retain exact geometry but do not predict the size of unknown items.
+            const measuredAverage = store.getPositiveMeasuredAverageSize();
             const anchorIndex = getEstimateFlushAnchorIndex(state);
-            runtime.lastFlushedEstimateMeasurementCount = store.getMeasuredCount();
+            runtime.pendingEstimateMeasurements = 0;
 
             if (measuredAverage !== undefined && anchorIndex !== undefined) {
                 didFlush = flushLayoutStoreEstimate(ctx, measuredAverage, anchorIndex, {
@@ -269,10 +268,18 @@ export function resetLayoutStoreRuntimeState(state: InternalState) {
 }
 
 export function setLayoutStoreMeasuredSize(ctx: StateContext, index: number | undefined, size: number) {
-    const store = getActiveLayoutStore(ctx);
+    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const store = runtime?.store;
     let didSet = false;
-    if (store?.hasIndex(index)) {
+    if (runtime && store?.hasIndex(index)) {
+        const previousCount = store.getMeasuredCount();
+        const previousSize = store.getSize(index);
         const didChange = store.setMeasuredSize(index, size);
+        // Count new or changed measurements, not the net retained count: invalidation
+        // and deletion can remove measurements while fresh geometry keeps arriving.
+        if (previousSize !== size || store.getMeasuredCount() !== previousCount) {
+            runtime.pendingEstimateMeasurements++;
+        }
         if (didChange) {
             syncLayoutStoreState(ctx);
         }
@@ -577,8 +584,10 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
 
         const knownSize = canSeedKnownSizes ? state.sizesKnown.get(key) : undefined;
         if (knownSize !== undefined) {
-            measuredCount++;
-            measuredTotalSize += knownSize;
+            if (knownSize > 0) {
+                measuredCount++;
+                measuredTotalSize += knownSize;
+            }
             sizeEntries.push({
                 index: targetIndex,
                 size: knownSize,

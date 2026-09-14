@@ -32,6 +32,7 @@ export class RowLayoutStore implements MutableLayoutStore {
     private knownSizes = new Map<number, KnownItemSize>();
     private lengthValue: number;
     private measuredCount = 0;
+    private positiveMeasuredCount = 0;
     private measuredSizeTotal = 0;
     private numColumns: number;
     private rowLayout: PrefixLayoutStore;
@@ -54,6 +55,7 @@ export class RowLayoutStore implements MutableLayoutStore {
     clearKnownSizes() {
         this.knownSizes.clear();
         this.measuredCount = 0;
+        this.positiveMeasuredCount = 0;
         this.measuredSizeTotal = 0;
         this.rowLayout = new PrefixLayoutStore(this.getRowCount(), this.estimatedSize);
     }
@@ -118,6 +120,10 @@ export class RowLayoutStore implements MutableLayoutStore {
         return this.measuredCount > 0 ? this.measuredSizeTotal / this.measuredCount : undefined;
     }
 
+    getPositiveMeasuredAverageSize() {
+        return this.positiveMeasuredCount > 0 ? this.measuredSizeTotal / this.positiveMeasuredCount : undefined;
+    }
+
     getMeasuredCount() {
         return this.measuredCount;
     }
@@ -159,6 +165,7 @@ export class RowLayoutStore implements MutableLayoutStore {
                 this.knownSizes.delete(knownIndex);
                 if (entry.kind === SIZE_MEASURED) {
                     this.measuredCount--;
+                    this.positiveMeasuredCount -= Number(entry.size > 0);
                     this.measuredSizeTotal -= entry.size;
                 }
                 changedRows.add(this.getRowIndex(knownIndex));
@@ -292,6 +299,8 @@ export class RowLayoutStore implements MutableLayoutStore {
             this.measuredSizeTotal += normalizedSize;
         }
 
+        this.positiveMeasuredCount +=
+            Number(normalizedSize > 0) - Number(previous?.kind === SIZE_MEASURED && previous.size > 0);
         this.knownSizes.set(index, { kind: SIZE_MEASURED, size: normalizedSize });
         this.syncRowHeight(rowIndex);
         return previousRowHeight !== this.rowLayout.getSize(rowIndex);
@@ -340,6 +349,7 @@ export class RowLayoutStore implements MutableLayoutStore {
 
     private rebuildRowsAndTotals() {
         this.measuredCount = 0;
+        this.positiveMeasuredCount = 0;
         this.measuredSizeTotal = 0;
         this.rowLayout = new PrefixLayoutStore(this.getRowCount(), this.estimatedSize);
         const knownRows = new Set<number>();
@@ -348,6 +358,7 @@ export class RowLayoutStore implements MutableLayoutStore {
             knownRows.add(this.getRowIndex(index));
             if (entry.kind === SIZE_MEASURED) {
                 this.measuredCount++;
+                this.positiveMeasuredCount += Number(entry.size > 0);
                 this.measuredSizeTotal += entry.size;
             }
         }

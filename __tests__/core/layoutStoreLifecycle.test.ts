@@ -574,7 +574,7 @@ describe("layout store lifecycle", () => {
             expect(getLayoutValue(ctx.state, "positions", 5)).toBeUndefined();
             expect(store.getOffset(5)).toBe(250);
             expect(requestedAdjustments).toEqual([-50]);
-            expect(ctx.state.layoutStoreRuntime?.lastFlushedEstimateMeasurementCount).toBe(4);
+            expect(ctx.state.layoutStoreRuntime?.pendingEstimateMeasurements).toBe(0);
         } finally {
             timers.restore();
         }
@@ -601,7 +601,57 @@ describe("layout store lifecycle", () => {
             timers.callbacks[1]();
 
             expect(store.getEstimatedSize()).toBe(50);
-            expect(ctx.state.layoutStoreRuntime?.lastFlushedEstimateMeasurementCount).toBe(4);
+            expect(ctx.state.layoutStoreRuntime?.pendingEstimateMeasurements).toBe(0);
+        } finally {
+            timers.restore();
+        }
+    });
+
+    it("adapts after invalidated or deleted measurements are replaced", () => {
+        const timers = captureTimeouts();
+        try {
+            for (const numColumns of [1, 2]) {
+                for (const mutation of ["invalidate", "delete"]) {
+                    const ctx = createLayoutStoreContext(1000);
+                    ctx.state.props.numColumns = numColumns;
+                    const store = syncLayoutStoreStructure(ctx)!;
+                    for (let index = 0; index < 100; index++) setLayoutStoreMeasuredSize(ctx, index, 50);
+                    expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
+                    timers.callbacks.at(-1)!();
+                    expect(store.getEstimatedSize()).toBe(50);
+
+                    if (mutation === "invalidate") store.invalidateRange(0, 100);
+                    else store.splice(0, 100, 100);
+                    for (let index = 0; index < 4; index++) setLayoutStoreMeasuredSize(ctx, index, 200);
+                    expect(store.getMeasuredCount()).toBe(4);
+                    expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
+                    timers.callbacks.at(-1)!();
+                    expect(store.getEstimatedSize()).toBe(200);
+                    expect(ctx.state.layoutStoreRuntime!.pendingEstimateMeasurements).toBe(0);
+                    ctx.state.scheduledWork.dispose();
+                }
+            }
+        } finally {
+            timers.restore();
+        }
+    });
+
+    it("counts changed measurements but ignores repeated identical layout reports", () => {
+        const timers = captureTimeouts();
+        try {
+            const ctx = createLayoutStoreContext(10);
+            const store = syncLayoutStoreStructure(ctx)!;
+            for (let index = 0; index < 4; index++) setLayoutStoreMeasuredSize(ctx, index, 50);
+            schedulePeriodicLayoutStoreEstimateFlush(ctx);
+            timers.callbacks.at(-1)!();
+            for (let index = 0; index < 4; index++) setLayoutStoreMeasuredSize(ctx, index, 50);
+            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(false);
+            for (let index = 0; index < 4; index++) setLayoutStoreMeasuredSize(ctx, index, 150);
+            expect(store.getMeasuredCount()).toBe(4);
+            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
+            timers.callbacks.at(-1)!();
+            expect(store.getEstimatedSize()).toBe(150);
+            ctx.state.scheduledWork.dispose();
         } finally {
             timers.restore();
         }
@@ -636,3 +686,42 @@ describe("layout store lifecycle", () => {
         expect(store).not.toBeInstanceOf(RowLayoutStore);
     });
 });
+
+for (const numColumns of [1, 2]) {
+    it(`excludes zero-size items from periodic estimates (${numColumns} columns)`, () => {
+        const timer = captureTimeouts();
+        const ctx = createLayoutStoreContext(1000);
+        ctx.state.props.numColumns = numColumns;
+        try {
+            const store = syncLayoutStoreStructure(ctx)!;
+            for (let index = 0; index < 4; index++) setLayoutStoreMeasuredSize(ctx, index, 0);
+            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
+            timer.callbacks.shift()!();
+            expect(store.getEstimatedSize()).toBe(100);
+            expect(store.getSize(0)).toBe(0);
+            expect(store.getTotalSize()).toBe(99600 / numColumns);
+            for (let index = 4; index < 8; index++) setLayoutStoreMeasuredSize(ctx, index, 120);
+            expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
+            timer.callbacks.shift()!();
+            expect(store.getEstimatedSize()).toBe(120);
+            expect(store.getSize(0)).toBe(0);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+            timer.restore();
+        }
+    });
+    it(`retains a positive fallback when rebuilding from zero-size measurements (${numColumns} columns)`, () => {
+        const ctx = createLayoutStoreContext(1000);
+        ctx.state.props.numColumns = numColumns;
+        ctx.state.idCache = ["item-0", "item-1"];
+        ctx.state.sizesKnown = new Map([
+            ["item-0", 0],
+            ["item-1", 0],
+        ]);
+        const store = rebuildLayoutStoreExact(ctx)!;
+        expect(store.getEstimatedSize()).toBe(100);
+        expect(store.getSize(0)).toBe(0);
+        expect(store.getTotalSize()).toBe(99800 / numColumns);
+        ctx.state.scheduledWork.dispose();
+    });
+}

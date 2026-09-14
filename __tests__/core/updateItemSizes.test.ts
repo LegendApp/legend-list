@@ -3,7 +3,7 @@ import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
-import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
+import { setLayoutStoreMeasuredSize, syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -64,6 +64,30 @@ describe("updateItemSizes", () => {
 
     afterEach(() => {
         Platform.OS = prevPlatform;
+    });
+
+    it("schedules estimate sampling when an equal-to-estimate measurement completes the threshold", () => {
+        const ctx = createMockContext(
+            { containerItemKey3: "k3" },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                idCache: ["k0", "k1", "k2", "k3"],
+                indexByKey: new Map([["k3", 3]]),
+                props: {
+                    data: Array.from({ length: 10 }, (_, index) => ({ id: `k${index}` })),
+                    estimatedItemSize: 100,
+                },
+            },
+        );
+        const store = syncLayoutStoreStructure(ctx)!;
+        ctx.state.layoutStoreRuntime!.didFlushInitialEstimate = true;
+        for (let index = 0; index < 3; index++) setLayoutStoreMeasuredSize(ctx, index, 50);
+        expect(ctx.state.scheduledWork.has("layoutStoreEstimateFlush")).toBe(false);
+        updateItemSizesBatch(ctx, [{ containerId: 3, itemKey: "k3", size: { height: 100, width: 400 } }]);
+        expect(store.getMeasuredCount()).toBe(4);
+        expect(ctx.state.scheduledWork.has("layoutStoreEstimateFlush")).toBe(true);
+        ctx.state.scheduledWork.dispose();
     });
 
     it("updates only the measured item without draining unrelated anchor resets", () => {

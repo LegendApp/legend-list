@@ -513,3 +513,30 @@ describe("doInitialAllocateContainers", () => {
         });
     });
 });
+
+it("bounds initial allocation for an all-zero fixed-size sample", () => {
+    const ctx = createMockContext(
+        {},
+        {
+            props: {
+                data: Array.from({ length: 1000 }, (_, index) => index),
+                estimatedItemSize: 100,
+                getFixedItemSize: () => 0,
+            },
+            scrollLength: 500,
+        },
+    );
+    let writes = 0;
+    const set = ctx.values.set.bind(ctx.values);
+    const spy = spyOn(ctx.values, "set").mockImplementation((key, value) => {
+        if (++writes > 100) throw new Error("unbounded allocation");
+        return set(key, value);
+    });
+    try {
+        expect(doInitialAllocateContainers(ctx)).toBe(true);
+        expect(ctx.values.get("numContainers")).toBe(6);
+    } finally {
+        spy.mockRestore();
+        ctx.state.scheduledWork.dispose();
+    }
+});
