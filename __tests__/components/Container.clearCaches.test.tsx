@@ -4,8 +4,10 @@ import { Text } from "react-native";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { measureContainersInLayoutEffect } from "../../src/core/measureContainersInLayoutEffect.native";
 import { getContainerLayoutEffectScope } from "../../src/core/scheduleContainerLayout";
+import { syncMountedContainer } from "../../src/core/syncMountedContainer";
 import { type StateContext, StateProvider, set$, useArr$, useStateContext } from "../../src/state/state";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
+import { getRenderedItem as renderAssignedItem } from "../../src/utils/getRenderedItem";
 import { createMockState } from "../__mocks__/createMockState";
 import TestRenderer, { act } from "../helpers/testRenderer";
 import { registerBaseModuleMocks } from "../setup";
@@ -68,6 +70,78 @@ beforeEach(() => {
     registerPositionViewMeasureMock();
     measuredHeight = 80;
     measuredHeights.clear();
+});
+
+describe("Container assigned index", () => {
+    it("refreshes retained row content and callbacks after prepend, reorder, and deletion", async () => {
+        const a = { id: "a", label: "Alpha" };
+        const b = { id: "b", label: "Beta" };
+        const x = { id: "x", label: "Extra" };
+        let ctx!: StateContext;
+        const onPress = mock((_index: number) => {});
+        const { Container } = await import("../../src/components/Container?retained-index");
+        const getRenderedItem = (key: string, id: number) => renderAssignedItem(ctx, key, id);
+
+        function Harness() {
+            ctx = useStateContext();
+            const initialized = React.useRef(false);
+            if (!initialized.current) {
+                ctx.state = createMockState({
+                    idCache: ["a", "b"],
+                    indexByKey: new Map([
+                        ["a", 0],
+                        ["b", 1],
+                    ]),
+                    props: {
+                        data: [a, b],
+                        keyExtractor: (item: TestItem) => item.id,
+                        renderItem: ({ item, index }: { item: TestItem; index: number }) => (
+                            <Text onPress={() => onPress(index)} testID="retained-row">{`${item.id}:${index}`}</Text>
+                        ),
+                    },
+                });
+                set$(ctx, "numColumns", 1);
+                set$(ctx, "containerItemKey0", "b");
+                set$(ctx, "containerItemData0", b);
+                syncMountedContainer(ctx, 0, 1, { updateLayout: false });
+                initialized.current = true;
+            }
+            return <Container getRenderedItem={getRenderedItem} horizontal={false} id={0} itemKey="b" recycleItems />;
+        }
+
+        let renderer!: TestRenderer.ReactTestRenderer;
+        await act(async () => {
+            renderer = TestRenderer.create(
+                <StateProvider>
+                    <Harness />
+                </StateProvider>,
+            );
+        });
+        try {
+            const assertRow = (index: number) => {
+                const row = renderer.root.findByProps({ testID: "retained-row" });
+                expect(row.props.children).toBe(`b:${index}`);
+                row.props.onPress();
+                expect(onPress).toHaveBeenLastCalledWith(index);
+            };
+            assertRow(1);
+            for (const data of [[x, a, b], [b, x, a], [a, b], [b]]) {
+                const index = data.indexOf(b);
+                await act(async () => {
+                    ctx.state.previousData = ctx.state.props.data;
+                    ctx.state.props.data = data;
+                    ctx.state.idCache = data.map((item) => item.id);
+                    ctx.state.indexByKey = new Map(data.map((item, i) => [item.id, i]));
+                    ctx.state.dataChangeEpoch++;
+                    syncMountedContainer(ctx, 0, index, { updateLayout: false });
+                });
+                assertRow(index);
+            }
+        } finally {
+            await act(async () => renderer.unmount());
+            ctx.state.scheduledWork.dispose();
+        }
+    });
 });
 
 describe("Container clearCaches measurement", () => {
