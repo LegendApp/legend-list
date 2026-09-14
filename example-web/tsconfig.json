@@ -33,6 +33,12 @@
             "@legendapp/list/react": [
                 "../src/react.ts"
             ],
+            "@legendapp/list/react-native": [
+                "../src/react.ts"
+            ],
+            "@legendapp/list/masonry": [
+                "../src/integrations/masonry.tsx"
+            ],
             "react": [
                 "./node_modules/@types/react"
             ],

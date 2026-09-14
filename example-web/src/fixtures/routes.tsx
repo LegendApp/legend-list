@@ -19,6 +19,7 @@ import HeaderMvcpExample from "./HeaderMvcpExample";
 import InitialScrollAtEndExample from "./InitialScrollAtEndExample";
 import InitialScrollIndexExample from "./InitialScrollIndexExample";
 import LazyListExample from "./LazyListExample";
+import MasonryExample from "./MasonryExample";
 import MutableCellsExample from "./MutableCellsExample";
 import MVCPTestExample from "./MVCPTestExample";
 import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
@@ -83,6 +84,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Data & Layout",
         path: "columns",
         title: "Columns",
+    },
+    {
+        description: "Balances dynamically sized cards into the shortest available column.",
+        element: () => <MasonryExample />,
+        group: "Data & Layout",
+        path: "masonry",
+        title: "Masonry",
     },
     {
         description: "Searchable directory with dynamic filtering.",

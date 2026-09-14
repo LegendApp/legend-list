@@ -28,7 +28,9 @@ export default defineConfig(({ command, mode }) => {
             alias: {
                 "@": path.resolve(__dirname, "../src"),
                 "@examples": path.resolve(__dirname, "../examples-shared"),
+                "@legendapp/list/masonry": path.resolve(__dirname, "../src/integrations/masonry.tsx"),
                 "@legendapp/list/react": path.resolve(__dirname, "../src/react.ts"),
+                "@legendapp/list/react-native": path.resolve(__dirname, "../src/react.ts"),
             },
             // Deduplicate React to avoid multiple copies
             dedupe: ["react", "react-dom"],

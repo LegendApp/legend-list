@@ -20,6 +20,7 @@ const nativeEntryPoints = {
     animated: "src/integrations/animated.tsx",
     keyboard: "src/integrations/keyboard.tsx",
     "keyboard-legacy": "src/integrations/keyboard-legacy.tsx",
+    masonry: "src/integrations/masonry.tsx",
     "react-native": "src/react-native.ts",
     reanimated: "src/integrations/reanimated.tsx",
     "section-list": "src/section-list/index.ts",

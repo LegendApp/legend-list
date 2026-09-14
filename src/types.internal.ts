@@ -3,6 +3,7 @@ import * as React from "react";
 
 import type { ScheduledWork } from "@/core/ScheduledWork";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import type { StateContext } from "@/state/state";
 import type {
     AlwaysRenderConfig,
     AnchoredEndSpaceConfig,
@@ -21,6 +22,41 @@ import type { StylesAsSharedValue } from "@/typesInternal";
 import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
 
 export type { BaseScrollViewProps, LegendListPropsBase } from "@/types.base";
+
+export interface ItemPositioningOptions {
+    doMVCP: boolean | undefined;
+    forceFullUpdate?: boolean;
+    optimizeForVisibleWindow?: boolean;
+    scrollBottomBuffered: number;
+    scrollVelocity?: number;
+    startIndex: number;
+}
+
+export interface LayoutStrategyDependencies {
+    getId: (state: InternalState, index: number) => string;
+    getItemSize: (
+        ctx: StateContext,
+        key: string,
+        index: number,
+        item: unknown,
+        useAverageSize?: boolean,
+        preferCachedSize?: boolean,
+        notifyTotalSize?: boolean,
+    ) => number;
+    getScrollVelocity: (state: InternalState) => number;
+    isDev: boolean;
+    notifyPosition: (ctx: StateContext, key: string, position: number) => void;
+    setTotalSize: (ctx: StateContext, totalSize: number) => void;
+}
+
+export type LayoutStrategy = ((
+    ctx: StateContext,
+    dataChanged: boolean | undefined,
+    options: ItemPositioningOptions,
+    dependencies: LayoutStrategyDependencies,
+) => void) & {
+    findStartIndex?: (ctx: StateContext, startIndex: number, scrollTop: number) => number;
+};
 
 export type ScrollAdjustmentSource = "data" | "item-size";
 
@@ -307,6 +343,7 @@ export interface InternalState {
         maintainScrollAtEnd: MaintainScrollAtEndNormalized | undefined;
         maintainScrollAtEndThreshold: number | undefined;
         maintainVisibleContentPosition: MaintainVisibleContentPositionNormalized;
+        layoutStrategyInternal: LayoutStrategy | undefined;
         numColumns: number;
         onEndReached: LegendListPropsInternal["onEndReached"];
         onEndReachedThreshold: number | null | undefined;

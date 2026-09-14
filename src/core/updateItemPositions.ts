@@ -1,21 +1,14 @@
+import { addTotalSize } from "@/core/addTotalSize";
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { Platform } from "@/platform/Platform";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
+import type { ItemPositioningOptions } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
-
-interface Options {
-    doMVCP: boolean | undefined;
-    forceFullUpdate?: boolean;
-    optimizeForVisibleWindow?: boolean;
-    scrollBottomBuffered: number;
-    scrollVelocity?: number;
-    startIndex: number;
-}
 
 export function updateItemPositions(
     ctx: StateContext,
@@ -27,7 +20,7 @@ export function updateItemPositions(
         scrollBottomBuffered,
         scrollVelocity,
         startIndex,
-    }: Options = {
+    }: ItemPositioningOptions = {
         doMVCP: false,
         forceFullUpdate: false,
         optimizeForVisibleWindow: false,
@@ -36,6 +29,34 @@ export function updateItemPositions(
     },
 ) {
     const state = ctx.state;
+    const layoutStrategy = state.props.layoutStrategyInternal;
+    if (layoutStrategy) {
+        layoutStrategy(
+            ctx,
+            dataChanged,
+            {
+                doMVCP,
+                forceFullUpdate,
+                optimizeForVisibleWindow,
+                scrollBottomBuffered,
+                scrollVelocity,
+                startIndex,
+            },
+            {
+                getId,
+                getItemSize,
+                getScrollVelocity,
+                isDev: IS_DEV,
+                notifyPosition: notifyPosition$,
+                setTotalSize: (strategyContext, totalSize) => addTotalSize(strategyContext, null, totalSize),
+            },
+        );
+        if (state.props.snapToIndices) {
+            updateSnapToOffsets(ctx);
+        }
+        return;
+    }
+
     const hasPositionListeners = ctx.positionListeners.size > 0;
     const {
         columns,

@@ -16,6 +16,7 @@ config.resolver.nodeModulesPaths = [path.resolve(projectRoot, 'node_modules'), p
 const defaultResolveRequest = config.resolver.resolveRequest;
 const listEntrypoints = {
     '@legendapp/list/keyboard': path.join(listRoot, 'integrations/keyboard'),
+    '@legendapp/list/masonry': path.join(listRoot, 'integrations/masonry'),
     '@legendapp/list/react': path.join(listRoot, 'react'),
     '@legendapp/list/react-native': path.join(listRoot, 'react-native'),
     '@legendapp/list/reanimated': path.join(listRoot, 'integrations/reanimated'),

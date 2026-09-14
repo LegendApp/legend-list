@@ -469,6 +469,7 @@ export function calculateItemsInView(
 
         // Check precomputed scroll range to see if we can skip this check
         if (
+            !state.props.layoutStrategyInternal?.findStartIndex &&
             enableScrollForNextCalculateItemsInView &&
             !suppressInitialScrollSideEffects &&
             !dataChanged &&
@@ -582,29 +583,34 @@ export function calculateItemsInView(
             (suppressInitialScrollSideEffects ? bootstrapInitialScrollState?.targetIndexSeed : undefined) ??
             (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
-        // Go backwards from the last start position to find the first item that is in view
-        // This is an optimization to avoid looping through all items, which could slow down
-        // when scrolling at the end of a long list.
-        for (let i = loopStart; i >= 0; i--) {
-            const id = idCache[i] ?? getId(state, i);
-            const top = positions[i]!;
-            const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-            const bottom = top + size;
+        const findLayoutStart = state.props.layoutStrategyInternal?.findStartIndex;
+        if (findLayoutStart) {
+            loopStart = findLayoutStart(ctx, loopStart, scrollTopBuffered);
+        } else {
+            // Go backwards from the last start position to find the first item that is in view
+            // This is an optimization to avoid looping through all items, which could slow down
+            // when scrolling at the end of a long list.
+            for (let i = loopStart; i >= 0; i--) {
+                const id = idCache[i] ?? getId(state, i);
+                const top = positions[i]!;
+                const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+                const bottom = top + size;
 
-            if (bottom > scrollTopBuffered) {
-                loopStart = i;
-            } else {
-                break;
-            }
-        }
-
-        if (numColumns > 1) {
-            while (loopStart > 0) {
-                const loopColumn = columns[loopStart];
-                if (loopColumn === 1 || loopColumn === undefined) {
+                if (bottom > scrollTopBuffered) {
+                    loopStart = i;
+                } else {
                     break;
                 }
-                loopStart -= 1;
+            }
+
+            if (numColumns > 1) {
+                while (loopStart > 0) {
+                    const loopColumn = columns[loopStart];
+                    if (loopColumn === 1 || loopColumn === undefined) {
+                        break;
+                    }
+                    loopStart -= 1;
+                }
             }
         }
 
@@ -675,7 +681,14 @@ export function calculateItemsInView(
 
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
-        if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
+        // The row cache has one top/bottom boundary; independent columns need
+        // separate boundaries or small reverse scrolls can skip newly visible cells.
+        if (
+            !findLayoutStart &&
+            enableScrollForNextCalculateItemsInView &&
+            nextTop !== undefined &&
+            nextBottom !== undefined
+        ) {
             state.scrollForNextCalculateItemsInView =
                 isNullOrUndefined(nextTop) && isNullOrUndefined(nextBottom)
                     ? undefined
@@ -712,6 +725,31 @@ export function calculateItemsInView(
             alwaysRenderIndicesSet.has(index) ||
             (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
+        // Independent-height columns can leave offscreen items between the first
+        // and last visible indices. They must not occupy the recycled pool just
+        // because an earlier tall item still intersects the viewport.
+        const isOutsideLayoutBuffer = findLayoutStart
+            ? (index: number) => {
+                  const id = idCache[index] ?? getId(state, index);
+                  const size = sizes.get(id) ?? getItemSize(ctx, id, index, data[index]);
+                  const top = positions[index]!;
+                  return top + size <= scrollTopBuffered || top > scrollBottomBuffered;
+              }
+            : undefined;
+        if (isOutsideLayoutBuffer) {
+            for (const [key, containerIndex] of containerItemKeys) {
+                const index = indexByKey.get(key);
+                if (
+                    index !== undefined &&
+                    !isPinnedRenderIndex(index) &&
+                    !state.stickyContainerPool.has(containerIndex) &&
+                    isOutsideLayoutBuffer(index)
+                ) {
+                    pendingRemoval.push(containerIndex);
+                }
+            }
+        }
+
         // Place newly added items into containers
         if (startBuffered !== null && endBuffered !== null) {
             const needNewContainers: number[] = [];
@@ -730,6 +768,7 @@ export function calculateItemsInView(
             };
 
             for (let i = startBuffered; i <= endBuffered; i++) {
+                if (isOutsideLayoutBuffer?.(i) && !isPinnedRenderIndex(i)) continue;
                 const id = idCache[i] ?? getId(state, i);
                 if (!containerItemKeys.has(id)) {
                     needNewContainersSet.add(i);

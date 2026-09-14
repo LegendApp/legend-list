@@ -1,3 +1,8 @@
+## Unreleased
+
+- Feat: Add optional `MasonryLegendList` for vertical, variable-height columns.
+- Fix: Preserve pending column reflow across React render replay.
+
 ## 3.3.11
 
 - Fix: `scrollToEnd` and `maintainScrollAtEnd` keep reaching the end as content changes, while scrolling away or requesting another position cancels automatic following.

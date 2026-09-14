@@ -10,7 +10,9 @@
         "build": "VITE_LEGEND_LIST_MODE=examples tsc && vite build",
         "build:fixtures": "VITE_LEGEND_LIST_MODE=fixtures tsc && vite build",
         "build:ignore-errors": "vite build --mode development",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "test:e2e": "playwright test",
+        "typecheck:e2e": "tsc --project tsconfig.e2e.json"
     },
     "dependencies": {
         "@tanstack/react-router": "^1.59.0",
@@ -23,6 +25,7 @@
         "virtua": "^0.41.5"
     },
     "devDependencies": {
+        "@playwright/test": "1.63.0",
         "@tailwindcss/vite": "^4.1.14",
         "@types/react": "^18.2.15",
         "@types/react-dom": "^18.2.7",

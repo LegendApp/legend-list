@@ -65,6 +65,11 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 title: "Columns",
             },
             {
+                description: "Balances dynamically sized cards into the shortest available column.",
+                slug: "masonry",
+                title: "Masonry",
+            },
+            {
                 description: "Forces external state updates through visible cells.",
                 slug: "extra-data",
                 title: "Extra Data",

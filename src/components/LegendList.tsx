@@ -198,6 +198,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
 
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
+    const layoutStrategyInternal = (props as any)
+        .layoutStrategyInternal as InternalState["props"]["layoutStrategyInternal"];
     const anchoredEndSpaceOwner =
         ((props as any).anchoredEndSpaceOwnerInternal as AnchoredEndSpaceOwner | undefined) ?? "list";
     const positionComponentInternal = (props as any).positionComponentInternal as React.ComponentType<any> | undefined;
@@ -205,6 +207,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         | React.ComponentType<any>
         | undefined;
     const {
+        layoutStrategyInternal: _layoutStrategyInternal,
         anchoredEndSpaceOwnerInternal: _anchoredEndSpaceOwnerInternal,
         positionComponentInternal: _positionComponentInternal,
         stickyPositionComponentInternal: _stickyPositionComponentInternal,
@@ -436,7 +439,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
 
     ctx.scrollAxisGap = nextScrollAxisGap;
-    state.didColumnsChange = numColumnsProp !== previousNumColumnsProp || didScrollAxisGapChange;
+    // Render replay can observe the new props before the layout effect has
+    // consumed this change. Keep the pending reflow until that effect clears it.
+    state.didColumnsChange ||= numColumnsProp !== previousNumColumnsProp || didScrollAxisGapChange;
     const previousDataLength = state.props.data?.length ?? 0;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataKeyChangeLocal = state.props.dataKey !== dataKey;
@@ -502,6 +507,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         horizontal: !!horizontal,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),
+        layoutStrategyInternal,
         maintainScrollAtEnd: maintainScrollAtEndConfig,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
