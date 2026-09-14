@@ -123,6 +123,7 @@ export function updateItemSizes(ctx: StateContext, measurement: ItemSizeMeasurem
 export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMeasurement[]) {
     const state = ctx.state;
     const result: ItemSizeUpdateResult = {};
+    const previousTotalSize = state.totalSize;
 
     for (const measurement of measurements) {
         // Measurements can arrive after recycling. Only explicit imperative sizes,
@@ -140,6 +141,12 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
             const nextResult = applyItemSize(ctx, measurement.itemKey, measurement.size, metadata);
             mergeItemSizeUpdateResult(result, nextResult);
         }
+    }
+
+    // Publish the batch total before recalculating scroll positions. If the total is unchanged,
+    // preserve any published old-architecture pending shrink or temporary padding compensation.
+    if (state.totalSize !== previousTotalSize) {
+        set$(ctx, "totalSize", state.totalSize);
     }
 
     flushItemSizeUpdates(ctx, result);
@@ -192,7 +199,7 @@ function applyItemSize(
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
-    const diff = updateOneItemSize(ctx, itemKey, sizeObj, resolvedMeasurementItem);
+    const diff = updateOneItemSize(ctx, itemKey, sizeObj, resolvedMeasurementItem, false);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
     if (diff !== 0) {
@@ -254,6 +261,7 @@ export function updateOneItemSize(
     itemKey: string,
     sizeObj: { width: number; height: number },
     resolvedMeasurementItem?: ResolvedItemSize,
+    notifyTotalSize = true,
 ) {
     const state = ctx.state;
     const {
@@ -281,7 +289,16 @@ export function updateOneItemSize(
                   itemType,
               }
             : undefined;
-    const prevSize = getItemSize(ctx, itemKey, index, itemData, undefined, undefined, undefined, resolvedItemSize);
+    const prevSize = getItemSize(
+        ctx,
+        itemKey,
+        index,
+        itemData,
+        undefined,
+        undefined,
+        notifyTotalSize,
+        resolvedItemSize,
+    );
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     const prevSizeKnown = sizesKnown.get(itemKey);
     if (Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown)) {
@@ -321,7 +338,7 @@ export function updateOneItemSize(
 
     // Update saved size if it changed
     if (!prevSize || Math.abs(prevSize - size) > 0.1) {
-        setSize(ctx, itemKey, size);
+        setSize(ctx, itemKey, size, notifyTotalSize);
         return size - prevSize;
     }
     return 0;

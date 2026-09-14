@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch } from "../../src/core/updateItemSizes";
-import type { StateContext } from "../../src/state/state";
+import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -139,6 +139,104 @@ describe("updateItemSizes", () => {
         expect(calculateSpy).toHaveBeenCalledTimes(1);
 
         calculateSpy.mockRestore();
+    });
+
+    it("publishes measured totals once before scroll recalculation", () => {
+        mockCtx.values.set("totalSize", 300);
+        for (let index = 0; index < 3; index++) {
+            mockState.sizes.set(`item_${index}`, 100);
+        }
+        const totals: number[] = [];
+        listen$(mockCtx, "totalSize", (value) => totals.push(value));
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {
+            expect(mockCtx.values.get("totalSize")).toBe(470);
+            expect(mockState.totalSize).toBe(470);
+        });
+        try {
+            updateItemSizesBatch(mockCtx, [
+                { itemKey: "item_0", size: { height: 150, width: 400 } },
+                { itemKey: "item_1", size: { height: 220, width: 400 } },
+            ]);
+            expect(totals).toEqual([470]);
+            expect(calculateSpy).toHaveBeenCalledTimes(1);
+        } finally {
+            calculateSpy.mockRestore();
+        }
+    });
+
+    it("does not publish intermediate totals when measurement changes cancel out", () => {
+        mockCtx.values.set("totalSize", 300);
+        for (let index = 0; index < 3; index++) {
+            mockState.sizes.set(`item_${index}`, 100);
+        }
+        const totals: number[] = [];
+        listen$(mockCtx, "totalSize", (value) => totals.push(value));
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        try {
+            updateItemSizesBatch(mockCtx, [
+                { itemKey: "item_0", size: { height: 150, width: 400 } },
+                { itemKey: "item_1", size: { height: 50, width: 400 } },
+            ]);
+            expect(totals).toEqual([]);
+            expect(mockState.totalSize).toBe(300);
+            expect(mockState.sizesKnown.get("item_0")).toBe(150);
+            expect(mockState.sizesKnown.get("item_1")).toBe(50);
+        } finally {
+            calculateSpy.mockRestore();
+        }
+    });
+
+    it("publishes a partial initial measurement batch without exposing uncached estimates", () => {
+        mockState.didContainersLayout = false;
+        const totals: number[] = [];
+        listen$(mockCtx, "totalSize", (value) => totals.push(value));
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        try {
+            updateItemSizesBatch(mockCtx, [
+                { itemKey: "item_0", size: { height: 150, width: 400 } },
+                { itemKey: "item_1", size: { height: 220, width: 400 } },
+            ]);
+            expect(totals).toEqual([370]);
+            expect(mockState.totalSize).toBe(370);
+            expect(calculateSpy).not.toHaveBeenCalled();
+        } finally {
+            calculateSpy.mockRestore();
+        }
+    });
+
+    it("keeps an old-architecture initial shrink pending instead of publishing it", () => {
+        mock.module("@/constants-platform", () => ({ IsNewArchitecture: false }));
+        mockCtx.values.set("totalSize", 300);
+        mockState.sizes.set("item_0", 100);
+        mockState.initialScroll = { index: 0 };
+        const totals: number[] = [];
+        listen$(mockCtx, "totalSize", (value) => totals.push(value));
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        try {
+            updateItemSizesBatch(mockCtx, [{ itemKey: "item_0", size: { height: 50, width: 400 } }]);
+            expect(mockState.sizesKnown.get("item_0")).toBe(50);
+            expect(mockState.pendingTotalSize).toBe(250);
+            expect(mockState.totalSize).toBe(300);
+            expect(mockCtx.values.get("totalSize")).toBe(300);
+            expect(totals).toEqual([]);
+        } finally {
+            calculateSpy.mockRestore();
+        }
+    });
+
+    it("preserves temporary padding compensation when measurements leave the total unchanged", () => {
+        mockCtx.values.set("totalSize", 340);
+        mockState.totalSize = 300;
+        mockState.sizes.set("item_0", 100);
+        mockState.sizesKnown.set("item_0", 100);
+        const totals: number[] = [];
+        listen$(mockCtx, "totalSize", (value) => totals.push(value));
+
+        updateItemSizesBatch(mockCtx, [{ itemKey: "item_0", size: { height: 100, width: 400 } }]);
+
+        expect(mockState.totalSize).toBe(300);
+        expect(mockCtx.values.get("totalSize")).toBe(340);
+        expect(totals).toEqual([]);
     });
 
     it("flushes and resets a synchronous batch when a callback throws", () => {

@@ -1,69 +1,110 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
+import * as React from "react";
+import { Animated } from "react-native";
+
+import { useValue$ } from "../../src/hooks/useValue$";
+import { type ListenerType, type StateContext, StateProvider, set$, useStateContext } from "../../src/state/state";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
-const setValue = mock((value: number) => {
-    animatedValue.value = value;
-});
-const animatedValue = {
-    getValue: () => animatedValue.value,
-    setValue,
-    value: 0,
-};
+function mountProbe({
+    getValue,
+    duringLayout,
+    strict = false,
+}: {
+    getValue?: (value: number) => number;
+    duringLayout?: (ctx: StateContext) => void;
+    strict?: boolean;
+} = {}) {
+    let ctx: StateContext;
+    const setValue = spyOn(Animated.Value.prototype, "setValue");
 
-let peekCalls = 0;
-const mockCtx = {
-    listeners: new Map(),
-    values: new Map(),
-};
+    function Child() {
+        const childCtx = useStateContext();
+        React.useLayoutEffect(() => duringLayout?.(childCtx), [childCtx]);
+        return null;
+    }
 
-function registerUseValueMocks() {
-    mock.module("@/hooks/useAnimatedValue", () => ({
-        useAnimatedValue: () => animatedValue,
-    }));
+    function Probe({ signal }: { signal: ListenerType }) {
+        ctx = useStateContext();
+        useValue$(signal, { getValue });
+        return <Child />;
+    }
 
-    mock.module("@/state/state", () => ({
-        listen$: () => () => {},
-        peek$: () => peekCalls++ !== 0,
-        useStateContext: () => mockCtx,
-    }));
-}
+    function tree(signal: ListenerType) {
+        const content = (
+            <StateProvider>
+                <Probe signal={signal} />
+            </StateProvider>
+        );
+        return strict ? <React.StrictMode>{content}</React.StrictMode> : content;
+    }
 
-function resetMocks() {
-    animatedValue.value = 0;
-    peekCalls = 0;
-    setValue.mockClear();
+    let renderer: TestRenderer.ReactTestRenderer;
+    act(() => {
+        renderer = TestRenderer.create(tree("totalSize"));
+    });
+    return {
+        ctx: ctx!,
+        setValue,
+        unmount() {
+            act(() => renderer.unmount());
+        },
+        update(signal: ListenerType) {
+            act(() => renderer.update(tree(signal)));
+        },
+    };
 }
 
 describe("useValue$", () => {
-    beforeEach(() => {
-        registerUseValueMocks();
-        resetMocks();
+    it.each([false, true])("does not rewrite an unchanged initial value (strict: %s)", (strict) => {
+        const probe = mountProbe({ strict });
+        try {
+            expect(probe.setValue).not.toHaveBeenCalled();
+            probe.update("totalSize");
+            expect(probe.setValue).not.toHaveBeenCalled();
+            expect(probe.ctx.listeners.get("totalSize")?.size).toBe(1);
+        } finally {
+            probe.unmount();
+        }
+        expect(probe.ctx.listeners.get("totalSize")?.size).toBe(0);
     });
 
-    it("resyncs the current value on mount after subscribing", async () => {
-        const { useValue$ } = await import("../../src/hooks/useValue$?mount-resync");
-
-        function Probe() {
-            useValue$("readyToRender", {
-                getValue: (value) => (value ? 1 : 0),
-            });
-            return null;
-        }
-
-        let renderer: TestRenderer.ReactTestRenderer | undefined;
+    it("resyncs changes between render and subscription", () => {
+        const probe = mountProbe({ duringLayout: (ctx) => set$(ctx, "totalSize", 125) });
         try {
-            act(() => {
-                renderer = TestRenderer.create(<Probe />);
-            });
-
-            expect(setValue).toHaveBeenCalledWith(1);
-            expect(animatedValue.getValue()).toBe(1);
+            expect(probe.setValue.mock.calls).toEqual([[125]]);
         } finally {
-            act(() => {
-                renderer?.unmount();
-            });
+            probe.unmount();
+        }
+    });
+
+    it("skips equal mapped values while forwarding changes synchronously", () => {
+        const probe = mountProbe({ getValue: (value) => Math.floor(value / 100) });
+        try {
+            set$(probe.ctx, "totalSize", 50);
+            expect(probe.setValue).not.toHaveBeenCalled();
+            set$(probe.ctx, "totalSize", 150);
+            set$(probe.ctx, "totalSize", 175);
+            set$(probe.ctx, "totalSize", 250);
+            expect(probe.setValue.mock.calls).toEqual([[1], [2]]);
+        } finally {
+            probe.unmount();
+        }
+    });
+
+    it("resyncs a new key and stops listening to the previous key", () => {
+        const probe = mountProbe();
+        try {
+            set$(probe.ctx, "headerSize", 80);
+            probe.update("headerSize");
+            set$(probe.ctx, "totalSize", 200);
+            set$(probe.ctx, "headerSize", 90);
+            expect(probe.setValue.mock.calls).toEqual([[80], [90]]);
+            expect(probe.ctx.listeners.get("totalSize")?.size).toBe(0);
+        } finally {
+            probe.unmount();
         }
     });
 });

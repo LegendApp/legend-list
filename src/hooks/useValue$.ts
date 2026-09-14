@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { useAnimatedValue } from "@/hooks/useAnimatedValue";
 import type { ListenerType } from "@/state/state";
@@ -13,10 +13,16 @@ export function useValue$(
     const { getValue } = params || {};
     const ctx = useStateContext();
     const getNewValue = () => (getValue ? getValue(peek$(ctx, key)) : peek$(ctx, key)) ?? 0;
-    const animValue = useAnimatedValue(getNewValue());
+    const initialValue = getNewValue();
+    const animValue = useAnimatedValue(initialValue);
+    const lastValue = useRef(initialValue);
     useLayoutEffect(() => {
         const syncCurrentValue = () => {
-            animValue.setValue(getNewValue());
+            const nextValue = getNewValue();
+            if (lastValue.current !== nextValue) {
+                lastValue.current = nextValue;
+                animValue.setValue(nextValue);
+            }
         };
         const unsubscribe = listen$(ctx, key, syncCurrentValue);
         syncCurrentValue();
