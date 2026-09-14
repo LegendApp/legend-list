@@ -180,6 +180,12 @@ describe("LegendList props behavior", () => {
         const getKey = spyOn(source, "getKey");
         const onViewableItemsChanged = mock(() => {});
         const { LegendList } = await import("../../src/components/LegendList?source-empty-viewability");
+        const callbacks: Array<() => void> = [];
+        const nativeSetTimeout = globalThis.setTimeout;
+        const timer = spyOn(globalThis, "setTimeout").mockImplementation(((callback: () => void, delay: number) => {
+            if (delay === 100) callbacks.push(callback);
+            return nativeSetTimeout(callback, delay);
+        }) as any);
         const rendered = render(
             <LegendList
                 dataSource={source}
@@ -192,14 +198,10 @@ describe("LegendList props behavior", () => {
             />,
         );
         const ctx = await getContextFromRender();
-        const callbacks: Array<() => void> = [];
-        const timer = spyOn(ctx.state.scheduledWork, "timeout").mockImplementation((callback) => {
-            callbacks.push(callback);
-            return 1 as any;
-        });
         try {
             await act(async () => lastListProps.onLayout(layoutEvent));
             expect(callbacks.length).toBeGreaterThan(0);
+            expect(ctx.state.scheduledWork.has("viewability:")).toBe(true);
             await act(async () => source.splice(0, 3, []));
             getKey.mockClear();
             await act(async () => {

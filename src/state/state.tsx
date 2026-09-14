@@ -10,6 +10,7 @@ import type {
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
+    ViewabilityConfig,
     ViewToken,
 } from "@/types.base";
 import type { InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
@@ -157,6 +158,12 @@ export interface StateContext {
             start: number;
             startBuffered: number;
             viewableItems: ViewToken[];
+            minimumViewTime?: {
+                data: object;
+                config: ViewabilityConfig;
+                since: Map<string, number>;
+                deadline?: number;
+            };
         }
     >;
     pendingContainerIds: Set<number> | null | undefined;

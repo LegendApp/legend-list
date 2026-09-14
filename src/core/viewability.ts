@@ -16,15 +16,7 @@ import { findContainerId } from "@/utils/helpers";
 function ensureViewabilityState(
     ctx: StateContext,
     configId: string,
-): {
-    endBuffered: number;
-    viewableItems: ViewToken[];
-    start: number;
-    startBuffered: number;
-    end: number;
-    previousStart: number;
-    previousEnd: number;
-} {
+): StateContext["mapViewabilityConfigStates"] extends Map<string, infer Value> ? Value : never {
     // Lazily initialize the per-list map if absent (e.g., in tests with manual contexts)
     let map = ctx.mapViewabilityConfigStates;
     if (!map) {
@@ -127,6 +119,9 @@ export function updateViewableItems(
     for (let pairIndex = 0; pairIndex < viewabilityConfigCallbackPairs.length; pairIndex++) {
         const viewabilityConfigCallbackPair = viewabilityConfigCallbackPairs[pairIndex];
         if (viewabilityConfigCallbackPair.viewabilityConfig.waitForInteraction && !state.hasViewabilityInteraction) {
+            state.scheduledWork.cancel(`viewability:${viewabilityConfigCallbackPair.viewabilityConfig.id!}`);
+            const configState = ctx.mapViewabilityConfigStates.get(viewabilityConfigCallbackPair.viewabilityConfig.id!);
+            if (configState) configState.minimumViewTime = undefined;
             continue;
         }
         const publishAmounts = pairIndex === viewabilityConfigCallbackPairs.length - 1;
@@ -135,36 +130,15 @@ export function updateViewableItems(
         viewabilityState.end = end;
         viewabilityState.startBuffered = startBuffered;
         viewabilityState.endBuffered = endBuffered;
-        if (viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime) {
-            state.scheduledWork.timeout(() => {
-                const currentPairs = state.viewabilityConfigCallbackPairs;
-                if (
-                    indexedData === getIndexedData(state) &&
-                    (!currentPairs || currentPairs.includes(viewabilityConfigCallbackPair)) &&
-                    hasViewabilityConsumers(ctx, currentPairs ?? [viewabilityConfigCallbackPair])
-                ) {
-                    updateViewableItemsWithConfig(
-                        indexedData,
-                        viewabilityConfigCallbackPair,
-                        state,
-                        ctx,
-                        scrollSize,
-                        undefined,
-                        publishAmounts,
-                    );
-                }
-            }, viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime);
-        } else {
-            updateViewableItemsWithConfig(
-                indexedData,
-                viewabilityConfigCallbackPair,
-                state,
-                ctx,
-                scrollSize,
-                layout,
-                publishAmounts,
-            );
-        }
+        updateViewableItemsWithConfig(
+            indexedData,
+            viewabilityConfigCallbackPair,
+            state,
+            ctx,
+            scrollSize,
+            layout,
+            publishAmounts,
+        );
     }
 }
 
@@ -181,6 +155,24 @@ function updateViewableItemsWithConfig(
     const configId = viewabilityConfig.id!;
     const viewabilityState = ensureViewabilityState(ctx, configId);
     const { viewableItems: previousViewableItems, start, end, startBuffered, endBuffered } = viewabilityState;
+
+    // Credit only uninterrupted time above the threshold for this key and config.
+    // One timer per configuration wakes the earliest pending row; exits clear its clock.
+    const minimumViewTime = Math.max(0, viewabilityConfig.minimumViewTime ?? 0);
+    const timerKey = `viewability:${configId}` as const;
+    let timing = viewabilityState.minimumViewTime;
+    if (minimumViewTime > 0) {
+        if (!timing || timing.data !== data || !areViewabilityConfigsEqual(timing.config, viewabilityConfig)) {
+            state.scheduledWork.cancel(timerKey);
+            timing = viewabilityState.minimumViewTime = { config: viewabilityConfig, data, since: new Map() };
+        }
+    } else if (timing) {
+        state.scheduledWork.cancel(timerKey);
+        timing = viewabilityState.minimumViewTime = undefined;
+    }
+    const now = timing ? Date.now() : 0;
+    const visibleKeys = timing ? new Set<string>() : undefined;
+    let nextDeadline: number | undefined;
 
     let staleViewabilityAmountIds: number[] | undefined;
     for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
@@ -224,6 +216,12 @@ function updateViewableItemsWithConfig(
                     publishAmounts,
                 );
             }
+            if (
+                timing &&
+                (!timing.since.has(viewToken.key) || now - timing.since.get(viewToken.key)! < minimumViewTime)
+            ) {
+                isStillViewable = false;
+            }
             if (!isStillViewable) {
                 changed.push({
                     ...viewToken,
@@ -246,20 +244,30 @@ function updateViewableItemsWithConfig(
         if (item !== undefined || data.kind === "dataSource") {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
-            if (
-                checkIsViewable(
-                    state,
-                    ctx,
-                    layout,
-                    viewabilityConfig,
-                    containerId,
-                    key,
-                    scrollSize,
-                    item,
-                    i,
-                    publishAmounts,
-                )
-            ) {
+            const amount = computeViewability(
+                state,
+                ctx,
+                layout,
+                viewabilityConfig,
+                containerId,
+                key,
+                scrollSize,
+                item,
+                i,
+                publishAmounts && !timing,
+            );
+            if (amount.isViewable) {
+                if (timing) {
+                    visibleKeys!.add(key);
+                    const since = timing.since.get(key) ?? now;
+                    timing.since.set(key, since);
+                    const deadline = since + minimumViewTime;
+                    if (now < deadline) {
+                        nextDeadline = Math.min(nextDeadline ?? deadline, deadline);
+                        continue;
+                    }
+                    if (publishAmounts) publishViewabilityAmount(ctx, amount);
+                }
                 const viewToken: ViewToken = {
                     containerId,
                     index: i,
@@ -271,6 +279,43 @@ function updateViewableItemsWithConfig(
                 if (!previousViewableKeys.has(viewToken.key)) {
                     changed.push(viewToken);
                 }
+            }
+        }
+    }
+
+    if (timing) {
+        for (const key of timing.since.keys()) {
+            if (!visibleKeys!.has(key)) timing.since.delete(key);
+        }
+        if (nextDeadline !== timing.deadline) {
+            state.scheduledWork.cancel(timerKey);
+            timing.deadline = nextDeadline;
+            if (nextDeadline !== undefined) {
+                const scheduledTiming = timing;
+                state.scheduledWork.timeout(
+                    () => {
+                        if (viewabilityState.minimumViewTime !== scheduledTiming || getIndexedData(state) !== data)
+                            return;
+                        scheduledTiming.deadline = undefined;
+                        const currentPairs = state.viewabilityConfigCallbackPairs;
+                        const currentPair = currentPairs
+                            ? currentPairs.find((pair) => pair.viewabilityConfig.id === configId)
+                            : viewabilityConfigCallbackPair;
+                        if (currentPair && hasViewabilityConsumers(ctx, currentPairs ?? [currentPair])) {
+                            updateViewableItemsWithConfig(
+                                data,
+                                currentPair,
+                                state,
+                                ctx,
+                                state.scrollLength,
+                                undefined,
+                                publishAmounts,
+                            );
+                        }
+                    },
+                    Math.max(0, nextDeadline - now),
+                    timerKey,
+                );
             }
         }
     }
@@ -445,4 +490,22 @@ function maybeUpdateViewabilityCallback(
 
     const cb = ctx.mapViewabilityCallbacks.get(key);
     cb?.(viewToken);
+}
+
+export function areViewabilityConfigsEqual(a: ViewabilityConfig | undefined, b: ViewabilityConfig | undefined) {
+    return (
+        a?.id === b?.id &&
+        a?.itemVisiblePercentThreshold === b?.itemVisiblePercentThreshold &&
+        a?.minimumViewTime === b?.minimumViewTime &&
+        a?.startOffset === b?.startOffset &&
+        a?.viewAreaCoveragePercentThreshold === b?.viewAreaCoveragePercentThreshold &&
+        a?.waitForInteraction === b?.waitForInteraction
+    );
+}
+
+export function resetViewabilityTimers(ctx: StateContext) {
+    for (const [configId, value] of ctx.mapViewabilityConfigStates) {
+        value.minimumViewTime = undefined;
+        ctx.state.scheduledWork.cancel(`viewability:${configId}`);
+    }
 }

@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { IsNewArchitecture } from "@/constants-platform";
-import { hasViewabilityConsumers, requestViewabilityRecalculation } from "@/core/viewability";
+import { hasViewabilityConsumers, requestViewabilityRecalculation, resetViewabilityTimers } from "@/core/viewability";
 import { useLatestRef } from "@/hooks/useLatestRef";
 import { listen$, peek$, useArr$, useSelector$, useStateContext } from "@/state/state";
 import type {
@@ -129,6 +129,7 @@ export function useViewability<ItemT = any>(callback: ViewabilityCallback<ItemT>
             ? scheduleViewabilityConfigWarning(ctx, "useViewability", configId)
             : undefined;
         if (!hadConsumers) {
+            resetViewabilityTimers(ctx);
             requestViewabilityRecalculation(ctx);
         }
 
@@ -158,6 +159,7 @@ export function useViewabilityAmount<ItemT = any>(callback: ViewabilityAmountCal
         if (value) callbackRef.current(value);
         const cancelConfigWarning = IS_DEV ? scheduleViewabilityConfigWarning(ctx, "useViewabilityAmount") : undefined;
         if (!hadConsumers) {
+            resetViewabilityTimers(ctx);
             requestViewabilityRecalculation(ctx);
         }
 

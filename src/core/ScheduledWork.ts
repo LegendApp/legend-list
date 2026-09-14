@@ -1,4 +1,5 @@
 export type ScheduledWorkKey =
+    | `viewability:${string}`
     | "adaptiveRender"
     | "alignItemsAtEndPaddingFallback"
     | "checkFinishedScrollFallback"
