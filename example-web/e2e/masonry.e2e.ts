@@ -44,16 +44,44 @@ async function readLayout(page: Page) {
 }
 
 async function scrollTo(page: Page, offset: number) {
-    await page.evaluate((value) => {
-        const scroller = Array.from(document.querySelectorAll("div")).find(
-            (element) =>
-                element.scrollHeight > element.clientHeight + 300 && getComputedStyle(element).overflowY === "auto",
-        );
-        if (!scroller) throw new Error("Missing masonry scroll container");
-        scroller.scrollTop = value;
-    }, offset);
-    await expect.poll(async () => Math.abs((await readLayout(page)).scroll - offset)).toBeLessThan(2);
-    await expect.poll(async () => (await readLayout(page)).cards.length).toBeGreaterThan(0);
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const target = await page.evaluate(() => {
+            const scroller = Array.from(document.querySelectorAll("div")).find(
+                (element) =>
+                    element.scrollHeight > element.clientHeight + 300 && getComputedStyle(element).overflowY === "auto",
+            );
+            if (!scroller) throw new Error("Missing masonry scroll container");
+            const bounds = scroller.getBoundingClientRect();
+            return { offset: scroller.scrollTop, x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+        });
+        const delta = offset - target.offset;
+        if (Math.abs(delta) < 2) break;
+        await page.mouse.move(target.x, target.y);
+        await page.mouse.wheel(0, delta);
+        // A reverse gesture must actually move backward, even while sizes settle.
+        await expect
+            .poll(async () => Math.sign(delta) * ((await readLayout(page)).scroll - target.offset))
+            .toBeGreaterThan(0);
+        let previous = "";
+        let stableSamples = 0;
+        await expect
+            .poll(
+                async () => {
+                    const layout = await readLayout(page);
+                    const signature = JSON.stringify(layout);
+                    stableSamples = signature === previous ? stableSamples + 1 : 0;
+                    previous = signature;
+                    return stableSamples;
+                },
+                { intervals: [100] },
+            )
+            .toBeGreaterThanOrEqual(3);
+        expect(Math.sign(delta) * ((await readLayout(page)).scroll - target.offset)).toBeGreaterThan(0);
+        // Dynamic measurement may preserve an anchor a few pixels away from the
+        // requested wheel delta. Correct only after layout settles, as a user can.
+    }
+    expect(Math.abs((await readLayout(page)).scroll - offset)).toBeLessThan(2);
+    expect((await readLayout(page)).cards.length).toBeGreaterThan(0);
     expect((await readLayout(page)).overlaps).toEqual([]);
 }
 
