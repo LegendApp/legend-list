@@ -546,4 +546,10 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
             />
         </HoldContentShrinkContext.Provider>
     );
-});
+}) as {
+    <ItemT>(
+        props: Extract<KeyboardAwareLegendListProps<ItemT>, { dataSource: unknown }> &
+            React.RefAttributes<LegendListRef>,
+    ): React.ReactElement | null;
+    <ItemT>(props: KeyboardAwareLegendListProps<ItemT> & React.RefAttributes<LegendListRef>): React.ReactElement | null;
+};

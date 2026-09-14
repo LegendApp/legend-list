@@ -118,6 +118,11 @@ export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
     elementAtIndex: (index: number) => HTMLElement | null | undefined;
 };
 
-export type LegendListComponent = <ItemT = any>(
-    props: LegendListProps<ItemT> & RefAttributes<LegendListRef>,
-) => ReactElement | null;
+// A source-specific overload provides contextual callback types before generic
+// inference. The union signature also accepts forwarded props from either mode.
+export type LegendListComponent = {
+    <ItemT = any>(
+        props: Extract<LegendListProps<ItemT>, { dataSource: unknown }> & RefAttributes<LegendListRef>,
+    ): ReactElement | null;
+    <ItemT = any>(props: LegendListProps<ItemT> & RefAttributes<LegendListRef>): ReactElement | null;
+};

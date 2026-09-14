@@ -69,9 +69,11 @@ interface AnimatedLegendListAdditionalProps {
     itemLayoutAnimation?: ReanimatedLayoutAnimation;
 }
 
-export interface AnimatedLegendListPropsBase<ItemT>
-    extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView">,
-        AnimatedLegendListAdditionalProps {}
+export type AnimatedLegendListPropsBase<ItemT> = PropsBase<ItemT> extends infer Props
+    ? Props extends unknown
+        ? Omit<Props, KeysToOmit | "refScrollView"> & AnimatedLegendListAdditionalProps
+        : never
+    : never;
 
 type ReanimatedScrollBridgeProps = ReanimatedScrollViewProps & {
     forwardedRef?: React.Ref<AnimatedScrollView>;
@@ -266,7 +268,7 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
     );
 });
 
-interface LegendListForwardedRefProps<ItemT> extends AnimatedLegendListPropsBase<ItemT> {
+type LegendListForwardedRefProps<ItemT> = AnimatedLegendListPropsBase<ItemT> & {
     /**
      * Internal bridge-only prop used to feed Reanimated animatedProps into LegendList's ScrollView.
      * Not part of the public AnimatedLegendList API.
@@ -278,7 +280,7 @@ interface LegendListForwardedRefProps<ItemT> extends AnimatedLegendListPropsBase
      * A string keeps the memoized shell's props equal across renders.
      */
     workletEventNamesInternal?: string;
-}
+};
 
 // Reanimated registers native worklet event handlers on the scroll view and passes an empty listener
 // down in their place. LegendList would otherwise throttle that no-op on every scroll event.
@@ -465,9 +467,12 @@ type AnimatedLegendListProps<ItemT> = PropsBase<ItemT> extends infer Props
         : never
     : never;
 
-type AnimatedLegendListDefinition = <ItemT>(
-    props: AnimatedLegendListProps<ItemT> & { ref?: React.Ref<LegendListRef> },
-) => React.ReactElement | null;
+type AnimatedLegendListDefinition = {
+    <ItemT>(
+        props: Extract<AnimatedLegendListProps<ItemT>, { dataSource: unknown }> & React.RefAttributes<LegendListRef>,
+    ): React.ReactElement | null;
+    <ItemT>(props: AnimatedLegendListProps<ItemT> & React.RefAttributes<LegendListRef>): React.ReactElement | null;
+};
 
 type AnimatedLegendListComponentDefinition = <ItemT>(
     props: LegendListForwardedRefProps<ItemT> & { ref?: React.Ref<AnimatedScrollView> },
@@ -495,14 +500,11 @@ const AnimatedLegendList = typedMemo(
         );
         useAnimatedLegendListSharedValuesSync(legendList, sharedValues);
         const forwardedProps = {
-            ...(rest as Omit<
-                LegendListForwardedRefProps<ItemT>,
-                "animatedPropsInternal" | "refLegendList" | "workletEventNamesInternal"
-            >),
+            ...rest,
             animatedPropsInternal: animatedProps,
             refLegendList: combinedRef,
             workletEventNamesInternal: getWorkletEventNames(rest),
-        };
+        } as LegendListForwardedRefProps<ItemT>;
 
         return <AnimatedLegendListComponentTyped {...forwardedProps} ref={refScrollView} />;
     }),
