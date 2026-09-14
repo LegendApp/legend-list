@@ -834,19 +834,6 @@ export function calculateItemsInView(
         let nextTop: number | undefined | null;
         let nextBottom: number | undefined | null;
 
-        // TODO PERF: Could cache this while looping through numContainers at the end of this function
-        // This takes 0.03 ms in an example in the ios simulator
-        let maxIndexRendered = 0;
-        for (let i = 0; i < prevNumContainers; i++) {
-            const key = peek$(ctx, `containerItemKey${i}`);
-            if (key !== undefined) {
-                const index = indexByKey.get(key);
-                if (index !== undefined) {
-                    maxIndexRendered = Math.max(maxIndexRendered, index);
-                }
-            }
-        }
-
         const visibleRange: VisibleRangeState = {
             endNoBuffer: null,
             firstFullyOnScreenIndex: undefined,
@@ -854,8 +841,9 @@ export function calculateItemsInView(
             startNoBuffer: null,
         };
 
-        // Continue until we've found the end and we've calculated start/end indices of all items in view
-        for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
+        // Positions come from the layout store; old mounted containers are reconciled
+        // separately below. Never scan the skipped gap after an upward scroll jump.
+        for (let i = Math.max(0, loopStart); i < dataLength && !foundEnd; i++) {
             const id = idCache[i] ?? getId(state, i);
             const top = layout.getOffset(i);
             if (top === undefined && layoutStoreMaterializedRange) {
