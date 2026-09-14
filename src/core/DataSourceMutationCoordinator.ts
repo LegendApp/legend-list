@@ -339,7 +339,11 @@ export function applyDataSourceMutationBatches(
         const index = nextIndexByKey.get(key);
         if (containerId !== undefined && index !== undefined) {
             const item = source.getItem(index);
-            if (invalidatedKeys.has(key)) state.containerItemMetadata.delete(containerId);
+            if (invalidatedKeys.has(key)) {
+                // Reject callbacks from the old content even before the next layout pass.
+                state.containerItemGenerations[containerId] = (state.containerItemGenerations[containerId] ?? 0) + 1;
+                state.containerItemMetadata.delete(containerId);
+            }
             updateContainerItemMetadata(state, containerId, index, item);
             set$(ctx, `containerItemIndex${containerId}`, index);
             set$(ctx, `containerItemData${containerId}`, item);

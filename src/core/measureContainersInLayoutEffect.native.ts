@@ -75,6 +75,7 @@ export function measureContainersInLayoutEffect(
                     if (isCurrentGeneration) {
                         const measurement: ItemSizeMeasurement = {
                             containerId,
+                            generation,
                             itemKey,
                             size: { height, width },
                         };

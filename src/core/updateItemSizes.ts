@@ -62,6 +62,7 @@ function updateOtherAxisSizeIfNeeded(
 
 export interface ItemSizeMeasurement {
     containerId?: number;
+    generation?: number;
     itemKey: string;
     size: { width: number; height: number };
 }
@@ -188,11 +189,13 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
             // Fabric's measure() can report NaN for a container with no layout yet. A NaN size would make
             // totalSize NaN, which never equals itself and re-renders forever; onLayout reports it later.
             if (!Number.isFinite(height) || !Number.isFinite(width)) continue;
-            // Measurements can arrive after recycling. Only explicit imperative sizes,
-            // which have no container id, bypass the current-assignment check.
+            // Recheck ownership after collection: recycling or invalidation can happen during a batch.
+            // Explicit imperative sizes have no container id and bypass the assignment check.
             const ownsMeasuredItem =
                 measurement.containerId === undefined ||
-                isContainerItemCurrent(ctx, measurement.containerId, measurement.itemKey);
+                (isContainerItemCurrent(ctx, measurement.containerId, measurement.itemKey) &&
+                    (measurement.generation === undefined ||
+                        (state.containerItemGenerations[measurement.containerId] ?? 0) === measurement.generation));
             if (ownsMeasuredItem) {
                 const index = state.indexByKey.get(measurement.itemKey);
                 const itemData = index === undefined ? undefined : getDataItem(state, index);
