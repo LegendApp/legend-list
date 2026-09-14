@@ -16,7 +16,7 @@ export interface RowSpanCacheInput {
 
 export class LayoutStoreRuntime {
     didFlushInitialEstimate = false;
-    lastFlushedEstimateMeasurementCount = 0;
+    pendingEstimateMeasurements = 0;
     positionListenerOffsets?: Map<string, number>;
     propEstimatedSize: number;
     private rowSpanCache?: {
@@ -32,7 +32,7 @@ export class LayoutStoreRuntime {
 
     resetTransientState() {
         this.didFlushInitialEstimate = false;
-        this.lastFlushedEstimateMeasurementCount = 0;
+        this.pendingEstimateMeasurements = 0;
         this.positionListenerOffsets = undefined;
     }
 

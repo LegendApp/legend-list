@@ -144,9 +144,9 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     if (result.shouldMaintainScrollAtEnd && Platform.OS !== "web") {
         doMaintainScrollAtEnd(ctx, { immediate: true });
     }
-    if (result.didChange) {
-        schedulePeriodicLayoutStoreEstimateFlush(ctx);
-    }
+    // A first measurement equal to its estimate still advances estimate sampling.
+    // Geometry and recalculation above remain synchronous with this layout pass.
+    schedulePeriodicLayoutStoreEstimateFlush(ctx);
 }
 
 export function updateItemSizes(ctx: StateContext, measurement: ItemSizeMeasurement) {

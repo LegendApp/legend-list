@@ -18,6 +18,7 @@ interface KnownPiece {
     kinds: Uint8Array;
     knownSizeTotal: number;
     measuredCount: number;
+    positiveMeasuredCount: number;
     measuredSizeTotal: number;
     sizes: Float64Array;
     type: typeof PIECE_KNOWN;
@@ -31,6 +32,7 @@ interface SequenceNode {
     left?: SequenceNode;
     logicalCount: number;
     measuredCount: number;
+    positiveMeasuredCount: number;
     measuredSizeTotal: number;
     piece: SequencePiece;
     priority: number;
@@ -135,6 +137,11 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
     getMeasuredAverageSize() {
         const measuredCount = this.getMeasuredCount();
         return measuredCount > 0 ? getMeasuredSizeTotal(this.root) / measuredCount : undefined;
+    }
+
+    getPositiveMeasuredAverageSize() {
+        const count = getPositiveMeasuredCount(this.root);
+        return count > 0 ? getMeasuredSizeTotal(this.root) / count : undefined;
     }
 
     getMeasuredCount() {
@@ -335,7 +342,8 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
                 existingPiece.knownSizeTotal += normalizedSize - existing.size;
                 existingPiece.measuredCount += existing.kind === SIZE_MEASURED ? 0 : 1;
                 existingPiece.measuredSizeTotal += normalizedSize - previousMeasuredSize;
-                updatePathToIndex(this.root, index);
+                existingPiece.positiveMeasuredCount += Number(normalizedSize > 0) - Number(previousMeasuredSize > 0);
+                updatePaths([located.path]);
             }
         } else if (!this.tryAppendMeasuredToPreviousBlock(index, normalizedSize, located)) {
             const [before, fromIndex] = splitTree(this.root, index);
@@ -386,6 +394,7 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
                 previousPiece.count++;
                 previousPiece.knownSizeTotal += size;
                 previousPiece.measuredCount++;
+                previousPiece.positiveMeasuredCount += Number(size > 0);
                 previousPiece.measuredSizeTotal += size;
                 currentPiece.count--;
                 updatePaths([previous.path, current.path]);
@@ -426,6 +435,7 @@ function createNode(piece: SequencePiece): SequenceNode {
         measuredCount: 0,
         measuredSizeTotal: 0,
         piece,
+        positiveMeasuredCount: 0,
         priority: getNodePriority(nextNodeId++),
     });
 }
@@ -436,6 +446,8 @@ function updateNode(node: SequenceNode) {
     node.knownCount = getKnownCount(node.left) + pieceStats.knownCount + getKnownCount(node.right);
     node.knownSizeTotal = getKnownSizeTotal(node.left) + pieceStats.knownSizeTotal + getKnownSizeTotal(node.right);
     node.measuredCount = getMeasuredCount(node.left) + pieceStats.measuredCount + getMeasuredCount(node.right);
+    node.positiveMeasuredCount =
+        getPositiveMeasuredCount(node.left) + pieceStats.positiveMeasuredCount + getPositiveMeasuredCount(node.right);
     node.measuredSizeTotal =
         getMeasuredSizeTotal(node.left) + pieceStats.measuredSizeTotal + getMeasuredSizeTotal(node.right);
     return node;
@@ -448,8 +460,9 @@ function getPieceStats(piece: SequencePiece) {
               knownSizeTotal: piece.knownSizeTotal,
               measuredCount: piece.measuredCount,
               measuredSizeTotal: piece.measuredSizeTotal,
+              positiveMeasuredCount: piece.positiveMeasuredCount,
           }
-        : { knownCount: 0, knownSizeTotal: 0, measuredCount: 0, measuredSizeTotal: 0 };
+        : { knownCount: 0, knownSizeTotal: 0, measuredCount: 0, measuredSizeTotal: 0, positiveMeasuredCount: 0 };
 }
 
 function getLogicalCount(node: SequenceNode | undefined) {
@@ -466,6 +479,10 @@ function getKnownSizeTotal(node: SequenceNode | undefined) {
 
 function getMeasuredCount(node: SequenceNode | undefined) {
     return node?.measuredCount ?? 0;
+}
+
+function getPositiveMeasuredCount(node: SequenceNode | undefined) {
+    return node?.positiveMeasuredCount ?? 0;
 }
 
 function getMeasuredSizeTotal(node: SequenceNode | undefined) {
@@ -531,13 +548,6 @@ function findPieceAtIndexWithPath(root: SequenceNode | undefined, index: number)
         }
     }
     return result;
-}
-
-function updatePathToIndex(root: SequenceNode | undefined, index: number) {
-    const located = findPieceAtIndexWithPath(root, index);
-    if (located) {
-        updatePaths([located.path]);
-    }
 }
 
 function updatePaths(paths: SequenceNode[][]) {
@@ -677,6 +687,7 @@ function mergePieces(left: SequencePiece, right: SequencePiece) {
             knownSizeTotal: left.knownSizeTotal + right.knownSizeTotal,
             measuredCount: left.measuredCount + right.measuredCount,
             measuredSizeTotal: left.measuredSizeTotal + right.measuredSizeTotal,
+            positiveMeasuredCount: left.positiveMeasuredCount + right.positiveMeasuredCount,
             sizes,
             type: PIECE_KNOWN,
         };
@@ -687,12 +698,14 @@ function mergePieces(left: SequencePiece, right: SequencePiece) {
 function createKnownPiece(sizes: Float64Array, kinds: Uint8Array, count: number): KnownPiece {
     let knownSizeTotal = 0;
     let measuredCount = 0;
+    let positiveMeasuredCount = 0;
     let measuredSizeTotal = 0;
     for (let index = 0; index < count; index++) {
         const size = sizes[index]!;
         knownSizeTotal += size;
         if (kinds[index] === SIZE_MEASURED) {
             measuredCount++;
+            positiveMeasuredCount += Number(size > 0);
             measuredSizeTotal += size;
         }
     }
@@ -702,6 +715,7 @@ function createKnownPiece(sizes: Float64Array, kinds: Uint8Array, count: number)
         knownSizeTotal,
         measuredCount,
         measuredSizeTotal,
+        positiveMeasuredCount,
         sizes,
         type: PIECE_KNOWN,
     };

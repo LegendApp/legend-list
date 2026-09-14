@@ -8,6 +8,7 @@ import { RowLayoutStore } from "../../src/core/RowLayoutStore";
 type TestStore = MutableLayoutStore & {
     getMeasuredAverageSize(): number | undefined;
     getMeasuredCount(): number;
+    getPositiveMeasuredAverageSize(): number | undefined;
     setEstimatedSize(size: number): void;
     setMeasuredSize(index: number, size: number): boolean;
 };
@@ -82,6 +83,16 @@ function verifyStore(store: TestStore, model: NaiveLayout) {
         expect(measuredAverage).toBeUndefined();
     }
 
+    const positive = measured.filter((size) => size > 0);
+    if (positive.length > 0) {
+        expect(store.getPositiveMeasuredAverageSize()).toBeCloseTo(
+            positive.reduce((sum, size) => sum + size, 0) / positive.length,
+            10,
+        );
+    } else {
+        expect(store.getPositiveMeasuredAverageSize()).toBeUndefined();
+    }
+
     if (model.knownSizes.length > 0) {
         for (const offset of [-1, 0.001, totalSize * 0.371 + 0.001, totalSize, totalSize + 1]) {
             expect(store.findIndexRangeAtOffsets(offset, offset)).toEqual(findExpectedRange(model, offset));
@@ -107,7 +118,7 @@ function runRandomizedContract(createStore: () => TestStore, numColumns: number)
             seed = nextRandom(seed);
             const index = seed % model.knownSizes.length;
             seed = nextRandom(seed);
-            const size = (seed % 5000) / 100;
+            const size = seed % 3 === 0 ? 0 : (seed % 5000) / 100;
             model.knownSizes[index] = size;
             store.setMeasuredSize(index, size);
         } else if (action === 1) {
@@ -208,3 +219,35 @@ describe("MutableLayoutStore contract", () => {
         }
     });
 });
+
+for (const columns of [1, 3]) {
+    it(`keeps positive sample counts through cached promotion and clearing (${columns} columns)`, () => {
+        const store =
+            columns === 1
+                ? new PrefixLayoutStore(300, 100)
+                : new RowLayoutStore({ estimatedSize: 100, length: 300, numColumns: columns });
+        store.replaceKnownSizeEntries(
+            Array.from({ length: 260 }, (_, index) => ({
+                index,
+                size: index % 2 ? 0 : 120,
+                type: index % 3 ? "measured" : "cached",
+            })),
+        );
+        for (let index = 0; index < 260; index++) store.setMeasuredSize(index, index % 2 ? 0 : 120);
+        expect(store.getMeasuredAverageSize()).toBe(60);
+        expect(store.getPositiveMeasuredAverageSize()).toBe(120);
+        store.move(0, 40, 130);
+        store.splice(10, 125, 2);
+        store.invalidateRange(0, 20);
+        expect(store.getPositiveMeasuredAverageSize()).toBe(120);
+        for (let index = 0; index < store.length; index++) store.setMeasuredSize(index, 0);
+        expect(store.getMeasuredCount()).toBe(store.length);
+        expect(store.getMeasuredAverageSize()).toBe(0);
+        expect(store.getPositiveMeasuredAverageSize()).toBeUndefined();
+        store.setMeasuredSize(0, 80);
+        expect(store.getPositiveMeasuredAverageSize()).toBe(80);
+        store.clearKnownSizes();
+        expect(store.getMeasuredCount()).toBe(0);
+        expect(store.getPositiveMeasuredAverageSize()).toBeUndefined();
+    });
+}

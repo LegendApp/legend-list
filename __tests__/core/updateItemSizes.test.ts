@@ -7,7 +7,7 @@ import { invalidateFixedItemSizes } from "../../src/core/containerItemMetadata";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
-import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
+import { setLayoutStoreMeasuredSize, syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch, updateOneItemSize } from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -101,23 +101,6 @@ describe("updateItemSizes", () => {
         expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(false);
     });
 
-    it("keeps positions current when a first measurement matches the size its position used", () => {
-        mockState.sizes.set("item_0", 100);
-        mockState.positionsAreCurrent = true;
-        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
-        expect(mockState.positionsAreCurrent).toBe(true);
-
-        // Native layout reports a row that matches its estimate as slightly under it
-        mockState.sizes.set("item_2", 100);
-        expect(updateOneItemSize(mockCtx, "item_2", { height: 99.9999, width: 400 })).toBe(0);
-        expect(mockState.sizesKnown.get("item_2")).toBe(100);
-        expect(mockState.positionsAreCurrent).toBe(true);
-
-        mockState.sizes.set("item_1", 100);
-        updateOneItemSize(mockCtx, "item_1", { height: 101, width: 400 });
-        expect(mockState.positionsAreCurrent).toBe(false);
-    });
-
     it("follows every web size measurement before the next frame without replacing the end request", async () => {
         Platform.OS = "web";
         const originalRAF = globalThis.requestAnimationFrame;
@@ -143,11 +126,12 @@ describe("updateItemSizes", () => {
         mockCtx.values.set("totalSize", 1500);
         mockCtx.values.set("isFollowingEnd", true);
         mockState.props.maintainScrollAtEnd = { animated: false };
-        mockState.positions = [0, 500, 1000];
+        syncLayoutStoreStructure(mockCtx);
         for (let index = 0; index < 3; index++) {
             const key = `item_${index}`;
             mockState.sizes.set(key, 500);
             mockState.sizesKnown.set(key, 500);
+            setLayoutStoreMeasuredSize(mockCtx, index, 500);
             assignContainer(index, key);
         }
         mockState.refScroller.current = {
@@ -217,11 +201,12 @@ describe("updateItemSizes", () => {
             mockCtx.values.set("isFollowingEnd", !!maintenance);
             mockState.initialScroll = { index: 2, viewPosition: 1 };
             mockState.initialScrollSession = { kind: "bootstrap", previousDataLength: 3 };
-            mockState.positions = [0, 500, 1000];
+            syncLayoutStoreStructure(mockCtx);
             for (let index = 0; index < 3; index++) {
                 const key = `item_${index}`;
                 mockState.sizes.set(key, 500);
                 mockState.sizesKnown.set(key, 500);
+            setLayoutStoreMeasuredSize(mockCtx, index, 500);
                 assignContainer(index, key);
             }
             // React commits the published content extent after the observer delivery,
@@ -249,7 +234,7 @@ describe("updateItemSizes", () => {
                 ]);
                 await Promise.resolve();
                 expect(domSize).toBe(1680);
-                expect(mockState.positions[2]).toBe(1120);
+                expect(mockState.layoutStoreRuntime?.store.getOffset(2)).toBe(1120);
                 if (maintenance === "animated") {
                     // The preserved target must yield before the smooth follow starts.
                     expect(scrollTo).not.toHaveBeenCalled();
@@ -275,12 +260,36 @@ describe("updateItemSizes", () => {
         mockState.props.maintainScrollAtEnd = { on: { dataChange: true } };
         mockState.sizes.set("item_0", 100);
         mockState.sizesKnown.set("item_0", 100);
-        mockState.positions = [0, 100, 200];
+        syncLayoutStoreStructure(mockCtx);
         updateItemSizes(mockCtx, { itemKey: "item_0", size: { height: 150, width: 400 } });
         expect(mockState.scroll).toBe(0);
         expect(mockState.scrollingTo).toBeUndefined();
         expect(mockState.pendingScrollResolve).toBeUndefined();
         expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+    });
+
+    it("schedules estimate sampling when an equal-to-estimate measurement completes the threshold", () => {
+        const ctx = createMockContext(
+            { containerItemKey3: "k3" },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                idCache: ["k0", "k1", "k2", "k3"],
+                indexByKey: new Map([["k3", 3]]),
+                props: {
+                    data: Array.from({ length: 10 }, (_, index) => ({ id: `k${index}` })),
+                    estimatedItemSize: 100,
+                },
+            },
+        );
+        const store = syncLayoutStoreStructure(ctx)!;
+        ctx.state.layoutStoreRuntime!.didFlushInitialEstimate = true;
+        for (let index = 0; index < 3; index++) setLayoutStoreMeasuredSize(ctx, index, 50);
+        expect(ctx.state.scheduledWork.has("layoutStoreEstimateFlush")).toBe(false);
+        updateItemSizesBatch(ctx, [{ containerId: 3, itemKey: "k3", size: { height: 100, width: 400 } }]);
+        expect(store.getMeasuredCount()).toBe(4);
+        expect(ctx.state.scheduledWork.has("layoutStoreEstimateFlush")).toBe(true);
+        ctx.state.scheduledWork.dispose();
     });
 
     it("updates only the measured item without draining unrelated anchor resets", () => {
