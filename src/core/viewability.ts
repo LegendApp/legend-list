@@ -227,7 +227,11 @@ function updateViewableItemsWithConfig(
 
     const viewableItems: ViewToken[] = [];
 
-    for (let i = start; i <= end; i++) {
+    // A delayed callback can run after a source mutation empties or shrinks this range.
+    // Unloaded rows are valid, but indexes outside the current source are not.
+    const startIndex = Math.max(0, start);
+    const endIndex = Math.min(end, data.getLength() - 1);
+    for (let i = startIndex; i <= endIndex; i++) {
         const item = data.getItem(i);
         if (item !== undefined || data.kind === "dataSource") {
             const key = getId(state, i);

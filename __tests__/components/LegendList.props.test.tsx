@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 import { RefreshControl, Text } from "react-native";
 
@@ -167,6 +167,48 @@ describe("LegendList props behavior", () => {
             await act(async () => source.splice(2, 1, [{ item: { id: "replacement" }, key: "replacement" }]));
             expect(peek$(ctx, "lastItemKeys")).toEqual(["replacement"]);
         } finally {
+            rendered.unmount();
+        }
+    });
+
+    it("does not read source keys after deleting all rows with pending viewability", async () => {
+        const source = new MutationDataSource({
+            generatedItemFactory: (index) => ({ id: `item-${index}` }),
+            generatedKeyPrefix: "item-",
+            length: 3,
+        });
+        const getKey = spyOn(source, "getKey");
+        const onViewableItemsChanged = mock(() => {});
+        const { LegendList } = await import("../../src/components/LegendList?source-empty-viewability");
+        const rendered = render(
+            <LegendList
+                dataSource={source}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                onViewableItemsChanged={onViewableItemsChanged}
+                recycleItems={false}
+                renderItem={() => null}
+                viewabilityConfig={{ minimumViewTime: 100 }}
+            />,
+        );
+        const ctx = await getContextFromRender();
+        const callbacks: Array<() => void> = [];
+        const timer = spyOn(ctx.state.scheduledWork, "timeout").mockImplementation((callback) => {
+            callbacks.push(callback);
+            return 1 as any;
+        });
+        try {
+            await act(async () => lastListProps.onLayout(layoutEvent));
+            expect(callbacks.length).toBeGreaterThan(0);
+            await act(async () => source.splice(0, 3, []));
+            getKey.mockClear();
+            await act(async () => {
+                for (const callback of callbacks) callback();
+            });
+            expect(getKey).not.toHaveBeenCalled();
+            expect(onViewableItemsChanged).not.toHaveBeenCalled();
+        } finally {
+            timer.mockRestore();
             rendered.unmount();
         }
     });
