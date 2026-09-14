@@ -36,3 +36,25 @@ ranges also use that fallback to avoid scanning a huge logical range. Grid
 invalidation visits the smaller of the requested range and the known-size cache,
 then recomputes only affected rows. Prefix point reads omit mutation paths, and
 range reads walk tree pieces instead of searching again for every item.
+
+
+## Large update-only batches
+
+A follow-up comparison against `929ae547` uses 10,000 cached identities and
+separate single-item preserve operations in one atomic batch. It uses the same
+Node environment, two warmups, and the median of ten runs, without mounted
+containers or concurrent validation workloads.
+
+| Operations per batch | Before (ms) | After (ms) |
+| --- | ---: | ---: |
+| 100 | 0.224 | 0.041 |
+| 500 | 3.078 | 0.120 |
+| 1,000 | 12.705 | 0.125 |
+| 2,000 | 48.277 | 0.255 |
+
+The update-only path now accumulates each affected entry's rendering and
+invalidation flags during collection. It does not rebuild the full affected map
+for every operation. Overlapping preserve operations cannot erase an earlier
+invalidation, and each affected mounted item is published once per batch.
+All mutation effects remain synchronous; no frame, microtask, or timer was added
+to defer reconciliation. The benchmark now includes these larger batch sizes.

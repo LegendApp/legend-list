@@ -72,13 +72,18 @@ function collectUpdatedEntries(ctx: StateContext, operations: readonly DataSourc
         count += operation.count;
     }
     if (count > ctx.state.indexByKey.size) return undefined;
-    const entries = new Map<number, MaterializedEntry>();
+    const entries = new Map<number, MaterializedEntry & { invalidateLayout: boolean }>();
     for (const operation of operations) {
         if (operation.type !== "update") return undefined;
         for (let index = operation.index; index < operation.index + operation.count; index++) {
             const key = ctx.state.idCache[index];
             if (key === undefined || ctx.state.indexByKey.get(key) !== index) return undefined;
-            entries.set(index, { index, key });
+            const previous = entries.get(index);
+            entries.set(index, {
+                index,
+                invalidateLayout: previous?.invalidateLayout === true || operation.layout === "invalidate",
+                key,
+            });
         }
     }
     return entries;
@@ -253,8 +258,17 @@ export function applyDataSourceMutationBatches(
     const invalidatedKeys = new Set<string>();
     const removedKeys = new Set<string>();
     const rerenderKeys = new Set<string>();
-    for (const operation of operations) {
-        entries = applyOperationToEntries(entries, operation, invalidatedKeys, rerenderKeys, removedKeys);
+    if (updatedEntries) {
+        // Updates retain indexes. Collect their effects once instead of rebuilding
+        // every affected entry for each operation in the batch.
+        for (const entry of updatedEntries.values()) {
+            rerenderKeys.add(entry.key);
+            if (entry.invalidateLayout) invalidatedKeys.add(entry.key);
+        }
+    } else {
+        for (const operation of operations) {
+            entries = applyOperationToEntries(entries, operation, invalidatedKeys, rerenderKeys, removedKeys);
+        }
     }
 
     let resetReason: string | undefined;

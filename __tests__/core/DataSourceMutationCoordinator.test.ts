@@ -269,3 +269,48 @@ it("invalidates fixed-size metadata for an in-place item update before publishin
     expect(ctx.values.get("containerItemIndex0")).toBe(0);
     expect(resolveContainerItemMetadata(ctx.state, 0, 0, item).fixedItemSize).toBe(90);
 });
+
+it("applies large update-only batches with overlapping preserve and invalidate ranges once per mounted item", () => {
+    const items = Array.from({ length: 5000 }, (_, index) => ({ id: `k${index}` }));
+    const getKey = mock((index: number) => items[index].id);
+    const source = {
+        ...createSource(
+            items.map((item) => item.id),
+            getKey,
+        ),
+        getItem: (index: number) => items[index],
+    };
+    const store = new PrefixLayoutStore(items.length, 10);
+    store.setMeasuredSize(20, 50);
+    store.setMeasuredSize(4999, 30);
+    const ctx = createMockContext(
+        { containerItemData0: items[20], containerItemKey0: "k20" },
+        {
+            containerItemKeys: new Map([["k20", 0]]),
+            idCache: items.map((item) => item.id),
+            indexByKey: new Map(items.map((item, index) => [item.id, index])),
+            layoutStoreRuntime: new LayoutStoreRuntime(store, 10),
+            props: { dataSource: source },
+            sizesKnown: new Map([
+                ["k20", 50],
+                ["k4999", 30],
+            ]),
+        },
+    );
+    const operations: DataSourceMutationBatch["operations"] = Array.from({ length: 2000 }, (_, index) => ({
+        count: 1,
+        index,
+        layout: index === 20 ? "invalidate" : "preserve",
+        type: "update",
+    }));
+    operations.push({ count: 2, index: 19, layout: "preserve", type: "update" });
+    const result = applyDataSourceMutationBatches(ctx, source, [createBatch(items.length, items.length, operations)]);
+    expect(result).toEqual({ applied: true, materializedCount: items.length });
+    expect(getKey).toHaveBeenCalledTimes(2000);
+    expect(store.getSize(20)).toBe(10);
+    expect(ctx.state.sizesKnown.has("k20")).toBe(false);
+    expect(store.getSize(4999)).toBe(30);
+    expect(ctx.values.get("containerDataVersion0")).toBe(1);
+    expect(ctx.state.containerItemGenerations[0]).toBe(1);
+    expect(ctx.state.idCache[4999]).toBe("k4999");
+});
