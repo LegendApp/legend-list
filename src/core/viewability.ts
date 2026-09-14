@@ -288,7 +288,9 @@ function updateViewableItemsWithConfig(
                 state.scheduledWork.timeout(
                     () => {
                         viewabilityState.deadline = undefined;
-                        updateViewableItemsWithConfig(viewabilityState, state, ctx, undefined, publishAmounts);
+                        if (getIndexedData(state) === data) {
+                            updateViewableItemsWithConfig(viewabilityState, state, ctx, undefined, publishAmounts);
+                        }
                     },
                     Math.min(nextDeadline - now, 2147483647),
                     timerKey,
