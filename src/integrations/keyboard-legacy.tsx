@@ -585,4 +585,12 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
             style={style}
         />
     );
-});
+}) as {
+    <ItemT>(
+        props: Extract<KeyboardControllerLegendListProps<ItemT>, { dataSource: unknown }> &
+            React.RefAttributes<LegendListRef>,
+    ): React.ReactElement | null;
+    <ItemT>(
+        props: KeyboardControllerLegendListProps<ItemT> & React.RefAttributes<LegendListRef>,
+    ): React.ReactElement | null;
+};

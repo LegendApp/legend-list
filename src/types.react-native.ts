@@ -100,6 +100,10 @@ export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
     elementAtIndex: (index: number) => View | null | undefined;
 };
 
-export type LegendListComponent = <ItemT = any>(
-    props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>,
-) => React.ReactElement | null;
+// Contextually type source callbacks before inferring the item generic.
+export type LegendListComponent = {
+    <ItemT = any>(
+        props: Extract<LegendListProps<ItemT>, { dataSource: unknown }> & React.RefAttributes<LegendListRef>,
+    ): React.ReactElement | null;
+    <ItemT = any>(props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>): React.ReactElement | null;
+};
