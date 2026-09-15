@@ -8,6 +8,7 @@ import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtE
 import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
 import { setLayoutStoreMeasuredSize, syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
+import { onScroll } from "../../src/core/onScroll";
 import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch, updateOneItemSize } from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -70,202 +71,52 @@ describe("updateItemSizes", () => {
         Platform.OS = prevPlatform;
     });
 
-    it("preserves layout end following after a child measures during a data change", async () => {
-        mockState.didDataChange = true;
-        mockState.isFirst = false;
-        mockState.props.maintainScrollAtEnd = { onDataChange: false, onItemLayout: true };
-        const follow = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockReturnValue(true);
-        try {
-            updateItemSizes(mockCtx, { itemKey: "item_0", size: { height: 150, width: 400 } });
-            expect(mockState.sizesKnown.get("item_0")).toBe(150);
-            expect(follow).not.toHaveBeenCalled();
-            mockState.didDataChange = false;
-            await Promise.resolve();
-            expect(follow).toHaveBeenCalledTimes(1);
-        } finally {
-            follow.mockRestore();
-            mockState.scheduledWork.dispose();
-        }
-    });
-
-    it("keeps a fixed row's new measurement when it becomes dynamic", () => {
-        mockState.props.getFixedItemSize = () => 100;
-        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
-        expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(true);
-
-        mockState.props.getFixedItemSize = () => undefined;
-        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
-        invalidateFixedItemSizes(mockState);
-
-        expect(mockState.sizesKnown.get("item_0")).toBe(100);
-        expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(false);
-    });
-
-    it("follows every web size measurement before the next frame without replacing the end request", async () => {
-        Platform.OS = "web";
-        const originalRAF = globalThis.requestAnimationFrame;
-        const originalCAF = globalThis.cancelAnimationFrame;
-        const frames = new Map<number, FrameRequestCallback>();
-        let nextFrame = 0;
-        globalThis.requestAnimationFrame = (callback) => {
-            frames.set(++nextFrame, callback);
-            return nextFrame;
-        };
-        globalThis.cancelAnimationFrame = (handle) => {
-            frames.delete(handle);
-        };
-        const flushFrames = () => {
-            const pending = [...frames.values()];
-            frames.clear();
-            for (const callback of pending) callback(0);
-        };
-        let physicalScroll = 900;
-        mockState.scroll = 900;
-        mockState.scrollPending = 900;
-        mockState.totalSize = 1500;
-        mockCtx.values.set("totalSize", 1500);
-        mockCtx.values.set("isFollowingEnd", true);
-        mockState.props.maintainScrollAtEnd = { animated: false };
-        syncLayoutStoreStructure(mockCtx);
-        for (let index = 0; index < 3; index++) {
-            const key = `item_${index}`;
-            mockState.sizes.set(key, 500);
-            mockState.sizesKnown.set(key, 500);
-            setLayoutStoreMeasuredSize(mockCtx, index, 500);
-            assignContainer(index, key);
-        }
-        mockState.refScroller.current = {
-            getCurrentScrollOffset: () => physicalScroll,
-            getMaxScrollOffset: () => mockState.totalSize - mockState.scrollLength,
-            getScrollableNode: () => ({}),
-            scrollTo: ({ y }: { y?: number }) => {
-                physicalScroll = Math.min(y ?? 0, mockState.totalSize - mockState.scrollLength);
-            },
-        } as any;
-        mockCtx.scrollToEnd = (options) => scrollToEnd(mockCtx, options);
-        try {
-            let resolve: (() => void) | undefined;
-            for (const height of [518, 552, 579, 591, 580, 561, 535, 500]) {
-                updateItemSizes(mockCtx, { itemKey: "item_2", size: { height, width: 400 } });
-                await Promise.resolve();
-                expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
-                expect(mockState.scrollingTo?.isScrollToEnd).toBe(true);
-                resolve ??= mockState.pendingScrollResolve;
-                expect(resolve).toBeDefined();
-                expect(mockState.pendingScrollResolve).toBe(resolve);
-            }
-            // Following never waits for a frame; only the latest instant scroll's
-            // completion frame stays queued, and it releases the end request.
-            expect(frames.size).toBe(1);
-            expect(mockState.scrollingTo?.isScrollToEnd).toBe(true);
-            flushFrames();
-            expect(mockState.scrollingTo).toBeUndefined();
-            updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 520, width: 400 } });
-            await Promise.resolve();
-            expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
-            const nextResolve = mockState.pendingScrollResolve;
-            expect(nextResolve).toBeDefined();
-            expect(nextResolve).not.toBe(resolve);
-            await Promise.resolve();
-            expect(mockState.maintainingScrollAtEnd).toBe("instant");
-            expect(mockState.pendingScrollResolve).toBe(nextResolve);
-            interruptMaintainScrollAtEnd(mockCtx);
-            physicalScroll = 800;
-            mockState.scroll = 800;
-            updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 550, width: 400 } });
-            await Promise.resolve();
-            expect(physicalScroll).toBe(800);
-            expect(mockState.scrollingTo).toBeUndefined();
-            expect(mockState.pendingScrollResolve).toBeUndefined();
-        } finally {
-            mockState.scheduledWork.dispose();
-            globalThis.requestAnimationFrame = originalRAF;
-            globalThis.cancelAnimationFrame = originalCAF;
-        }
-    });
-
-    for (const maintenance of [false, true, "animated"] as const) {
-        it(`follows web row growth with one scroll owner (maintainScrollAtEnd=${maintenance})`, async () => {
-            Platform.OS = "web";
-            const originalRAF = globalThis.requestAnimationFrame;
-            const frames: FrameRequestCallback[] = [];
-            globalThis.requestAnimationFrame = (callback) => frames.push(callback);
-            let physicalScroll = 900;
-            let domSize = 1500;
-            mockState.scroll = 900;
-            mockState.scrollPending = 900;
-            mockCtx.values.set("totalSize", domSize);
-            mockState.props.maintainScrollAtEnd = maintenance
-                ? { animated: maintenance === "animated", onItemLayout: true }
-                : undefined;
-            mockCtx.values.set("isFollowingEnd", !!maintenance);
-            mockState.initialScroll = { index: 2, viewPosition: 1 };
-            mockState.initialScrollSession = { kind: "bootstrap", previousDataLength: 3 };
-            syncLayoutStoreStructure(mockCtx);
-            for (let index = 0; index < 3; index++) {
-                const key = `item_${index}`;
-                mockState.sizes.set(key, 500);
-                mockState.sizesKnown.set(key, 500);
-            setLayoutStoreMeasuredSize(mockCtx, index, 500);
-                assignContainer(index, key);
-            }
-            // React commits the published content extent after the observer delivery,
-            // before paint. Until then the DOM clamps to the old extent.
-            listen$(mockCtx, "totalSize", (value) =>
-                queueMicrotask(() => {
-                    domSize = value;
-                }),
-            );
-            const scrollTo = mock(({ y = 0 }: { y?: number; animated?: boolean }) => {
-                physicalScroll = Math.min(y, domSize - mockState.scrollLength);
-            });
-            mockState.refScroller.current = {
-                getCurrentScrollOffset: () => physicalScroll,
-                getMaxScrollOffset: () => domSize - mockState.scrollLength,
-                getScrollableNode: () => ({}),
-                scrollTo,
-            } as any;
-            mockCtx.scrollToEnd = (options) => scrollToEnd(mockCtx, options);
-            try {
-                updateItemSizesBatch(mockCtx, [
-                    { itemKey: "item_0", size: { height: 560, width: 400 } },
-                    { itemKey: "item_1", size: { height: 560, width: 400 } },
-                    { itemKey: "item_2", size: { height: 560, width: 400 } },
-                ]);
-                await Promise.resolve();
-                expect(domSize).toBe(1680);
-                expect(mockState.layoutStoreRuntime?.store.getOffset(2)).toBe(1120);
-                if (maintenance === "animated") {
-                    // The preserved target must yield before the smooth follow starts.
-                    expect(scrollTo).not.toHaveBeenCalled();
-                    expect(physicalScroll).toBe(900);
-                    for (const callback of frames.splice(0)) callback(0);
-                } else {
-                    // No animation frame has run: instant growth must paint at the true end.
-                    expect(physicalScroll).toBe(1080);
+    it("keeps native scrollbar jumps responsive after a measured row shifts the visible anchor", () => {
+        for (const height of [50, 150]) {
+            for (const destination of [80000, 1000]) {
+                const keys = Array.from({ length: 1000 }, (_, i) => `k${i}`);
+                const ctx = createMockContext(
+                    { readyToRender: true },
+                    {
+                        didContainersLayout: true,
+                        didFinishInitialScroll: true,
+                        endBuffered: 506,
+                        idCache: keys,
+                        idsInView: ["k500"],
+                        indexByKey: new Map(keys.map((key, index) => [key, index])),
+                        props: {
+                            data: keys.map((id) => ({ id })),
+                            estimatedItemSize: 100,
+                            maintainVisibleContentPosition: { data: false, size: true },
+                        },
+                        scroll: 50000,
+                        scrollLength: 600,
+                        startBuffered: 499,
+                        totalSize: 100000,
+                    },
+                );
+                syncLayoutStoreStructure(ctx);
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => {},
+                );
+                try {
+                    updateItemSizesBatch(ctx, [{ itemKey: "k499", size: { height, width: 400 } }]);
+                    expect(ctx.state.scroll).toBe(50000 + height - 100);
+                    onScroll(ctx, {
+                        nativeEvent: {
+                            contentOffset: { x: 0, y: destination },
+                            contentSize: { height: ctx.state.totalSize, width: 400 },
+                        },
+                    } as Parameters<typeof onScroll>[1]);
+                    expect(ctx.state.lastNativeScroll).toBe(destination);
+                    expect(ctx.state.scroll).toBe(destination);
+                    expect(ctx.state.ignoreScrollFromMVCP).toBeUndefined();
+                } finally {
+                    calculateSpy.mockRestore();
+                    ctx.state.scheduledWork.dispose();
                 }
-                expect(scrollTo).toHaveBeenCalledTimes(1);
-                expect(scrollTo).toHaveBeenCalledWith({ animated: maintenance === "animated", x: 0, y: 1080 });
-            } finally {
-                mockState.isUnmounted = true;
-                mockState.scheduledWork.dispose();
-                globalThis.requestAnimationFrame = originalRAF;
             }
-        });
-    }
-
-    it("keeps append-only following idle during a measured item resize", () => {
-        Platform.OS = "web";
-        mockCtx.values.set("isFollowingEnd", true);
-        mockState.props.maintainScrollAtEnd = { on: { dataChange: true } };
-        mockState.sizes.set("item_0", 100);
-        mockState.sizesKnown.set("item_0", 100);
-        syncLayoutStoreStructure(mockCtx);
-        updateItemSizes(mockCtx, { itemKey: "item_0", size: { height: 150, width: 400 } });
-        expect(mockState.scroll).toBe(0);
-        expect(mockState.scrollingTo).toBeUndefined();
-        expect(mockState.pendingScrollResolve).toBeUndefined();
-        expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+        }
     });
 
     it("schedules estimate sampling when an equal-to-estimate measurement completes the threshold", () => {
@@ -365,7 +216,7 @@ describe("updateItemSizes", () => {
                 size: { height: 150, width: 400 },
             });
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, "item-size");
             expect(mockState.layoutStoreRuntime?.store.getOffset(2)).toBe(250);
             expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true, mvcpAdjustmentSource: "item-size" });
         } finally {
@@ -709,5 +560,203 @@ describe("updateItemSizes", () => {
         expect(calculateSpy).not.toHaveBeenCalled();
 
         calculateSpy.mockRestore();
+    });
+
+    it("preserves layout end following after a child measures during a data change", async () => {
+        mockState.didDataChange = true;
+        mockState.isFirst = false;
+        mockState.props.maintainScrollAtEnd = { onDataChange: false, onItemLayout: true };
+        const follow = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockReturnValue(true);
+        try {
+            updateItemSizes(mockCtx, { itemKey: "item_0", size: { height: 150, width: 400 } });
+            expect(mockState.sizesKnown.get("item_0")).toBe(150);
+            expect(follow).not.toHaveBeenCalled();
+            mockState.didDataChange = false;
+            await Promise.resolve();
+            expect(follow).toHaveBeenCalledTimes(1);
+        } finally {
+            follow.mockRestore();
+            mockState.scheduledWork.dispose();
+        }
+    });
+
+    it("keeps a fixed row's new measurement when it becomes dynamic", () => {
+        mockState.props.getFixedItemSize = () => 100;
+        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
+        expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(true);
+
+        mockState.props.getFixedItemSize = () => undefined;
+        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
+        invalidateFixedItemSizes(mockState);
+
+        expect(mockState.sizesKnown.get("item_0")).toBe(100);
+        expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(false);
+    });
+
+    it("follows every web size measurement before the next frame without replacing the end request", async () => {
+        Platform.OS = "web";
+        const originalRAF = globalThis.requestAnimationFrame;
+        const originalCAF = globalThis.cancelAnimationFrame;
+        const frames = new Map<number, FrameRequestCallback>();
+        let nextFrame = 0;
+        globalThis.requestAnimationFrame = (callback) => {
+            frames.set(++nextFrame, callback);
+            return nextFrame;
+        };
+        globalThis.cancelAnimationFrame = (handle) => {
+            frames.delete(handle);
+        };
+        const flushFrames = () => {
+            const pending = [...frames.values()];
+            frames.clear();
+            for (const callback of pending) callback(0);
+        };
+        let physicalScroll = 900;
+        mockState.scroll = 900;
+        mockState.scrollPending = 900;
+        mockState.totalSize = 1500;
+        mockCtx.values.set("totalSize", 1500);
+        mockCtx.values.set("isFollowingEnd", true);
+        mockState.props.maintainScrollAtEnd = { animated: false };
+        syncLayoutStoreStructure(mockCtx);
+        for (let index = 0; index < 3; index++) {
+            const key = `item_${index}`;
+            mockState.sizes.set(key, 500);
+            mockState.sizesKnown.set(key, 500);
+            setLayoutStoreMeasuredSize(mockCtx, index, 500);
+            assignContainer(index, key);
+        }
+        mockState.refScroller.current = {
+            getCurrentScrollOffset: () => physicalScroll,
+            getMaxScrollOffset: () => mockState.totalSize - mockState.scrollLength,
+            getScrollableNode: () => ({}),
+            scrollTo: ({ y }: { y?: number }) => {
+                physicalScroll = Math.min(y ?? 0, mockState.totalSize - mockState.scrollLength);
+            },
+        } as any;
+        mockCtx.scrollToEnd = (options) => scrollToEnd(mockCtx, options);
+        try {
+            let resolve: (() => void) | undefined;
+            for (const height of [518, 552, 579, 591, 580, 561, 535, 500]) {
+                updateItemSizes(mockCtx, { itemKey: "item_2", size: { height, width: 400 } });
+                await Promise.resolve();
+                expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
+                expect(mockState.scrollingTo?.isScrollToEnd).toBe(true);
+                resolve ??= mockState.pendingScrollResolve;
+                expect(resolve).toBeDefined();
+                expect(mockState.pendingScrollResolve).toBe(resolve);
+            }
+            // Following never waits for a frame; only the latest instant scroll's
+            // completion frame stays queued, and it releases the end request.
+            expect(frames.size).toBe(1);
+            expect(mockState.scrollingTo?.isScrollToEnd).toBe(true);
+            flushFrames();
+            expect(mockState.scrollingTo).toBeUndefined();
+            updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 520, width: 400 } });
+            await Promise.resolve();
+            expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
+            const nextResolve = mockState.pendingScrollResolve;
+            expect(nextResolve).toBeDefined();
+            expect(nextResolve).not.toBe(resolve);
+            await Promise.resolve();
+            expect(mockState.maintainingScrollAtEnd).toBe("instant");
+            expect(mockState.pendingScrollResolve).toBe(nextResolve);
+            interruptMaintainScrollAtEnd(mockCtx);
+            physicalScroll = 800;
+            mockState.scroll = 800;
+            updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 550, width: 400 } });
+            await Promise.resolve();
+            expect(physicalScroll).toBe(800);
+            expect(mockState.scrollingTo).toBeUndefined();
+            expect(mockState.pendingScrollResolve).toBeUndefined();
+        } finally {
+            mockState.scheduledWork.dispose();
+            globalThis.requestAnimationFrame = originalRAF;
+            globalThis.cancelAnimationFrame = originalCAF;
+        }
+    });
+
+    for (const maintenance of [false, true, "animated"] as const) {
+        it(`follows web row growth with one scroll owner (maintainScrollAtEnd=${maintenance})`, async () => {
+            Platform.OS = "web";
+            const originalRAF = globalThis.requestAnimationFrame;
+            const frames: FrameRequestCallback[] = [];
+            globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+            let physicalScroll = 900;
+            let domSize = 1500;
+            mockState.scroll = 900;
+            mockState.scrollPending = 900;
+            mockCtx.values.set("totalSize", domSize);
+            mockState.props.maintainScrollAtEnd = maintenance
+                ? { animated: maintenance === "animated", onItemLayout: true }
+                : undefined;
+            mockCtx.values.set("isFollowingEnd", !!maintenance);
+            mockState.initialScroll = { index: 2, viewPosition: 1 };
+            mockState.initialScrollSession = { kind: "bootstrap", previousDataLength: 3 };
+            syncLayoutStoreStructure(mockCtx);
+            for (let index = 0; index < 3; index++) {
+                const key = `item_${index}`;
+                mockState.sizes.set(key, 500);
+                mockState.sizesKnown.set(key, 500);
+            setLayoutStoreMeasuredSize(mockCtx, index, 500);
+                assignContainer(index, key);
+            }
+            // React commits the published content extent after the observer delivery,
+            // before paint. Until then the DOM clamps to the old extent.
+            listen$(mockCtx, "totalSize", (value) =>
+                queueMicrotask(() => {
+                    domSize = value;
+                }),
+            );
+            const scrollTo = mock(({ y = 0 }: { y?: number; animated?: boolean }) => {
+                physicalScroll = Math.min(y, domSize - mockState.scrollLength);
+            });
+            mockState.refScroller.current = {
+                getCurrentScrollOffset: () => physicalScroll,
+                getMaxScrollOffset: () => domSize - mockState.scrollLength,
+                getScrollableNode: () => ({}),
+                scrollTo,
+            } as any;
+            mockCtx.scrollToEnd = (options) => scrollToEnd(mockCtx, options);
+            try {
+                updateItemSizesBatch(mockCtx, [
+                    { itemKey: "item_0", size: { height: 560, width: 400 } },
+                    { itemKey: "item_1", size: { height: 560, width: 400 } },
+                    { itemKey: "item_2", size: { height: 560, width: 400 } },
+                ]);
+                await Promise.resolve();
+                expect(domSize).toBe(1680);
+                expect(mockState.layoutStoreRuntime?.store.getOffset(2)).toBe(1120);
+                if (maintenance === "animated") {
+                    // The preserved target must yield before the smooth follow starts.
+                    expect(scrollTo).not.toHaveBeenCalled();
+                    expect(physicalScroll).toBe(900);
+                    for (const callback of frames.splice(0)) callback(0);
+                } else {
+                    // No animation frame has run: instant growth must paint at the true end.
+                    expect(physicalScroll).toBe(1080);
+                }
+                expect(scrollTo).toHaveBeenCalledTimes(1);
+                expect(scrollTo).toHaveBeenCalledWith({ animated: maintenance === "animated", x: 0, y: 1080 });
+            } finally {
+                mockState.isUnmounted = true;
+                mockState.scheduledWork.dispose();
+                globalThis.requestAnimationFrame = originalRAF;
+            }
+        });
+    }
+
+    it("keeps append-only following idle during a measured item resize", () => {
+        Platform.OS = "web";
+        mockCtx.values.set("isFollowingEnd", true);
+        mockState.props.maintainScrollAtEnd = { on: { dataChange: true } };
+        mockState.sizes.set("item_0", 100);
+        mockState.sizesKnown.set("item_0", 100);
+        syncLayoutStoreStructure(mockCtx);
+        updateItemSizes(mockCtx, { itemKey: "item_0", size: { height: 150, width: 400 } });
+        expect(mockState.scroll).toBe(0);
+        expect(mockState.scrollingTo).toBeUndefined();
+        expect(mockState.pendingScrollResolve).toBeUndefined();
+        expect(mockState.maintainingScrollAtEnd).toBeUndefined();
     });
 });
