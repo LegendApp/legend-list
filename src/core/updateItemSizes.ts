@@ -224,7 +224,11 @@ function applyItemSize(
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
-    const applyMVCPAdjustment = state.props.maintainVisibleContentPosition.size ? prepareMVCP(ctx) : undefined;
+    // Measurements must use the item-size path: generic adjustments suppress
+    // native scroll events and can swallow the next offset in a scrollbar drag.
+    const applyMVCPAdjustment = state.props.maintainVisibleContentPosition.size
+        ? prepareMVCP(ctx, false, "item-size")
+        : undefined;
     const diff = updateOneItemSize(ctx, itemKey, sizeObj, resolvedMeasurementItem, false);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 

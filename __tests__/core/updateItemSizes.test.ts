@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { setLayoutStoreMeasuredSize, syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
+import { onScroll } from "../../src/core/onScroll";
 import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -64,6 +65,54 @@ describe("updateItemSizes", () => {
 
     afterEach(() => {
         Platform.OS = prevPlatform;
+    });
+
+    it("keeps native scrollbar jumps responsive after a measured row shifts the visible anchor", () => {
+        for (const height of [50, 150]) {
+            for (const destination of [80000, 1000]) {
+                const keys = Array.from({ length: 1000 }, (_, i) => `k${i}`);
+                const ctx = createMockContext(
+                    { readyToRender: true },
+                    {
+                        didContainersLayout: true,
+                        didFinishInitialScroll: true,
+                        endBuffered: 506,
+                        idCache: keys,
+                        idsInView: ["k500"],
+                        indexByKey: new Map(keys.map((key, index) => [key, index])),
+                        props: {
+                            data: keys.map((id) => ({ id })),
+                            estimatedItemSize: 100,
+                            maintainVisibleContentPosition: { data: false, size: true },
+                        },
+                        scroll: 50000,
+                        scrollLength: 600,
+                        startBuffered: 499,
+                        totalSize: 100000,
+                    },
+                );
+                syncLayoutStoreStructure(ctx);
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => {},
+                );
+                try {
+                    updateItemSizesBatch(ctx, [{ itemKey: "k499", size: { height, width: 400 } }]);
+                    expect(ctx.state.scroll).toBe(50000 + height - 100);
+                    onScroll(ctx, {
+                        nativeEvent: {
+                            contentOffset: { x: 0, y: destination },
+                            contentSize: { height: ctx.state.totalSize, width: 400 },
+                        },
+                    } as Parameters<typeof onScroll>[1]);
+                    expect(ctx.state.lastNativeScroll).toBe(destination);
+                    expect(ctx.state.scroll).toBe(destination);
+                    expect(ctx.state.ignoreScrollFromMVCP).toBeUndefined();
+                } finally {
+                    calculateSpy.mockRestore();
+                    ctx.state.scheduledWork.dispose();
+                }
+            }
+        }
     });
 
     it("schedules estimate sampling when an equal-to-estimate measurement completes the threshold", () => {
@@ -163,7 +212,7 @@ describe("updateItemSizes", () => {
                 size: { height: 150, width: 400 },
             });
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, "item-size");
             expect(mockState.layoutStoreRuntime?.store.getOffset(2)).toBe(250);
             expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true, mvcpAdjustmentSource: "item-size" });
         } finally {
