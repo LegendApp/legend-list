@@ -45,7 +45,8 @@
         }
     },
     "include": [
-        "src"
+        "src",
+        "qa"
     ],
     "references": [
         {

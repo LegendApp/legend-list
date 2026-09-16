@@ -132,3 +132,78 @@ describe("DataSourceObserver", () => {
         expect(mutable.unsubscribe).toHaveBeenCalledTimes(1);
     });
 });
+
+it("resubscribes once and reconciles mutations missed while stopped", () => {
+    let revision = 0;
+    let length = 3;
+    const listeners = new Set<(notification: DataSourceMutationBatch) => void>();
+    const source: LegendListDataSource<number> = {
+        getItem: (index) => index,
+        getKey: (index) => String(index),
+        getLength: () => length,
+        getRevision: () => revision,
+        subscribe: (listener) => {
+            listeners.add(listener);
+            return () => {
+                listeners.delete(listener);
+            };
+        },
+    };
+    const onBatch = mock(() => {});
+    const onReset = mock(() => {});
+    const observer = new DataSourceObserver(source, { onBatch, onReset });
+    const stop = observer.start();
+    observer.start();
+    expect(listeners.size).toBe(1);
+    stop();
+    expect(listeners.size).toBe(0);
+    revision = 1;
+    length = 4;
+    observer.start();
+    expect(listeners.size).toBe(1);
+    expect(onReset).toHaveBeenCalledTimes(1);
+    revision = 2;
+    length = 5;
+    const batch: DataSourceMutationBatch = {
+        length,
+        operations: [{ deleteCount: 0, index: 4, insertCount: 1, type: "splice" }],
+        previousLength: 4,
+        previousRevision: 1,
+        revision,
+    };
+    for (const listener of listeners) listener(batch);
+    expect(onBatch).toHaveBeenCalledWith(batch);
+    expect(onReset).toHaveBeenCalledTimes(1);
+    observer.stop();
+    expect(listeners.size).toBe(0);
+});
+
+it("accepts a synchronous subscription emission without a duplicate reset", () => {
+    let revision = 0;
+    const onBatch = mock(() => {});
+    const onReset = mock(() => {});
+    const unsubscribe = mock(() => {});
+    const source: LegendListDataSource<number> = {
+        getItem: (index) => index,
+        getKey: (index) => String(index),
+        getLength: () => 3,
+        getRevision: () => revision,
+        subscribe: (listener) => {
+            revision = 1;
+            listener({
+                length: 3,
+                operations: [{ count: 1, index: 0, layout: "preserve", type: "update" }],
+                previousLength: 3,
+                previousRevision: 0,
+                revision,
+            });
+            return unsubscribe;
+        },
+    };
+    const observer = new DataSourceObserver(source, { onBatch, onReset });
+    observer.start();
+    expect(onBatch).toHaveBeenCalledTimes(1);
+    expect(onReset).not.toHaveBeenCalled();
+    observer.stop();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+});

@@ -258,3 +258,85 @@ it("restarts timing after a source deletes and reinserts a key before the next c
         advance(190);
         expect(calls[0].viewableItems.map((item) => item.key)).toEqual(["a"]);
     }));
+
+it("keeps independent deadlines when visibility configurations overlap", () =>
+    scenario(({ advance, ctx, update, pending }) => {
+        const fast: OnViewableItemsChangedInfo[] = [];
+        const slow: OnViewableItemsChangedInfo[] = [];
+        ctx.state.viewabilityConfigCallbackPairs = setupViewability({
+            viewabilityConfigCallbackPairs: [
+                {
+                    onViewableItemsChanged: (info) => fast.push(info),
+                    viewabilityConfig: { id: "fast", itemVisiblePercentThreshold: 50, minimumViewTime: 100 },
+                },
+                {
+                    onViewableItemsChanged: (info) => slow.push(info),
+                    viewabilityConfig: { id: "slow", itemVisiblePercentThreshold: 75, minimumViewTime: 200 },
+                },
+            ],
+        });
+        update(0);
+        expect(pending.size).toBe(2);
+        advance(50);
+        update(40); // a remains eligible for fast, but drops below slow's threshold.
+        expect(pending.size).toBe(1);
+        advance(80);
+        update(0);
+        expect(pending.size).toBe(2);
+        advance(100);
+        expect(fast).toHaveLength(1);
+        expect(fast[0].viewableItems.map((item) => item.key)).toEqual(["a"]);
+        expect(slow).toEqual([]);
+        advance(279);
+        expect(slow).toEqual([]);
+        advance(280);
+        expect(slow).toHaveLength(1);
+        expect(slow[0].viewableItems.map((item) => item.key)).toEqual(["a"]);
+        expect(pending.size).toBe(0);
+    }));
+
+it("publishes immediately when minimum view time is disabled and restarts when enabled", () =>
+    scenario(({ advance, calls, configure, update, pending }) => {
+        update(0);
+        advance(50);
+        configure({ minimumViewTime: 0 });
+        update();
+        expect(pending.size).toBe(0);
+        expect(calls).toHaveLength(1);
+        expect(calls[0].changed).toMatchObject([{ isViewable: true, key: "a" }]);
+        advance(60);
+        configure({ minimumViewTime: 100 });
+        update();
+        expect(calls[1].changed).toMatchObject([{ isViewable: false, key: "a" }]);
+        advance(159);
+        expect(calls).toHaveLength(2);
+        advance(160);
+        expect(calls[2].changed).toMatchObject([{ isViewable: true, key: "a" }]);
+    }));
+
+it("does not cancel another configuration when a callback pair is removed", () =>
+    scenario(({ advance, ctx, update, pending }) => {
+        const removed: OnViewableItemsChangedInfo[] = [];
+        const retained: OnViewableItemsChangedInfo[] = [];
+        const first = {
+            onViewableItemsChanged: (info: OnViewableItemsChangedInfo) => removed.push(info),
+            viewabilityConfig: { id: "removed", minimumViewTime: 100 },
+        };
+        const second = {
+            onViewableItemsChanged: (info: OnViewableItemsChangedInfo) => retained.push(info),
+            viewabilityConfig: { id: "retained", minimumViewTime: 200 },
+        };
+        ctx.state.viewabilityConfigCallbackPairs = setupViewability({
+            viewabilityConfigCallbackPairs: [first, second],
+        });
+        update(0);
+        advance(50);
+        ctx.state.viewabilityConfigCallbackPairs = setupViewability({ viewabilityConfigCallbackPairs: [second] });
+        update();
+        advance(100);
+        expect(removed).toEqual([]);
+        expect(retained).toEqual([]);
+        advance(200);
+        expect(retained).toHaveLength(1);
+        expect(pending.size).toBe(0);
+    }));
