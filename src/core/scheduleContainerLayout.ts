@@ -1,3 +1,4 @@
+import { IsNewArchitecture } from "@/constants-platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
 // Consumes the next parent measurement scope. `undefined` means no request was
@@ -53,5 +54,16 @@ export function scheduleContainerLayout(ctx: StateContext, target?: number | Rea
     if (!isAlreadyScheduled) {
         const nextEpoch = (peek$(ctx, "containerLayoutEpoch") ?? 0) + 1;
         set$(ctx, "containerLayoutEpoch", nextEpoch);
+    }
+}
+
+// Invalidating geometry must also wake mounted rows whose dimensions did not change.
+export function triggerMountedContainerLayouts(ctx: StateContext) {
+    if (IsNewArchitecture) {
+        scheduleContainerLayout(ctx);
+    } else {
+        for (const triggerLayout of ctx.containerLayoutTriggers.values()) {
+            triggerLayout();
+        }
     }
 }

@@ -54,3 +54,60 @@ it("rejects a delayed native measure after same-key invalidation without overwri
         ctx.state.scheduledWork.dispose();
     }
 });
+
+it("requests fresh legacy layouts for every mounted container after geometry invalidation", async () => {
+    mock.module("@/constants-platform", () => ({ IsNewArchitecture: false }));
+    const { triggerMountedContainerLayouts } = await import("../../src/core/scheduleContainerLayout");
+    const ctx = createMockContext();
+    const first = mock(() => {});
+    const second = mock(() => {});
+    ctx.containerLayoutTriggers.set(0, first);
+    ctx.containerLayoutTriggers.set(3, second);
+    triggerMountedContainerLayouts(ctx);
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(ctx.pendingContainerIds).toBeUndefined();
+});
+
+it("remeasures unchanged legacy rows when their registered layout trigger fires", async () => {
+    mock.module("@/constants-platform", () => ({ IsNewArchitecture: false }));
+    const React = await import("react");
+    const { act, render } = await import("../helpers/testingLibrary");
+    const { useContainerMeasurement } = await import("../../src/hooks/useContainerMeasurement");
+    const ctx = createMockContext(
+        { containerItemKey0: "item_0", otherAxisSize: 400, readyToRender: true },
+        {
+            didContainersLayout: true,
+            idCache: ["item_0"],
+            indexByKey: new Map([["item_0", 0]]),
+            props: { data: [{ id: "item_0" }], estimatedItemSize: 100 },
+        },
+    );
+    ctx.state.containerItemKeys.set("item_0", 0);
+    const calculate = spyOn(calculateModule, "calculateItemsInView").mockImplementation(() => {});
+    const measure = mock((callback: (x: number, y: number, width: number, height: number) => void) =>
+        callback(0, 0, 400, 160),
+    );
+    const ref = { current: { measure } } as any;
+    let onLayout: (event: any) => void;
+    function Row() {
+        ({ onLayout } = useContainerMeasurement({ containerId: 0, ctx, horizontal: false, itemKey: "item_0", ref }));
+        return null;
+    }
+    const screen = render(React.createElement(Row));
+    try {
+        await act(async () => onLayout({ nativeEvent: { layout: { height: 160, width: 400, x: 0, y: 0 } } }));
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(160);
+        for (let round = 1; round <= 2; round++) {
+            ctx.state.sizesKnown.clear();
+            ctx.state.sizes.clear();
+            await act(async () => ctx.containerLayoutTriggers.get(0)!());
+            expect(measure).toHaveBeenCalledTimes(round);
+            expect(ctx.state.sizesKnown.get("item_0")).toBe(160);
+        }
+    } finally {
+        screen.unmount();
+        calculate.mockRestore();
+        ctx.state.scheduledWork.dispose();
+    }
+});

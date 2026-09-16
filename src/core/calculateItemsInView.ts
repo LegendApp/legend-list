@@ -22,7 +22,7 @@ import {
 } from "@/core/layoutStoreLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
-import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
+import { scheduleContainerLayout, triggerMountedContainerLayouts } from "@/core/scheduleContainerLayout";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { getViewabilityStartOffset, hasViewabilityConsumers, updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -683,6 +683,7 @@ export function calculateItemsInView(
                 // A source reset invalidates geometry, including the keyed cache used
                 // to suppress unchanged native measurements. Clear both owners together.
                 clearUnsafeSizeCaches(state);
+                triggerMountedContainerLayouts(ctx);
             }
             resetLayoutCachesForDataChange(state, {
                 includeLayoutStoreMeasurements: !shouldReconcileLayoutStoreDataChange,
@@ -718,6 +719,7 @@ export function calculateItemsInView(
             const didFailReliableReconcile = shouldReconcileLayoutStoreDataChange && !didReconcileLayoutStoreDataChange;
             if (didFailReliableReconcile || !state.props.hasReliableKeyExtractor) {
                 clearUnsafeSizeCaches(state);
+                triggerMountedContainerLayouts(ctx);
             }
             resetLayoutCachesForDataChange(state);
             rebuildLayoutStoreExact(ctx);

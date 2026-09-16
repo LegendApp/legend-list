@@ -1,11 +1,10 @@
-import { IsNewArchitecture } from "@/constants-platform";
 import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { getDataLength, getIndexedData } from "@/core/IndexedData";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import { clearLayoutStoreKnownSizes, rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
-import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
+import { triggerMountedContainerLayouts } from "@/core/scheduleContainerLayout";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
@@ -46,16 +45,6 @@ function getAverageItemSizes(state: StateContext["state"]): Record<string, Legen
     }
 
     return averageItemSizes;
-}
-
-function triggerMountedContainerLayouts(ctx: StateContext) {
-    if (IsNewArchitecture) {
-        scheduleContainerLayout(ctx);
-    } else {
-        for (const triggerLayout of ctx.containerLayoutTriggers.values()) {
-            triggerLayout();
-        }
-    }
 }
 
 export function createImperativeHandle(ctx: StateContext, scheduleImperativeScrollCommit?: () => void): LegendListRef {
