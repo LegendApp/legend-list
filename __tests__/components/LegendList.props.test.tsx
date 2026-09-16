@@ -14,6 +14,7 @@ import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { getDataLength } from "../../src/core/IndexedData";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
+import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
 import type { DataSourceMutationBatch, LegendListDataSource } from "../../src/types.base";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
@@ -151,6 +152,68 @@ afterEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("only passes loaded items to shouldRestorePosition after a source prepend", async () => {
+        let keys = Array.from({ length: 20 }, (_, index) => `item-${index}`);
+        let revision = 0;
+        let listener: (batch: DataSourceMutationBatch) => void = () => {};
+        const loadedItem = { id: "item-1" };
+        const source: LegendListDataSource<{ id: string }> = {
+            getItem: (index) => (keys[index] === loadedItem.id ? loadedItem : undefined),
+            getKey: (index) => keys[index],
+            getLength: () => keys.length,
+            getRevision: () => revision,
+            subscribe: (callback) => {
+                listener = callback;
+                return () => {};
+            },
+        };
+        const shouldRestorePosition = mock((item: { id: string }) => item.id !== "skip");
+        const { LegendList } = await import("../../src/components/LegendList?source-unloaded-mvcp");
+        const rendered = render(
+            <LegendList
+                dataSource={source}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                maintainVisibleContentPosition={{ data: true, shouldRestorePosition, size: true }}
+                recycleItems={false}
+                renderItem={() => null}
+            />,
+        );
+        const ctx = await getContextFromRender();
+        try {
+            await act(async () => lastListProps.onLayout(layoutEvent));
+            await act(async () => {
+                updateItemSizesBatch(
+                    ctx,
+                    Array.from(ctx.state.containerItemKeys, ([itemKey, containerId]) => ({
+                        containerId,
+                        itemKey,
+                        size: { height: 50, width: 320 },
+                    })),
+                );
+            });
+            expect(ctx.state.didContainersLayout).toBe(true);
+            expect(ctx.state.idsInView).toContain("item-0");
+            expect(ctx.state.idsInView).toContain(loadedItem.id);
+            shouldRestorePosition.mockClear();
+            await act(async () => {
+                keys = ["new", ...keys];
+                revision++;
+                listener({
+                    length: 21,
+                    operations: [{ deleteCount: 0, index: 0, insertCount: 1, type: "splice" }],
+                    previousLength: 20,
+                    previousRevision: 0,
+                    revision,
+                });
+            });
+            expect(shouldRestorePosition).toHaveBeenCalled();
+            for (const [item] of shouldRestorePosition.mock.calls) expect(item).toBe(loadedItem);
+        } finally {
+            rendered.unmount();
+        }
+    });
+
     it("updates last-item identity after same-length source moves and replacements", async () => {
         const source = new MutationDataSource({
             generatedItemFactory: (index) => ({ id: `item-${index}` }),

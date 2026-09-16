@@ -761,11 +761,10 @@ export function calculateItemsInView(
             for (const id of state.idsInView) {
                 const index = indexByKey.get(id);
                 if (index === undefined) continue;
-                if (
-                    shouldRestorePosition &&
-                    !shouldRestorePosition(indexedData.getItem(index), index, legacyData ?? [])
-                )
-                    continue;
+                if (shouldRestorePosition) {
+                    const item = indexedData.getItem(index);
+                    if (item === undefined || !shouldRestorePosition(item, index, legacyData ?? [])) continue;
+                }
                 protectedContainerKeys.add(id);
             }
         }
