@@ -234,3 +234,53 @@ for (const cached of [false, true]) {
         });
     }
 }
+
+for (const mode of ["array", "source"] as const) {
+    test(`resumes delayed visibility on an idle Strict Mode ${mode} mount`, async () => {
+        const items = [{ id: "visible" }, { id: "below" }];
+        const callback = mock((_info: any) => {});
+        mock.module("@/components/ListComponent", () => ({
+            ListComponent: (props: any) => {
+                React.useLayoutEffect(() => {
+                    props.onLayout({ nativeEvent: { layout: { height: 100, width: 320, x: 0, y: 0 } } });
+                }, []);
+                return null;
+            },
+        }));
+        const { LegendList } = await import(`../../src/components/LegendList?strict-idle-${mode}`);
+        const screen = render(
+            <React.StrictMode>
+                <LegendList
+                    {...(mode === "array"
+                        ? { data: items }
+                        : {
+                              dataSource: {
+                                  getItem: (index: number) => items[index],
+                                  getKey: (index: number) => items[index].id,
+                                  getLength: () => items.length,
+                                  getRevision: () => 0,
+                                  subscribe: () => () => {},
+                              },
+                          })}
+                    estimatedItemSize={100}
+                    estimatedListSize={{ height: 100, width: 320 }}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    onViewableItemsChanged={callback}
+                    recycleItems={false}
+                    renderItem={() => null}
+                    viewabilityConfig={{ minimumViewTime: 40 }}
+                />
+            </React.StrictMode>,
+        );
+        try {
+            expect(callback).not.toHaveBeenCalled();
+            await act(async () => new Promise((resolve) => setTimeout(resolve, 100)));
+            expect(callback).toHaveBeenCalledTimes(1);
+            expect(callback.mock.calls[0][0].viewableItems.map((item: any) => item.key)).toEqual(["visible"]);
+        } finally {
+            screen.unmount();
+        }
+        await act(async () => new Promise((resolve) => setTimeout(resolve, 60)));
+        expect(callback).toHaveBeenCalledTimes(1);
+    });
+}

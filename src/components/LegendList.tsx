@@ -1076,11 +1076,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, scheduleImperativeScrollCommit), []);
 
     useEffect(() => {
+        // Effect replay cancels scheduled work without unmounting the list state.
+        // Recalculate on setup so an idle list also resumes delayed visibility.
+        if (hasViewabilityConsumers(ctx)) {
+            requestViewabilityRecalculation(ctx);
+        }
         return () => {
             cancelImperativeScroll(state);
+            resetViewabilityTimers(ctx);
             state.scheduledWork.dispose();
         };
-    }, [state]);
+    }, [ctx, state]);
 
     // Run pending scroll to end after props have settled.
     useLayoutEffect(() => {
