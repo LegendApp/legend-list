@@ -268,3 +268,91 @@ for (const columns of [1, 3]) {
         });
     }
 }
+
+// Mixed span edits exercise topology reuse together with retained measurements.
+// Repack the independent model from scratch after every operation.
+for (const initialSeed of [830271, 194910, 712311, 988712, 12987]) {
+    it(`matches a variable-span mutation model, seed ${initialSeed}`, () => {
+        let seed = initialSeed;
+        const random = (limit: number) => {
+            seed = nextRandom(seed);
+            return seed % limit;
+        };
+        let numColumns = 1 + random(6);
+        let estimatedSize = 10.25;
+        let spans = Array.from({ length: 40 }, () => 1 + random(numColumns));
+        const sizes: Array<number | undefined> = Array(40).fill(undefined);
+        const store = new RowLayoutStore({ estimatedSize, length: spans.length, numColumns, spans });
+        for (let step = 0; step < 500; step++) {
+            const length = spans.length;
+            const action = random(7);
+            if (action === 0 && length > 0) {
+                const index = random(length);
+                sizes[index] = random(200) / 4;
+                store.setMeasuredSize(index, sizes[index]!);
+            } else if (action === 1) {
+                const index = random(length + 1);
+                const deleted = Math.min(random(4), length - index);
+                const inserted = length < 100 ? random(4) : 0;
+                spans.splice(index, deleted, ...Array(inserted).fill(1));
+                sizes.splice(index, deleted, ...Array(inserted).fill(undefined));
+                store.splice(index, deleted, inserted);
+            } else if (action === 2 && length > 0) {
+                const from = random(length);
+                const count = 1 + random(Math.min(length - from, 5));
+                const to = random(length - count + 1);
+                moveArray(spans, from, to, count);
+                moveArray(sizes, from, to, count);
+                store.move(from, to, count);
+            } else if (action === 3 && length > 0) {
+                const index = random(length);
+                const count = random(length - index + 1);
+                sizes.fill(undefined, index, index + count);
+                store.invalidateRange(index, count);
+            } else if (action === 4) {
+                estimatedSize = random(200) / 4;
+                store.setEstimatedSize(estimatedSize);
+            } else if (action === 5 && length > 0) {
+                const index = random(length);
+                spans[index] = 1 + random(numColumns);
+                store.resize(length, spans, numColumns, index);
+            } else if (action === 6) {
+                numColumns = 1 + random(6);
+                spans = spans.map((span) => Math.min(span, numColumns));
+                store.resize(length, spans, numColumns);
+            }
+
+            const rows: Array<{ bottom: number; start: number; end: number }> = [];
+            let totalSize = 0;
+            for (let start = 0; start < spans.length; ) {
+                let end = start;
+                let column = 0;
+                let height = 0;
+                while (end < spans.length && column + spans[end] <= numColumns) {
+                    const size = sizes[end] ?? estimatedSize;
+                    expect(store.getColumn(end)).toBe(column + 1);
+                    expect(store.getSpan(end)).toBe(spans[end]);
+                    expect(store.getSize(end)).toBe(size);
+                    expect(store.getOffset(end)).toBe(totalSize);
+                    column += spans[end];
+                    height = Math.max(height, size);
+                    end++;
+                }
+                totalSize += height;
+                rows.push({ bottom: totalSize, end: end - 1, start });
+                start = end;
+            }
+            expect(store.length).toBe(spans.length);
+            expect(store.getTotalSize()).toBe(totalSize);
+            expect(store.getMeasuredCount()).toBe(sizes.filter((size) => size !== undefined).length);
+            if (rows.length > 0) {
+                for (const offset of [0, random(Math.ceil(totalSize) + 2), totalSize]) {
+                    const row = rows.find((entry) => entry.bottom > offset) ?? rows[rows.length - 1];
+                    expect(store.findIndexRangeAtOffsets(offset, offset)).toEqual({ end: row.end, start: row.start });
+                }
+            } else {
+                expect(store.findIndexRangeAtOffsets(0, 0)).toBeUndefined();
+            }
+        }
+    });
+}

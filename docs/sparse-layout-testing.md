@@ -1,6 +1,6 @@
 # Sparse layout test coverage
 
-The five previously failing regressions are fixed and the combined release check
+The previously failing regressions are fixed and the combined release check
 passes. A high line percentage alone does not establish release readiness.
 
 ## Reproduce the checks
@@ -30,15 +30,15 @@ bun run test:regressions                     # requires a current build
 ## Verified snapshot
 
 Verified on September 16, 2026, using Bun 1.3.14. Source target: `sparse-layout`
-at `a8715aab`, including the working-tree fixes and coverage tests subsequently committed. Comparison base:
+at `8f1d0318`, including the working-tree reset, adapter-identity and empty-viewport fixes and tests. Comparison base:
 `e9f90bcfb4e8cce9111971f31d72d443d5989f0b`.
 
-- Default suite: **1,936 passing tests**, 145 files, 1,262,738 assertions.
-- Changed executable lines: **3,288 / 3,305 (99.49%)**, with the Bun normalization
+- Default suite: **1,947 passing tests**, 146 files, 1,664,960 assertions.
+- Changed executable lines: **3,318 / 3,334 (99.52%)**, with the Bun normalization
   described below. This passes the 95% changed-line threshold.
 - No unmeasured runtime changes were found.
 - Source types, public API types, built-package types, lint and build pass.
-- All ten focused mounted regression cases pass, alongside the continuous-time
+- All 42 focused mounted regression cases pass, alongside the continuous-time
   unit tests. Public inference tests pass against source and generated declarations.
 
 These are line-coverage numbers for changes on a Git branch, not measurements of
@@ -57,6 +57,23 @@ every boolean branch, condition, state transition, or possible event ordering.
 | Public types | Web, native, Reanimated, keyboard and legacy keyboard wrappers verify explicit source generics and inferred arrays across first-visible, size, viewability and configured viewability callbacks. Negative type assertions detect accidental `any` or loss of unloaded-item optionality. The same consumer tests compile against generated declarations. SectionList inference is covered separately. Inferred-source callbacks also pass for every listed wrapper. |
 | Test tooling | Coverage parser tests verify path/query normalization, counter union, phantom zero handling, diff line selection and detection of runtime versus erased-type changes. |
 
+The latest regression expansion adds:
+
+- Twelve mounted native measurement scenarios cover explicit reset, revision gaps
+  and changed-key recovery across both axes and one/two columns. Each repeats
+  recovery twice and verifies exact offsets, zero-size rows and fresh measurements
+  equal to the previously cached values.
+- Nineteen mounted timing scenarios cover parent rerenders, changed callbacks,
+  equivalent configurations, extra data, preserved payload updates, source
+  reset/replacement and empty-footer exit/reentry. Both cached and full layout
+  paths verify exact continuous-visibility deadlines and exit notifications.
+- Stable array/source adapters preserve pending timers and avoid repeating a
+  1,000-item variable-span scan on unrelated rerenders. Pinned keys and bottom
+  rows remain correct after moves, appends and removal.
+- Five additional seeded variable-span models compare 2,500 mixed measurements,
+  splices, moves, invalidations, estimate changes, span edits and column changes
+  against independently rebuilt dense geometry after every operation.
+
 ## Resolved regressions
 
 Every runtime regression now lives under `__tests__/components/` and runs in a
@@ -74,6 +91,11 @@ built declarations. `test:regressions` remains a convenient focused recheck.
 
 The two timing defects also existed on main; their fixes are included here.
 
+The latest fixes clear keyed native-size caches together with reset geometry,
+retain indexed adapters across unrelated renders, and process empty item viewports
+as visibility exits. The empty-viewport defect also reproduced on main; the array
+rerender defect did not.
+
 ## Coverage collection and limits
 
 `scripts/branch-coverage.ts` runs the full suite, the platform child-process cases,
@@ -88,18 +110,18 @@ zero counters for entire uncalled source ranges, including blank lines and erase
 TypeScript declarations. Once those functions execute, those non-executable lines
 are omitted. The normalized denominator keeps lines present across the records,
 plus every line with any positive counter. The raw union remains available for
-audit: this snapshot reports 3,660 raw lines, including 355 such phantom zeroes.
+audit: this snapshot reports 3,690 raw lines, including 356 such phantom zeroes.
 The resulting percentage is a Bun-normalized estimate, not an independent
 instrumentation result.
 
-Reports and all 122 individual LCOV files/logs are written to
+Reports and all 158 individual LCOV files/logs are written to
 `coverage/branch/`. `summary.json` and `summary.md` list uncovered changed lines by
 file. Type-only changes are checked through compilation; changed runtime files
 with no coverage cause the gate to fail. Working-tree changes, including
 untracked source files, are included. A failing test or less than 95% normalized
 changed-line coverage also fails the command. Generated reports are gitignored.
 
-Seventeen changed lines remain unhit in the passing runs, in list orchestration,
+Sixteen changed lines remain unhit in the passing runs, in list orchestration,
 initial scrolling, mounted-container synchronization and viewability fallback paths; the generated report
 contains their exact locations. Passing tests around those areas do not prove
 every fallback or lifecycle ordering is exercised.
@@ -110,6 +132,10 @@ hooks, both timing modes, and scroll/anchor behavior on the built candidate.
 The previous web example typecheck also remains blocked by missing local example
 dependencies. This testing pass does not resolve that environment gap or replace
 native/web UI and performance acceptance.
+
+For this latest pass, Argent reported no running device or Chromium target.
+The worktree has native JS dependencies but no generated iOS/Android project;
+the web example still lacks its dependencies. No live UI acceptance was run.
 
 ## Scrollbar and measurement integration regression
 
