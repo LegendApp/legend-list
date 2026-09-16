@@ -13,10 +13,12 @@ interface AvailableContainer {
 }
 
 interface RequestedContainer {
+    isBuffered: boolean;
     isSticky: boolean;
     itemIndex: number;
     itemType?: string;
     order: number;
+    renderPriority: number;
 }
 
 // Allocate the whole request batch together rather than greedily assigning each item.
@@ -29,8 +31,8 @@ export function findAvailableContainers(
     startBuffered: number,
     endBuffered: number,
     pendingRemoval: number[],
-    getRequiredItemType?: (itemIndex: number) => string | undefined,
     protectedKeys?: Set<string>,
+    reverseItemOrder = false,
 ): ContainerAllocation[] {
     const numNeeded = needNewContainers.length;
     if (numNeeded === 0) {
@@ -40,17 +42,28 @@ export function findAvailableContainers(
     const numContainers = peek$(ctx, "numContainers");
     const state = ctx.state;
     const { containerItemMetadata, stickyContainerPool } = state;
+    const { data, getItemType } = state.props;
+    const hasItemTypes = !!getItemType;
     const shouldAvoidAssignedContainerReuse = state.props.recycleItems && !!state.props.positionComponentInternal;
     const pendingRemovalSet = pendingRemoval.length > 0 ? new Set(pendingRemoval) : undefined;
 
-    const requests: RequestedContainer[] = needNewContainers.map((itemIndex, order) => ({
-        isSticky: state.props.stickyHeaderIndicesSet.has(itemIndex),
-        itemIndex,
-        itemType: getRequiredItemType?.(itemIndex),
-        order,
-    }));
-    const normalRequests = requests.filter((request) => !request.isSticky);
-    const stickyRequests = requests.filter((request) => request.isSticky);
+    const requests = new Array<RequestedContainer>(numNeeded);
+    const normalRequests: RequestedContainer[] = [];
+    const stickyRequests: RequestedContainer[] = [];
+    for (let order = 0; order < numNeeded; order++) {
+        const itemIndex = needNewContainers[order];
+        const itemType = getItemType?.(data[itemIndex], itemIndex);
+        const request: RequestedContainer = {
+            isBuffered: itemIndex >= startBuffered && itemIndex <= endBuffered,
+            isSticky: state.props.stickyHeaderIndicesSet.has(itemIndex),
+            itemIndex,
+            itemType: hasItemTypes ? (itemType !== undefined ? String(itemType) : "") : undefined,
+            order,
+            renderPriority: reverseItemOrder ? -itemIndex : itemIndex,
+        };
+        requests[order] = request;
+        (request.isSticky ? stickyRequests : normalRequests).push(request);
+    }
     const normalCandidates: AvailableContainer[] = [];
     const stickyCandidates: AvailableContainer[] = [];
 
@@ -129,7 +142,7 @@ export function findAvailableContainers(
         // Otherwise an early request could retype the exact container needed by a
         // later request. Sticky pools skip the cross-type pass so a mismatched sticky
         // request grows a new type-owned slot instead of retyping an existing one.
-        if (getRequiredItemType) {
+        if (hasItemTypes) {
             assignMatching(
                 pendingRequests,
                 candidates,
@@ -159,6 +172,16 @@ export function findAvailableContainers(
             stickyContainerPool.add(containerIndex);
         }
         assign(request, containerIndex);
+    }
+
+    // Selection above preserves distance preference and reserves exact-type slots.
+    // Now pair compatible requests with the selected slots in React child order.
+    // Swapping only within a requested type/pool preserves every type match and
+    // keeps sticky slots separate, including newly grown slots.
+    if (normalRequests.length > 1 || stickyRequests.length > 1) {
+        const containerIndices: number[] = [];
+        reorderPoolAssignments(normalRequests, allocations, containerIndices, hasItemTypes);
+        reorderPoolAssignments(stickyRequests, allocations, containerIndices, hasItemTypes);
     }
 
     if (pendingRemovalChanged) {
@@ -194,4 +217,55 @@ export function findAvailableContainers(
 
 function comparatorByDistance(a: AvailableContainer, b: AvailableContainer) {
     return b.distance - a.distance;
+}
+
+function comparatorByRenderPriority(a: RequestedContainer, b: RequestedContainer) {
+    // Buffered rows precede distant pins; signed priority supplies the scroll direction.
+    return Number(b.isBuffered) - Number(a.isBuffered) || a.renderPriority - b.renderPriority;
+}
+
+function comparatorByIndex(a: number, b: number) {
+    return a - b;
+}
+
+function reorderPoolAssignments(
+    requests: RequestedContainer[],
+    allocations: ContainerAllocation[],
+    containerIndices: number[],
+    groupByType: boolean,
+) {
+    if (requests.length >= 2) {
+        // Without getItemType, the whole pool is already one compatible group.
+        if (groupByType) {
+            const groups = new Map<string | undefined, RequestedContainer[]>();
+            for (const request of requests) {
+                const group = groups.get(request.itemType);
+                if (group) {
+                    group.push(request);
+                } else {
+                    groups.set(request.itemType, [request]);
+                }
+            }
+            for (const group of groups.values()) {
+                reorderPoolAssignments(group, allocations, containerIndices, false);
+            }
+        } else {
+            containerIndices.length = 0;
+            let indicesSorted = true;
+            for (let i = 0; i < requests.length; i++) {
+                const containerIndex = allocations[requests[i].order].containerIndex;
+                if (i > 0 && containerIndex < containerIndices[i - 1]) {
+                    indicesSorted = false;
+                }
+                containerIndices.push(containerIndex);
+            }
+            if (!indicesSorted) {
+                containerIndices.sort(comparatorByIndex);
+            }
+            requests.sort(comparatorByRenderPriority);
+            for (let i = 0; i < requests.length; i++) {
+                allocations[requests[i].order].containerIndex = containerIndices[i];
+            }
+        }
+    }
 }

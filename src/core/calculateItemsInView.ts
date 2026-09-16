@@ -336,7 +336,7 @@ export function calculateItemsInView(
             indexByKey,
             positionRecalculationStartIndex,
             positions,
-            props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
+            props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
             scrollLength,
             sizes,
@@ -763,21 +763,20 @@ export function calculateItemsInView(
             }
 
             if (needNewContainers.length > 0) {
-                const getRequiredItemType = getItemType
-                    ? (i: number) => {
-                          const itemType = getItemType(data[i], i);
-                          return itemType !== undefined ? String(itemType) : "";
-                      }
-                    : undefined;
-
                 const availableContainerAllocations = findAvailableContainers(
                     ctx,
                     needNewContainers,
                     startBuffered,
                     endBuffered,
                     pendingRemoval,
-                    getRequiredItemType,
                     protectedContainerKeys,
+                    // Initial end alignment has no scroll velocity yet. Keep its
+                    // target-side rows first until the initial scroll settles.
+                    // After a pause velocity can be zero on the first movement;
+                    // use its displacement without treating initial insets as motion.
+                    hasActiveInitialScroll(state)
+                        ? initialScroll?.viewPosition === 1
+                        : (speed || (state.hasScrolled ? state.scroll - state.scrollPrev : 0)) < 0,
                 );
                 for (const allocation of availableContainerAllocations) {
                     const i = allocation.itemIndex;

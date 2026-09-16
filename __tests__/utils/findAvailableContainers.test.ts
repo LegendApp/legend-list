@@ -31,11 +31,169 @@ describe("findAvailableContainers", () => {
             containerItemMetadata: new Map(),
             indexByKey: new Map(),
             props: {
+                data: [],
                 stickyHeaderIndicesSet: new Set(),
             },
             stickyContainerPool: new Set(),
         } as unknown as InternalState;
         ctx.state = mockState;
+    });
+
+    it("resolves types once from current data and preserves type normalization", () => {
+        ctx.values.set("numContainers", 4);
+        const data = [{ type: undefined }, { type: 0 }, { type: "photo" }, { type: "" }];
+        mockState.props.data = data;
+        const calls: Array<[unknown, number]> = [];
+        mockState.props.getItemType = (item, index) => {
+            calls.push([item, index]);
+            return item.type;
+        };
+
+        const requests = [2, 0, 3, 1];
+        const allocations = findAvailableContainers(ctx, requests, 0, 3, []);
+
+        expect(calls).toEqual(requests.map((index) => [data[index], index]));
+        expect(allocations.map((allocation) => allocation.itemType)).toEqual(["photo", "", "", "0"]);
+
+        mockState.props.getItemType = undefined;
+        expect(findAvailableContainers(ctx, [0], 0, 3, [])[0].itemType).toBeUndefined();
+    });
+
+    describe("directional assignment", () => {
+        for (const reverse of [false, true]) {
+            it(`keeps untyped sticky and normal pools separate (${reverse})`, () => {
+                ctx.values.set("numContainers", 5);
+                mockState.props.stickyHeaderIndicesSet = new Set([9, 13]);
+                mockState.stickyContainerPool = new Set([1, 3]);
+                const requests = [9, 10, 11, 12, 13];
+
+                const allocations = findAvailableContainers(ctx, requests, 10, 12, [], undefined, reverse);
+
+                expect(allocations.map((allocation) => allocation.itemIndex)).toEqual(requests);
+                const bySlot = [...allocations].sort((a, b) => a.containerIndex - b.containerIndex);
+                expect(bySlot.map((allocation) => allocation.itemIndex)).toEqual(
+                    reverse ? [12, 13, 11, 9, 10] : [10, 9, 11, 13, 12],
+                );
+            });
+
+            it(`keeps mixed type groups distinct and preserves caller order (${reverse})`, () => {
+                const slotTypes = ["other", "", "z", "a", "z", "", "a", "other", "z", "a"];
+                ctx.values.set("numContainers", slotTypes.length);
+                for (let slot = 0; slot < slotTypes.length; slot++) {
+                    setContainerItemType(slot, slotTypes[slot]);
+                }
+                const requests = [23, 20, 29, 21, 27, 25, 24, 22, 28, 26];
+                const originalRequests = [...requests];
+                const types = new Map([
+                    [20, "other"],
+                    [28, "other"],
+                    [21, ""],
+                    [25, ""],
+                    [22, "a"],
+                    [24, "a"],
+                    [26, "a"],
+                    [23, "z"],
+                    [27, "z"],
+                    [29, "z"],
+                ]);
+
+                mockState.props.getItemType = (_item, index) => types.get(index);
+                const allocations = findAvailableContainers(ctx, requests, 23, 27, [], undefined, reverse);
+
+                expect(requests).toEqual(originalRequests);
+                expect(allocations.map((allocation) => allocation.itemIndex)).toEqual(originalRequests);
+                const bySlot = [...allocations].sort((a, b) => a.containerIndex - b.containerIndex);
+                expect(bySlot.map((allocation) => allocation.itemIndex)).toEqual(
+                    reverse ? [28, 25, 27, 26, 23, 21, 24, 20, 29, 22] : [20, 25, 23, 24, 27, 21, 26, 28, 29, 22],
+                );
+                expect(bySlot.map((allocation) => allocation.itemType)).toEqual(slotTypes);
+            });
+
+            it(`pairs selected slots in ${reverse ? "descending" : "ascending"} item order`, () => {
+                ctx.values.set("numContainers", 5);
+                // Distance selection is 3, 1, 4; slot 0 stays protected and slot 2 is active.
+                for (const [slot, index] of [0, 2, 11, -10, 3].entries()) {
+                    ctx.values.set(`containerItemKey${slot}`, `old-${slot}`);
+                    mockState.indexByKey.set(`old-${slot}`, index);
+                }
+                const pendingRemoval: number[] = [];
+                const allocations = findAvailableContainers(
+                    ctx,
+                    [10, 11, 12],
+                    10,
+                    12,
+                    pendingRemoval,
+                    new Set(["old-0"]),
+                    reverse,
+                );
+                expect(containerIndices(allocations)).toEqual(reverse ? [4, 3, 1] : [1, 3, 4]);
+                expect(allocations.map((allocation) => allocation.itemIndex)).toEqual([10, 11, 12]);
+            });
+
+            it(`keeps buffered requests ahead of distant pins (${reverse})`, () => {
+                ctx.values.set("numContainers", 5);
+                const allocations = findAvailableContainers(
+                    ctx,
+                    [100, 101, 102, 0, 200],
+                    100,
+                    102,
+                    [],
+                    undefined,
+                    reverse,
+                );
+                const inRenderOrder = allocations.sort((a, b) => a.containerIndex - b.containerIndex);
+                expect(inRenderOrder.map((allocation) => allocation.itemIndex)).toEqual(
+                    reverse ? [102, 101, 100, 200, 0] : [100, 101, 102, 0, 200],
+                );
+            });
+
+            it(`orders mixed reused and grown slots while preserving type and sticky ownership (${reverse})`, () => {
+                ctx.values.set("numContainers", 5);
+                mockState.props.stickyHeaderIndicesSet = new Set([9, 13]);
+                mockState.stickyContainerPool = new Set([0, 4]);
+                for (const [slot, type] of ["header", "photo", "text", "photo", "header"].entries()) {
+                    setContainerItemType(slot, type);
+                }
+                const types = new Map([
+                    [9, "header"],
+                    [10, "photo"],
+                    [11, "text"],
+                    [12, "photo"],
+                    [13, "header"],
+                    [14, "photo"],
+                ]);
+                const pendingRemoval = [1, 3];
+                mockState.props.getItemType = (_item, index) => types.get(index);
+                const allocations = findAvailableContainers(
+                    ctx,
+                    [9, 10, 11, 12, 13, 14],
+                    9,
+                    14,
+                    pendingRemoval,
+                    undefined,
+                    reverse,
+                );
+                const bySlot = [...allocations].sort((a, b) => a.containerIndex - b.containerIndex);
+                expect(bySlot.filter((a) => a.itemType === "photo").map((a) => a.itemIndex)).toEqual(
+                    reverse ? [14, 12, 10] : [10, 12, 14],
+                );
+                expect(bySlot.filter((a) => a.itemType === "header").map((a) => a.itemIndex)).toEqual(
+                    reverse ? [13, 9] : [9, 13],
+                );
+                for (const allocation of allocations) {
+                    expect(mockState.stickyContainerPool.has(allocation.containerIndex)).toBe(
+                        allocation.itemType === "header",
+                    );
+                    if (allocation.containerIndex < 5) {
+                        expect(mockState.containerItemMetadata.get(allocation.containerIndex)?.itemType).toBe(
+                            allocation.itemType,
+                        );
+                    }
+                }
+                expect(pendingRemoval).toEqual([]);
+                expect(new Set(containerIndices(allocations)).size).toBe(6);
+            });
+        }
     });
 
     describe("when there are unallocated containers", () => {
@@ -145,15 +303,7 @@ describe("findAvailableContainers", () => {
             mockState.indexByKey.set("item1", 1);
             mockState.indexByKey.set("item20", 20);
 
-            const result = findAvailableContainers(
-                ctx,
-                neededItems(2),
-                5,
-                10,
-                [],
-                undefined,
-                new Set(["item0", "item1"]),
-            );
+            const result = findAvailableContainers(ctx, neededItems(2), 5, 10, [], new Set(["item0", "item1"]));
             const resultIndices = containerIndices(result);
 
             expect(resultIndices).not.toContain(0);
@@ -210,7 +360,8 @@ describe("findAvailableContainers", () => {
                 [2, "row"],
                 [5, "header"],
             ]);
-            const result = findAvailableContainers(ctx, [2, 5], 0, 10, [], (index) => itemTypes.get(index));
+            mockState.props.getItemType = (_item, index) => itemTypes.get(index);
+            const result = findAvailableContainers(ctx, [2, 5], 0, 10, []);
 
             expect(result).toEqual([
                 { containerIndex: 1, itemIndex: 2, itemType: "row" },
@@ -229,7 +380,8 @@ describe("findAvailableContainers", () => {
             setContainerItemType(0, "section");
             setContainerItemType(1, "row");
 
-            const result = findAvailableContainers(ctx, [5], 0, 10, [], () => "header");
+            mockState.props.getItemType = () => "header";
+            const result = findAvailableContainers(ctx, [5], 0, 10, []);
 
             expect(result).toEqual([{ containerIndex: 2, itemIndex: 5, itemType: "header" }]);
             expect(mockState.stickyContainerPool.has(0)).toBe(true);
@@ -262,7 +414,8 @@ describe("findAvailableContainers", () => {
             setContainerItemType(0, "header");
             setContainerItemType(1, "footer");
 
-            const result = findAvailableContainers(ctx, [10], 8, 12, [], () => "row");
+            mockState.props.getItemType = () => "row";
+            const result = findAvailableContainers(ctx, [10], 8, 12, []);
 
             expect(result).toEqual([{ containerIndex: 0, itemIndex: 10, itemType: "row" }]);
         });
@@ -280,7 +433,8 @@ describe("findAvailableContainers", () => {
             setContainerItemType(1, "footer");
             setContainerItemType(2, "footer");
 
-            const result = findAvailableContainers(ctx, [11], 8, 12, [], () => "row");
+            mockState.props.getItemType = () => "row";
+            const result = findAvailableContainers(ctx, [11], 8, 12, []);
 
             expect(result).toEqual([{ containerIndex: 0, itemIndex: 11, itemType: "row" }]);
         });
@@ -296,7 +450,8 @@ describe("findAvailableContainers", () => {
             setContainerItemType(1, "footer");
 
             const pendingRemoval = [1];
-            const result = findAvailableContainers(ctx, [11], 8, 12, pendingRemoval, () => "row");
+            mockState.props.getItemType = () => "row";
+            const result = findAvailableContainers(ctx, [11], 8, 12, pendingRemoval);
 
             expect(result).toEqual([{ containerIndex: 1, itemIndex: 11, itemType: "row" }]);
             expect(pendingRemoval).toEqual([]);
@@ -315,7 +470,8 @@ describe("findAvailableContainers", () => {
             setContainerItemType(1, "footer");
             setContainerItemType(2, "footer");
 
-            const result = findAvailableContainers(ctx, [11], 8, 12, [], () => "row", new Set(["protected-item"]));
+            mockState.props.getItemType = () => "row";
+            const result = findAvailableContainers(ctx, [11], 8, 12, [], new Set(["protected-item"]));
 
             expect(result).toEqual([{ containerIndex: 2, itemIndex: 11, itemType: "row" }]);
         });
@@ -330,7 +486,8 @@ describe("findAvailableContainers", () => {
             setContainerItemType(0, "header");
             setContainerItemType(1, "footer");
 
-            const result = findAvailableContainers(ctx, [12], 8, 12, [], () => "row");
+            mockState.props.getItemType = () => "row";
+            const result = findAvailableContainers(ctx, [12], 8, 12, []);
 
             expect(result).toEqual([{ containerIndex: 2, itemIndex: 12, itemType: "row" }]);
         });
@@ -347,7 +504,8 @@ describe("findAvailableContainers", () => {
 
             for (let itemIndex = 0; itemIndex < 20; itemIndex++) {
                 const itemType = `type-${itemIndex}`;
-                const result = findAvailableContainers(ctx, [itemIndex], itemIndex, itemIndex, [], () => itemType);
+                mockState.props.getItemType = () => itemType;
+                const result = findAvailableContainers(ctx, [itemIndex], itemIndex, itemIndex, []);
                 const allocation = result[0];
                 const oldKey = ctx.values.get(`containerItemKey${allocation.containerIndex}`);
                 const nextKey = `item-${itemIndex}`;
@@ -374,7 +532,8 @@ describe("findAvailableContainers", () => {
                 [10, "row"],
                 [11, "footer"],
             ]);
-            const result = findAvailableContainers(ctx, [10, 11], 8, 12, [], (index) => itemTypes.get(index));
+            mockState.props.getItemType = (_item, index) => itemTypes.get(index);
+            const result = findAvailableContainers(ctx, [10, 11], 8, 12, []);
 
             expect(result).toEqual([
                 { containerIndex: 1, itemIndex: 10, itemType: "row" },

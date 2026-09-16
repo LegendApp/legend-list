@@ -456,7 +456,7 @@ describe("LegendList initial scroll integration", () => {
         await scenario.fireLayout();
 
         expect(scenario.ref.current?.getState().scroll).toBe(0);
-        expect(getRenderedLabels(scenario.renderer)).toEqual(["Item 0", "Item 1"]);
+        expect(getRenderedLabels(scenario.renderer)).toEqual(["Item 1", "Item 0"]);
 
         await scenario.cleanup();
     });
@@ -638,7 +638,7 @@ describe("LegendList initial scroll integration", () => {
         await scenario.rerender(createItems(2));
 
         expect(scenario.ref.current?.getState().scroll).toBe(0);
-        expect(getRenderedLabels(scenario.renderer)).toEqual(["Item 0", "Item 1"]);
+        expect(getRenderedLabels(scenario.renderer)).toEqual(["Item 1", "Item 0"]);
 
         await scenario.cleanup();
     });

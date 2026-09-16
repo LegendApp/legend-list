@@ -80,6 +80,82 @@ describe("calculateItemsInView", () => {
         return performance.now() - start;
     }
 
+    describe("container render priority", () => {
+        for (const velocity of [12, -12, 0]) {
+            it(`assigns new rows in physical slot order at velocity ${velocity}`, () => {
+                setupFixedSizeItems(100, 100);
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 4000;
+                mockState.scrollLength = 300;
+                calculateItemsInView(mockCtx, { scrollVelocity: velocity });
+                const indices = getRenderedContainerKeys().map((key) => mockState.indexByKey.get(key)!);
+                expect(indices.length).toBeGreaterThanOrEqual(3);
+                expect(indices).toEqual([...indices].sort((a, b) => (velocity < 0 ? b - a : a - b)));
+            });
+        }
+        for (const pinKind of ["alwaysRender", "scrollTarget"]) {
+            for (const velocity of [12, -12]) {
+                it(`keeps ${pinKind} pins behind buffered rows at velocity ${velocity}`, () => {
+                    setupFixedSizeItems(100, 100);
+                    mockState.didFinishInitialScroll = true;
+                    mockState.scroll = 4000;
+                    mockState.scrollLength = 300;
+                    const pins = pinKind === "alwaysRender" ? [0, 90] : [0, 1];
+                    if (pinKind === "alwaysRender") {
+                        mockState.props.alwaysRenderIndicesArr = pins;
+                        mockState.props.alwaysRenderIndicesSet = new Set(pins);
+                    } else {
+                        mockState.scrollTargetPinnedRange = { end: 1, start: 0 };
+                    }
+                    calculateItemsInView(mockCtx, { scrollVelocity: velocity });
+                    const indices = getRenderedContainerKeys().map((key) => mockState.indexByKey.get(key)!);
+                    const buffered = indices.filter((index) => !pins.includes(index));
+                    expect(buffered.length).toBeGreaterThanOrEqual(3);
+                    const direction = velocity < 0 ? -1 : 1;
+                    expect(indices).toEqual([
+                        ...buffered.sort((a, b) => direction * (a - b)),
+                        ...[...pins].sort((a, b) => direction * (a - b)),
+                    ]);
+                    for (const index of pins) {
+                        const slot = mockState.containerItemKeys.get(`item_${index}`)!;
+                        expect(mockState.stickyContainerPool.has(slot)).toBe(true);
+                    }
+                });
+            }
+        }
+
+        it("prioritizes the first upward movement after velocity history expires", () => {
+            setupFixedSizeItems(100, 100);
+            mockState.didFinishInitialScroll = true;
+            mockState.scroll = 4000;
+            mockState.scrollPrev = 4500;
+            mockState.hasScrolled = true;
+            mockState.scrollLength = 300;
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+            const indices = getRenderedContainerKeys().map((key) => mockState.indexByKey.get(key)!);
+            expect(indices.length).toBeGreaterThanOrEqual(3);
+            expect(indices).toEqual([...indices].sort((a, b) => b - a));
+        });
+
+        for (const viewPosition of [0, 1]) {
+            it(`uses initial alignment ${viewPosition} rather than proximity to the end`, () => {
+                setupFixedSizeItems(100, 100);
+                mockState.didFinishInitialScroll = false;
+                mockState.scrollLength = 300;
+                mockState.initialScroll = { index: 97, viewPosition };
+                mockState.initialScrollSession = {
+                    bootstrap: { mountFrameCount: 0, passCount: 0, scroll: 9500, targetIndexSeed: 97 },
+                    kind: "bootstrap",
+                    previousDataLength: 0,
+                } as any;
+                calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                const indices = getRenderedContainerKeys().map((key) => mockState.indexByKey.get(key)!);
+                expect(indices.length).toBeGreaterThanOrEqual(3);
+                expect(indices).toEqual([...indices].sort((a, b) => (viewPosition === 1 ? b - a : a - b)));
+            });
+        }
+    });
+
     describe("basic viewport calculations", () => {
         it("should return early when data is empty", () => {
             mockState.props.data = [];

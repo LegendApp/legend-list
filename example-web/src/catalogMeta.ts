@@ -30,6 +30,11 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
     {
         entries: [
             {
+                description: "Checks image request priority with slow recycled rows and fast scrolling.",
+                slug: "recycle-image-priority",
+                title: "Recycled Image Priority",
+            },
+            {
                 description: "Verifies indexed scrollTo accuracy on variable-height content.",
                 slug: "accurate-scrollto",
                 title: "Accurate scrollTo",

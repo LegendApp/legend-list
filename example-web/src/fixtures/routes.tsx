@@ -23,6 +23,7 @@ import LazyListExample from "./LazyListExample";
 import MutableCellsExample from "./MutableCellsExample";
 import MVCPTestExample from "./MVCPTestExample";
 import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
+import RecycleImagePriorityExample from "./RecycleImagePriorityExample";
 import SnapToIndicesExample from "./SnapToIndicesExample";
 import WindowScrollExample from "./WindowScrollExample";
 
@@ -36,6 +37,13 @@ export type FixtureRoute = {
 };
 
 export const FIXTURE_ROUTES: FixtureRoute[] = [
+    {
+        description: "Checks image request priority with slow recycled rows and fast scrolling.",
+        element: () => <RecycleImagePriorityExample />,
+        group: "Scroll & Position",
+        path: "recycle-image-priority",
+        title: "Recycled Image Priority",
+    },
     {
         description: "Regresses typing during animated end scrolling, footer removal, and history-target priority.",
         element: () => <ChatEndFollowExample />,
