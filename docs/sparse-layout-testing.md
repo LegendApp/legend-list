@@ -1,7 +1,10 @@
 # Sparse layout test coverage
 
-The previously failing regressions are fixed and the combined release check
-passes. A high line percentage alone does not establish release readiness.
+The unit release check and the 44-case real-browser matrix pass. Both runtime
+failures from the broader audit are fixed: reset recovery requests fresh mounted
+measurements, and Strict Mode effect replay restores delayed viewability.
+See [validation and remaining acceptance](sparse-layout-validation-gaps.md) for
+evidence and the native checks still required before cross-platform sign-off.
 
 ## Reproduce the checks
 
@@ -30,15 +33,17 @@ bun run test:regressions                     # requires a current build
 ## Verified snapshot
 
 Verified on September 16, 2026, using Bun 1.3.14. Source target: `sparse-layout`
-at `8f1d0318`, including the working-tree reset, adapter-identity and empty-viewport fixes and tests. Comparison base:
+source at `1819a769`, with coverage expansion and the browser matrix in `5249d461`. Comparison base:
 `e9f90bcfb4e8cce9111971f31d72d443d5989f0b`.
 
-- Default suite: **1,947 passing tests**, 146 files, 1,664,960 assertions.
-- Changed executable lines: **3,318 / 3,334 (99.52%)**, with the Bun normalization
+- Default suite: **1,961 passing tests**, 147 files, 1,820,206 assertions.
+- Changed executable lines: **3,344 / 3,356 (99.64%)**, with the Bun normalization
   described below. This passes the 95% changed-line threshold.
 - No unmeasured runtime changes were found.
+- Real-browser matrix: **44/44 pass**, on two consecutive unchanged runs.
+  The browser page is separate from `test:release`.
 - Source types, public API types, built-package types, lint and build pass.
-- All 42 focused mounted regression cases pass, alongside the continuous-time
+- All 44 focused mounted regression cases pass, alongside the continuous-time
   unit tests. Public inference tests pass against source and generated declarations.
 
 These are line-coverage numbers for changes on a Git branch, not measurements of
@@ -76,8 +81,9 @@ The latest regression expansion adds:
 
 ## Resolved regressions
 
-Every runtime regression now lives under `__tests__/components/` and runs in a
-fresh process launched by the default suite. Public inference assertions live in
+The previously fixed mounted runtime regressions live under `__tests__/components/`
+and run in a fresh process launched by the default suite. The new real-browser
+regressions live in `example-web/qa/` and run separately. Public inference assertions live in
 `__tests__/types/publicInference.types.tsx` and compile against both source and
 built declarations. `test:regressions` remains a convenient focused recheck.
 
@@ -110,32 +116,31 @@ zero counters for entire uncalled source ranges, including blank lines and erase
 TypeScript declarations. Once those functions execute, those non-executable lines
 are omitted. The normalized denominator keeps lines present across the records,
 plus every line with any positive counter. The raw union remains available for
-audit: this snapshot reports 3,690 raw lines, including 356 such phantom zeroes.
+audit: this snapshot reports 3,717 raw lines, including 361 such phantom zeroes.
 The resulting percentage is a Bun-normalized estimate, not an independent
 instrumentation result.
 
-Reports and all 158 individual LCOV files/logs are written to
+Reports and all 163 individual LCOV files/logs are written to
 `coverage/branch/`. `summary.json` and `summary.md` list uncovered changed lines by
 file. Type-only changes are checked through compilation; changed runtime files
 with no coverage cause the gate to fail. Working-tree changes, including
 untracked source files, are included. A failing test or less than 95% normalized
 changed-line coverage also fails the command. Generated reports are gitignored.
 
-Sixteen changed lines remain unhit in the passing runs, in list orchestration,
-initial scrolling, mounted-container synchronization and viewability fallback paths; the generated report
+Twelve changed lines remain unhit in the passing runs, in list orchestration,
+initial scrolling and mounted-container synchronization; the generated report
 contains their exact locations. Passing tests around those areas do not prove
 every fallback or lifecycle ordering is exercised.
 
 Fresh device/browser acceptance remains necessary on the fixed candidate:
 native delayed measurement and rapid reset/replacement, all sibling visibility
 hooks, both timing modes, and scroll/anchor behavior on the built candidate.
-The previous web example typecheck also remains blocked by missing local example
-dependencies. This testing pass does not resolve that environment gap or replace
-native/web UI and performance acceptance.
-
-For this latest pass, Argent reported no running device or Chromium target.
-The worktree has native JS dependencies but no generated iOS/Android project;
-the web example still lacks its dependencies. No live UI acceptance was run.
+The web dependency gap is now resolved through the existing main-checkout
+packages linked into this worktree. The web example typecheck and production
+build pass, and the current source has been tested in Chromium through Argent.
+Those real-browser tests now pass after the fixes described above. Native UI
+acceptance still needs refreshing, and production frame-time/memory claims require
+measurements on the intended shipping workloads.
 
 ## Scrollbar and measurement integration regression
 
