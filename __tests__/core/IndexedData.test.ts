@@ -1,7 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import { ArrayDataAdapter, DataSourceAdapter, getDataLength } from "../../src/core/IndexedData";
+import {
+    ArrayDataAdapter,
+    DataSourceAdapter,
+    getDataLength,
+    getIndexedData,
+    resolveIndexedData,
+} from "../../src/core/IndexedData";
 import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import type { DataSourceMutationBatch, LegendListDataSource } from "../../src/types.base";
 import { getId } from "../../src/utils/getId";
@@ -62,4 +68,27 @@ describe("IndexedData", () => {
         expect(store?.length).toBe(3);
         expect(store?.getTotalSize()).toBe(75);
     });
+});
+
+it("shares stable adapter identity between render and imperative reads", () => {
+    const data = [{ id: "a" }];
+    const keyExtractor = (item: Item) => item.id;
+    const adapter = resolveIndexedData(undefined, data, undefined, keyExtractor);
+    const ctx = createMockContext({}, { props: { data, keyExtractor } });
+    ctx.state.indexedData = adapter;
+    expect(getIndexedData(ctx.state)).toBe(adapter);
+    expect(resolveIndexedData(adapter, data, undefined, keyExtractor)).toBe(adapter);
+    expect(resolveIndexedData(adapter, [...data], undefined, keyExtractor)).not.toBe(adapter);
+    expect(resolveIndexedData(adapter, data, undefined, () => "other")).not.toBe(adapter);
+});
+
+it("ignores array fallback and extractor identities in source mode", () => {
+    const source = createDataSource([{ id: "a" }]);
+    const adapter = resolveIndexedData(undefined, [], source);
+    expect(resolveIndexedData(adapter, [], source, () => "ignored")).toBe(adapter);
+    expect(resolveIndexedData(adapter, [], { ...source })).not.toBe(adapter);
+    const array = resolveIndexedData(adapter, [{ id: "b" }], undefined, (item) => item.id);
+    expect(array.kind).toBe("array");
+    expect(array.getKey(0)).toBe("b");
+    expect(resolveIndexedData(array, [], source).kind).toBe("dataSource");
 });

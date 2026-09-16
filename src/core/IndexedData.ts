@@ -60,24 +60,33 @@ export class DataSourceAdapter<ItemT> implements IndexedData<ItemT> {
     }
 }
 
+// Share adapter ownership between React renders and imperative layout reads.
+// Timing and span caches use this identity, so unchanged inputs must retain it.
+export function resolveIndexedData<ItemT>(
+    indexedData: IndexedData<ItemT> | undefined,
+    data: readonly ItemT[],
+    dataSource: LegendListDataSource<ItemT> | undefined,
+    keyExtractor?: (item: ItemT, index: number) => string,
+): IndexedData<ItemT> {
+    if (dataSource) {
+        return indexedData instanceof DataSourceAdapter && indexedData.source === dataSource
+            ? indexedData
+            : new DataSourceAdapter(dataSource);
+    }
+    return indexedData instanceof ArrayDataAdapter && indexedData.matches(data, keyExtractor)
+        ? indexedData
+        : new ArrayDataAdapter(data, keyExtractor);
+}
+
+const EMPTY_DATA: readonly never[] = [];
+
 export function getIndexedData(state: InternalState): IndexedData<any> {
     const { data, dataSource, keyExtractor } = state.props;
-    let indexedData = state.indexedData;
-
-    if (indexedData && data === undefined && dataSource === undefined) {
-        return indexedData;
+    if (state.indexedData && data === undefined && dataSource === undefined) {
+        return state.indexedData;
     }
-
-    if (dataSource) {
-        if (!(indexedData instanceof DataSourceAdapter) || indexedData.source !== dataSource) {
-            indexedData = new DataSourceAdapter(dataSource);
-        }
-    } else if (!(indexedData instanceof ArrayDataAdapter) || !indexedData.matches(data ?? [], keyExtractor)) {
-        indexedData = new ArrayDataAdapter(data ?? [], keyExtractor);
-    }
-
-    state.indexedData = indexedData;
-    return indexedData;
+    state.indexedData = resolveIndexedData(state.indexedData, data ?? EMPTY_DATA, dataSource, keyExtractor);
+    return state.indexedData;
 }
 
 export function getDataItem(state: InternalState, index: number) {
