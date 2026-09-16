@@ -4,7 +4,7 @@ import React from "react";
 
 import { getIndexedData } from "../../src/core/IndexedData";
 import { resetViewabilityTimers } from "../../src/core/viewability";
-import { type StateContext, useStateContext } from "../../src/state/state";
+import { type StateContext, set$, useStateContext } from "../../src/state/state";
 import type { DataSourceMutationBatch } from "../../src/types.base";
 import { act, render } from "../helpers/testingLibrary";
 import { createViewabilityClock } from "../helpers/viewabilityClock";
@@ -182,4 +182,55 @@ for (const mode of ["reset", "replace"] as const) {
             s.dispose();
         }
     });
+}
+
+for (const cached of [false, true]) {
+    test(`restarts pending visibility after an empty footer viewport (cached range: ${cached})`, async () => {
+        const s = await mountScenario("source");
+        try {
+            set$(s.ctx, "footerSize", 1000);
+            await s.advance(50);
+            await s.scroll(2100, cached);
+            expect(s.ctx.state.startNoBuffer).toBeNull();
+            expect(s.clock.pending.size).toBe(0);
+            await s.advance(80);
+            await s.scroll(0, cached);
+            await s.advance(100);
+            expect(s.callback).not.toHaveBeenCalled();
+            await s.advance(179);
+            expect(s.callback).not.toHaveBeenCalled();
+            await s.advance(180);
+            expect(s.callback).toHaveBeenCalledTimes(1);
+        } finally {
+            s.dispose();
+        }
+    });
+
+    for (const minimumViewTime of [0, 100]) {
+        test(`publishes exits and fresh entries around an empty viewport (minimum: ${minimumViewTime}, cached: ${cached})`, async () => {
+            const s = await mountScenario("array", minimumViewTime);
+            try {
+                set$(s.ctx, "footerSize", 1000);
+                await s.advance(100);
+                expect(s.ctx.mapViewabilityConfigStates.get("")!.viewableItems.map((item) => item.key)).toEqual(["0"]);
+                s.callback.mockClear();
+                await s.advance(150);
+                await s.scroll(2100, cached);
+                expect(s.callback).toHaveBeenCalledTimes(1);
+                expect(s.callback.mock.calls[0][0].changed).toMatchObject([{ isViewable: false, key: "0" }]);
+                expect(s.callback.mock.calls[0][0].viewableItems).toEqual([]);
+                await s.advance(180);
+                await s.scroll(0, cached);
+                if (minimumViewTime > 0) {
+                    await s.advance(279);
+                    expect(s.callback).toHaveBeenCalledTimes(1);
+                    await s.advance(280);
+                }
+                expect(s.callback).toHaveBeenCalledTimes(2);
+                expect(s.callback.mock.calls[1][0].changed).toMatchObject([{ isViewable: true, key: "0" }]);
+            } finally {
+                s.dispose();
+            }
+        });
+    }
 }

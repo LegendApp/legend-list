@@ -399,12 +399,14 @@ function updateVisibleRangeForCachedRange(
         firstVisibleScroll === undefined ? visibleRange.startNoBuffer : visibleRange.firstVisibleIndex,
     );
 
+    // An empty item viewport (for example, within a footer) still ends visibility
+    // and must revoke any minimum-view-time credit before a row can reenter.
     if (viewabilityConfigCallbackPairs) {
         updateViewableItems(
             ctx,
             viewabilityConfigCallbackPairs,
             scrollLength,
-            visibleRange.startNoBuffer ?? 0,
+            visibleRange.startNoBuffer ?? -1,
             visibleRange.endNoBuffer ?? -1,
             startBuffered,
             endBuffered,
@@ -1251,16 +1253,15 @@ export function calculateItemsInView(
             }
         }
 
-        // A calculated empty range must clear reported rows and pending dwell.
         if (viewabilityConfigCallbackPairs) {
             updateViewableItems(
                 ctx,
                 viewabilityConfigCallbackPairs,
                 scrollLength,
-                visibleRange.startNoBuffer ?? 0,
+                visibleRange.startNoBuffer ?? -1,
                 visibleRange.endNoBuffer ?? -1,
-                startBuffered ?? visibleRange.startNoBuffer ?? 0,
-                endBuffered ?? visibleRange.endNoBuffer ?? -1,
+                startBuffered ?? -1,
+                endBuffered ?? -1,
                 layout,
             );
         }
