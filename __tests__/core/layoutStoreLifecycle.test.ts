@@ -580,6 +580,30 @@ describe("layout store lifecycle", () => {
         }
     });
 
+    it("uses visible then buffered fallback anchors and defers estimates without either", () => {
+        for (const fallback of ["visible", "buffered", "none"]) {
+            const timers = captureTimeouts();
+            const ctx = createLayoutStoreContext(10);
+            try {
+                const store = syncLayoutStoreStructure(ctx)!;
+                const adjustments: number[] = [];
+                ctx.state.scrollAdjustHandler.requestAdjust = (amount) => adjustments.push(amount);
+                ctx.state.firstFullyOnScreenIndex = undefined;
+                ctx.state.startNoBuffer = fallback === "visible" ? 5 : null;
+                ctx.state.startBuffered = fallback === "none" ? null : 5;
+                for (let index = 0; index < 4; index++) setLayoutStoreMeasuredSize(ctx, index, 50);
+                expect(schedulePeriodicLayoutStoreEstimateFlush(ctx)).toBe(true);
+                expect(timers.callbacks.length).toBe(1);
+                timers.callbacks[0]();
+                expect(store.getEstimatedSize()).toBe(fallback === "none" ? 100 : 50);
+                expect(adjustments).toEqual(fallback === "none" ? [] : [-50]);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+                timers.restore();
+            }
+        }
+    });
+
     it("defers periodic estimate flushes until recent scroll activity settles", () => {
         const timers = captureTimeouts();
         try {

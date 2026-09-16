@@ -5,6 +5,7 @@ import { applyDataSourceMutationBatches, transformDataSourceIndex } from "../../
 import { DataSourceAdapter } from "../../src/core/IndexedData";
 import { LayoutStoreRuntime } from "../../src/core/LayoutStoreRuntime";
 import { PrefixLayoutStore } from "../../src/core/PrefixLayoutStore";
+import { RowLayoutStore } from "../../src/core/RowLayoutStore";
 import type { DataSourceMutationBatch, LegendListDataSource } from "../../src/types.base";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -313,4 +314,226 @@ it("applies large update-only batches with overlapping preserve and invalidate r
     expect(ctx.values.get("containerDataVersion0")).toBe(1);
     expect(ctx.state.containerItemGenerations[0]).toBe(1);
     expect(ctx.state.idCache[4999]).toBe("k4999");
+});
+
+describe("mutation boundaries and event reconciliation", () => {
+    it("keeps identity and geometry untouched when key validation throws or a reset is requested", () => {
+        for (const failure of ["throw", "reset", "duplicate"] as const) {
+            const store = new PrefixLayoutStore(2, 10);
+            store.setMeasuredSize(0, 35);
+            const keys = failure === "duplicate" ? ["a", "a"] : ["a", "b"];
+            const source = createSource(keys, (index) => {
+                if (failure === "throw") throw new Error("unavailable key");
+                return keys[index];
+            });
+            const ctx = createMockContext(
+                {},
+                {
+                    idCache: [...keys],
+                    indexByKey: new Map(keys.map((key, index) => [key, index])),
+                    layoutStoreRuntime: new LayoutStoreRuntime(store, 10),
+                    props: { dataSource: source },
+                },
+            );
+            const before = [...ctx.state.indexByKey];
+            const result = applyDataSourceMutationBatches(ctx, source, [
+                createBatch(2, 2, [
+                    failure === "reset" ? { type: "reset" } : { count: 0, from: 0, to: 0, type: "move" },
+                ]),
+            ]);
+            expect(result.applied).toBe(false);
+            expect(result.resetReason).toContain(
+                failure === "throw" ? "unavailable key" : failure === "duplicate" ? "duplicated" : "requested a reset",
+            );
+            expect([...ctx.state.indexByKey]).toEqual(before);
+            expect(ctx.state.idCache).toEqual(keys);
+            expect(store.getTotalSize()).toBe(45);
+            expect(store.getSize(0)).toBe(35);
+        }
+    });
+
+    it("publishes removed viewability tokens and relocates retained hooks and active targets", () => {
+        const items = [{ id: "c" }, { id: "a" }];
+        const source = { ...createSource(["c", "a"]), getItem: (index: number) => items[index] };
+        const onChanged = mock(() => {});
+        const onRemoved = mock(() => {});
+        const onMoved = mock(() => {});
+        const onAmountRemoved = mock(() => {});
+        const tokens = ["a", "b", "c"].map((key, index) => ({
+            containerId: index,
+            index,
+            isViewable: true,
+            item: { id: key },
+            key,
+        }));
+        const ctx = createMockContext(
+            {},
+            {
+                idCache: ["a", "b", "c"],
+                idsInView: ["a", "b", "c"],
+                indexByKey: new Map([
+                    ["a", 0],
+                    ["b", 1],
+                    ["c", 2],
+                ]),
+                initialScroll: { index: 2 },
+                initialScrollSession: {
+                    bootstrap: { targetIndexSeed: 2, visibleIndices: [0, 1, 2] },
+                    kind: "bootstrap",
+                } as any,
+                lastFirstVisibleItemCallback: { index: 1, key: "b" },
+                props: { dataSource: source },
+                viewabilityConfigCallbackPairs: [
+                    { onViewableItemsChanged: onChanged, viewabilityConfig: { id: "rows" } },
+                ],
+            },
+        );
+        ctx.mapViewabilityConfigStates.set("rows", {
+            end: 2,
+            endBuffered: 2,
+            previousEnd: 2,
+            previousStart: 0,
+            start: 0,
+            startBuffered: 0,
+            viewableItems: tokens,
+        });
+        ctx.mapViewabilityCallbacks.set("1rows", onRemoved);
+        ctx.mapViewabilityCallbacks.set("0rows", onMoved);
+        for (const token of tokens)
+            ctx.mapViewabilityAmountValues.set(token.containerId, {
+                ...token,
+                percentOfScroller: 25,
+                percentVisible: 100,
+                scrollSize: 400,
+                size: 100,
+                sizeVisible: 100,
+            });
+        ctx.mapViewabilityAmountCallbacks.set(1, onAmountRemoved);
+        const result = applyDataSourceMutationBatches(ctx, source, [
+            createBatch(3, 2, [
+                { deleteCount: 1, index: 1, insertCount: 0, type: "splice" },
+                { count: 1, from: 1, to: 0, type: "move" },
+            ]),
+        ]);
+        expect(result.applied).toBe(true);
+        expect(onRemoved).toHaveBeenCalledWith(expect.objectContaining({ isViewable: false, key: "b" }));
+        expect(onMoved).toHaveBeenCalledWith(expect.objectContaining({ index: 1, item: items[1], key: "a" }));
+        expect(onAmountRemoved).toHaveBeenCalledWith(
+            expect.objectContaining({ isViewable: false, key: "b", sizeVisible: -1 }),
+        );
+        expect(ctx.mapViewabilityAmountValues.has(0)).toBe(false);
+        expect(onChanged).toHaveBeenCalledWith(
+            expect.objectContaining({
+                changed: [expect.objectContaining({ isViewable: false, key: "b" })],
+                viewableItems: [
+                    expect.objectContaining({ index: 1, key: "a" }),
+                    expect.objectContaining({ index: 0, key: "c" }),
+                ],
+            }),
+        );
+        expect(ctx.state.idsInView).toEqual(["a", "c"]);
+        expect(ctx.state.lastFirstVisibleItemCallback).toBeUndefined();
+        expect(ctx.state.initialScroll?.index).toBe(0);
+        expect(
+            ctx.state.initialScrollSession?.kind === "bootstrap" && ctx.state.initialScrollSession.bootstrap,
+        ).toMatchObject({ targetIndexSeed: 0, visibleIndices: [1, 0, 0] });
+    });
+
+    it("clears viewability ranges and pinned targets when the last items are deleted", () => {
+        const ctx = createMockContext(
+            { activeStickyIndex: 1 },
+            {
+                firstFullyOnScreenIndex: 0,
+                idCache: ["a", "b"],
+                indexByKey: new Map([
+                    ["a", 0],
+                    ["b", 1],
+                ]),
+                scrollingTo: { index: 1, offset: 10 },
+                scrollTargetPinnedRange: { end: 1, start: 0 },
+            },
+        );
+        ctx.mapViewabilityConfigStates.set("rows", {
+            end: 1,
+            endBuffered: 1,
+            previousEnd: 1,
+            previousStart: 0,
+            start: 0,
+            startBuffered: 0,
+            viewableItems: [],
+        });
+        expect(
+            applyDataSourceMutationBatches(ctx, createSource([]), [
+                createBatch(2, 0, [{ deleteCount: 2, index: 0, insertCount: 0, type: "splice" }]),
+            ]).applied,
+        ).toBe(true);
+        expect(ctx.state.scrollTargetPinnedRange).toBeUndefined();
+        expect(ctx.values.get("activeStickyIndex")).toBe(-1);
+        expect(ctx.mapViewabilityConfigStates.get("rows")).toMatchObject({
+            end: -1,
+            endBuffered: -1,
+            start: -1,
+            startBuffered: -1,
+        });
+        expect(ctx.state.startNoBuffer).toBeNull();
+        expect(ctx.state.endNoBuffer).toBeNull();
+        expect(ctx.state.indexByKey.size).toBe(0);
+    });
+
+    it("transforms cached spans and preserves the earliest repack boundary across mutations", () => {
+        let keys = ["a", "b", "c", "d"];
+        const source = createSource(keys);
+        const store = new RowLayoutStore({ estimatedSize: 10, length: 4, numColumns: 3, spans: [1, 2, 1, 3] });
+        const runtime = new LayoutStoreRuntime(store, 10);
+        const input = {
+            data: source,
+            dataKey: undefined,
+            dataVersion: undefined,
+            extraData: undefined,
+            numColumns: 3,
+            overrideItemLayout: () => {},
+        };
+        runtime.setCachedRowSpans(input, [1, 2, 1, 3]);
+        const ctx = createMockContext(
+            {},
+            {
+                idCache: [...keys],
+                indexByKey: new Map(keys.map((key, index) => [key, index])),
+                layoutStoreRuntime: runtime,
+                props: { dataSource: source, numColumns: 3, overrideItemLayout: input.overrideItemLayout },
+            },
+        );
+        expect(
+            applyDataSourceMutationBatches(ctx, source, [
+                createBatch(4, 4, [{ count: 1, index: 2, layout: "invalidate", type: "update" }]),
+            ]).applied,
+        ).toBe(true);
+        expect(ctx.state.dataSourceSpanInvalidationIndex).toBe(2);
+        keys = ["d", "a", "b", "c"];
+        const movedSource = createSource(keys);
+        expect(
+            applyDataSourceMutationBatches(ctx, movedSource, [
+                createBatch(4, 4, [{ count: 1, from: 3, to: 0, type: "move" }]),
+            ]).applied,
+        ).toBe(true);
+        expect(runtime.getCachedRowSpans(input)).toEqual([3, 1, 2, 1]);
+        expect(ctx.state.dataSourceSpanInvalidationIndex).toBe(0);
+        expect(store.getSpan(0)).toBe(3);
+        const insertedSource = createSource(["d", "a", "x", "b", "c"]);
+        expect(
+            applyDataSourceMutationBatches(ctx, insertedSource, [
+                createBatch(4, 5, [{ deleteCount: 0, index: 2, insertCount: 1, type: "splice" }]),
+            ]).applied,
+        ).toBe(true);
+        expect(runtime.getCachedRowSpans(input)).toEqual([3, 1, undefined, 2, 1]);
+        expect(ctx.state.dataSourceSpanInvalidationIndex).toBe(0);
+    });
+
+    it("clamps deleted targets to inserted replacement slots", () => {
+        expect(
+            [1, 2, 3, 4].map((index) =>
+                transformDataSourceIndex(index, [{ deleteCount: 3, index: 1, insertCount: 2, type: "splice" }]),
+            ),
+        ).toEqual([1, 2, 2, 3]);
+    });
 });
