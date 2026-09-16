@@ -170,6 +170,14 @@ export function useContainerMeasurement({
         }
     });
 
+    useLayoutEffect(() => {
+        if (!IsNewArchitecture && layoutRenderCount > 0) {
+            // Legacy onLayout does not fire when reset content has unchanged bounds.
+            // Measure after the requested commit, retaining the async generation guard.
+            onLayoutChange({ height: 0, width: 0, x: 0, y: 0 });
+        }
+    }, [layoutRenderCount, onLayoutChange]);
+
     const { onLayout } = useOnLayoutSync(
         {
             measureInLayoutEffect: !IsNewArchitecture,

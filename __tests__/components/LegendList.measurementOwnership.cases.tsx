@@ -4,6 +4,7 @@ import "../setup";
 import React from "react";
 
 import { measureContainersInLayoutEffect } from "../../src/core/measureContainersInLayoutEffect.native";
+import { getContainerLayoutEffectScope } from "../../src/core/scheduleContainerLayout";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { useStateContext } from "../../src/state/state";
 import { act, render } from "../helpers/testingLibrary";
@@ -141,7 +142,7 @@ for (const mode of ["reset", "revision-gap", "changed-key"] as const) {
                         renderItem: () => null,
                     }),
                 );
-                const measure = async () => {
+                const measure = async (scheduledScope?: Set<number> | null) => {
                     const targets = new Set<number>();
                     for (const [key, containerId] of ctx.state.containerItemKeys) {
                         const index = ctx.state.indexByKey.get(key);
@@ -156,7 +157,9 @@ for (const mode of ["reset", "revision-gap", "changed-key"] as const) {
                             },
                         });
                     }
-                    await act(async () => measureContainersInLayoutEffect(ctx, targets));
+                    await act(async () =>
+                        measureContainersInLayoutEffect(ctx, scheduledScope === undefined ? targets : scheduledScope),
+                    );
                 };
                 try {
                     await act(async () => {
@@ -167,6 +170,7 @@ for (const mode of ["reset", "revision-gap", "changed-key"] as const) {
                     expect(ctx.state.layoutStoreRuntime.store.getSize(0)).toBe(80);
                     // A second recovery must behave like the first, not leave the observer reset-only.
                     for (let round = 0; round < 2; round++) {
+                        getContainerLayoutEffectScope(ctx);
                         await act(async () => {
                             const previousRevision = revision++;
                             if (mode === "changed-key") items[1] = { id: `replacement-${round}` };
@@ -183,7 +187,9 @@ for (const mode of ["reset", "revision-gap", "changed-key"] as const) {
                             });
                         });
                         expect(ctx.state.sizesKnown.has("0")).toBe(false);
-                        await measure();
+                        const scope = getContainerLayoutEffectScope(ctx);
+                        expect(scope).toBeNull();
+                        await measure(scope);
                         const store = ctx.state.layoutStoreRuntime.store;
                         expect(store.getSize(0)).toBe(80);
                         expect(store.getSize(1)).toBe(60);
