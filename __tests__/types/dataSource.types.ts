@@ -1,4 +1,5 @@
 import type { AnimatedLegendListProps } from "../../src/integrations/reanimated";
+import type { SectionListProps } from "../../src/section-list/SectionList";
 import type { LegendListProps as NativeLegendListProps } from "../../src/types.react-native";
 import type {
     DataSourceMutationBatch,
@@ -126,6 +127,32 @@ const arrayCallbacks: LegendListProps<Item> = {
 };
 void sourceCallbacks;
 void arrayCallbacks;
+
+// SectionList always flattens into array mode, so its callbacks retain contextual types.
+const sectionCallbacks: SectionListProps<Item> = {
+    onFirstVisibleItemChanged: ({ item }) => {
+        item.kind;
+        // @ts-expect-error Flat section items are typed, not any.
+        item.unknownProperty;
+    },
+    onItemSizeChanged: ({ itemData }) => {
+        itemData.kind;
+        // @ts-expect-error Flat section items are typed, not any.
+        itemData.unknownProperty;
+    },
+    sections: [],
+    viewabilityConfigCallbackPairs: [
+        {
+            onViewableItemsChanged: ({ viewableItems }) => {
+                viewableItems[0].item.kind;
+                // @ts-expect-error Flat section items are typed, not any.
+                viewableItems[0].item.unknownProperty;
+            },
+            viewabilityConfig: {},
+        },
+    ],
+};
+void sectionCallbacks;
 
 type FirstVisibleItem<Props extends { onFirstVisibleItemChanged?: (info: any) => void }> = Parameters<
     NonNullable<Props["onFirstVisibleItemChanged"]>
