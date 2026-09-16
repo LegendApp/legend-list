@@ -33,7 +33,7 @@ import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
-import { ArrayDataAdapter, DataSourceAdapter, getDataLength } from "@/core/IndexedData";
+import { getDataLength, type IndexedData, resolveIndexedData } from "@/core/IndexedData";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import {
@@ -268,10 +268,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
     const numColumnsProp = normalizeNumColumnsProp(numColumnsPropRaw);
 
-    const indexedData = useMemo(
-        () => (dataSource ? new DataSourceAdapter(dataSource) : new ArrayDataAdapter(dataProp, keyExtractorProp)),
-        [dataProp, dataSource, keyExtractorProp],
+    const keyExtractor = useMemo(
+        () =>
+            dataSource
+                ? (_item: T, index: number) => dataSource.getKey(index)
+                : (keyExtractorProp ?? ((_item: T, index: number) => index.toString())),
+        [dataSource, keyExtractorProp],
     );
+    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
+    const indexedDataRef = useRef<IndexedData<T> | undefined>(undefined);
+    const indexedData = resolveIndexedData(indexedDataRef.current, dataProp, dataSource, wrappedKeyExtractor);
+    indexedDataRef.current = indexedData;
     const dataLength = indexedData.getLength();
     const dataSourceRevision = dataSource?.getRevision();
 
@@ -397,9 +404,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const refScroller = useRef<LooseScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
-    const keyExtractor = dataSource
-        ? (_item: T, index: number) => indexedData.getKey(index)
-        : (keyExtractorProp ?? ((_item: T, index: number) => index.toString()));
     const stickyHeaderIndices = stickyHeaderIndicesProp;
     const contentInsetEndAdjustmentResolved = Platform.OS === "web" ? contentInsetEndAdjustment : undefined;
     const previousContentInsetEndAdjustmentRef = useRef(contentInsetEndAdjustmentResolved);
@@ -414,6 +418,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         alwaysRender?.keys?.join(","),
         dataProp,
         indexedData,
+        dataLength,
+        dataSourceRevision,
         dataKey,
         dataVersion,
         keyExtractor,
@@ -546,7 +552,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
     const wrappedGetFixedItemSize = useWrapIfItem(getFixedItemSize);
     const wrappedGetItemType = useWrapIfItem(getItemType);
-    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
 
     ctx.scrollAxisGap = nextScrollAxisGap;
     state.didColumnsChange = numColumnsProp !== previousNumColumnsProp || didScrollAxisChange || didScrollAxisGapChange;

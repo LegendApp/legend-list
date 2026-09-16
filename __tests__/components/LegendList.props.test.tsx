@@ -285,6 +285,83 @@ describe("LegendList props behavior", () => {
         }
     });
 
+    for (const mode of ["array", "source"] as const) {
+        it(`preserves variable-span topology on unrelated ${mode} rerenders`, async () => {
+            const data = Array.from({ length: 1000 }, (_, index) => ({ id: `item-${index}` }));
+            const source = new MutationDataSource({
+                generatedItemFactory: (index) => data[index],
+                generatedKeyPrefix: "item-",
+                length: data.length,
+            });
+            const overrideItemLayout = mock((layout: { span: number }, _item: unknown, index: number) => {
+                layout.span = index % 3 === 0 ? 2 : 1;
+            });
+            const keyExtractor = (item: { id: string }) => item.id;
+            const { LegendList } = await import(`../../src/components/LegendList?stable-span-cache-${mode}`);
+            const renderList = (testID: string) => (
+                <LegendList
+                    {...(mode === "source" ? { dataSource: source } : { data })}
+                    estimatedItemSize={50}
+                    estimatedListSize={{ height: 200, width: 320 }}
+                    keyExtractor={keyExtractor}
+                    numColumns={3}
+                    overrideItemLayout={overrideItemLayout}
+                    recycleItems={false}
+                    renderItem={() => null}
+                    testID={testID}
+                />
+            );
+            const rendered = render(renderList("before"));
+            const ctx = await getContextFromRender();
+            try {
+                await act(async () => lastListProps.onLayout(layoutEvent));
+                const calls = overrideItemLayout.mock.calls.length;
+                expect(calls).toBeGreaterThanOrEqual(data.length);
+                const store = ctx.state.layoutStoreRuntime!.store;
+                await act(async () => {
+                    rendered.rerender(renderList("after"));
+                    ctx.state.triggerCalculateItemsInView!({ forceFullItemPositions: true });
+                });
+                expect(overrideItemLayout.mock.calls.length).toBe(calls);
+                expect(ctx.state.layoutStoreRuntime!.store).toBe(store);
+                expect(store.getOffset(4)).toBe(100);
+            } finally {
+                rendered.unmount();
+            }
+        });
+    }
+
+    it("refreshes source pins after moves and length changes with a stable adapter", async () => {
+        const source = new MutationDataSource({
+            generatedItemFactory: (index) => ({ id: `item-${index}` }),
+            generatedKeyPrefix: "item-",
+            length: 20,
+        });
+        const { LegendList } = await import("../../src/components/LegendList?source-pins-revision");
+        const rendered = render(
+            <LegendList
+                alwaysRender={{ bottom: 1, keys: ["item-18"] }}
+                dataSource={source}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                recycleItems={false}
+                renderItem={() => null}
+            />,
+        );
+        const ctx = await getContextFromRender();
+        try {
+            expect(ctx.state.props.alwaysRenderIndicesArr).toEqual([18, 19]);
+            await act(async () => source.move(18, 10, 1));
+            expect(ctx.state.props.alwaysRenderIndicesArr).toEqual([10, 19]);
+            await act(async () => source.splice(20, 0, [{ item: { id: "tail" }, key: "tail" }]));
+            expect(ctx.state.props.alwaysRenderIndicesArr).toEqual([10, 20]);
+            await act(async () => source.splice(10, 1, []));
+            expect(ctx.state.props.alwaysRenderIndicesArr).toEqual([19]);
+        } finally {
+            rendered.unmount();
+        }
+    });
+
     it("updates last-item identity after same-length source moves and replacements", async () => {
         const source = new MutationDataSource({
             generatedItemFactory: (index) => ({ id: `item-${index}` }),
