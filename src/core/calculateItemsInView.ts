@@ -410,18 +410,18 @@ function updateViewabilityForCachedRange(
         firstVisibleScroll === undefined ? visibleRange.startNoBuffer : visibleRange.firstVisibleIndex,
     );
 
-    if (state.props.hasExternalScroll || (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null)) {
-        updateViewableItems(
-            ctx,
-            viewabilityConfigCallbackPairs,
-            scrollLength,
-            visibleRange.startNoBuffer ?? 0,
-            visibleRange.endNoBuffer ?? -1,
-            startBuffered,
-            endBuffered,
-            layout,
-        );
-    }
+    // An empty item viewport (for example, within a footer) still ends visibility
+    // and must revoke any minimum-view-time credit before a row can reenter.
+    updateViewableItems(
+        ctx,
+        viewabilityConfigCallbackPairs,
+        scrollLength,
+        visibleRange.startNoBuffer ?? -1,
+        visibleRange.endNoBuffer ?? -1,
+        startBuffered,
+        endBuffered,
+        layout,
+    );
 }
 
 export function calculateItemsInView(
@@ -1192,19 +1192,15 @@ export function calculateItemsInView(
             }
         }
 
-        if (
-            viewabilityConfigCallbackPairs &&
-            (state.props.hasExternalScroll ||
-                (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null))
-        ) {
+        if (viewabilityConfigCallbackPairs) {
             updateViewableItems(
                 ctx,
                 viewabilityConfigCallbackPairs,
                 scrollLength,
-                visibleRange.startNoBuffer ?? 0,
+                visibleRange.startNoBuffer ?? -1,
                 visibleRange.endNoBuffer ?? -1,
-                startBuffered ?? visibleRange.startNoBuffer ?? 0,
-                endBuffered ?? visibleRange.endNoBuffer ?? -1,
+                startBuffered ?? -1,
+                endBuffered ?? -1,
                 layout,
             );
         }
