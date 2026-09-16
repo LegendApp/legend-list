@@ -152,6 +152,152 @@ afterEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("switches between arrays and sources without retaining obsolete subscriptions or rows", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?switch-data-modes");
+        const listeners = new Set<(batch: DataSourceMutationBatch) => void>();
+        let sourceItems = Array.from({ length: 4 }, (_, index) => ({ id: `source-${index}` }));
+        let revision = 0;
+        const source: LegendListDataSource<{ id: string }> = {
+            getItem: (index) => sourceItems[index],
+            getKey: (index) => sourceItems[index].id,
+            getLength: () => sourceItems.length,
+            getRevision: () => revision,
+            subscribe: (listener) => {
+                listeners.add(listener);
+                return () => {
+                    listeners.delete(listener);
+                };
+            },
+        };
+        const array = Array.from({ length: 3 }, (_, index) => ({ id: `array-${index}` }));
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderList = (sourceMode: boolean) => (
+            <LegendList
+                {...(sourceMode ? { dataSource: source } : { data: array })}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 400, width: 320 }}
+                keyExtractor={keyExtractor}
+                recycleItems
+                renderItem={() => null}
+            />
+        );
+        const rendered = render(renderList(false));
+        const ctx = await getContextFromRender();
+        try {
+            await act(async () =>
+                lastListProps.onLayout({ nativeEvent: { layout: { height: 400, width: 320, x: 0, y: 0 } } }),
+            );
+            const assertRows = (expected: typeof array) => {
+                expect(ctx.state.layoutStoreRuntime!.store.length).toBe(expected.length);
+                for (const [key, container] of ctx.state.containerItemKeys) {
+                    const index = expected.findIndex((item) => item.id === key);
+                    expect(index).toBeGreaterThanOrEqual(0);
+                    expect(peek$(ctx, `containerItemIndex${container}`)).toBe(index);
+                    expect(peek$(ctx, `containerItemData${container}`)).toBe(expected[index]);
+                }
+                for (const item of expected) expect(ctx.state.containerItemKeys.has(item.id)).toBe(true);
+            };
+            assertRows(array);
+            await act(async () => rendered.rerender(renderList(true)));
+            expect(listeners.size).toBe(1);
+            assertRows(sourceItems);
+            await act(async () => rendered.rerender(renderList(false)));
+            expect(listeners.size).toBe(0);
+            assertRows(array);
+            sourceItems = [{ id: "source-replaced-while-stopped" }];
+            revision++;
+            await act(async () => rendered.rerender(renderList(true)));
+            expect(listeners.size).toBe(1);
+            assertRows(sourceItems);
+        } finally {
+            rendered.unmount();
+        }
+        expect(listeners.size).toBe(0);
+    });
+
+    for (const horizontal of [false, true]) {
+        it(`reconciles queued source edits with span and column changes (${horizontal ? "horizontal" : "vertical"})`, async () => {
+            type Item = { id: string; size: number; span: number };
+            const items: Item[] = Array.from({ length: 12 }, (_, index) => ({
+                id: `item-${index}`,
+                size: 40 + (index % 4) * 10,
+                span: 1 + (index % 2),
+            }));
+            const source = new MutationDataSource({
+                generatedItemFactory: (index) => items[index],
+                generatedKeyPrefix: "item-",
+                length: items.length,
+            });
+            // Seed the fixture's generated payloads before editing the reference model.
+            for (let index = 0; index < items.length; index++) source.getItem(index);
+            const { LegendList } = await import(`../../src/components/LegendList?queued-span-edits-${horizontal}`);
+            const overrideItemLayout = (layout: { span: number }, item: Item) => {
+                layout.span = item.span;
+            };
+            const getFixedItemSize = (item: Item) => item.size;
+            const renderList = (numColumns: number) => (
+                <LegendList
+                    dataSource={source}
+                    estimatedItemSize={50}
+                    estimatedListSize={{ height: 2000, width: 2000 }}
+                    getFixedItemSize={getFixedItemSize}
+                    horizontal={horizontal}
+                    numColumns={numColumns}
+                    overrideItemLayout={overrideItemLayout}
+                    recycleItems={true}
+                    renderItem={() => null}
+                />
+            );
+            const rendered = render(renderList(3));
+            const ctx = await getContextFromRender();
+            try {
+                await act(async () =>
+                    lastListProps.onLayout({ nativeEvent: { layout: { height: 2000, width: 2000, x: 0, y: 0 } } }),
+                );
+                for (let round = 0; round < 8; round++) {
+                    const columns = round % 2 ? 3 : 4;
+                    await act(async () => {
+                        items[1] = { ...items[1], size: 80 + round, span: 1 + (round % 3) };
+                        source.update(1, items[1], "invalidate");
+                        items.splice(0, 0, ...items.splice(4, 2));
+                        source.move(4, 0, 2);
+                        const inserted = { id: `inserted-${round}`, size: 35 + round, span: 2 };
+                        items.splice(3, 1, inserted);
+                        source.splice(3, 1, [{ item: inserted, key: inserted.id }]);
+                        rendered.rerender(renderList(columns));
+                    });
+                    await flushAsync();
+                    const store = ctx.state.layoutStoreRuntime!.store;
+                    let offset = 0;
+                    let column = 0;
+                    let rowSize = 0;
+                    for (let index = 0; index < items.length; index++) {
+                        const item = items[index];
+                        if (column + item.span > columns) {
+                            offset += rowSize;
+                            column = 0;
+                            rowSize = 0;
+                        }
+                        expect(store.getOffset(index)).toBe(offset);
+                        expect(store.getSize(index)).toBe(item.size);
+                        expect(store.getColumn(index)).toBe(column + 1);
+                        expect(store.getSpan(index)).toBe(item.span);
+                        const container = ctx.state.containerItemKeys.get(item.id);
+                        expect(container).toBeDefined();
+                        expect(peek$(ctx, `containerItemIndex${container}`)).toBe(index);
+                        expect(peek$(ctx, `containerItemData${container}`)).toBe(item);
+                        column += item.span;
+                        rowSize = Math.max(rowSize, item.size);
+                    }
+                    expect(store.getTotalSize()).toBe(offset + rowSize);
+                    expect(ctx.state.totalSize).toBe(offset + rowSize);
+                }
+            } finally {
+                rendered.unmount();
+            }
+        });
+    }
+
     for (const mode of ["reset", "revision-gap", "changed-key"] as const) {
         it(`recovers readable source state after ${mode} mutations`, async () => {
             let keys = ["a", "b", "c"];
