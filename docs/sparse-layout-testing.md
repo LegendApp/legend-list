@@ -110,3 +110,21 @@ hooks, both timing modes, and scroll/anchor behavior on the built candidate.
 The previous web example typecheck also remains blocked by missing local example
 dependencies. This testing pass does not resolve that environment gap or replace
 native/web UI and performance acceptance.
+
+## Scrollbar and measurement integration regression
+
+`bun test ./__tests__/components/LegendList.scrollbarMeasurements.test.ts`
+runs the mounted list in an isolated process. The native view boundary is mocked;
+scroll handling, delayed native measure callbacks, measurement batching, layout,
+scroll adjustments, and recycled container assignment use the real source code.
+The scenario covers 86,016 rows with both arrays and indexed sources, shrinking
+and growing rows, and ten large jumps/reversals per data mode. Assertions check
+native/rendered offset agreement, destination indices, every visible container's
+assignment, and stability after the former 100 ms suppression window.
+
+This test runs in the default suite, focused release regressions, and isolated
+branch coverage collection. Restoring the original missing item-size adjustment
+source makes both data modes fail on native/rendered offset disagreement.
+It protects event ordering and rendered range selection, not AppKit painting or
+physical scrollbar tracking. The 10 MB Markdown macOS thumb-drag check remains
+separate runtime acceptance; these tests do not claim automated pixel coverage.
