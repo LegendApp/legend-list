@@ -152,6 +152,77 @@ afterEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    for (const mode of ["reset", "revision-gap", "changed-key"] as const) {
+        it(`recovers readable source state after ${mode} mutations`, async () => {
+            let keys = ["a", "b", "c"];
+            let revision = 0;
+            let listener: (batch: DataSourceMutationBatch) => void = () => {};
+            const source: LegendListDataSource<{ id: string }> = {
+                getItem: (index) => ({ id: keys[index] }),
+                getKey: (index) => keys[index],
+                getLength: () => keys.length,
+                getRevision: () => revision,
+                subscribe: (callback) => {
+                    listener = callback;
+                    return () => {};
+                },
+            };
+            const { LegendList } = await import(`../../src/components/LegendList?source-reset-recovery-${mode}`);
+            const rendered = render(
+                <LegendList
+                    dataSource={source}
+                    estimatedItemSize={50}
+                    estimatedListSize={{ height: 200, width: 320 }}
+                    recycleItems={false}
+                    renderItem={() => null}
+                />,
+            );
+            const ctx = await getContextFromRender();
+            try {
+                await act(async () => lastListProps.onLayout(layoutEvent));
+                expect(ctx.state.indexByKey.get("a")).toBe(0);
+                await act(async () => {
+                    keys = ["replacement", "b", "c"];
+                    revision = 1;
+                    listener({
+                        length: 3,
+                        operations:
+                            mode === "reset"
+                                ? [{ type: "reset" }]
+                                : [{ count: 1, index: 0, layout: "preserve", type: "update" }],
+                        previousLength: 3,
+                        previousRevision: mode === "revision-gap" ? 9 : 0,
+                        revision,
+                    });
+                });
+                await flushAsync();
+                expect(ctx.state.indexByKey.has("a")).toBe(false);
+                expect(ctx.state.indexByKey.get("replacement")).toBe(0);
+                expect(ctx.state.layoutStoreRuntime?.store.length).toBe(3);
+                expect(ctx.state.pendingDataSourceBatches).toBeUndefined();
+                // Recovery must rebase the observer too: a later valid mutation
+                // should apply normally, not repeatedly fall back to resetting.
+                await act(async () => {
+                    keys.push("d");
+                    revision++;
+                    listener({
+                        length: 4,
+                        operations: [{ deleteCount: 0, index: 3, insertCount: 1, type: "splice" }],
+                        previousLength: 3,
+                        previousRevision: 1,
+                        revision,
+                    });
+                });
+                await flushAsync();
+                expect(ctx.state.layoutStoreRuntime?.store.length).toBe(4);
+                expect(peek$(ctx, "lastItemKeys")).toEqual(["d"]);
+                expect(ctx.state.pendingDataSourceBatches).toBeUndefined();
+            } finally {
+                rendered.unmount();
+            }
+        });
+    }
+
     it("only passes loaded items to shouldRestorePosition after a source prepend", async () => {
         let keys = Array.from({ length: 20 }, (_, index) => `item-${index}`);
         let revision = 0;

@@ -1262,3 +1262,77 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.pendingScrollResolve).toBeUndefined();
     });
 });
+
+describe("indexed imperative item lookup", () => {
+    for (const mode of ["array", "source"] as const) {
+        for (const method of ["scrollToItem", "scrollItemIntoView"] as const) {
+            it(`${method} finds the retained item in ${mode} mode and stops reading at it`, async () => {
+                const items = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
+                const getItem = mock((index: number) => items[index]);
+                const ctx = createMockContext(
+                    {},
+                    {
+                        didFinishInitialScroll: true,
+                        endNoBuffer: 1,
+                        props:
+                            mode === "array"
+                                ? { data: items }
+                                : {
+                                      dataSource: {
+                                          getItem,
+                                          getKey: (index) => items[index].id,
+                                          getLength: () => items.length,
+                                          getRevision: () => 0,
+                                          subscribe: () => () => {},
+                                      },
+                                  },
+                        startNoBuffer: 1,
+                    },
+                );
+                const scroll = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation(() => undefined);
+                try {
+                    const handle = createImperativeHandle(ctx);
+                    await handle[method]({ animated: false, item: items[2], viewOffset: 7 });
+                    expect(scroll).toHaveBeenCalledWith(
+                        ctx,
+                        expect.objectContaining({ animated: false, index: 2, viewOffset: 7 }),
+                    );
+                    if (mode === "source") expect(getItem.mock.calls.map(([index]) => index)).toEqual([0, 1, 2]);
+                    scroll.mockClear();
+                    getItem.mockClear();
+                    await handle[method]({ item: { id: "c" } });
+                    expect(scroll).not.toHaveBeenCalled();
+                    if (mode === "source") expect(getItem.mock.calls.map(([index]) => index)).toEqual([0, 1, 2, 3]);
+                } finally {
+                    scroll.mockRestore();
+                    ctx.state.scheduledWork.dispose();
+                }
+            });
+        }
+    }
+
+    it("scrolls an item above the viewport to the start and leaves visible items alone", async () => {
+        const items = [{ id: "a" }, { id: "b" }, { id: "c" }];
+        const ctx = createMockContext(
+            {},
+            {
+                didFinishInitialScroll: true,
+                endNoBuffer: 2,
+                props: { data: items },
+                startNoBuffer: 1,
+            },
+        );
+        const scroll = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation(() => undefined);
+        try {
+            const handle = createImperativeHandle(ctx);
+            await handle.scrollItemIntoView({ item: items[0] });
+            expect(scroll).toHaveBeenCalledWith(ctx, expect.objectContaining({ index: 0, viewPosition: 0 }));
+            scroll.mockClear();
+            await handle.scrollItemIntoView({ item: items[1] });
+            expect(scroll).not.toHaveBeenCalled();
+        } finally {
+            scroll.mockRestore();
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+});

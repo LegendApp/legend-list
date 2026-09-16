@@ -106,6 +106,36 @@ describe("measureContainersInLayoutEffect", () => {
         calculateSpy.mockRestore();
     });
 
+    it("measures unloaded source slots without calling the fixed-size callback", () => {
+        ctx.state.props.data = [];
+        ctx.state.props.dataSource = {
+            getItem: () => undefined,
+            getKey: () => "item_0",
+            getLength: () => 1,
+            getRevision: () => 0,
+            subscribe: () => () => {},
+        };
+        let fixedCalls = 0;
+        ctx.state.props.getFixedItemSize = () => {
+            fixedCalls++;
+            return 100;
+        };
+        let measurements = 0;
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: any) => {
+                    measurements++;
+                    callback(0, 0, 400, 120);
+                },
+            },
+        } as any);
+        measureContainersInLayoutEffect(ctx, new Set([0]));
+        expect(fixedCalls).toBe(0);
+        expect(measurements).toBe(1);
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(120);
+        expect(ctx.values.get("containerLayoutReady0")).toBe(true);
+    });
+
     it("skips per-container reveal bookkeeping when hiding is disabled", () => {
         const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
         let hideItemsUntilMeasuredReads = 0;

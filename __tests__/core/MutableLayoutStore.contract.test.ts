@@ -102,16 +102,16 @@ function verifyStore(store: TestStore, model: NaiveLayout) {
     }
 }
 
-function runRandomizedContract(createStore: () => TestStore, numColumns: number) {
+function runRandomizedContract(createStore: () => TestStore, numColumns: number, initialSeed = 918273, steps = 300) {
     const store = createStore();
     const model: NaiveLayout = {
         estimatedSize: 10.5,
         knownSizes: new Array<number | undefined>(12).fill(undefined),
         numColumns,
     };
-    let seed = 918273;
+    let seed = initialSeed;
 
-    for (let step = 0; step < 300; step++) {
+    for (let step = 0; step < steps; step++) {
         seed = nextRandom(seed);
         const action = seed % 5;
         if (action === 0 && model.knownSizes.length > 0) {
@@ -250,4 +250,21 @@ for (const columns of [1, 3]) {
         expect(store.getMeasuredCount()).toBe(0);
         expect(store.getPositiveMeasuredAverageSize()).toBeUndefined();
     });
+}
+
+// Vary operation ordering as well as values; failures identify a reproducible seed.
+for (const columns of [1, 3]) {
+    for (const seed of [104729, 209458, 314187, 418916, 523645, 628374, 733103, 837832, 942561, 1047290]) {
+        it(`matches the sequence model for ${columns} columns, seed ${seed}`, () => {
+            runRandomizedContract(
+                () =>
+                    columns === 1
+                        ? new PrefixLayoutStore(12, 10.5)
+                        : new RowLayoutStore({ estimatedSize: 10.5, length: 12, numColumns: columns }),
+                columns,
+                seed,
+                1000,
+            );
+        });
+    }
 }
