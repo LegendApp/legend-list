@@ -169,6 +169,154 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 
+    it.each([false, true])("retries a measured iOS instant index target (horizontal=%s)", (horizontal) => {
+        Platform.OS = "ios";
+        const scrollTo = mock(() => {});
+        const resolve = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 3000 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                pendingScrollResolve: resolve,
+                positions: [0, 1586, 2000],
+                props: { data: [{ id: 0 }, { id: 1 }, { id: 2 }], estimatedItemSize: 72, horizontal } as any,
+                refScroller: { current: { scrollTo } } as any,
+                scroll: 1534,
+                scrollingTo: { animated: false, index: 1, offset: 1534, targetOffset: 1534, viewPosition: 0 },
+                scrollLength: 414,
+                scrollPending: 1534,
+            },
+        );
+        checkFinishedScrollFallback(ctx);
+        flushTimers(1);
+        expect(resolve).not.toHaveBeenCalled();
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: horizontal ? 1586 : 0, y: horizontal ? 0 : 1586 });
+        ctx.state.scrollPending = 1586;
+        ctx.state.scroll = 1586;
+        flushTimers(1);
+        expect(resolve).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([true, false])(
+        "handles native MVCP adjustment before/after a queued instant command (adjustFirst=%s)",
+        (adjustFirst) => {
+            Platform.OS = "ios";
+            const estimatedTarget = 1534;
+            const measuredTarget = 1586.6666666666667;
+            const delta = measuredTarget - estimatedTarget;
+            let nativeOffset = 69053.66666666667;
+            const nativeCommands = [estimatedTarget];
+            const resolve = mock(() => {});
+            const scrollTo = mock(({ y }: { y: number }) => nativeCommands.push(y));
+            const ctx = createMockContext(
+                { totalSize: 100000 },
+                {
+                    didContainersLayout: true,
+                    hasScrolled: true,
+                    pendingScrollResolve: resolve,
+                    positions: [0, measuredTarget, 2000],
+                    props: { data: [{ id: 0 }, { id: 1 }, { id: 2 }], estimatedItemSize: 72 } as any,
+                    refScroller: { current: { scrollTo } } as any,
+                    scroll: measuredTarget,
+                    scrollAdjustHandler: { getAdjust: () => delta * 2 } as any,
+                    scrollingTo: {
+                        animated: false,
+                        index: 1,
+                        offset: estimatedTarget,
+                        targetOffset: estimatedTarget,
+                        viewPosition: 0,
+                    },
+                    scrollLength: 414,
+                    scrollPending: estimatedTarget,
+                },
+            );
+            checkFinishedScrollFallback(ctx);
+
+            // Measurements have changed the target, but the absolute command is
+            // still queued. Optimistic scrollPending must not resolve the request.
+            checkFinishedScroll(ctx);
+            expect(resolve).not.toHaveBeenCalled();
+            expect(ctx.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(true);
+
+            if (adjustFirst) nativeOffset += delta;
+            nativeOffset = nativeCommands.shift()!;
+            if (!adjustFirst) nativeOffset += delta;
+            ctx.state.scroll = ctx.state.scrollPending = nativeOffset;
+            checkFinishedScroll(ctx);
+
+            if (adjustFirst) {
+                // Native applied MVCP to the previous position; the late absolute
+                // command overwrote it. Keep ownership and correct the actual gap.
+                expect(measuredTarget - nativeOffset).toBeCloseTo(delta);
+                expect(resolve).not.toHaveBeenCalled();
+                flushTimers(1);
+                expect(scrollTo).toHaveBeenCalledTimes(1);
+                expect(nativeCommands).toEqual([measuredTarget]);
+                expect(resolve).not.toHaveBeenCalled();
+                nativeOffset = nativeCommands.shift()!;
+                ctx.state.scroll = ctx.state.scrollPending = nativeOffset;
+                checkFinishedScroll(ctx);
+            }
+
+            expect(nativeOffset).toBeCloseTo(measuredTarget);
+            expect(resolve).toHaveBeenCalledTimes(1);
+            expect(ctx.state.scrollingTo).toBeUndefined();
+            expect(ctx.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(false);
+            flushTimers(2);
+            expect(resolve).toHaveBeenCalledTimes(1);
+            expect(scrollTo).toHaveBeenCalledTimes(adjustFirst ? 1 : 0);
+        },
+    );
+
+    it("uses native RTL coordinates when retrying an instant indexed scroll", () => {
+        Platform.OS = "ios";
+        const scrollTo = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 3000 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                positions: [0, 1586, 2000],
+                props: { data: [{ id: 0 }, { id: 1 }, { id: 2 }], horizontal: true, rtl: true } as any,
+                refScroller: { current: { scrollTo } } as any,
+                scrollingTo: { animated: false, index: 1, offset: 1534, targetOffset: 1534, viewPosition: 0 },
+                scrollLength: 414,
+                scrollPending: 1534,
+            },
+        );
+        checkFinishedScrollFallback(ctx);
+        flushTimers(1);
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 1000, y: 0 });
+    });
+
+    it("bounds retries when native cannot reach an instant index target", () => {
+        Platform.OS = "ios";
+        const scrollTo = mock(() => {});
+        const resolve = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 3000 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                pendingScrollResolve: resolve,
+                positions: [0, 1586, 2000],
+                props: { data: [{ id: 0 }, { id: 1 }, { id: 2 }] } as any,
+                refScroller: { current: { scrollTo } } as any,
+                scrollingTo: { animated: false, index: 1, offset: 1534, targetOffset: 1534, viewPosition: 0 },
+                scrollLength: 414,
+                scrollPending: 1534,
+            },
+        );
+        checkFinishedScrollFallback(ctx);
+        flushTimers(5);
+        expect(scrollTo).toHaveBeenCalledTimes(5);
+        expect(resolve).not.toHaveBeenCalled();
+        flushTimers(1);
+        expect(resolve).toHaveBeenCalledTimes(1);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
     it("preserves the retry budget when momentum completion re-enters the fallback", () => {
         Platform.OS = "ios";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
@@ -662,6 +810,41 @@ describe("checkFinishedScroll", () => {
         Platform.OS = originalPlatform;
         globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    });
+
+    it("keeps an iOS instant index request active until native reaches its measured position", () => {
+        Platform.OS = "ios";
+        const resolve = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 3000 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                pendingScrollResolve: resolve,
+                positions: [0, 1586.6666666666667, 2000],
+                props: { data: [{ id: 0 }, { id: 1 }, { id: 2 }], estimatedItemSize: 72 } as any,
+                scroll: 1586.6666666666667,
+                scrollAdjustHandler: { getAdjust: () => 105.3333333333 } as any,
+                scrollingTo: { animated: false, index: 1, offset: 1534, targetOffset: 1534, viewPosition: 0 },
+                scrollLength: 414,
+                scrollPending: 1534,
+            },
+        );
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(resolve).not.toHaveBeenCalled();
+
+        // The cumulative adjust from earlier requests must not count as arrival either.
+        ctx.state.scrollPending = 1586.6666666666667 + 105.3333333333;
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+        expect(resolve).not.toHaveBeenCalled();
+
+        ctx.state.scrollPending = 1586.6666666666667;
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+        expect(resolve).toHaveBeenCalledTimes(1);
     });
 
     it("replaces an existing completion frame even when its handle is zero", () => {

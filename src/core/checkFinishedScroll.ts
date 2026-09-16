@@ -7,6 +7,7 @@ import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialSc
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -102,11 +103,26 @@ function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScroll
     return scrollingTo.index === getDataLength(ctx.state) - 1 && scrollingTo.viewPosition === 1;
 }
 
+function isIOSInstantIndexTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const index = scrollingTo.index;
+    return (
+        Platform.OS === "ios" &&
+        !scrollingTo.isInitialScroll &&
+        !scrollingTo.animated &&
+        index !== undefined &&
+        index >= 0 &&
+        index < getDataLength(ctx.state)
+    );
+}
+
 function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const index = scrollingTo.index;
-    const shouldRecomputeEndTarget = isEndAlignedLastItemTarget(ctx, scrollingTo);
+    // Native layout can move an instant index target after dispatch. Comparing only
+    // the original offset can release ownership before MVCP reaches that new position.
+    const shouldRecomputeTarget =
+        isEndAlignedLastItemTarget(ctx, scrollingTo) || isIOSInstantIndexTarget(ctx, scrollingTo);
     const requestedTargetOffset =
-        shouldRecomputeEndTarget && index !== undefined
+        shouldRecomputeTarget && index !== undefined
             ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), scrollingTo)
             : (scrollingTo.targetOffset ??
               clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo));
@@ -123,7 +139,10 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
     const diff1 = Math.abs(scroll - clampedTargetOffset);
     const adjustedTargetOffset = clampedTargetOffset + adjust;
     const diff2 = Math.abs(scroll - adjustedTargetOffset);
-    const canUseAdjustedCompletion = !scrollingTo.animated || Platform.OS === "ios";
+    // This target already includes measured geometry. The cumulative adjust can
+    // include earlier requests and must not be added to its current position.
+    const canUseAdjustedCompletion =
+        !isIOSInstantIndexTarget(ctx, scrollingTo) && (!scrollingTo.animated || Platform.OS === "ios");
 
     return {
         clampedTargetOffset,
@@ -151,10 +170,13 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 }
 
 function scrollToFallbackOffset(ctx: StateContext, offset: number) {
-    ctx.state.refScroller.current?.scrollTo({
+    const { state } = ctx;
+    const horizontal = state.props.horizontal;
+    const nativeOffset = toNativeHorizontalOffset(state, offset, horizontal ? getContentSize(ctx) : undefined);
+    state.refScroller.current?.scrollTo({
         animated: false,
-        x: ctx.state.props.horizontal ? offset : 0,
-        y: ctx.state.props.horizontal ? 0 : offset,
+        x: horizontal ? nativeOffset : 0,
+        y: horizontal ? 0 : offset,
     });
 }
 
@@ -216,10 +238,11 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 state.hasScrolled && (!isStillScrollingTo.isInitialScroll || completionState.isAtResolvedTarget);
             const shouldRetryUnalignedInitialScroll =
                 isStillScrollingTo.isInitialScroll && !completionState.isAtResolvedTarget && numChecks <= maxChecks;
-            const shouldRetryUnalignedEndScroll =
+            const shouldRetryUnalignedIndexScroll =
                 Platform.OS !== "web" &&
                 !isStillScrollingTo.isInitialScroll &&
-                isEndAlignedLastItemTarget(ctx, isStillScrollingTo) &&
+                (isEndAlignedLastItemTarget(ctx, isStillScrollingTo) ||
+                    isIOSInstantIndexTarget(ctx, isStillScrollingTo)) &&
                 !completionState.isAtResolvedTarget &&
                 numChecks <= maxChecks;
             if (shouldRetrySilentInitialNativeScroll) {
@@ -236,7 +259,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     "checkFinishedScrollRetryFrame",
                 );
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
-            } else if (shouldRetryUnalignedEndScroll) {
+            } else if (shouldRetryUnalignedIndexScroll) {
                 scrollToFallbackOffset(ctx, completionState.clampedTargetOffset);
                 scheduleFallbackCheck(100);
             } else if (
