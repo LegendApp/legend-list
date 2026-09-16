@@ -11,6 +11,7 @@ import { getObservedScrollOffset } from "@/core/observedScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 export { getCurrentTargetOffset };
 
@@ -239,7 +240,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 Platform.OS !== "web" &&
                 !isStillScrollingTo.isInitialScroll &&
                 (isEndAlignedLastItemTarget(ctx, isStillScrollingTo) ||
-                    (isStillScrollingTo.index !== undefined && completionState.didTargetOffsetChange)) &&
+                    (isMeasuredIndexTarget(ctx, isStillScrollingTo) &&
+                        (completionState.didTargetOffsetChange ||
+                            (Platform.OS === "ios" && !isStillScrollingTo.animated)))) &&
                 !completionState.isAtResolvedTarget &&
                 numChecks <= maxChecks;
             const isAnimatedMaintain = !!(
