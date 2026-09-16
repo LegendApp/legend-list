@@ -81,9 +81,9 @@
         "testsilently": "bun test > /dev/null 2>&1",
         "test:watch": "bun test --watch",
         "test:coverage": "bun test --coverage",
-        "lint": "bunx biome check ./src ./__tests__ ./benchmarks ./example/app ./example/screens ./example-web",
-        "lint:fix": "bunx biome check --write ./src ./__tests__ ./benchmarks ./example/app ./example/screens ./example-web",
-        "lint:fix-unsafe": "bunx biome check --write --unsafe ./src ./__tests__ ./benchmarks ./example/app ./example/screens ./example-web",
+        "lint": "bunx biome check ./src ./__tests__ ./benchmarks ./example/app ./example/screens ./example-web ./scripts",
+        "lint:fix": "bunx biome check --write ./src ./__tests__ ./benchmarks ./example/app ./example/screens ./example-web ./scripts",
+        "lint:fix-unsafe": "bunx biome check --write --unsafe ./src ./__tests__ ./benchmarks ./example/app ./example/screens ./example-web ./scripts",
         "test:visualize": "bun run visualize-tests.js && open test-visualization.html",
         "tsc": "status=0; bun run tsc:src || status=1; bun run tsc:types || status=1; bun run tsc:example || status=1; bun run tsc:example-web || status=1; exit $status",
         "tsc:src": "tsc --noEmit --project tsconfig.src.json",
@@ -91,7 +91,11 @@
         "tsc:example": "cd example && tsc --noEmit --project tsconfig.json",
         "tsc:example-oldarch": "cd example-oldarch && tsc --noEmit --project tsconfig.json",
         "tsc:example-web": "cd example-web && tsc --noEmit --project tsconfig.json",
-        "tsc:go": "tsgo --noEmit --project tsconfig.src.json"
+        "tsc:go": "tsgo --noEmit --project tsconfig.src.json",
+        "test:regressions": "bun run scripts/test-known-regressions.ts",
+        "tsc:package-types": "tsc --noEmit --project tsconfig.package-types.json",
+        "test:coverage:branch": "bun run scripts/branch-coverage.ts",
+        "test:release": "bun run test:coverage:branch && bun run tsc:src && bun run tsc:types && bun run build && bun run tsc:package-types && bun run test:regressions"
     },
     "peerDependencies": {
         "react": "*"
