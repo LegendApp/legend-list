@@ -890,6 +890,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             cancelImperativeScroll(state);
             syncScrollActive(ctx);
             cancelBootstrapInitialScrollFrame(state);
+            resetViewabilityTimers(ctx);
             state.scheduledWork.dispose();
         };
     }, [ctx, state]);
@@ -1250,6 +1251,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     });
 
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, scheduleImperativeScrollCommit), []);
+
+    useEffect(() => {
+        // An idle list needs a new visibility deadline after Strict Mode effect replay.
+        if (hasViewabilityConsumers(ctx)) requestViewabilityRecalculation(ctx);
+    }, [ctx]);
 
     // Run pending scroll to end after props have settled.
     useLayoutEffect(() => {
