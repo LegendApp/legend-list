@@ -679,6 +679,11 @@ export function calculateItemsInView(
             state.props.hasReliableKeyExtractor;
         const previousIdCache = shouldReconcileLayoutStoreDataChange ? getSparseIdCacheSnapshot(state) : undefined;
         if (didDataChange && !didApplyDataSourceMutation) {
+            if (state.dataSourceNeedsReset) {
+                // A source reset invalidates geometry, including the keyed cache used
+                // to suppress unchanged native measurements. Clear both owners together.
+                clearUnsafeSizeCaches(state);
+            }
             resetLayoutCachesForDataChange(state, {
                 includeLayoutStoreMeasurements: !shouldReconcileLayoutStoreDataChange,
             });

@@ -97,3 +97,106 @@ for (const mode of ["invalidate", "reset", "replace", "revision-gap"])
             rendered.unmount();
         }
     });
+
+for (const mode of ["reset", "revision-gap", "changed-key"] as const) {
+    for (const horizontal of [false, true]) {
+        for (const numColumns of [1, 2]) {
+            test(`restores unchanged measurements after ${mode} (${horizontal ? "horizontal" : "vertical"}, ${numColumns} columns)`, async () => {
+                let ctx: any;
+                let listProps: any;
+                let listener: any;
+                let revision = 0;
+                let items = Array.from({ length: 20 }, (_, index) => ({ id: String(index) }));
+                mock.module("@/components/ListComponent", () => ({
+                    ListComponent: (props: any) => {
+                        ctx = useStateContext();
+                        listProps = props;
+                        return null;
+                    },
+                }));
+                const { LegendList } = await import(
+                    `../../src/components/LegendList?reset-geometry-${mode}-${horizontal}-${numColumns}`
+                );
+                const source = {
+                    getItem: (index: number) => items[index],
+                    getKey: (index: number) => items[index].id,
+                    getLength: () => items.length,
+                    getRevision: () => revision,
+                    subscribe: (callback: any) => {
+                        listener = callback;
+                        return () => {};
+                    },
+                };
+                const layout = horizontal
+                    ? { height: 320, width: 100, x: 0, y: 0 }
+                    : { height: 100, width: 320, x: 0, y: 0 };
+                const screen = render(
+                    React.createElement(LegendList, {
+                        dataSource: source,
+                        estimatedItemSize: 50,
+                        estimatedListSize: layout,
+                        horizontal,
+                        numColumns,
+                        recycleItems: false,
+                        renderItem: () => null,
+                    }),
+                );
+                const measure = async () => {
+                    const targets = new Set<number>();
+                    for (const [key, containerId] of ctx.state.containerItemKeys) {
+                        const index = ctx.state.indexByKey.get(key);
+                        if (index >= 6) continue;
+                        // Include zero and equal-to-estimate rows as well as varying heights.
+                        const size = [80, 60, 0, 120, 50, 90][index];
+                        targets.add(containerId);
+                        ctx.viewRefs.set(containerId, {
+                            current: {
+                                measure: (callback: any) =>
+                                    callback(0, 0, horizontal ? size : 320, horizontal ? 320 : size),
+                            },
+                        });
+                    }
+                    await act(async () => measureContainersInLayoutEffect(ctx, targets));
+                };
+                try {
+                    await act(async () => {
+                        await new Promise((resolve) => setTimeout(resolve, 0));
+                    });
+                    await act(async () => listProps.onLayout({ nativeEvent: { layout } }));
+                    await measure();
+                    expect(ctx.state.layoutStoreRuntime.store.getSize(0)).toBe(80);
+                    // A second recovery must behave like the first, not leave the observer reset-only.
+                    for (let round = 0; round < 2; round++) {
+                        await act(async () => {
+                            const previousRevision = revision++;
+                            if (mode === "changed-key") items[1] = { id: `replacement-${round}` };
+                            else items = items.map((item) => ({ ...item }));
+                            listener({
+                                length: items.length,
+                                operations:
+                                    mode === "reset"
+                                        ? [{ type: "reset" }]
+                                        : [{ count: 1, index: 1, layout: "preserve", type: "update" }],
+                                previousLength: items.length,
+                                previousRevision: mode === "revision-gap" ? previousRevision + 10 : previousRevision,
+                                revision,
+                            });
+                        });
+                        expect(ctx.state.sizesKnown.has("0")).toBe(false);
+                        await measure();
+                        const store = ctx.state.layoutStoreRuntime.store;
+                        expect(store.getSize(0)).toBe(80);
+                        expect(store.getSize(1)).toBe(60);
+                        expect(store.getSize(2)).toBe(0);
+                        expect(store.getOffset(numColumns)).toBe(80);
+                        expect(store.getOffset(numColumns * 2)).toBe(numColumns === 1 ? 140 : 200);
+                        expect(ctx.state.sizesKnown.get("0")).toBe(80);
+                        expect(store.getMeasuredCount()).toBeGreaterThanOrEqual(3);
+                    }
+                } finally {
+                    screen.unmount();
+                }
+            });
+        }
+    }
+}
