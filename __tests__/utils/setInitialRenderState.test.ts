@@ -86,12 +86,14 @@ describe("setInitialRenderState", () => {
 
     it("calls onLoad only once across replayed readiness transitions", () => {
         const onLoad = mock(() => {});
+        const onReady = mock(() => {});
         const ctx = createMockContext(
             {},
             {
                 didContainersLayout: true,
                 props: {
                     onLoad,
+                    onReady,
                 },
             },
         );
@@ -101,12 +103,35 @@ describe("setInitialRenderState", () => {
         expect(ctx.values.get("readyToRender")).toBe(true);
         expect(ctx.state.didLoad).toBe(true);
         expect(onLoad).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(1);
 
         resetInitialRenderState(ctx, { resetLayout: true });
         setInitialRenderState(ctx, { didLayout: true });
 
         expect(ctx.values.get("readyToRender")).toBe(true);
         expect(onLoad).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(2);
+        setInitialRenderState(ctx, { didInitialScroll: true, didLayout: true });
+        expect(onReady).toHaveBeenCalledTimes(2);
+    });
+
+    it("waits for both layout and initial scroll after a dataset reset and uses the latest callback", () => {
+        const onReady = mock(() => {});
+        const ctx = createMockContext({}, { props: { onReady } });
+        resetInitialRenderState(ctx, { resetInitialScroll: true, resetLayout: true });
+        setInitialRenderState(ctx, { didLayout: true });
+        expect(onReady).not.toHaveBeenCalled();
+        setInitialRenderState(ctx, { didInitialScroll: true });
+        expect(onReady).toHaveBeenCalledTimes(1);
+
+        resetInitialRenderState(ctx, { resetInitialScroll: true, resetLayout: true });
+        const nextReady = mock(() => {});
+        ctx.state.props.onReady = nextReady;
+        setInitialRenderState(ctx, { didInitialScroll: true });
+        expect(nextReady).not.toHaveBeenCalled();
+        setInitialRenderState(ctx, { didLayout: true });
+        expect(nextReady).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(1);
     });
 
     it("resets readiness and adaptive render before a replayed initial render", () => {

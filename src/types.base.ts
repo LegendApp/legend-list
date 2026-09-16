@@ -321,6 +321,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     onLoad?: (info: { elapsedTimeInMs: number }) => void;
 
     /**
+     * Called after layout and initial scrolling complete, including after a
+     * dataKey reset. Unlike onLoad, this runs for each initial placement cycle.
+     * Ordinary data updates do not trigger it unless they restart initial placement.
+     */
+    onReady?: () => void;
+
+    /**
      * Called when list layout metrics change.
      */
     onMetricsChange?: (metrics: LegendListMetrics) => void;

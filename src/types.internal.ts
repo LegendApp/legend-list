@@ -313,6 +313,7 @@ export interface InternalState {
         adaptiveRender: LegendListPropsInternal["experimental_adaptiveRender"];
         onItemSizeChanged: LegendListPropsInternal["onItemSizeChanged"];
         onLoad: LegendListPropsInternal["onLoad"];
+        onReady: LegendListPropsInternal["onReady"];
         onMomentumScrollEnd: LegendListPropsInternal["onMomentumScrollEnd"];
         onScroll: LegendListPropsInternal["onScroll"];
         onScrollBeginDrag: LegendListPropsInternal["onScrollBeginDrag"];
