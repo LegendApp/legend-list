@@ -98,6 +98,7 @@ function runCoverage() {
         "__tests__/components/LegendList.bootstrapInitialScroll.test.tsx",
         "__tests__/components/LegendList.bootstrapInitialScroll.oldarch.cases.tsx",
         "__tests__/components/LegendList.measurementOwnership.cases.tsx",
+        "__tests__/components/LegendList.scrollbarMeasurements.cases.tsx",
         "__tests__/components/LegendList.viewabilitySubscriptions.cases.tsx",
         "__tests__/components/LegendList.viewabilityInteraction.cases.tsx",
         "__tests__/components/LegendList.viewabilityTiming.cases.tsx",

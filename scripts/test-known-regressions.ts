@@ -2,6 +2,7 @@
 const checks = [
     ["bun", "test", "./__tests__/components/LegendList.viewabilityInteraction.cases.tsx"],
     ["bun", "test", "./__tests__/components/LegendList.measurementOwnership.cases.tsx"],
+    ["bun", "test", "./__tests__/components/LegendList.scrollbarMeasurements.cases.tsx"],
     ["bun", "test", "./__tests__/components/LegendList.viewabilitySubscriptions.cases.tsx"],
     ["bun", "test", "./__tests__/components/LegendList.viewabilityTiming.cases.tsx"],
     ["bunx", "tsc", "--noEmit", "--project", "tsconfig.package-types.json"],
