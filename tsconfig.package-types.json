@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig.type-tests.json",
+    "compilerOptions": {
+        "paths": {
+            "@/*": [
+                "./src/*"
+            ],
+            "@legendapp/list/*": [
+                "./dist/*"
+            ]
+        }
+    },
+    "include": [
+        "__tests__/types/publicWrappers.types.tsx",
+        "__tests__/types/publicInference.types.tsx"
+    ]
+}
