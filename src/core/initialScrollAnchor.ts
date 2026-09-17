@@ -2,6 +2,7 @@ import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearInitialScrollAnchor } from "@/core/finishInitialScroll";
 import { getDataLength } from "@/core/IndexedData";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
+import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -61,13 +62,15 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateC
     if (!anchor || state.scrollingTo) return;
     const observed = observedOffset ?? getObservedScrollOffset(state);
     const target = anchor.contentOffset ?? resolveInitialScrollOffset(ctx, anchor);
-    // Partial acknowledgements stay inside the interval of the outstanding request.
-    // Queued work has no such interval and cannot claim a user's movement away.
+    // Native clamping and MVCP can overshoot a resize correction. Drag handlers
+    // release ownership explicitly; an offset during native alignment is ambiguous.
+    // Web acknowledgements stay inside the outstanding request's interval.
     if (
         state.scheduledWork.has("initialScrollAlignment") &&
-        anchor.lastRequestOffset !== undefined &&
-        observed >= Math.min(anchor.lastRequestOffset, target) - 1 &&
-        observed <= Math.max(anchor.lastRequestOffset, target) + 1
+        (Platform.OS !== "web" ||
+            (anchor.lastRequestOffset !== undefined &&
+                observed >= Math.min(anchor.lastRequestOffset, target) - 1 &&
+                observed <= Math.max(anchor.lastRequestOffset, target) + 1))
     )
         return;
     if (Math.abs(observed - target) <= 1) return;

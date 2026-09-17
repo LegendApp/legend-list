@@ -971,15 +971,15 @@ describe("LegendList props behavior", () => {
             />,
         );
         const state = await getStateFromRender();
-        state.initialScrollAnchor = { contentOffset: 640, kind: "end", lastRequestOffset: 600 };
-        state.scheduledWork.frame(() => {}, "initialScrollAlignment");
-
-        act(() => {
-            lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
-        });
-
-        expect(state.initialScrollAnchor).toBeUndefined();
-        expect(state.scheduledWork.has("initialScrollAlignment")).toBe(false);
+        for (const lastRequestOffset of [undefined, 600]) {
+            state.initialScrollAnchor = { contentOffset: 640, kind: "end", lastRequestOffset };
+            state.scheduledWork.frame(() => {}, "initialScrollAlignment");
+            act(() => {
+                lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+            });
+            expect(state.initialScrollAnchor).toBeUndefined();
+            expect(state.scheduledWork.has("initialScrollAlignment")).toBe(false);
+        }
         rendered.unmount();
     });
 
