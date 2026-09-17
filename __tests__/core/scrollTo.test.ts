@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import * as doScrollToModule from "@/core/doScrollTo";
 import { scrollTo } from "@/core/scrollTo";
 import * as updateScrollModule from "@/core/updateScroll";
@@ -33,6 +34,39 @@ describe("scrollTo", () => {
         doScrollToSpy.mockRestore();
         updateScrollSpy.mockRestore();
     });
+
+    for (const platform of ["ios", "android", "web"] as const) {
+        it(`keeps an animated request active before movement on ${platform}`, () => {
+            Platform.OS = platform;
+            mockCtx.state.scrollPending = 25;
+            mockCtx.state.didFinishInitialScroll = true;
+            const resolve = mock(() => {});
+            mockCtx.state.pendingScrollResolve = resolve;
+            let frame: FrameRequestCallback | undefined;
+            const frameSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((callback) => {
+                frame = callback;
+                return 1;
+            });
+
+            try {
+                scrollTo(mockCtx, { animated: true, offset: 500 });
+                // Layout can request a completion check before the first native scroll event.
+                checkFinishedScroll(mockCtx);
+                frame?.(0);
+                expect(mockCtx.state.scrollingTo).toBeDefined();
+                expect(resolve).not.toHaveBeenCalled();
+
+                mockCtx.state.scroll = 500;
+                mockCtx.state.scrollPending = 500;
+                checkFinishedScroll(mockCtx);
+                frame?.(0);
+                expect(mockCtx.state.scrollingTo).toBeUndefined();
+                expect(resolve).toHaveBeenCalledTimes(1);
+            } finally {
+                frameSpy.mockRestore();
+            }
+        });
+    }
 
     it("cancels pending completion work before starting a new scroll", () => {
         const cancelCalls: number[] = [];

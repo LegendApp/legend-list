@@ -199,7 +199,12 @@ export function scrollTo(
             pinScrollTargetRenderRange(ctx, targetOffset, scrollTarget.index);
         }
     }
-    state.scrollPending = targetOffset;
+    // Animated requests have not moved yet. Layout can check completion before
+    // the first scroll event, so keep the target only on scrollingTo until then.
+    // Initial and instant scrolls still need the optimistic offset for settling.
+    if (!animated || isInitialScroll) {
+        state.scrollPending = targetOffset;
+    }
 
     // Keep the initial native-scroll watchdog anchored to the original starting point across retries.
     // That lets fallback nudges detect real progress instead of treating each retry as a brand new attempt.
