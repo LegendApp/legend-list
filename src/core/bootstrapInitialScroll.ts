@@ -1,5 +1,6 @@
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
+import { materializeFixedLayoutStoreRangeAtOffsets } from "@/core/fixedLayoutMaterialization";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { getDataLength } from "@/core/IndexedData";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
@@ -9,7 +10,7 @@ import {
     schedulePreservedEndAnchorCorrection,
     updateInitialScrollAnchor,
 } from "@/core/initialScrollAnchor";
-import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
+import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -17,7 +18,6 @@ import type { InternalState } from "@/types.internal";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
-import { getKnownOrFixedItemSize } from "@/utils/getItemSize";
 
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES = 24;
@@ -53,24 +53,16 @@ function doVisibleIndicesMatch(previous: readonly number[] | undefined, next: re
 
 // Inspect the target viewport separately from the mounted buffer: measurements
 // can move the resolved target beyond the rows currently mounted.
-function getBootstrapRevealVisibleIndices(ctx: StateContext, offset: number, startIndex: number) {
-    const { state } = ctx;
-    const dataLength = getDataLength(state);
+function getBootstrapRevealVisibleIndices(ctx: StateContext, offset: number) {
     const viewportStart = offset - getStartOffsetAdjustment(ctx) + (peek$(ctx, "scrollAdjustPending") ?? 0);
-    const viewportEnd = viewportStart + state.scrollLength;
+    const viewportEnd = viewportStart + ctx.state.scrollLength;
+    const { didChange, range } = materializeFixedLayoutStoreRangeAtOffsets(ctx, viewportStart, viewportEnd);
+    if (didChange) syncLayoutStoreState(ctx);
     const indices: number[] = [];
-    const sizeAt = (itemIndex: number) => getKnownOrFixedItemSize(ctx, itemIndex) ?? getLayoutSize(ctx, itemIndex) ?? 0;
-    let index = Math.max(0, Math.min(dataLength - 1, startIndex));
-    while (index > 0) {
-        const top = getLayoutOffset(ctx, index - 1);
-        if (top !== undefined && top + sizeAt(index - 1) <= viewportStart) break;
-        index--;
-    }
-    for (; index < dataLength; index++) {
-        const top = getLayoutOffset(ctx, index);
-        if (top === undefined) continue;
-        if (top >= viewportEnd) break;
-        if (top + sizeAt(index) > viewportStart) indices.push(index);
+    if (range) {
+        ctx.state.layoutStoreRuntime!.store.forEachLayout(range.start, range.end, (index, top, size) => {
+            if (top < viewportEnd && top + size > viewportStart) indices.push(index);
+        });
     }
     return indices;
 }
@@ -363,11 +355,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
     const areMountedBufferedIndicesMeasured = checkAllSizesKnown(state, state.startBuffered, state.endBuffered);
     const didResolvedOffsetChange = Math.abs(bootstrapInitialScroll.scroll - resolvedOffset) > 1;
-    const visibleIndices = getBootstrapRevealVisibleIndices(
-        ctx,
-        resolvedOffset,
-        bootstrapInitialScroll.targetIndexSeed ?? Math.max(0, state.startBuffered),
-    );
+    const visibleIndices = getBootstrapRevealVisibleIndices(ctx, resolvedOffset);
     const areVisibleIndicesMeasured =
         visibleIndices.length > 0 &&
         visibleIndices.every((index) => {
