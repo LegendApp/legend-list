@@ -20,6 +20,8 @@ import {
     cancelNativeScrollToStart,
     hasNativeScrollToStart,
 } from "@/core/nativeScrollToStart";
+import { clearInitialScrollAnchor } from "@/core/finishInitialScroll";
+import { getDataLength } from "@/core/IndexedData";
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { listen$, peek$, useArr$, useStateContext } from "@/state/state";
@@ -454,7 +456,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             const state = ctx.state;
             const initial = state.initialScroll;
             if (hasActiveInitialScroll(state)) {
-                return !(initial?.viewPosition === 1 && initial.index === state.props.data.length - 1);
+                return !(initial?.viewPosition === 1 && initial.index === getDataLength(state) - 1);
             }
             return !!(
                 (state.scrollingTo &&
@@ -490,6 +492,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 !state.pendingMaintainScrollAtEnd &&
                 !state.scrollingTo &&
                 !state.pendingScrollResolve &&
+                !state.initialScrollAnchor &&
                 !hasNativeScrollToStart(ctx) &&
                 !isScrollToStart &&
                 !hasActiveInitialScroll(state)
@@ -497,7 +500,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 return false;
             }
             const explicit = captured?.explicit ?? isExplicitNavigation();
-            if (direction > 0 && !explicit && !hasNativeScrollToStart(ctx) && !(isNew && state.props.onUserScroll))
+            if (direction > 0 && !explicit && !state.initialScrollAnchor && !hasNativeScrollToStart(ctx) && !(isNew && state.props.onUserScroll))
                 return false;
             const node = resolveScrollableNode(scrollRef.current, externalTarget);
             const maxOffset = getMaxScrollOffset();
@@ -513,6 +516,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                     if (isWheel && !wheelAccepted) wheelStartedNested = true;
                     return false;
                 }
+                if (state.initialScrollAnchor) clearInitialScrollAnchor(state);
                 // A wheel tail that predates a command keeps its gesture owner.
                 // Browsers disagree on whether a wheel that interrupts a smooth scroll still applies natively
                 // (Chromium drops it, WebKit and Firefox apply it), so the stop write applies it and the native

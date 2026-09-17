@@ -45,6 +45,7 @@ export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
         if (Math.abs(diff) <= 1) return;
         if (anchor.lastRequestTime === undefined || (state.lastNativeScrollTime ?? 0) > anchor.lastRequestTime) {
             anchor.lastRequestTime = Date.now();
+            anchor.lastRequestOffset = observed;
             anchor.contentOffset = offset;
             requestAdjust(ctx, diff);
         }
@@ -54,15 +55,22 @@ export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
     return true;
 }
 
-export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateContext) {
+export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateContext, observedOffset?: number) {
     const { state } = ctx;
     const anchor = state.initialScrollAnchor;
-    if (!anchor || state.scrollingTo || state.scheduledWork.has("initialScrollAlignment")) return;
+    if (!anchor || state.scrollingTo) return;
+    const observed = observedOffset ?? getObservedScrollOffset(state);
+    const target = anchor.contentOffset ?? resolveInitialScrollOffset(ctx, anchor);
+    // Partial acknowledgements stay inside the interval of the outstanding request.
+    // Queued work has no such interval and cannot claim a user's movement away.
     if (
-        Math.abs(getObservedScrollOffset(state) - (anchor.contentOffset ?? resolveInitialScrollOffset(ctx, anchor))) <=
-        1
+        state.scheduledWork.has("initialScrollAlignment") &&
+        anchor.lastRequestOffset !== undefined &&
+        observed >= Math.min(anchor.lastRequestOffset, target) - 1 &&
+        observed <= Math.max(anchor.lastRequestOffset, target) + 1
     )
         return;
+    if (Math.abs(observed - target) <= 1) return;
     if ((anchor.preserveForBottomPadding || anchor.preserveForFooterLayout) && peek$(ctx, "isAtEnd")) return;
     // A revealed list belongs to the user once they leave its settled target.
     // Keeping a padding-only anchor here would pull them back on the next resize.

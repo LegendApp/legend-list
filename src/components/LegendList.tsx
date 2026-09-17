@@ -34,7 +34,7 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { doScrollTo } from "@/core/doScrollTo";
 import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
-import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
+import { clearInitialScrollAnchor, clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { handleLayout } from "@/core/handleLayout";
 import { getDataLength, type IndexedData, resolveIndexedData } from "@/core/IndexedData";
@@ -1296,6 +1296,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 state.userScrollContentSize = undefined;
                 state.scheduledWork.cancel("endFollowRearm");
                 state.isDragging = true;
+                if (state.initialScrollAnchor) clearInitialScrollAnchor(state);
                 recordViewabilityInteraction(ctx);
                 interruptUserScroll(ctx);
                 state.props.onUserScroll?.();

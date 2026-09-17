@@ -192,8 +192,6 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     const didInteract =
         newScroll !== state.scroll && state.didFinishInitialScroll && !state.scrollingTo && !state.ignoreScrollFromMVCP;
-    const previousScroll = state.scroll;
-    const hadPreservedEndAnchorCorrection = !!state.preservedEndAnchorCorrection;
     state.scrollPending = newScroll;
 
     updateScroll(ctx, newScroll, insetChanged, {
@@ -203,11 +201,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     });
     if (didInteract) recordViewabilityInteraction(ctx);
     trackInitialScrollNativeProgress(state, newScroll);
-    // Rows measured at the new offset can start a correction; it must not pull back a scroll the list didn't make.
-    clearFinishedBootstrapInitialScrollTargetIfMovedAway(
-        ctx,
-        !hadPreservedEndAnchorCorrection && Math.abs(newScroll - previousScroll) > 1,
-    );
+    clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx, newScroll);
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);
