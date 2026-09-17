@@ -298,7 +298,7 @@ function applyItemSize(
             size,
         });
 
-        state.positionRecalculationStartIndex = Math.min(state.positionRecalculationStartIndex ?? index, index);
+        state.containerSyncAdjust = undefined;
     }
     updateOtherAxisSizeIfNeeded(ctx, sizeObj, horizontal);
 
@@ -363,7 +363,7 @@ export function updateOneItemSize(
     const prevSize =
         layoutStore && index !== undefined
             ? layoutStore.getSize(index)
-            : getItemSize(ctx, itemKey, itemIndex, itemData, undefined, undefined, notifyTotalSize, resolvedItemSize);
+            : getItemSize(ctx, itemKey, itemIndex, itemData, notifyTotalSize, resolvedItemSize);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     if (fixedItemSize === undefined) {
         state.fixedItemSizeKeys?.delete(itemKey);

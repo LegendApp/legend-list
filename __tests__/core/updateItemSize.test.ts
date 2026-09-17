@@ -604,21 +604,20 @@ describe("item size update functions", () => {
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
-        it("keeps totalSize correct when an averaged size is cached before measurement", () => {
+        it("keeps totalSize correct when an estimated size is cached before measurement", () => {
             const ctx = createMockContext(
                 {
                     numContainers: 0,
                     readyToRender: true,
                 },
                 {
-                    averageSizes: { "": { avg: 20, num: 1 } },
                     didContainersLayout: true,
                     didFinishInitialScroll: true,
                     endBuffered: -1,
                     indexByKey: new Map([["item_0", 0]]),
                     props: {
                         data: [{ id: "item1", name: "First" }],
-                        estimatedItemSize: undefined,
+                        estimatedItemSize: 20,
                         onItemSizeChanged: undefined,
                     },
                     startBuffered: 1,
@@ -627,8 +626,8 @@ describe("item size update functions", () => {
             );
             const state = ctx.state;
 
-            // Prime the cache with an averaged size without touching totalSize.
-            getItemSize(ctx, "item_0", 0, state.props.data[0], true);
+            // Prime the cache with an estimated size without touching totalSize.
+            getItemSize(ctx, "item_0", 0, state.props.data[0]);
 
             expect(state.totalSize).toBe(20);
 

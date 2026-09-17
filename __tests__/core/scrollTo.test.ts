@@ -152,29 +152,6 @@ describe("scrollTo", () => {
         expect(mockCtx.state.scrollPending).toBe(700);
     });
 
-    it("captures a frozen average size snapshot when starting a scroll", () => {
-        mockCtx.state.averageSizes = {
-            "": { avg: 80, num: 4 },
-            large: { avg: 120, num: 2 },
-        };
-
-        scrollTo(mockCtx, {
-            animated: true,
-            index: 5,
-            itemSize: 80,
-            offset: 200,
-        });
-
-        expect(mockCtx.state.scrollingTo).toMatchObject({
-            animated: true,
-            averageSizeSnapshot: { "": 80, large: 120 },
-            index: 5,
-            itemSize: 80,
-            offset: 200,
-            targetOffset: 200,
-        });
-    });
-
     it("precomputes the target range for non-animated imperative scrolls", () => {
         mockCtx.state.props.data = Array.from({ length: 10 }, (_, index) => ({ id: index }));
         mockCtx.state.props.estimatedItemSize = 80;

@@ -98,8 +98,6 @@ export function updateScroll(
     }
 
     // Update current scroll state
-    state.scrollPrev = prevScroll;
-    state.scrollPrevTime = state.scrollTime;
     state.scroll = newScroll;
     state.scrollTime = currentTime;
 

@@ -455,10 +455,8 @@ export function calculateItemsInView(
     batchedUpdates(() => {
         const {
             containerItemKeys,
-            enableScrollForNextCalculateItemsInView,
             idCache,
             indexByKey,
-            positionRecalculationStartIndex,
             props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
             scrollLength,
@@ -646,7 +644,6 @@ export function calculateItemsInView(
 
         // Check precomputed scroll range to see if we can skip this check
         if (
-            enableScrollForNextCalculateItemsInView &&
             !hasEstimatedInitialLayout &&
             !suppressInitialScrollSideEffects &&
             !didDataChange &&
@@ -778,11 +775,6 @@ export function calculateItemsInView(
                 scrollBottomBuffered,
             );
             totalSize = getContentSize(ctx, includeContentContainerMinSize);
-        }
-
-        if (positionRecalculationStartIndex !== undefined) {
-            // Clear the invalidation marker after using it for position updates.
-            state.positionRecalculationStartIndex = undefined;
         }
 
         let protectedContainerKeys: Set<string> | undefined;
@@ -928,7 +920,7 @@ export function calculateItemsInView(
 
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
-        if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
+        if (nextTop !== undefined && nextBottom !== undefined) {
             state.scrollForNextCalculateItemsInView =
                 isNullOrUndefined(nextTop) && isNullOrUndefined(nextBottom)
                     ? undefined
@@ -936,7 +928,7 @@ export function calculateItemsInView(
                           bottom: nextBottom,
                           top: nextTop,
                       };
-        } else if (enableScrollForNextCalculateItemsInView && state.props.hasExternalScroll) {
+        } else if (state.props.hasExternalScroll) {
             // A shared owner can keep scrolling while this list is entirely out of range.
             // Re-enter calculation only when the buffer reaches the list again.
             if (scrollBottomBuffered < 0) {

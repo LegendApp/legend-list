@@ -49,10 +49,7 @@ export function finishScrollTo(ctx: StateContext) {
         if (scrollingTo.isInitialScroll || state.initialScroll) {
             const isOffsetSession = state.initialScrollSession?.kind === "offset";
             const shouldPreserveResizeTarget =
-                !!scrollingTo.isInitialScroll &&
-                !state.clearPreservedInitialScrollOnNextFinish &&
-                getDataLength(state) > 0 &&
-                state.initialScroll?.viewPosition === 1;
+                !!scrollingTo.isInitialScroll && getDataLength(state) > 0 && state.initialScroll?.viewPosition === 1;
             finishInitialScroll(ctx, {
                 onFinished: complete,
                 preserveTarget: (isOffsetSession && getDataLength(state) === 0) || shouldPreserveResizeTarget,

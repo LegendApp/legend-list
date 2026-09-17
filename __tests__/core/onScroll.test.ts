@@ -111,7 +111,6 @@ describe("onScroll", () => {
 
             expect(mockState.scrollPending).toBe(100);
             expect(mockState.scroll).toBe(100);
-            expect(mockState.scrollPrev).toBe(0);
             expect(mockState.hasScrolled).toBe(true);
         });
 
@@ -242,7 +241,6 @@ describe("onScroll", () => {
 
             expect(mockState.scrollTime).toBeGreaterThan(0);
             expect(mockState.lastBatchingAction).toBe(mockState.scrollTime);
-            expect(mockState.scrollTime).toBeGreaterThanOrEqual(mockState.scrollPrevTime ?? 0);
         });
 
         it("keeps the initial scroll watchdog active for zero-offset events that do not move toward the target", () => {
@@ -402,7 +400,6 @@ describe("onScroll", () => {
                 onScroll(mockCtx, mockScrollEvent);
 
                 expect(mockState.scroll).toBe(0); // Ignored events must not update committed scroll state
-                expect(mockState.scrollPrev).toBe(0); // Previous scroll stays unchanged
                 expect(mockState.scrollHistory.length).toBe(1); // History still records sample
                 expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
             } finally {
@@ -420,7 +417,6 @@ describe("onScroll", () => {
                 onScroll(mockCtx, mockScrollEvent);
 
                 expect(mockState.scroll).toBe(0);
-                expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(1);
                 expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
             } finally {
@@ -465,14 +461,12 @@ describe("onScroll", () => {
                 mockScrollEvent.nativeEvent.contentOffset.y = 30;
                 onScroll(mockCtx, mockScrollEvent);
                 expect(mockState.scroll).toBe(0);
-                expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(1);
 
                 // Test above gt threshold
                 mockScrollEvent.nativeEvent.contentOffset.y = 250;
                 onScroll(mockCtx, mockScrollEvent);
                 expect(mockState.scroll).toBe(0);
-                expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(2);
 
                 expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
@@ -694,13 +688,11 @@ describe("onScroll", () => {
             // First scroll
             onScroll(mockCtx, mockScrollEvent);
             expect(mockState.scroll).toBe(100);
-            expect(mockState.scrollPrev).toBe(0);
 
             // Second scroll
             mockScrollEvent.nativeEvent.contentOffset.y = 200;
             onScroll(mockCtx, mockScrollEvent);
             expect(mockState.scroll).toBe(200);
-            expect(mockState.scrollPrev).toBe(100);
         });
 
         it("should update scrollPending before processing", () => {

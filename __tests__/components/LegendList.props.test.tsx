@@ -2301,7 +2301,6 @@ describe("LegendList props behavior", () => {
         } as any;
         state.scroll = 220;
         state.scrollPending = 220;
-        state.scrollPrev = 220;
 
         await act(async () => {
             finishScrollTo(ctx);
@@ -3178,7 +3177,6 @@ describe("LegendList props behavior", () => {
             rendered.rerender(renderList(() => {}));
         });
 
-        expect(state.enableScrollForNextCalculateItemsInView).toBe(true);
         expect(state.scrollForNextCalculateItemsInView).toBeUndefined();
 
         rendered.unmount();

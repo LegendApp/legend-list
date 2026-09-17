@@ -296,7 +296,6 @@ describe("ContextContainer hooks", () => {
             const TestComponent = () => {
                 const ctx = useStateContext();
                 ctx.state = {
-                    enableScrollForNextCalculateItemsInView: false,
                     scrollForNextCalculateItemsInView: { bottom: 100, top: 0 },
                     triggerCalculateItemsInView: () => calculations++,
                     viewabilityConfigCallbackPairs: [],

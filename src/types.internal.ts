@@ -82,7 +82,6 @@ export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated"
 export type ScrollResolve = () => void;
 
 export interface ScrollTarget {
-    averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
     /** Absolute and end targets include the contentContainerStyle minimum; item targets align to rows. */
     clampToContentContainerMinSize?: boolean;
@@ -229,7 +228,6 @@ export interface InternalState {
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
-    enableScrollForNextCalculateItemsInView: boolean;
     edgeReachedGate?: "closed" | "prepared" | "consumed-start" | "consumed-end";
     edgeReachedGateScroll?: number;
     endBuffered: number;
@@ -285,7 +283,6 @@ export interface InternalState {
     visibleContentAnchor?: { key: string; offset: number; sizeOnly?: true };
     measuringContainersInLayout?: boolean;
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
-    positionRecalculationStartIndex: number | undefined;
     mvcpAnchorLock?: {
         id: string;
         position: number;
@@ -333,8 +330,6 @@ export interface InternalState {
     scrollLastCalculate?: number;
     scrollLength: number;
     scrollPending: number;
-    scrollPrev: number;
-    scrollPrevTime: number;
     scrollProcessingEnabled: boolean;
     scrollTime: number;
     scheduledWork: ScheduledWork;
