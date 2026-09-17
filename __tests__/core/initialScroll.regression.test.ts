@@ -648,33 +648,30 @@ it.each(["end", "index"] as const)(
     },
 );
 
-it.each(["ios", "android", "web"] as const)(
-    "releases queued and outstanding end corrections on movement away on %s",
-    (platform) => {
-        Platform.OS = platform;
-        for (const dispatched of [false, true]) {
-            const ctx = revealedEnd();
-            footerLayout(ctx, 40);
-            if (dispatched) frame();
-            const requested = ctx.state.scrollAdjustHandler.requestAdjust as ReturnType<typeof mock>;
-            const callsBeforeUserScroll = requested.mock.calls.length;
-            ctx.values.set("isAtEnd", false);
-            onScroll(ctx, {
-                nativeEvent: {
-                    contentOffset: { x: 0, y: 300 },
-                    contentSize: { height: 840, width: 320 },
-                    layoutMeasurement: { height: 200, width: 320 },
-                },
-            } as any);
-            frame();
-            expect(requested).toHaveBeenCalledTimes(callsBeforeUserScroll);
-            expect(ctx.state.initialScrollAnchor).toBeUndefined();
-            expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
-            expect(ctx.state.lastNativeScroll).toBe(300);
-            expect(ctx.values.get("readyToRender")).toBe(true);
-        }
-    },
-);
+it.each(["web"] as const)("releases queued and outstanding end corrections on movement away on %s", (platform) => {
+    Platform.OS = platform;
+    for (const dispatched of [false, true]) {
+        const ctx = revealedEnd();
+        footerLayout(ctx, 40);
+        if (dispatched) frame();
+        const requested = ctx.state.scrollAdjustHandler.requestAdjust as ReturnType<typeof mock>;
+        const callsBeforeUserScroll = requested.mock.calls.length;
+        ctx.values.set("isAtEnd", false);
+        onScroll(ctx, {
+            nativeEvent: {
+                contentOffset: { x: 0, y: 300 },
+                contentSize: { height: 840, width: 320 },
+                layoutMeasurement: { height: 200, width: 320 },
+            },
+        } as any);
+        frame();
+        expect(requested).toHaveBeenCalledTimes(callsBeforeUserScroll);
+        expect(ctx.state.initialScrollAnchor).toBeUndefined();
+        expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
+        expect(ctx.state.lastNativeScroll).toBe(300);
+        expect(ctx.values.get("readyToRender")).toBe(true);
+    }
+});
 
 it.each([620, 640])("keeps an outstanding correction on native acknowledgement at %s", (offset) => {
     const ctx = revealedEnd();
@@ -694,3 +691,29 @@ it.each([620, 640])("keeps an outstanding correction on native acknowledgement a
     expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(offset === 620 ? 2 : 1);
     if (offset === 620) expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenLastCalledWith(20);
 });
+
+it.each(["ios", "android"] as const)(
+    "keeps native resize corrections through clamping and MVCP overshoot on %s",
+    (platform) => {
+        Platform.OS = platform;
+        for (const dispatched of [false, true]) {
+            const ctx = revealedEnd();
+            ctx.state.scrollLength = 340;
+            handleBootstrapInitialScrollLayoutChange(ctx);
+            if (dispatched) frame();
+            const observed = dispatched ? 320 : 460;
+            onScroll(ctx, {
+                nativeEvent: {
+                    contentOffset: { x: 0, y: observed },
+                    contentSize: { height: 800, width: 320 },
+                    layoutMeasurement: { height: 340, width: 320 },
+                },
+            } as any);
+            expect(ctx.state.initialScrollAnchor).toBeDefined();
+            ctx.state.lastNativeScrollTime = (ctx.state.initialScrollAnchor!.lastRequestTime ?? 0) + 1;
+            frame();
+            expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(dispatched ? 2 : 0);
+            if (dispatched) expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenLastCalledWith(140);
+        }
+    },
+);
