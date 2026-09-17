@@ -111,7 +111,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     updateScroll(ctx, newScroll, insetChanged, { fromNativeScrollEvent: true });
     if (didInteract) recordViewabilityInteraction(ctx);
     trackInitialScrollNativeProgress(state, newScroll);
-    clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx);
+    clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx, newScroll);
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);

@@ -31,7 +31,7 @@ import { DataSourceObserver } from "@/core/DataSourceObserver";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
-import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
+import { clearInitialScrollAnchor, clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
 import { getDataLength, type IndexedData, resolveIndexedData } from "@/core/IndexedData";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
@@ -1120,6 +1120,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
             onScrollBeginDrag: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
                 state.isDragging = true;
+                if (state.initialScrollAnchor) clearInitialScrollAnchor(state);
                 recordViewabilityInteraction(ctx);
                 interruptMaintainScrollAtEnd(ctx);
                 prepareReachedEdgeForNextUserScroll(ctx);

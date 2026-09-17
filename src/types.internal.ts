@@ -183,7 +183,7 @@ export interface InternalState {
     endNoBuffer: number | null;
     endReachedSnapshot: ThresholdSnapshot | undefined;
     firstFullyOnScreenIndex: number | undefined;
-    initialScrollAnchor?: InternalInitialScrollTarget & { lastRequestTime?: number };
+    initialScrollAnchor?: InternalInitialScrollTarget & { lastRequestOffset?: number; lastRequestTime?: number };
     hasHadNonEmptyData: boolean;
     hasScrolled?: boolean;
     hasViewabilityInteraction?: boolean;

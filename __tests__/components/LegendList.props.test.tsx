@@ -956,6 +956,33 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("cancels pending initial alignment when a native drag begins", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-initial-drag-cancel");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+        const state = await getStateFromRender();
+        state.initialScrollAnchor = { contentOffset: 640, kind: "end", lastRequestOffset: 600 };
+        state.scheduledWork.frame(() => {}, "initialScrollAlignment");
+
+        act(() => {
+            lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+        });
+
+        expect(state.initialScrollAnchor).toBeUndefined();
+        expect(state.scheduledWork.has("initialScrollAlignment")).toBe(false);
+        rendered.unmount();
+    });
+
     for (const maintaining of ["animated", "pending-animated", "instant", "pending-instant"] as const) {
         it(`cancels ${maintaining} end following when a native drag begins`, async () => {
             const data = [{ id: "item-1", label: "Alpha" }];

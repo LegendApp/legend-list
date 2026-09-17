@@ -14,6 +14,7 @@ import {
 } from "react";
 
 import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { clearInitialScrollAnchor } from "@/core/finishInitialScroll";
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useArr$, useStateContext } from "@/state/state";
@@ -397,6 +398,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         const onWheel = (nativeEvent: Event) => {
             const event = nativeEvent as WheelEvent;
             const delta = horizontal ? event.deltaX || (event.shiftKey ? event.deltaY : 0) : event.deltaY;
+            if (delta !== 0 && !event.ctrlKey && !event.defaultPrevented && ctx.state.initialScrollAnchor) {
+                clearInitialScrollAnchor(ctx.state);
+            }
             if (
                 delta < 0 &&
                 !event.ctrlKey &&

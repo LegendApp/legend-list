@@ -33,6 +33,16 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 description: "Checks image request priority with slow recycled rows and fast scrolling.",
                 slug: "recycle-image-priority",
                 title: "Recycled Image Priority",
+    },
+    {
+                description: "Exercises delayed data, footer growth, resize, and initial-scroll cancellation.",
+                slug: "initial-scroll-lifecycle",
+                title: "Initial Scroll Lifecycle",
+            },
+            {
+                description: "Exercises initial-scroll lifecycle and cancellation on the horizontal axis.",
+                slug: "initial-scroll-lifecycle-horizontal",
+                title: "Horizontal Initial Scroll Lifecycle",
             },
             {
                 description: "Verifies indexed scrollTo accuracy on variable-height content.",

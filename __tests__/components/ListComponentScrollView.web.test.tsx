@@ -106,7 +106,7 @@ function resetMocks() {
     mockCtx.state.dataChangeNeedsScrollUpdate = false;
     mockCtx.state.didFinishInitialScroll = true;
     mockCtx.state.initialScroll = undefined;
-    mockCtx.state.initialScroll = undefined;
+    mockCtx.state.initialScrollAnchor = undefined;
     mockCtx.state.mvcpAnchorLock = undefined;
     mockCtx.state.props.anchoredEndSpace = undefined;
     mockCtx.state.props.contentInsetEndAdjustment = undefined;
@@ -204,6 +204,48 @@ describe("ListComponentScrollView (web)", () => {
         }
         expect(scrollListeners.has("wheel")).toBe(false);
     });
+
+    it.each([false, true])(
+        "releases initial alignment on wheel intent on either axis (horizontal=%s)",
+        async (horizontal) => {
+            resetMocks();
+            const cancelWork = mock(() => {});
+            mockCtx.state.scheduledWork = { cancel: cancelWork };
+            const { ListComponentScrollView } = await import(
+                "../../src/components/ListComponentScrollView?initial-wheel-cancel"
+            );
+            let renderer: TestRenderer.ReactTestRenderer | undefined;
+            try {
+                act(() => {
+                    renderer = TestRenderer.create(
+                        <ListComponentScrollView horizontal={horizontal} onLayout={() => {}} style={{}}>
+                            <div />
+                        </ListComponentScrollView>,
+                    );
+                });
+                const wheel = scrollListeners.get("wheel")!;
+                const event = {
+                    ctrlKey: false,
+                    defaultPrevented: false,
+                    deltaX: horizontal ? -20 : 0,
+                    deltaY: horizontal ? 0 : -20,
+                };
+                for (const lastRequestOffset of [undefined, 600]) {
+                    const anchor = { contentOffset: 640, lastRequestOffset };
+                    mockCtx.state.initialScrollAnchor = anchor;
+                    wheel({ ...event, ctrlKey: true } as WheelEvent);
+                    wheel({ ...event, defaultPrevented: true } as WheelEvent);
+                    expect(mockCtx.state.initialScrollAnchor).toBe(anchor);
+                    wheel(event as WheelEvent);
+                    expect(mockCtx.state.initialScrollAnchor).toBeUndefined();
+                    expect(cancelWork).toHaveBeenCalledWith("initialScrollAlignment");
+                }
+            } finally {
+                act(() => renderer?.unmount());
+            }
+            expect(scrollListeners.has("wheel")).toBe(false);
+        },
+    );
 
     it("keeps RAF coalescing during steady-state user scrolling", async () => {
         resetMocks();

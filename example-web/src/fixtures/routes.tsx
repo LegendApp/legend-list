@@ -21,6 +21,7 @@ import FixedSizeItemsExample from "./FixedSizeItemsExample";
 import HeaderMvcpExample from "./HeaderMvcpExample";
 import InitialScrollAtEndExample from "./InitialScrollAtEndExample";
 import InitialScrollIndexExample from "./InitialScrollIndexExample";
+import InitialScrollLifecycleExample from "./InitialScrollLifecycleExample";
 import LazyListExample from "./LazyListExample";
 import MutableCellsExample from "./MutableCellsExample";
 import MVCPTestExample from "./MVCPTestExample";
@@ -60,6 +61,20 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "recycle-image-priority",
         title: "Recycled Image Priority",
+    },
+    {
+        description: "Exercises delayed data, footer growth, resize, and user takeover during initial scrolling.",
+        element: () => <InitialScrollLifecycleExample />,
+        group: "Scroll & Position",
+        path: "initial-scroll-lifecycle",
+        title: "Initial Scroll Lifecycle",
+    },
+    {
+        description: "Exercises initial-scroll lifecycle and cancellation on the horizontal axis.",
+        element: () => <InitialScrollLifecycleExample horizontal />,
+        group: "Scroll & Position",
+        path: "initial-scroll-lifecycle-horizontal",
+        title: "Horizontal Initial Scroll Lifecycle",
     },
     {
         description: "Regresses typing during animated end scrolling, footer removal, and history-target priority.",
