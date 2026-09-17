@@ -1,37 +1,48 @@
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { releaseDeferredPublicOnScroll } from "@/core/deferredPublicOnScroll";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
-import { initialScrollCompletion, initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
+import { getDataLength } from "@/core/IndexedData";
+import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { Platform } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-const PRESERVED_INITIAL_SCROLL_FALLBACK_CLEAR_DELAY_MS = 2000;
-
 function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
     state.scroll = offset;
     state.scrollPending = offset;
 }
 
-export function clearPreservedInitialScrollTarget(state: StateContext["state"]) {
+export function clearInitialScrollAnchor(state: StateContext["state"]) {
     state.scheduledWork.cancel("preservedInitialScroll");
-    state.clearPreservedInitialScrollOnNextFinish = undefined;
+    state.scheduledWork.cancel("initialScrollAlignment");
+    state.initialScrollAnchor = undefined;
+}
+
+function preserveInitialScrollAnchor(
+    state: StateContext["state"],
+    target: NonNullable<StateContext["state"]["initialScroll"]>,
+) {
+    clearInitialScrollAnchor(state);
+    // Keep geometry only: completion and measurement state belong to initialization.
+    const { bootstrap: _, completion: __, previousDataLength: ___, ...anchor } = target;
+    state.initialScrollAnchor = { ...anchor, contentOffset: state.scrollPending ?? state.scroll };
+    state.scheduledWork.timeout(() => clearInitialScrollAnchor(state), 2000, "preservedInitialScroll");
+}
+
+export function clearPreservedInitialScrollTarget(state: StateContext["state"]) {
+    state.scheduledWork.cancel("initialScrollCompletion");
+    clearInitialScrollAnchor(state);
     state.initialScroll = undefined;
-    state.preservedEndAnchorCorrection = undefined;
-    setInitialScrollSession(state);
 }
 
 export function supersedeInitialScroll(ctx: StateContext) {
     const state = ctx.state;
-    const bootstrapInitialScroll =
-        state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
 
-    if (state.initialScroll || bootstrapInitialScroll || state.scrollingTo?.isInitialScroll) {
-        if (bootstrapInitialScroll?.frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
-            cancelAnimationFrame(bootstrapInitialScroll.frameHandle);
-        }
+    if (state.initialScroll || state.initialScrollAnchor || state.scrollingTo?.isInitialScroll) {
+        state.scheduledWork.cancel("initialScrollFrame");
+        state.scheduledWork.cancel("initialScrollLayout");
         if (state.scrollingTo?.isInitialScroll) {
             cancelScrollCompletionChecks(state);
             state.scrollingTo = undefined;
@@ -39,7 +50,7 @@ export function supersedeInitialScroll(ctx: StateContext) {
         }
 
         initialScrollCompletion.resetFlags(state);
-        setInitialScrollSession(state, { bootstrap: null });
+        if (state.initialScroll) state.initialScroll.bootstrap = undefined;
         finishInitialScroll(ctx);
     }
 }
@@ -50,7 +61,6 @@ export function finishInitialScroll(
         recalculateItems?: boolean;
         resolvedOffset?: number;
         preserveTarget?: boolean;
-        schedulePreservedTargetClear?: boolean;
         syncObservedOffset?: boolean;
         waitForCompletionFrame?: boolean;
         onFinished?: () => void;
@@ -58,10 +68,12 @@ export function finishInitialScroll(
 ) {
     const state = ctx.state;
     const freshDataTransitionEpoch = state.freshDataTransitionEpoch;
+    const target = state.initialScroll;
+    state.scheduledWork.cancel("initialScrollCompletion");
 
     if (options?.resolvedOffset !== undefined) {
         syncInitialScrollOffset(state, options.resolvedOffset);
-    } else if (options?.syncObservedOffset && state.initialScrollSession?.kind === "offset") {
+    } else if (options?.syncObservedOffset && state.initialScroll?.kind === "offset") {
         const observedOffset = getObservedScrollOffset(ctx);
         if (Number.isFinite(observedOffset)) {
             syncInitialScrollOffset(state, observedOffset);
@@ -77,41 +89,24 @@ export function finishInitialScroll(
             options?.onFinished?.();
             return;
         }
+        if (state.initialScroll !== target) return;
         const shouldReleaseDeferredPublicOnScroll =
-            Platform.OS === "web" && state.initialScrollSession?.kind === "bootstrap";
+            Platform.OS === "web" && !!state.initialScroll && state.initialScroll.kind !== "offset";
         if (
-            isEndOfContentTarget(state.initialScroll, state.props.data.length) &&
+            isEndOfContentTarget(state.initialScroll, getDataLength(state)) &&
             state.props.maintainScrollAtEnd &&
             !state.endFollowInterrupted
         ) {
             set$(ctx, "isFollowingEnd", true);
         }
-        const finalScrollOffset = options?.resolvedOffset ?? state.scrollPending;
+        const finalScrollOffset = options?.resolvedOffset ?? state.scrollPending ?? state.scroll ?? 0;
         initialScrollWatchdog.clear(state);
-        if (options?.preserveTarget && state.initialScroll) {
-            setInitialScrollSession(state);
-            state.scheduledWork.cancel("preservedInitialScroll");
-            if (options?.schedulePreservedTargetClear) {
-                // This is only a backstop. The main preservation lifecycle is
-                // event-driven via late layout/data/user-scroll invalidation.
-                state.scheduledWork.timeout(
-                    () => {
-                        if (
-                            !state.didFinishInitialScroll ||
-                            state.scrollingTo?.isInitialScroll ||
-                            !state.initialScroll
-                        ) {
-                            return;
-                        }
-
-                        clearPreservedInitialScrollTarget(state);
-                    },
-                    PRESERVED_INITIAL_SCROLL_FALLBACK_CLEAR_DELAY_MS,
-                    "preservedInitialScroll",
-                );
-            }
+        if (options?.preserveTarget && state.initialScroll && getDataLength(state) === 0) {
+            state.initialScroll.bootstrap = undefined;
         } else {
+            const preserved = options?.preserveTarget ? state.initialScroll : undefined;
             clearPreservedInitialScrollTarget(state);
+            if (preserved) preserveInitialScrollAnchor(state, preserved);
         }
 
         if (options?.recalculateItems) {
@@ -128,7 +123,7 @@ export function finishInitialScroll(
     };
 
     if (options?.waitForCompletionFrame) {
-        requestAnimationFrame(complete);
+        state.scheduledWork.frame(complete, "initialScrollCompletion");
         return;
     }
 

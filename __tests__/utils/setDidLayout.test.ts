@@ -163,22 +163,30 @@ describe("setDidLayout", () => {
 
         it("preserves offset-based initial scroll state for lifecycle ownership", () => {
             mockState.initialScroll = { contentOffset: 125, index: 0, viewOffset: 0 };
-            mockState.initialScrollSession = { kind: "offset", previousDataLength: 0 } as any;
+            mockState.initialScroll = { ...mockState.initialScroll, kind: "offset", previousDataLength: 0 } as any;
 
             setDidLayout(mockCtx);
 
-            expect(mockState.initialScroll).toEqual({ contentOffset: 125, index: 0, viewOffset: 0 });
+            expect(mockState.initialScroll ?? mockState.initialScrollAnchor).toMatchObject({
+                contentOffset: 125,
+                index: 0,
+                viewOffset: 0,
+            });
             expect(mockState.didContainersLayout).toBe(true);
         });
 
         it("preserves offset-based initialScroll when layout happens before data arrives", () => {
             mockState.initialScroll = { contentOffset: 125, index: 0, viewOffset: 0 };
-            mockState.initialScrollSession = { kind: "offset", previousDataLength: 0 } as any;
+            mockState.initialScroll = { ...mockState.initialScroll, kind: "offset", previousDataLength: 0 } as any;
             mockState.props.data = [];
 
             setDidLayout(mockCtx);
 
-            expect(mockState.initialScroll).toEqual({ contentOffset: 125, index: 0, viewOffset: 0 });
+            expect(mockState.initialScroll ?? mockState.initialScrollAnchor).toMatchObject({
+                contentOffset: 125,
+                index: 0,
+                viewOffset: 0,
+            });
         });
 
         it("should still perform other actions", () => {

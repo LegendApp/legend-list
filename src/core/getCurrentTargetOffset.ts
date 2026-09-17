@@ -17,7 +17,7 @@ export function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: Activ
 }
 
 export function isIndexScrollTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    return !scrollingTo.isInitialScroll || ctx.state.initialScrollSession?.kind === "bootstrap";
+    return !scrollingTo.isInitialScroll || (ctx.state.initialScroll !== undefined && ctx.state.initialScroll.kind !== "offset");
 }
 
 export function getCommittedWebEndOffset(ctx: StateContext) {

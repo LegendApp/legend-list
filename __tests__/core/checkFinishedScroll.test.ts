@@ -172,7 +172,7 @@ describe("checkFinishedScrollFallback", () => {
             {},
             {
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         watchdog: {
                             targetOffset: 220,
@@ -207,7 +207,7 @@ describe("checkFinishedScrollFallback", () => {
             {},
             {
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         watchdog: {
                             targetOffset: 220,
@@ -781,7 +781,7 @@ describe("checkFinishedScrollFallback", () => {
             {},
             {
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         watchdog: {
                             targetOffset: 220,
@@ -826,7 +826,7 @@ describe("checkFinishedScrollFallback", () => {
             {
                 didContainersLayout: true,
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         didDispatchNativeScroll: true,
                         watchdog: {
@@ -861,7 +861,7 @@ describe("checkFinishedScrollFallback", () => {
             { animated: false, x: 0, y: 219 },
             { animated: false, x: 0, y: 220 },
         ]);
-        expect(ctx.state.initialScrollSession?.completion).toMatchObject({
+        expect(ctx.state.initialScroll?.completion).toMatchObject({
             didDispatchNativeScroll: true,
             didRetrySilentInitialScroll: true,
             watchdog: {
@@ -1066,14 +1066,14 @@ describe("checkFinishedScrollFallback", () => {
             {
                 didContainersLayout: true,
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         didDispatchNativeScroll: true,
                         watchdog: {
                             targetOffset: 39715,
                         },
                     },
-                    kind: "bootstrap",
+                    kind: "index",
                     previousDataLength: 100,
                 } as any,
                 refScroller: {
@@ -1114,11 +1114,11 @@ describe("checkFinishedScrollFallback", () => {
             {
                 didContainersLayout: true,
                 hasScrolled: true,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         didDispatchNativeScroll: true,
                     },
-                    kind: "bootstrap",
+                    kind: "index",
                     previousDataLength: 2,
                 } as any,
                 refScroller: {
@@ -1156,7 +1156,7 @@ describe("checkFinishedScrollFallback", () => {
             { totalSize: 100 },
             {
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         watchdog: {
                             targetOffset: 36,
@@ -1202,7 +1202,7 @@ describe("checkFinishedScrollFallback", () => {
             {
                 didContainersLayout: true,
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         watchdog: {
                             targetOffset: 220,
@@ -1244,7 +1244,7 @@ describe("checkFinishedScrollFallback", () => {
             { totalSize: 0 },
             {
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         watchdog: {
                             targetOffset: 36,

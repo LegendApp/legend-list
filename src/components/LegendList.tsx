@@ -16,7 +16,6 @@ import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { resetAdaptiveRender } from "@/core/adaptiveRender";
 import {
-    cancelBootstrapInitialScrollFrame,
     handleBootstrapInitialScrollFooterLayout,
     handleBootstrapInitialScrollLayoutChange,
 } from "@/core/bootstrapInitialScroll";
@@ -377,6 +376,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const initialScrollProp: InternalState["initialScroll"] = initialScrollAtEnd
         ? {
               index: Math.max(0, dataLength - 1),
+              kind: "end",
               preserveForBottomPadding: true,
               viewOffset: getEndAlignedViewOffset(stylePaddingEndState),
               viewPosition: 1,
@@ -503,10 +503,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idsInView: [],
                 indexByKey: new Map(),
                 indexedData,
-                initialScroll: initialScrollProp,
-                initialScrollSession: initialScrollProp
+                initialScroll: initialScrollProp
                     ? {
-                          kind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
+                          ...initialScrollProp,
+                          kind: initialScrollAtEnd ? "end" : initialScrollUsesOffsetOnly ? "offset" : "index",
                           previousDataLength: dataLength,
                       }
                     : undefined,
@@ -621,7 +621,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         didDataChangeLocal &&
         !initialScrollAtEnd &&
         state.didFinishInitialScroll &&
-        state.initialScroll?.viewPosition === 1 &&
+        state.initialScrollAnchor?.viewPosition === 1 &&
         previousDataLength > 0
     ) {
         clearPreservedInitialScrollTarget(state);
@@ -856,7 +856,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
         restoreItemSizeEstimates(ctx, estimatedListSize?.[horizontal ? "height" : "width"], sizeCacheOwnerRef.current);
-        if (state.initialScrollSession?.kind === "bootstrap" || snapToIndices?.length) {
+        if ((state.initialScroll && state.initialScroll.kind !== "offset") || snapToIndices?.length) {
             rebuildLayoutStoreExact(ctx);
         }
         syncLayoutStoreState(ctx);
@@ -869,7 +869,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
-        return usesBootstrapInitialScroll && state.initialScrollSession?.kind === "bootstrap" && Platform.OS === "web"
+        return usesBootstrapInitialScroll &&
+            !!state.initialScroll &&
+            state.initialScroll.kind !== "offset" &&
+            Platform.OS === "web"
             ? undefined
             : resolvedOffset;
     }, [usesBootstrapInitialScroll]);
@@ -885,7 +888,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.pendingMaintainScrollAtEnd = false;
             cancelImperativeScroll(state);
             syncScrollActive(ctx);
-            cancelBootstrapInitialScrollFrame(state);
             resetViewabilityTimers(ctx);
             state.scheduledWork.dispose();
         };
@@ -949,7 +951,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             didStartFreshData,
             initialScrollAtEnd,
             latestInitialScroll: initialScrollProp,
-            latestInitialScrollSessionKind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
+            latestInitialScrollSessionKind: initialScrollAtEnd
+                ? "end"
+                : initialScrollUsesOffsetOnly
+                  ? "offset"
+                  : "index",
             stylePaddingEnd: stylePaddingEndState,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
         });
@@ -1089,7 +1095,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 !initialScrollAtEnd &&
                 !hasInitialScrollIndex &&
                 !hasInitialScrollOffset &&
-                state.initialScrollSession?.kind === "offset" &&
+                state.initialScroll?.kind === "offset" &&
                 state.initialScroll &&
                 (!state.scrollingTo || state.scrollingTo.isInitialScroll)
             ) {

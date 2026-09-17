@@ -376,10 +376,10 @@ describe("mutation boundaries and event reconciliation", () => {
                     ["b", 1],
                     ["c", 2],
                 ]),
-                initialScroll: { index: 2 },
-                initialScrollSession: {
+                initialScroll: {
                     bootstrap: { targetIndexSeed: 2, visibleIndices: [0, 1, 2] },
-                    kind: "bootstrap",
+                    index: 2,
+                    kind: "index",
                 } as any,
                 lastFirstVisibleItemCallback: { index: 1, key: "b" },
                 props: { dataSource: source },
@@ -434,9 +434,7 @@ describe("mutation boundaries and event reconciliation", () => {
         expect(ctx.state.idsInView).toEqual(["a", "c"]);
         expect(ctx.state.lastFirstVisibleItemCallback).toBeUndefined();
         expect(ctx.state.initialScroll?.index).toBe(0);
-        expect(
-            ctx.state.initialScrollSession?.kind === "bootstrap" && ctx.state.initialScrollSession.bootstrap,
-        ).toMatchObject({ targetIndexSeed: 0, visibleIndices: [1, 0, 0] });
+        expect(ctx.state.initialScroll?.bootstrap).toMatchObject({ targetIndexSeed: 0, visibleIndices: [1, 0, 0] });
     });
 
     it("clears viewability ranges and pinned targets when the last items are deleted", () => {

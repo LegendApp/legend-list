@@ -99,10 +99,9 @@ export interface ScrollTarget {
 }
 
 type BootstrapInitialScrollSession = {
-    frameHandle?: number;
     mountFrameCount: number;
     passCount: number;
-    previousResolvedOffset?: number;
+    needsReevaluation?: boolean;
     scroll: number;
     seedContentOffset: number;
     targetIndexSeed?: number;
@@ -115,6 +114,7 @@ export type InternalScrollTarget = ScrollTarget & {
     landingRetries?: number;
     /** Offset the latest landing retry started from, used to stop when the scroll makes no progress. */
     landingRetryFrom?: number;
+    kind?: "end";
     waitForInitialScrollCompletionFrame?: boolean;
 };
 
@@ -122,31 +122,18 @@ type InitialScrollSessionCompletion = {
     didDispatchNativeScroll?: boolean;
     didRetrySilentInitialScroll?: boolean;
     watchdog?: {
-        startScroll: number;
         targetOffset: number;
     };
 };
 
 interface InternalInitialScrollTarget extends ScrollIndexWithOffsetAndContentOffset {
+    kind?: "index" | "end" | "offset";
+    bootstrap?: BootstrapInitialScrollSession;
+    completion?: InitialScrollSessionCompletion;
+    previousDataLength?: number;
     preserveForBottomPadding?: boolean;
     preserveForFooterLayout?: boolean;
 }
-
-type InternalInitialScrollSessionBase = {
-    completion?: InitialScrollSessionCompletion;
-    previousDataLength: number;
-};
-
-type OffsetInitialScrollSession = InternalInitialScrollSessionBase & {
-    kind: "offset";
-};
-
-type BootstrapOwnedInitialScrollSession = InternalInitialScrollSessionBase & {
-    bootstrap?: BootstrapInitialScrollSession;
-    kind: "bootstrap";
-};
-
-type InternalInitialScrollSession = OffsetInitialScrollSession | BootstrapOwnedInitialScrollSession;
 
 type LegendListPropsInternal = LegendListPropsBase<any, Record<string, any>, string | undefined> & {
     data: readonly any[];
@@ -234,6 +221,7 @@ export interface InternalState {
     endNoBuffer: number | null;
     endReachedSnapshot: ThresholdSnapshot | undefined;
     firstFullyOnScreenIndex: number | undefined;
+    initialScrollAnchor?: InternalInitialScrollTarget & { lastRequestTime?: number };
     preservedEndAnchorCorrection?: {
         lastRequestTime?: number;
     };
@@ -248,8 +236,6 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     indexByKey: Map<string, number>;
     previousIndexByKey?: Map<string, number>;
-    clearPreservedInitialScrollOnNextFinish?: boolean;
-    initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
     isDragging?: boolean;
     isEndReached: boolean | null;

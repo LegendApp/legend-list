@@ -27,10 +27,10 @@ describe("initialScroll", () => {
         const ctx = createMockContext(
             { totalSize: 1000 },
             {
-                initialScrollSession: {
+                initialScroll: {
                     kind: "offset",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                } as StateContext["state"]["initialScroll"],
                 positions: [0, 100, 200, 300, 400, 500],
                 scrollLength: 300,
             },
@@ -69,10 +69,10 @@ describe("initialScroll", () => {
         const ctx = createMockContext(
             { totalSize: 1000 },
             {
-                initialScrollSession: {
-                    kind: "bootstrap",
+                initialScroll: {
+                    kind: "index",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                } as StateContext["state"]["initialScroll"],
                 positions: [0, 100, 200, 300, 400, 500, 600, 700, 800, 900],
                 scrollLength: 300,
             },
@@ -89,10 +89,10 @@ describe("initialScroll", () => {
         const ctx = createMockContext(
             {},
             {
-                initialScrollSession: {
-                    kind: "bootstrap",
+                initialScroll: {
+                    kind: "index",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                } as StateContext["state"]["initialScroll"],
                 positions: [],
                 props: {
                     data: Array.from({ length: 100 }, (_, index) => ({ id: index })),
@@ -123,11 +123,13 @@ describe("initialScroll", () => {
         const ctx = createMockContext(
             { totalSize: 1000 },
             {
-                initialScroll: { index: 3, viewOffset: 0 } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
-                    kind: "bootstrap",
+                initialScroll: {
+                    index: 3,
+                    kind: "index",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 0,
+                },
+
                 positions: [0, 100, 200, 300, 400],
                 queuedInitialLayout: false,
                 scrollLength: 300,
@@ -142,11 +144,13 @@ describe("initialScroll", () => {
         const ctx = createMockContext(
             { totalSize: 1000 },
             {
-                initialScroll: { index: 3, viewOffset: 0 } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
-                    kind: "bootstrap",
+                initialScroll: {
+                    index: 3,
+                    kind: "index",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 0,
+                },
+
                 positions: [0, 100, 200, 300, 400],
                 queuedInitialLayout: false,
                 scrollingTo: {
@@ -160,7 +164,7 @@ describe("initialScroll", () => {
         );
 
         expect(advanceCurrentInitialScrollSession(ctx)).toBe(true);
-        expect(ctx.state.initialScroll?.contentOffset).toBe(300);
+        expect((ctx.state.initialScroll ?? ctx.state.initialScrollAnchor)?.contentOffset).toBe(300);
         expect(scrollToSpy).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({
@@ -179,12 +183,11 @@ describe("initialScroll", () => {
                 initialScroll: {
                     contentOffset: 300,
                     index: 3,
-                    viewOffset: 0,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
-                    kind: "bootstrap",
+                    kind: "index",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 0,
+                },
+
                 positions: [0, 100, 200, 300, 400],
                 queuedInitialLayout: true,
                 scrollingTo: {
@@ -209,13 +212,12 @@ describe("initialScroll", () => {
                 initialScroll: {
                     contentOffset: 100,
                     index: 3,
+                    kind: "index",
+                    previousDataLength: 0,
                     viewOffset: 0,
                     viewPosition: 1,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
-                    kind: "bootstrap",
-                    previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                },
+
                 positions: [0, 100, 200, 300, 400],
                 queuedInitialLayout: true,
                 scroll: 100,
@@ -232,7 +234,7 @@ describe("initialScroll", () => {
         );
 
         expect(advanceCurrentInitialScrollSession(ctx, { forceScroll: true })).toBe(true);
-        expect(ctx.state.initialScroll?.contentOffset).toBe(300);
+        expect((ctx.state.initialScroll ?? ctx.state.initialScrollAnchor)?.contentOffset).toBe(300);
         expect(scrollToSpy).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({
@@ -251,12 +253,11 @@ describe("initialScroll", () => {
                 initialScroll: {
                     contentOffset: 220,
                     index: 0,
-                    viewOffset: 0,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
                     kind: "offset",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 0,
+                },
+
                 lastLayout: { height: 300, width: 320, x: 0, y: 0 } as StateContext["state"]["lastLayout"],
                 scrollLength: 300,
             },
@@ -281,12 +282,11 @@ describe("initialScroll", () => {
                 initialScroll: {
                     contentOffset: 220,
                     index: 0,
-                    viewOffset: 0,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
                     kind: "offset",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 0,
+                },
+
                 scroll: 220.5,
                 scrollLength: 300,
                 scrollPending: 220.5,
@@ -341,10 +341,10 @@ describe("initialScroll", () => {
             {},
             {
                 didFinishInitialScroll: true,
-                initialScrollSession: {
+                initialScroll: {
                     kind: "offset",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                } as StateContext["state"]["initialScroll"],
             },
         );
 
@@ -360,7 +360,7 @@ describe("initialScroll", () => {
 
         expect(ctx.state.didFinishInitialScroll).toBe(false);
         expect(ctx.values.get("readyToRender")).toBe(false);
-        expect(ctx.state.initialScrollSession).toMatchObject({
+        expect(ctx.state.initialScroll ?? ctx.state.initialScrollAnchor).toMatchObject({
             kind: "offset",
         });
     });

@@ -55,7 +55,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
         return false;
     }
 
-    if (state.initialScrollSession?.kind === "bootstrap") {
+    if (!!state.initialScroll && state.initialScroll.kind !== "offset") {
         return false;
     }
 

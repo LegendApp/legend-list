@@ -2082,7 +2082,7 @@ describe("LegendList props behavior", () => {
         const indexState = await getStateFromRender();
         const indexContext = await getContextFromRender();
         expect(indexState.didFinishInitialScroll).toBe(true);
-        expect(indexState.initialScroll).toBeUndefined();
+        expect(indexState.initialScroll ?? indexState.initialScrollAnchor).toBeUndefined();
         expect(indexContext.values.get("readyToRender")).toBeUndefined();
         await act(async () => {
             setDidLayout(indexContext);
@@ -2095,7 +2095,7 @@ describe("LegendList props behavior", () => {
         const offsetState = await getStateFromRender();
         const offsetContext = await getContextFromRender();
         expect(offsetState.didFinishInitialScroll).toBe(true);
-        expect(offsetState.initialScroll).toBeUndefined();
+        expect(offsetState.initialScroll ?? offsetState.initialScrollAnchor).toBeUndefined();
         expect(offsetContext.values.get("readyToRender")).toBeUndefined();
         await act(async () => {
             setDidLayout(offsetContext);
@@ -2125,7 +2125,7 @@ describe("LegendList props behavior", () => {
 
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll).toBeUndefined();
+        expect(state.initialScroll ?? state.initialScrollAnchor).toBeUndefined();
 
         rendered.unmount();
     });
@@ -2151,7 +2151,7 @@ describe("LegendList props behavior", () => {
         const indexState = await getStateFromRender();
         const indexContext = await getContextFromRender();
         expect(indexState.didFinishInitialScroll).toBe(true);
-        expect(indexState.initialScroll).toBeUndefined();
+        expect(indexState.initialScroll ?? indexState.initialScrollAnchor).toBeUndefined();
         await act(async () => {
             setDidLayout(indexContext);
         });
@@ -2166,7 +2166,7 @@ describe("LegendList props behavior", () => {
         const offsetState = await getStateFromRender();
         const offsetContext = await getContextFromRender();
         expect(offsetState.didFinishInitialScroll).toBe(true);
-        expect(offsetState.initialScroll).toBeUndefined();
+        expect(offsetState.initialScroll ?? offsetState.initialScrollAnchor).toBeUndefined();
         await act(async () => {
             setDidLayout(offsetContext);
         });
@@ -2197,8 +2197,8 @@ describe("LegendList props behavior", () => {
 
         const state = await getStateFromRender();
 
-        expect(state.initialScroll?.index).toBe(2);
-        expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(2);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBeCloseTo(0);
 
         rendered.unmount();
     });
@@ -2226,8 +2226,8 @@ describe("LegendList props behavior", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.index).toBe(2);
-        expect(state.initialScroll?.viewOffset).toBe(-12);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(2);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBe(-12);
 
         rendered.unmount();
     });
@@ -2250,7 +2250,7 @@ describe("LegendList props behavior", () => {
 
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.contentOffset).toBe(0);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.contentOffset).toBe(0);
 
         await act(async () => {
             setDidLayout((handlerInstances.at(-1) as any).context);
@@ -2284,7 +2284,7 @@ describe("LegendList props behavior", () => {
 
         const state = await getStateFromRender();
         const ctx = await getContextFromRender();
-        expect(state.initialScroll?.contentOffset).toBe(220);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.contentOffset).toBe(220);
         expect(ctx.values.get("readyToRender")).toBeUndefined();
 
         await act(async () => {
@@ -2334,9 +2334,9 @@ describe("LegendList props behavior", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.index).toBe(2);
-        expect(state.initialScroll?.viewPosition).toBe(1);
-        expect(state.initialScroll?.viewOffset).toBe(-12);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(2);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBe(-12);
 
         rendered.unmount();
     });
@@ -2361,10 +2361,10 @@ describe("LegendList props behavior", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.index).toBe(2);
-        expect(state.initialScroll?.preserveForBottomPadding).toBe(true);
-        expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
-        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(2);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.preserveForBottomPadding).toBe(true);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBeCloseTo(0);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
 
         rendered.unmount();
 
@@ -2380,8 +2380,10 @@ describe("LegendList props behavior", () => {
         );
 
         const middleState = await getStateFromRender();
-        expect(middleState.initialScroll?.viewPosition).toBeUndefined();
-        expect(middleState.initialScroll?.preserveForBottomPadding).toBeUndefined();
+        expect((middleState.initialScroll ?? middleState.initialScrollAnchor)?.viewPosition).toBeUndefined();
+        expect(
+            (middleState.initialScroll ?? middleState.initialScrollAnchor)?.preserveForBottomPadding,
+        ).toBeUndefined();
 
         middleRendered.unmount();
 
@@ -2398,9 +2400,11 @@ describe("LegendList props behavior", () => {
         );
 
         const offsetState = await getStateFromRender();
-        expect(offsetState.initialScroll?.viewOffset).toBe(20);
-        expect(offsetState.initialScroll?.viewPosition).toBeUndefined();
-        expect(offsetState.initialScroll?.preserveForBottomPadding).toBeUndefined();
+        expect((offsetState.initialScroll ?? offsetState.initialScrollAnchor)?.viewOffset).toBe(20);
+        expect((offsetState.initialScroll ?? offsetState.initialScrollAnchor)?.viewPosition).toBeUndefined();
+        expect(
+            (offsetState.initialScroll ?? offsetState.initialScrollAnchor)?.preserveForBottomPadding,
+        ).toBeUndefined();
 
         offsetRendered.unmount();
     });
@@ -2475,7 +2479,7 @@ describe("LegendList props behavior", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.contentOffset).toBe(300);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.contentOffset).toBe(300);
 
         scrollToCalls = [];
         state.didFinishInitialScroll = true;
@@ -2552,7 +2556,7 @@ describe("LegendList props behavior", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.contentOffset).toBe(220);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.contentOffset).toBe(220);
 
         scrollToCalls = [];
         state.didFinishInitialScroll = true;

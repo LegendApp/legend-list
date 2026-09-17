@@ -475,8 +475,7 @@ export function calculateItemsInView(
         const { hasEstimatedInitialLayout } = state;
         const didDataChange = !!dataChanged;
         const isInitialLayout = !!initialLayout;
-        const bootstrapInitialScrollState =
-            state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+        const bootstrapInitialScrollState = state.initialScroll?.bootstrap;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (scrollLength === 0 || !prevNumContainers) {

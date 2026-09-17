@@ -402,9 +402,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 }
             }
             const shouldFlushImmediately =
-                !!state.scrollingTo ||
-                (!state.didFinishInitialScroll && !!(state.initialScrollSession || state.initialScroll)) ||
-                isInMVCPActiveMode(state);
+                !!state?.scrollingTo ||
+                (!!state?.initialScroll && !state.didFinishInitialScroll) ||
+                (!!state && isInMVCPActiveMode(state));
             if (shouldFlushImmediately) {
                 scrollEventCoalescer.flush();
             } else {

@@ -1,7 +1,7 @@
-import { clearFinishedBootstrapInitialScrollTargetIfMovedAway } from "@/core/bootstrapInitialScroll";
-import { interruptUserScroll } from "@/core/cancelScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { clearFinishedBootstrapInitialScrollTargetIfMovedAway } from "@/core/initialScrollAnchor";
+import { interruptUserScroll } from "@/core/cancelScroll";
 import { armAppScrollRearm } from "@/core/finishMaintainScrollAtEnd";
 import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
@@ -27,10 +27,6 @@ function trackInitialScrollNativeProgress(state: StateContext["state"], newScrol
 
     if (initialNativeScrollWatchdog) {
         state.hasScrolled = false;
-        initialScrollWatchdog.set(state, {
-            startScroll: initialNativeScrollWatchdog.startScroll,
-            targetOffset: initialNativeScrollWatchdog.targetOffset,
-        });
     }
 }
 
@@ -38,7 +34,7 @@ function shouldDeferPublicOnScroll(state: StateContext["state"]) {
     return (
         Platform.OS === "web" &&
         !!state.initialScroll &&
-        state.initialScrollSession?.kind === "bootstrap" &&
+        state.initialScroll.kind !== "offset" &&
         !state.didFinishInitialScroll
     );
 }
@@ -88,7 +84,9 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         newScroll = toLogicalHorizontalOffset(state, newScroll, event.nativeEvent.contentSize?.width);
     }
     const isFinishedEndInitialScroll =
-        state.didFinishInitialScroll && state.initialScroll?.viewPosition === 1 && state.scroll > state.scrollLength;
+        state.didFinishInitialScroll &&
+        state.initialScrollAnchor?.viewPosition === 1 &&
+        state.scroll > state.scrollLength;
     const shouldIgnoreNegativeInsetChange =
         Platform.OS !== "web" && insetChanged && newScroll < 0 && isFinishedEndInitialScroll;
     if (shouldIgnoreNegativeInsetChange) {
