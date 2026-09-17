@@ -330,7 +330,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
             { totalSize: 420 },
             {
                 averageSizes: { "": { avg: 50, num: 4 }, header: { avg: 20, num: 2 } },
-                positionRecalculationStartIndex: 5,
                 props: {
                     data: [{ id: "a" }, { id: "b" }],
                 },
@@ -362,7 +361,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.sizes.size).toBe(0);
         expect(ctx.state.sizesKnown.size).toBe(0);
         expect(Object.keys(ctx.state.averageSizes)).toEqual([]);
-        expect(ctx.state.positionRecalculationStartIndex).toBe(0);
         expect(ctx.state.scrollForNextCalculateItemsInView).toBeUndefined();
         expect(ctx.state.totalSize).toBe(0);
         expect(ctx.state.pendingTotalSize).toBeUndefined();

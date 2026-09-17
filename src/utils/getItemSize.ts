@@ -1,7 +1,6 @@
 import { getDataItem } from "@/core/IndexedData";
 import { setSize } from "@/core/setSize";
 import type { StateContext } from "@/state/state";
-import { roundSize } from "@/utils/helpers";
 import { getId } from "./getId";
 
 export interface ResolvedItemSize {
@@ -68,69 +67,28 @@ export function getItemSize(
     key: string,
     index: number,
     data: any,
-    useAverageSize?: boolean,
-    preferCachedSize?: boolean,
     notifyTotalSize?: boolean,
     resolved?: ResolvedItemSize,
 ) {
     const state = ctx.state;
-    const {
-        sizes,
-        averageSizes,
-        props: { estimatedItemSize, getItemType },
-        scrollingTo,
-    } = state;
     const sizeKnown = state.sizesKnown.get(key);
     if (sizeKnown !== undefined) {
         return sizeKnown;
     }
 
-    let size: number | undefined;
-    const renderedSize = sizes.get(key);
-
-    // Some callers need the last rendered measurement to win over any average-based fallback.
-    if (preferCachedSize) {
-        if (renderedSize !== undefined) {
-            return renderedSize;
-        }
+    const fixedSize = getKnownOrFixedSize(ctx, key, index, data, resolved);
+    if (fixedSize !== undefined) {
+        setSize(ctx, key, fixedSize, notifyTotalSize);
+        return fixedSize;
     }
 
-    size = getKnownOrFixedSize(ctx, key, index, data, resolved);
-    if (size !== undefined) {
-        setSize(ctx, key, size, notifyTotalSize);
-        return size;
-    }
-
-    const itemType = resolved?.itemType ?? (getItemType ? (getItemType(data, index) ?? "") : "");
-
-    if (useAverageSize && !scrollingTo) {
-        // Use item type specific average if available
-        const averageSizeForType = averageSizes[itemType]?.avg;
-        if (averageSizeForType !== undefined) {
-            size = roundSize(averageSizeForType);
-        }
-    }
-
-    // Reuse a rendered measurement before falling back to scroll-scoped or estimated values.
-    if (size === undefined && renderedSize !== undefined) {
+    const renderedSize = state.sizes.get(key);
+    if (renderedSize !== undefined) {
         return renderedSize;
     }
 
-    // While scrolling to a target, use the average snapshot captured at scroll start instead of the live average.
-    if (size === undefined && useAverageSize && scrollingTo) {
-        const averageSizeForType = scrollingTo.averageSizeSnapshot?.[itemType];
-        if (averageSizeForType !== undefined) {
-            size = roundSize(averageSizeForType);
-        }
-    }
-
-    // Last fallback: static estimatedItemSize prop.
-    if (size === undefined) {
-        size = estimatedItemSize! + ctx.scrollAxisGap;
-    }
-
+    const size = state.props.estimatedItemSize! + ctx.scrollAxisGap;
     setSize(ctx, key, size, notifyTotalSize);
-
     return size;
 }
 

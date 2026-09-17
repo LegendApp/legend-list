@@ -10,13 +10,7 @@ describe("getItemSize", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
 
-    const callGetItemSize = (
-        key: string,
-        index: number,
-        data: any,
-        useAverageSize?: boolean,
-        preferCachedSize?: boolean,
-    ) => getItemSize(mockCtx, key, index, data, useAverageSize, preferCachedSize);
+    const callGetItemSize = (key: string, index: number, data: any) => getItemSize(mockCtx, key, index, data);
 
     beforeEach(() => {
         mockCtx = createMockContext(
@@ -47,16 +41,6 @@ describe("getItemSize", () => {
         const result = callGetItemSize("item_0", 0, { id: 0 });
 
         expect(result).toBe(65);
-    });
-
-    it("uses cached rendered size before fixed size when preferred", () => {
-        mockState.sizes.set("item_0", 90);
-        mockState.props.getFixedItemSize = () => 150;
-
-        const result = callGetItemSize("item_0", 0, { id: 0 }, false, true);
-
-        expect(result).toBe(90);
-        expect(mockState.sizesKnown.has("item_0")).toBe(false);
     });
 
     it("uses fixed size as authoritative and promotes it to known size", () => {
@@ -111,48 +95,17 @@ describe("getItemSize", () => {
         expect(result).toBe(90);
     });
 
-    it("uses type-specific average size without adding scroll-axis gap", () => {
-        mockCtx.scrollAxisGap = 16;
-        mockState.props.getItemType = (item: { type?: string }) => item.type ?? "";
-        mockState.averageSizes = {
-            "": { avg: 80, num: 1 },
-            large: { avg: 120, num: 1 },
-        };
-
-        const result = callGetItemSize("item_0", 0, { id: 0, type: "large" }, true);
-
-        expect(result).toBe(120);
-        expect(mockState.sizes.get("item_0")).toBe(120);
-    });
-
-    it("uses frozen average size snapshot without adding scroll-axis gap", () => {
-        mockCtx.scrollAxisGap = 16;
-        mockState.scrollingTo = { averageSizeSnapshot: { "": 72 }, index: 0, offset: 0 } as any;
-
-        const result = callGetItemSize("item_0", 0, { id: 0 }, true);
-
-        expect(result).toBe(72);
-        expect(mockState.sizes.get("item_0")).toBe(72);
-    });
-
-    it("reuses rendered size while scrolling when no snapshot average exists", () => {
+    it("reuses rendered size while scrolling", () => {
         mockState.sizes.set("item_0", 90);
-        mockState.scrollingTo = { averageSizeSnapshot: {}, index: 0, offset: 0 } as any;
+        mockState.scrollingTo = { index: 0, offset: 0 } as any;
 
-        const result = callGetItemSize("item_0", 0, { id: 0 }, true);
+        const result = callGetItemSize("item_0", 0, { id: 0 });
 
         expect(result).toBe(90);
     });
 
     it("falls back to static estimatedItemSize when no other size source exists", () => {
         const result = callGetItemSize("item_0", 0, { id: 0 });
-
-        expect(result).toBe(50);
-        expect(mockState.sizes.get("item_0")).toBe(50);
-    });
-
-    it("uses static estimatedItemSize when average sizing is disabled", () => {
-        const result = callGetItemSize("item_0", 0, { id: 0 }, false);
 
         expect(result).toBe(50);
         expect(mockState.sizes.get("item_0")).toBe(50);

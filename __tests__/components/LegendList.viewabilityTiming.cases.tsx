@@ -74,7 +74,6 @@ async function mountScenario(mode: "array" | "source" = "array", minimumViewTime
             ctx.state.scroll = offset;
             ctx.state.scrollPending = offset;
             if (cached) {
-                ctx.state.enableScrollForNextCalculateItemsInView = true;
                 ctx.state.scrollForNextCalculateItemsInView = { bottom: 10000, top: null };
             }
             await act(async () => ctx.state.triggerCalculateItemsInView!({ forceFullItemPositions: !cached }));

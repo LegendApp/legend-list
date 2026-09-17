@@ -169,7 +169,6 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             delete state.averageSizes[key];
         }
         clearLayoutStoreKnownSizes(ctx);
-        state.positionRecalculationStartIndex = 0;
         state.scrollForNextCalculateItemsInView = undefined;
 
         state.pendingTotalSize = undefined;

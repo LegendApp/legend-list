@@ -971,10 +971,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
 function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
     const state = ctx.state;
     clearBootstrapInitialScrollSession(state);
-    const shouldPreserveResizeTarget =
-        !state.clearPreservedInitialScrollOnNextFinish &&
-        getDataLength(state) > 0 &&
-        state.initialScroll?.viewPosition === 1;
+    const shouldPreserveResizeTarget = getDataLength(state) > 0 && state.initialScroll?.viewPosition === 1;
     finishInitialScroll(ctx, {
         preserveTarget: shouldPreserveResizeTarget,
         recalculateItems: true,

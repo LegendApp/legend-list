@@ -28,7 +28,6 @@ export function checkResetContainers(
             delete state.averageSizes[key];
         }
         clearLayoutStoreKnownSizes(ctx);
-        state.positionRecalculationStartIndex = 0;
         state.scrollForNextCalculateItemsInView = undefined;
     }
 

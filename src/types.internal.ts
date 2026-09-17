@@ -76,7 +76,6 @@ export interface ThresholdSnapshot {
 export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";
 
 export interface ScrollTarget {
-    averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
     index?: number;
     isInitialScroll?: boolean;
@@ -192,7 +191,6 @@ export interface InternalState {
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
-    enableScrollForNextCalculateItemsInView: boolean;
     edgeReachedGate?: "closed" | "prepared";
     endBuffered: number;
     endNoBuffer: number | null;
@@ -210,7 +208,6 @@ export interface InternalState {
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
     ignoreScrollFromMVCPIgnored?: boolean;
     indexByKey: Map<string, number>;
-    clearPreservedInitialScrollOnNextFinish?: boolean;
     initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
     isDragging?: boolean;
@@ -226,7 +223,6 @@ export interface InternalState {
     lastScrollDelta: number;
     loadStartTime: number;
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
-    positionRecalculationStartIndex: number | undefined;
     mvcpAnchorLock?: {
         id: string;
         position: number;
@@ -273,8 +269,6 @@ export interface InternalState {
     scrollLastCalculate?: number;
     scrollLength: number;
     scrollPending: number;
-    scrollPrev: number;
-    scrollPrevTime: number;
     scrollProcessingEnabled: boolean;
     scrollTime: number;
     scheduledWork: ScheduledWork;

@@ -42,7 +42,6 @@ describe("requestAdjust", () => {
                     },
                 } as any,
                 scrollLength: 500,
-                scrollPrev: 90,
             },
         );
         mockState = mockCtx.state;
@@ -135,12 +134,10 @@ describe("requestAdjust", () => {
         });
 
         it("should preserve other state properties", () => {
-            const originalScrollPrev = mockState.scrollPrev;
             const originalScrollTime = mockState.scrollTime;
 
             requestAdjust(mockCtx, 25);
 
-            expect(mockState.scrollPrev).toBe(originalScrollPrev);
             expect(mockState.scrollTime).toBe(originalScrollTime);
         });
     });

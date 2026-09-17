@@ -272,43 +272,6 @@ describe("finishScrollTo", () => {
             }
         });
 
-        it("clears preserved targets immediately after a post-finish layout retarget completes", () => {
-            const mockCtx = createMockContext(
-                {},
-                {
-                    clearPreservedInitialScrollOnNextFinish: true,
-                    initialScroll: {
-                        contentOffset: undefined,
-                        index: 2,
-                        preserveForBottomPadding: true,
-                        viewOffset: 0,
-                        viewPosition: 1,
-                    } as any,
-                    initialScrollSession: {
-                        kind: "bootstrap",
-                        previousDataLength: 3,
-                    } as any,
-                    props: {
-                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
-                    },
-                    scrollHistory: [{ scroll: 0, time: Date.now() }],
-                    scrollingTo: {
-                        animated: false,
-                        isInitialScroll: true,
-                        offset: 220,
-                        targetOffset: 220,
-                        viewOffset: 0,
-                        viewPosition: 1,
-                    } as any,
-                },
-            );
-
-            finishScrollTo(mockCtx);
-
-            expect(mockCtx.state.initialScroll).toBeUndefined();
-            expect(mockCtx.state.clearPreservedInitialScrollOnNextFinish).toBeUndefined();
-        });
-
         it("syncs offset sessions from the scroller's observed offset when available", () => {
             const mockCtx = createMockContext(
                 {},
@@ -338,7 +301,6 @@ describe("finishScrollTo", () => {
                         offset: 220,
                     } as any,
                     scrollPending: 220,
-                    scrollPrev: 220,
                 },
             );
 
@@ -346,7 +308,6 @@ describe("finishScrollTo", () => {
 
             expect(mockCtx.state.scroll).toBe(180);
             expect(mockCtx.state.scrollPending).toBe(180);
-            expect(mockCtx.state.scrollPrev).toBe(180);
         });
 
         it("ignores non-finite observed offsets when finishing offset sessions", () => {
@@ -378,7 +339,6 @@ describe("finishScrollTo", () => {
                         offset: 220,
                     } as any,
                     scrollPending: 220,
-                    scrollPrev: 220,
                 },
             );
 
@@ -386,7 +346,6 @@ describe("finishScrollTo", () => {
 
             expect(mockCtx.state.scroll).toBe(220);
             expect(mockCtx.state.scrollPending).toBe(220);
-            expect(mockCtx.state.scrollPrev).toBe(220);
         });
 
         it("waits for the completion frame before finishing when requested", () => {

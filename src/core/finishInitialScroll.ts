@@ -11,7 +11,6 @@ const PRESERVED_INITIAL_SCROLL_FALLBACK_CLEAR_DELAY_MS = 2000;
 function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
     state.scroll = offset;
     state.scrollPending = offset;
-    state.scrollPrev = offset;
 }
 
 function clearPreservedInitialScrollTargetTimeout(state: StateContext["state"]) {
@@ -20,7 +19,6 @@ function clearPreservedInitialScrollTargetTimeout(state: StateContext["state"]) 
 
 export function clearPreservedInitialScrollTarget(state: StateContext["state"]) {
     clearPreservedInitialScrollTargetTimeout(state);
-    state.clearPreservedInitialScrollOnNextFinish = undefined;
     state.initialScroll = undefined;
     setInitialScrollSession(state);
 }
@@ -81,7 +79,6 @@ export function finishInitialScroll(
         const finalScrollOffset = options?.resolvedOffset ?? state.scrollPending ?? state.scroll ?? 0;
         initialScrollWatchdog.clear(state);
         if (options?.preserveTarget && state.initialScroll) {
-            state.clearPreservedInitialScrollOnNextFinish = undefined;
             setInitialScrollSession(state);
             clearPreservedInitialScrollTargetTimeout(state);
             if (options?.schedulePreservedTargetClear) {

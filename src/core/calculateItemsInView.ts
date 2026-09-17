@@ -440,10 +440,8 @@ export function calculateItemsInView(
     batchedUpdates(() => {
         const {
             containerItemKeys,
-            enableScrollForNextCalculateItemsInView,
             idCache,
             indexByKey,
-            positionRecalculationStartIndex,
             props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
             scrollLength,
@@ -621,7 +619,6 @@ export function calculateItemsInView(
 
         // Check precomputed scroll range to see if we can skip this check
         if (
-            enableScrollForNextCalculateItemsInView &&
             !suppressInitialScrollSideEffects &&
             !didDataChange &&
             !forceFullItemPositions &&
@@ -748,11 +745,6 @@ export function calculateItemsInView(
                 scrollBottomBuffered,
             );
             totalSize = getContentSize(ctx);
-        }
-
-        if (positionRecalculationStartIndex !== undefined) {
-            // Clear the invalidation marker after using it for position updates.
-            state.positionRecalculationStartIndex = undefined;
         }
 
         let protectedContainerKeys: Set<string> | undefined;
@@ -901,7 +893,7 @@ export function calculateItemsInView(
 
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
-        if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
+        if (nextTop !== undefined && nextBottom !== undefined) {
             state.scrollForNextCalculateItemsInView =
                 isNullOrUndefined(nextTop) && isNullOrUndefined(nextBottom)
                     ? undefined

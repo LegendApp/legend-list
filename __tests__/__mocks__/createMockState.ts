@@ -19,7 +19,6 @@ export function createMockState(
     const state = {
         anchoredEndSpaceSize: undefined,
         averageSizes: {},
-        clearPreservedInitialScrollOnNextFinish: undefined,
         // Core calculateItemsInView properties
         containerItemGenerations: [],
         containerItemKeys: new Map(),
@@ -29,7 +28,6 @@ export function createMockState(
         dataChangeKeyExtractorChanged: false,
         dataChangeNeedsScrollUpdate: false,
         didLoad: false,
-        enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
         endNoBuffer: 0,
@@ -62,7 +60,6 @@ export function createMockState(
         pendingDataComparison: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
-        positionRecalculationStartIndex: undefined,
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,
         refScroller: { current: null } as InternalState["refScroller"],
@@ -79,8 +76,6 @@ export function createMockState(
         // Required by PrepareMVCP
         scrollLength: 300,
         scrollPending: 0,
-        scrollPrev: 0,
-        scrollPrevTime: 0,
         scrollTime: 0,
         sizes: new Map(),
         sizesKnown: new Map(),

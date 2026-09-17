@@ -455,7 +455,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 didColumnsChange: false,
                 didDataChange: false,
                 didLoad: false,
-                enableScrollForNextCalculateItemsInView: true,
                 endBuffered: -1,
                 endNoBuffer: -1,
                 endReachedSnapshot: undefined,
@@ -486,7 +485,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeMarginTop: 0,
                 pendingDataComparison: undefined,
                 pendingNativeMVCPAdjust: undefined,
-                positionRecalculationStartIndex: 0,
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
                 refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
@@ -497,8 +495,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollHistory: [],
                 scrollLength: initialScrollLength,
                 scrollPending: 0,
-                scrollPrev: 0,
-                scrollPrevTime: 0,
                 scrollProcessingEnabled: true,
                 scrollTime: 0,
                 sizes: new Map(),
@@ -1052,7 +1048,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             viewabilityConfigCallbackPairs,
         });
         state.viewabilityConfigCallbackPairs = viewability;
-        state.enableScrollForNextCalculateItemsInView = true;
         state.scrollForNextCalculateItemsInView = undefined;
         const hasViewabilityConsumersNow = hasViewabilityConsumers(ctx, viewability);
         if (didViewabilityConfigChange || (!hadViewabilityConsumers && hasViewabilityConsumersNow)) {

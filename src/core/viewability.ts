@@ -91,7 +91,6 @@ export function hasViewabilityConsumers(ctx: StateContext, pairs = ctx.state?.vi
 export function requestViewabilityRecalculation(ctx: StateContext) {
     const state = ctx.state;
     if (state) {
-        state.enableScrollForNextCalculateItemsInView = true;
         state.scrollForNextCalculateItemsInView = undefined;
         state.triggerCalculateItemsInView?.();
     }

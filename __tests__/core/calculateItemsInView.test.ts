@@ -1196,21 +1196,6 @@ describe("calculateItemsInView", () => {
             expect(mockState.viewabilityConfigCallbackPairs[0].onViewableItemsChanged).not.toHaveBeenCalled();
         });
 
-        it("should not skip calculation from stale precomputed range when optimization is disabled", () => {
-            setupFixedSizeItems(20, 50);
-            mockState.enableScrollForNextCalculateItemsInView = false;
-            mockState.scrollForNextCalculateItemsInView = {
-                bottom: 2000,
-                top: -500,
-            };
-            mockState.scroll = 100;
-            mockState.endBuffered = 3;
-
-            calculateItemsInView(mockCtx);
-
-            expect(mockState.endBuffered).toBe(19);
-        });
-
         it("should calculate when outside precomputed range", () => {
             mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
             mockState.scrollForNextCalculateItemsInView = {
@@ -2736,11 +2721,10 @@ describe("calculateItemsInView", () => {
         });
     });
 
-    describe("positionRecalculationStartIndex optimization", () => {
+    describe("measured sparse geometry", () => {
         it("recomputes the complete affected suffix when a size changes during scrolling", () => {
             setupFixedSizeItems(100, 50);
             mockState.props.getFixedItemSize = undefined;
-            mockState.positionRecalculationStartIndex = 10;
             mockState.sizes.set("item_10", 1000);
             mockState.sizesKnown.set("item_10", 1000);
             mockState.layoutStoreRuntime = undefined;
@@ -2758,26 +2742,6 @@ describe("calculateItemsInView", () => {
                     mockState.layoutStoreRuntime!.store.getOffset(index - 1) + mockState.sizes.get(previousKey)!;
                 expect(mockState.layoutStoreRuntime!.store.getOffset(index)).toBe(previousEnd);
             }
-        });
-
-        it("should use positionRecalculationStartIndex to optimize loop start", () => {
-            mockState.props.data = Array.from({ length: 100 }, (_, i) => ({ id: i }));
-            mockState.positionRecalculationStartIndex = 50;
-            mockState.startBufferedId = "item_80";
-            mockState.indexByKey.set("item_80", 80);
-
-            for (let i = 0; i < 100; i++) {
-                const id = `item_${i}`;
-                mockState.idCache[i] = id;
-                mockState.indexByKey.set(id, i);
-                setLayoutValue(mockState, "positions", id, i * 50);
-                mockState.sizes.set(id, 50);
-            }
-
-            calculateItemsInView(mockCtx);
-
-            expect(mockState.idsInView).toBeDefined();
-            expect(mockState.positionRecalculationStartIndex).toBeUndefined(); // Should be cleared
         });
     });
 

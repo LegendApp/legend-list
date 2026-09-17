@@ -220,7 +220,6 @@ function applyItemSize(
     // Need to calculate if haven't all laid out yet
     let needsRecalculate = !didContainersLayout;
     let shouldMaintainScrollAtEnd = false;
-    let positionRecalculationStartIndex: number | undefined;
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -233,9 +232,6 @@ function applyItemSize(
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
     if (diff !== 0) {
-        positionRecalculationStartIndex =
-            positionRecalculationStartIndex !== undefined ? Math.min(positionRecalculationStartIndex, index) : index;
-
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;
@@ -258,14 +254,6 @@ function applyItemSize(
             previous: size - diff,
             size,
         });
-    }
-
-    // Update state with minimum changed index
-    if (positionRecalculationStartIndex !== undefined) {
-        state.positionRecalculationStartIndex =
-            state.positionRecalculationStartIndex !== undefined
-                ? Math.min(state.positionRecalculationStartIndex, positionRecalculationStartIndex)
-                : positionRecalculationStartIndex;
     }
 
     updateOtherAxisSizeIfNeeded(ctx, sizeObj, horizontal);
@@ -329,7 +317,7 @@ export function updateOneItemSize(
     const prevSize =
         layoutStore && index !== undefined
             ? layoutStore.getSize(index)
-            : getItemSize(ctx, itemKey, itemIndex, itemData, undefined, undefined, notifyTotalSize, resolvedItemSize);
+            : getItemSize(ctx, itemKey, itemIndex, itemData, notifyTotalSize, resolvedItemSize);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     const prevSizeKnown = sizesKnown.get(itemKey);
     if (Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown)) {
