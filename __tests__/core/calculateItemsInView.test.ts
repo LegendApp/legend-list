@@ -581,14 +581,15 @@ describe("calculateItemsInView", () => {
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
             mockState.scroll = 0;
             mockState.scrollLength = 200;
-            mockState.initialScrollSession = {
+            mockState.initialScroll = {
+                ...mockState.initialScroll,
                 bootstrap: {
                     mountFrameCount: 0,
                     passCount: 0,
                     scroll: 250,
                     targetIndexSeed: 5,
                 },
-                kind: "bootstrap",
+                kind: "index",
                 previousDataLength: 0,
             } as any;
 
@@ -2063,14 +2064,15 @@ describe("calculateItemsInView", () => {
                 bottom: 1000,
                 top: -500,
             };
-            mockState.initialScrollSession = {
+            mockState.initialScroll = {
+                ...mockState.initialScroll,
                 bootstrap: {
                     mountFrameCount: 0,
                     passCount: 0,
                     scroll: 250,
                     targetIndexSeed: 5,
                 },
-                kind: "bootstrap",
+                kind: "index",
                 previousDataLength: 0,
             } as any;
 
@@ -2101,14 +2103,15 @@ describe("calculateItemsInView", () => {
             };
             mockState.scrollLength = 200;
             mockState.queuedInitialLayout = false;
-            mockState.initialScrollSession = {
+            mockState.initialScroll = {
+                ...mockState.initialScroll,
                 bootstrap: {
                     mountFrameCount: 0,
                     passCount: 0,
                     scroll: 250,
                     targetIndexSeed: 5,
                 },
-                kind: "bootstrap",
+                kind: "index",
                 previousDataLength: 0,
             } as any;
             mockState.viewabilityConfigCallbackPairs = [{ onViewableItemsChanged: () => {}, viewabilityConfig: {} }];

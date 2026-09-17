@@ -43,7 +43,7 @@ describe("checkAtBottom", () => {
         const calls: Array<{ distanceFromEnd: number }> = [];
         const state = createMockState({
             didFinishInitialScroll: true,
-            initialScroll: { index: 5, viewPosition: 1 },
+            initialScrollAnchor: { index: 5, viewPosition: 1 },
             isEndReached: null,
             props: {
                 onEndReached: (payload) => calls.push(payload),

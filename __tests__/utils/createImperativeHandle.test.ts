@@ -274,12 +274,11 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 didFinishInitialScroll: false,
                 initialScroll: {
                     index: 2,
+                    kind: "index",
+                    previousDataLength: 3,
                     viewPosition: 1,
                 },
-                initialScrollSession: {
-                    kind: "bootstrap",
-                    previousDataLength: 3,
-                },
+
                 props: {
                     data: [1, 2, 3],
                 },
@@ -542,20 +541,18 @@ describe("createImperativeHandle.scrollToEnd", () => {
             const ctx = createMockContext({}, {
                 didFinishInitialScroll: false,
                 initialScroll: {
-                    index: 2,
-                    viewPosition: 1,
-                },
-                initialScrollSession: {
                     bootstrap: {
-                        frameHandle: 42,
                         mountFrameCount: 1,
                         passCount: 1,
                         scroll: 100,
                         seedContentOffset: 0,
                     },
-                    kind: "bootstrap",
+                    index: 2,
+                    kind: "index",
                     previousDataLength: 3,
+                    viewPosition: 1,
                 },
+
                 props: {
                     data: [1, 2, 3],
                 },
@@ -565,13 +562,14 @@ describe("createImperativeHandle.scrollToEnd", () => {
                     offset: 100,
                 },
             } as any);
+            ctx.state.scheduledWork.register("initialScrollFrame", () => cancelAnimationFrame(42));
             const handle = createImperativeHandle(ctx, scheduleCommit);
             const promise = handle.scrollToEnd({ animated: true });
 
             expect(canceledFrames).toContain(42);
             expect(ctx.state.didFinishInitialScroll).toBe(true);
-            expect(ctx.state.initialScroll).toBeUndefined();
-            expect(ctx.state.initialScrollSession).toBeUndefined();
+            expect(ctx.state.initialScroll ?? ctx.state.initialScrollAnchor).toBeUndefined();
+            expect(ctx.state.initialScroll ?? ctx.state.initialScrollAnchor).toBeUndefined();
             expect(ctx.state.scrollingTo).toBeUndefined();
             expect(ctx.state.pendingScrollToEnd).toBeDefined();
             expect(scheduleCommit).toHaveBeenCalledTimes(1);

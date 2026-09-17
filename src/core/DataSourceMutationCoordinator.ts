@@ -391,8 +391,7 @@ export function applyDataSourceMutationBatches(
     if (state.initialScroll?.index !== undefined) {
         state.initialScroll.index = transformClampedIndex(state.initialScroll.index);
     }
-    const bootstrap =
-        state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+    const bootstrap = state.initialScroll?.bootstrap;
     if (bootstrap?.targetIndexSeed !== undefined) {
         bootstrap.targetIndexSeed = transformClampedIndex(bootstrap.targetIndexSeed);
     }

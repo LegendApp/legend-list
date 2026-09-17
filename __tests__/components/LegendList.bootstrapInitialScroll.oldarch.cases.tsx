@@ -116,7 +116,7 @@ async function getContextFromRender() {
 }
 
 function getBootstrapSession(state: any) {
-    return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+    return state.initialScroll?.bootstrap;
 }
 
 function seedMeasuredLayout(state: any, count: number, size: number | number[]) {
@@ -218,8 +218,8 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
         }
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.viewPosition).toBe(1);
-        expect(state.initialScroll?.preserveForFooterLayout).toBe(true);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.preserveForFooterLayout).toBe(true);
 
         const footerFinishTracker = trackAssignedStateValue(state, "didFinishInitialScroll");
         try {
@@ -227,8 +227,8 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
                 lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
             });
 
-            expect(footerFinishTracker.assignedValues).toContain(false);
-            expect(state.initialScroll?.viewPosition).toBe(1);
+            expect(footerFinishTracker.assignedValues).not.toContain(false);
+            expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
         } finally {
             footerFinishTracker.restore();
         }
@@ -245,7 +245,7 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
         }
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
 
         const layoutFinishTracker = trackAssignedStateValue(state, "didFinishInitialScroll");
         try {
@@ -260,7 +260,7 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
 
             expect(layoutFinishTracker.assignedValues).not.toContain(false);
             expect(state.didFinishInitialScroll).toBe(true);
-            expect(state.initialScroll?.viewPosition).toBe(1);
+            expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
             expect(getBootstrapSession(state)).toBeUndefined();
             expect(state.scrollingTo).toBeUndefined();
             expect(lastListProps.scrollAdjustHandler.requestedAdjusts.at(-1)).toBe(50);

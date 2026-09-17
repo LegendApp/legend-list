@@ -33,7 +33,6 @@ function syncInitialScrollNativeWatchdog(
     if (shouldWatchInitialNativeScroll) {
         state.hasScrolled = false;
         initialScrollWatchdog.set(state, {
-            startScroll: existingWatchdog?.startScroll ?? state.scroll,
             targetOffset,
         });
         return;
@@ -82,7 +81,7 @@ export function scrollTo(
     const requestedOffset = precomputedWithViewOffset
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
-    const shouldPreserveRawInitialOffsetRequest = !!isInitialScroll && state.initialScrollSession?.kind === "offset";
+    const shouldPreserveRawInitialOffsetRequest = !!isInitialScroll && state.initialScroll?.kind === "offset";
     const targetOffset = clampScrollOffset(ctx, requestedOffset, scrollTarget);
     const offset = shouldPreserveRawInitialOffsetRequest ? requestedOffset : targetOffset;
 
@@ -110,8 +109,7 @@ export function scrollTo(
         state.scrollPending = targetOffset;
     }
 
-    // Keep the initial native-scroll watchdog anchored to the original starting point across retries.
-    // That lets fallback nudges detect real progress instead of treating each retry as a brand new attempt.
+    // A non-zero initial target completes only after observing that target or exhausting native retries.
     syncInitialScrollNativeWatchdog(state, { isInitialScroll, requestedOffset: offset, targetOffset });
 
     if (!isInitialScroll && !noScrollingTo && Math.abs(state.scroll - targetOffset) > 1) {

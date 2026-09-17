@@ -45,7 +45,7 @@ describe("checkAtTop", () => {
             {},
             {
                 didFinishInitialScroll: true,
-                initialScroll: { index: 5, viewPosition: 1 },
+                initialScrollAnchor: { index: 5, viewPosition: 1 },
                 isStartReached: null,
                 props: {
                     onStartReached: (payload) => calls.push(payload),

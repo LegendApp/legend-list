@@ -75,19 +75,18 @@ describe("finishScrollTo", () => {
                 {},
                 {
                     initialScroll: {
-                        contentOffset: 220,
-                        index: 0,
-                        viewOffset: 0,
-                    } as any,
-                    initialScrollSession: {
                         completion: {
                             watchdog: {
                                 targetOffset: 220,
                             },
                         },
+                        contentOffset: 220,
+                        index: 0,
                         kind: "offset",
                         previousDataLength: 0,
+                        viewOffset: 0,
                     },
+
                     props: {
                         data: [{ id: "item-0" }],
                     },
@@ -98,9 +97,9 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toBeUndefined();
-            expect(mockCtx.state.initialScroll).toBeUndefined();
-            expect(mockCtx.state.initialScrollSession).toBeUndefined();
+            expect(mockCtx.state.initialScroll?.completion?.watchdog).toBeUndefined();
+            expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toBeUndefined();
+            expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toBeUndefined();
         });
 
         it("preserves empty offset-only initial targets for the first non-empty replay", () => {
@@ -110,12 +109,11 @@ describe("finishScrollTo", () => {
                     initialScroll: {
                         contentOffset: 220,
                         index: 0,
-                        viewOffset: 0,
-                    } as any,
-                    initialScrollSession: {
                         kind: "offset",
                         previousDataLength: 0,
-                    } as any,
+                        viewOffset: 0,
+                    },
+
                     props: {
                         data: [],
                     },
@@ -130,12 +128,12 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialScroll).toEqual({
+            expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toMatchObject({
                 contentOffset: 220,
                 index: 0,
                 viewOffset: 0,
             });
-            expect(mockCtx.state.initialScrollSession).toMatchObject({
+            expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toMatchObject({
                 kind: "offset",
             });
         });
@@ -165,8 +163,8 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialScroll).toEqual({
-                contentOffset: undefined,
+            expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toMatchObject({
+                contentOffset: 0,
                 index: 2,
                 preserveForFooterLayout: true,
                 viewOffset: 0,
@@ -181,14 +179,13 @@ describe("finishScrollTo", () => {
                     initialScroll: {
                         contentOffset: undefined,
                         index: 2,
+                        kind: "index",
                         preserveForBottomPadding: true,
+                        previousDataLength: 3,
                         viewOffset: 0,
                         viewPosition: 1,
-                    } as any,
-                    initialScrollSession: {
-                        kind: "bootstrap",
-                        previousDataLength: 3,
-                    } as any,
+                    },
+
                     props: {
                         data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
                     },
@@ -207,17 +204,15 @@ describe("finishScrollTo", () => {
             finishScrollTo(mockCtx);
 
             expect(mockCtx.state.didFinishInitialScroll).toBe(true);
-            expect(mockCtx.state.initialScroll).toEqual({
-                contentOffset: undefined,
+            expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toMatchObject({
+                contentOffset: 0,
                 index: 2,
                 preserveForBottomPadding: true,
                 viewOffset: 0,
                 viewPosition: 1,
             });
-            expect(mockCtx.state.initialScrollSession).toMatchObject({
-                bootstrap: undefined,
-                kind: "bootstrap",
-            });
+            expect(mockCtx.state.initialScroll).toBeUndefined();
+            expect(mockCtx.state.initialScrollAnchor?.bootstrap).toBeUndefined();
             expect(mockCtx.state.scrollingTo).toBeUndefined();
         });
 
@@ -237,14 +232,13 @@ describe("finishScrollTo", () => {
                     initialScroll: {
                         contentOffset: undefined,
                         index: 2,
+                        kind: "index",
                         preserveForBottomPadding: true,
+                        previousDataLength: 3,
                         viewOffset: 0,
                         viewPosition: 1,
-                    } as any,
-                    initialScrollSession: {
-                        kind: "bootstrap",
-                        previousDataLength: 3,
-                    } as any,
+                    },
+
                     props: {
                         data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
                     },
@@ -263,13 +257,48 @@ describe("finishScrollTo", () => {
             try {
                 finishScrollTo(mockCtx);
 
-                expect(mockCtx.state.initialScroll?.viewPosition).toBe(1);
+                expect((mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor)?.viewPosition).toBe(1);
                 expect(queuedDelay).toBe(2000);
                 queuedTimeout?.();
-                expect(mockCtx.state.initialScroll).toBeUndefined();
+                expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toBeUndefined();
             } finally {
                 globalThis.setTimeout = originalSetTimeout;
             }
+        });
+
+        it("releases initialization state while preserving bottom alignment", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        kind: "index",
+                        preserveForBottomPadding: true,
+                        previousDataLength: 3,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    },
+
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 220,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toBeUndefined();
+            expect(mockCtx.state.initialScrollAnchor?.index).toBe(2);
         });
 
         it("syncs offset sessions from the scroller's observed offset when available", () => {
@@ -279,12 +308,11 @@ describe("finishScrollTo", () => {
                     initialScroll: {
                         contentOffset: 220,
                         index: 0,
-                        viewOffset: 0,
-                    } as any,
-                    initialScrollSession: {
                         kind: "offset",
                         previousDataLength: 0,
-                    } as any,
+                        viewOffset: 0,
+                    },
+
                     props: {
                         data: [{ id: "item-0" }],
                     },
@@ -317,12 +345,11 @@ describe("finishScrollTo", () => {
                     initialScroll: {
                         contentOffset: 220,
                         index: 0,
-                        viewOffset: 0,
-                    } as any,
-                    initialScrollSession: {
                         kind: "offset",
                         previousDataLength: 0,
-                    } as any,
+                        viewOffset: 0,
+                    },
+
                     props: {
                         data: [{ id: "item-0" }],
                     },
@@ -362,12 +389,11 @@ describe("finishScrollTo", () => {
                     initialScroll: {
                         contentOffset: 220,
                         index: 0,
-                        viewOffset: 0,
-                    } as any,
-                    initialScrollSession: {
                         kind: "offset",
                         previousDataLength: 0,
-                    } as any,
+                        viewOffset: 0,
+                    },
+
                     props: {
                         data: [{ id: "item-0" }],
                     },
@@ -394,7 +420,7 @@ describe("finishScrollTo", () => {
                 finishScrollTo(mockCtx);
 
                 expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
-                expect(mockCtx.state.initialScroll).toEqual({
+                expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toMatchObject({
                     contentOffset: 220,
                     index: 0,
                     viewOffset: 0,
@@ -403,7 +429,7 @@ describe("finishScrollTo", () => {
                 queuedFrame?.(0);
 
                 expect(mockCtx.state.didFinishInitialScroll).toBe(true);
-                expect(mockCtx.state.initialScroll).toBeUndefined();
+                expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toBeUndefined();
             } finally {
                 globalThis.requestAnimationFrame = originalRequestAnimationFrame;
             }
@@ -419,12 +445,11 @@ describe("finishScrollTo", () => {
                     initialScroll: {
                         contentOffset: 220,
                         index: 0,
-                        viewOffset: 0,
-                    } as any,
-                    initialScrollSession: {
-                        kind: "bootstrap",
+                        kind: "index",
                         previousDataLength: 0,
-                    } as any,
+                        viewOffset: 0,
+                    },
+
                     props: {
                         data: [{ id: "item-0" }],
                         onScroll: (event: any) => onScrollCalls.push(event),
@@ -493,7 +518,7 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialScroll).toBeUndefined();
+            expect(mockCtx.state.initialScroll ?? mockCtx.state.initialScrollAnchor).toBeUndefined();
         });
 
         it("should handle state with undefined scrollingTo", () => {

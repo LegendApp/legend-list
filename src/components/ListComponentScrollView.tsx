@@ -351,7 +351,6 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             const state = ctx.state;
             const shouldFlushImmediately =
                 !!state?.scrollingTo ||
-                (!!state?.initialScrollSession && !state.didFinishInitialScroll) ||
                 (!!state?.initialScroll && !state.didFinishInitialScroll) ||
                 (!!state && isInMVCPActiveMode(state));
             if (shouldFlushImmediately) {

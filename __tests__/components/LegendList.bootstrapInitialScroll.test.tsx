@@ -126,7 +126,7 @@ async function getContextFromRender() {
 }
 
 function getBootstrapSession(state: any) {
-    return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+    return state.initialScroll?.bootstrap;
 }
 
 function findFirstStyleByType(node: any, type: string): Record<string, unknown> | undefined {
@@ -315,7 +315,7 @@ describe("LegendList bootstrap initial scroll", () => {
         const state = await getStateFromRender();
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll).toBeUndefined();
+        expect(state.initialScroll ?? state.initialScrollAnchor).toBeUndefined();
         expect(getBootstrapSession(state)).toBeUndefined();
     });
 
@@ -580,7 +580,7 @@ describe("LegendList bootstrap initial scroll", () => {
         const emptyState = await getStateFromRender();
         const ctx = await getContextFromRender();
         expect(emptyState.didFinishInitialScroll).toBe(true);
-        expect(emptyState.initialScroll?.index).toBe(2);
+        expect((emptyState.initialScroll ?? emptyState.initialScrollAnchor)?.index).toBe(2);
         expect(getBootstrapSession(emptyState)).toBeUndefined();
         await act(async () => {
             setDidLayout(ctx);
@@ -643,7 +643,7 @@ describe("LegendList bootstrap initial scroll", () => {
         await act(async () => {
             setDidLayout(ctx);
         });
-        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScroll ?? ctx.state.initialScrollAnchor).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
 
         const nextData = Array.from({ length: 5 }, (_, index) => ({
@@ -664,7 +664,7 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.index).toBe(2);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(2);
         expect(state.didFinishInitialScroll).toBe(false);
         expect(getBootstrapSession(state)).toBeDefined();
     });
@@ -683,7 +683,7 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const ctx = await getContextFromRender();
-        expect(ctx.state.initialScroll?.index).toBe(1);
+        expect((ctx.state.initialScroll ?? ctx.state.initialScrollAnchor)?.index).toBe(1);
 
         const nextData = Array.from({ length: 5 }, (_, index) => ({
             id: `item-${index}`,
@@ -703,7 +703,7 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.index).toBe(4);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(4);
         expect(state.didFinishInitialScroll).toBe(false);
         expect(getBootstrapSession(state)).toBeDefined();
     });
@@ -753,7 +753,7 @@ describe("LegendList bootstrap initial scroll", () => {
         rendered.rerender(renderList(nextData, 3));
         await flushAsync();
 
-        expect(state.initialScroll?.index).toBe(3);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(3);
         expect(state.didFinishInitialScroll).toBe(false);
         expect(ctx.values.get("readyToRender")).toBe(false);
     });
@@ -801,7 +801,7 @@ describe("LegendList bootstrap initial scroll", () => {
         rendered.rerender(renderList(nextData, "dataset-2", 3));
         await flushAsync();
 
-        expect(state.initialScroll?.index).toBe(3);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(3);
         expect(state.didFinishInitialScroll).toBe(false);
         expect(ctx.values.get("readyToRender")).toBe(false);
     });
@@ -871,7 +871,8 @@ describe("LegendList bootstrap initial scroll", () => {
             lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
         });
 
-        expect(state.initialScroll.viewOffset).toBe(-40);
+        expect(state.initialScroll.kind).toBe("end");
+        expect(getBootstrapSession(state).scroll).toBe(0);
         expect(getBootstrapSession(state)?.mountFrameCount).toBeGreaterThanOrEqual(3);
         expect(getBootstrapSession(state)?.passCount).toBe(0);
     });
@@ -935,7 +936,7 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.viewOffset).toBe(-10);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBe(-10);
         expect(getBootstrapSession(state)).toBeDefined();
 
         getBootstrapSession(state).mountFrameCount = 3;
@@ -954,7 +955,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         await flushAsync();
 
-        expect(state.initialScroll?.viewOffset).toBe(-40);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBe(-40);
         expect(getBootstrapSession(state)?.mountFrameCount).toBeGreaterThanOrEqual(3);
         expect(getBootstrapSession(state)).toBeDefined();
     });
@@ -980,7 +981,7 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.viewOffset).toBe(-10);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBe(-10);
         expect(getBootstrapSession(state)).toBeDefined();
 
         getBootstrapSession(state).mountFrameCount = 3;
@@ -1001,7 +1002,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         await flushAsync();
 
-        expect(state.initialScroll?.viewOffset).toBe(-40);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBe(-40);
         expect(getBootstrapSession(state)?.mountFrameCount).toBeGreaterThanOrEqual(3);
         expect(getBootstrapSession(state)).toBeDefined();
     });
@@ -1025,7 +1026,7 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.viewOffset).toBe(-5);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBe(-5);
 
         rendered.rerender(
             <LegendList
@@ -1041,7 +1042,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         await flushAsync();
 
-        expect(state.initialScroll?.viewOffset).toBe(-5);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewOffset).toBe(-5);
     });
 
     it("clears a finished bottom-aligned initialScrollIndex when data changes", async () => {
@@ -1079,7 +1080,7 @@ describe("LegendList bootstrap initial scroll", () => {
             });
         }
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
         expect(getBootstrapSession(state)).toBeUndefined();
 
         rendered.rerender(
@@ -1096,7 +1097,7 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll).toBeUndefined();
+        expect(state.initialScroll ?? state.initialScrollAnchor).toBeUndefined();
         expect(getBootstrapSession(state)).toBeUndefined();
         expect(state.scrollingTo).toBeUndefined();
     });
@@ -1134,7 +1135,7 @@ describe("LegendList bootstrap initial scroll", () => {
             });
         }
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.index).toBe(4);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(4);
         expect(getBootstrapSession(state)).toBeUndefined();
 
         const appendedData = [...data, { id: "item-5", label: "Item 5" }];
@@ -1152,14 +1153,17 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll).toMatchObject({
+        expect(state.initialScroll ?? state.initialScrollAnchor).toMatchObject({
             index: 5,
             preserveForBottomPadding: true,
             viewPosition: 1,
         });
-        expect(getBootstrapSession(state)).toMatchObject({
-            scroll: 100,
+        expect(getBootstrapSession(state)).toBeUndefined();
+        expect(state.initialScroll).toBeUndefined();
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 20));
         });
+        expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toContain(50);
     });
 
     it("does not retarget initialScrollAtEnd after the user scrolls near but away from the end", async () => {
@@ -1191,7 +1195,7 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.index).toBe(4);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(4);
         expect(getBootstrapSession(state)).toBeUndefined();
 
         await act(async () => {
@@ -1204,7 +1208,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         expect(ctx.values.get("isAtEnd")).toBe(false);
         expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
-        expect(state.initialScroll).toBeUndefined();
+        expect(state.initialScroll ?? state.initialScrollAnchor).toBeUndefined();
 
         const appendedData = [...data, { id: "item-5", label: "Item 5" }];
         rendered.rerender(
@@ -1220,11 +1224,11 @@ describe("LegendList bootstrap initial scroll", () => {
 
         await flushAsync();
 
-        expect(state.initialScroll).toBeUndefined();
+        expect(state.initialScroll ?? state.initialScrollAnchor).toBeUndefined();
         expect(getBootstrapSession(state)).toBeUndefined();
     });
 
-    it("resets render readiness when footer layout retargets a finished end alignment", async () => {
+    it("keeps render readiness when footer layout retargets a finished end alignment", async () => {
         const data = Array.from({ length: 6 }, (_, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
@@ -1266,8 +1270,8 @@ describe("LegendList bootstrap initial scroll", () => {
             lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
         });
 
-        expect(state.didFinishInitialScroll).toBe(false);
-        expect(ctx.values.get("readyToRender")).toBe(false);
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
 
         await act(async () => {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
@@ -1320,7 +1324,7 @@ describe("LegendList bootstrap initial scroll", () => {
         }
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
 
         await act(async () => {
             lastListProps.onLayout?.({
@@ -1332,7 +1336,7 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
         expect(getBootstrapSession(state)).toBeUndefined();
         expect(state.scrollingTo).toBeUndefined();
         expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([50]);
@@ -1389,7 +1393,7 @@ describe("LegendList bootstrap initial scroll", () => {
             }
 
             expect(state.didFinishInitialScroll).toBe(true);
-            expect(state.initialScroll?.viewPosition).toBe(1);
+            expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
             expect(preservedTargetClearDelay).toBe(2000);
             expect(queuedPreservedTargetClear).toBeDefined();
 
@@ -1403,7 +1407,7 @@ describe("LegendList bootstrap initial scroll", () => {
             await flushAsync();
 
             expect(state.didFinishInitialScroll).toBe(true);
-            expect(state.initialScroll?.viewPosition).toBe(1);
+            expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
             expect(getBootstrapSession(state)).toBeUndefined();
             expect(state.scrollingTo).toBeUndefined();
             expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([50]);
@@ -1461,7 +1465,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
             expect(finishTracker.assignedValues).not.toContain(false);
             expect(state.didFinishInitialScroll).toBe(true);
-            expect(state.initialScroll?.viewPosition).toBe(1);
+            expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
             expect(getBootstrapSession(state)).toBeUndefined();
             expect(state.scrollingTo).toBeUndefined();
             expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([]);

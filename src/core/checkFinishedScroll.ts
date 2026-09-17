@@ -65,7 +65,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
         return false;
     }
 
-    if (state.initialScrollSession?.kind === "bootstrap") {
+    if (!!state.initialScroll && state.initialScroll.kind !== "offset") {
         return false;
     }
 
@@ -116,6 +116,7 @@ function isIOSInstantIndexTarget(ctx: StateContext, scrollingTo: ActiveScrollTar
 }
 
 function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    if (scrollingTo.kind === "end") return Math.max(0, getContentSize(ctx) - ctx.state.scrollLength);
     const index = scrollingTo.index;
     // Native layout can move an instant index target after dispatch. Comparing only
     // the original offset can release ownership before MVCP reaches that new position.

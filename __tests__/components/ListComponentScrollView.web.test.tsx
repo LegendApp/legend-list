@@ -26,8 +26,11 @@ const mockCtx = {
         anchoredEndSpaceSize: undefined as number | undefined,
         dataChangeNeedsScrollUpdate: false,
         didFinishInitialScroll: true,
-        initialScroll: undefined as Record<string, unknown> | undefined,
-        initialScrollSession: undefined as { kind?: string } | undefined,
+        initialScroll: {
+            ...(undefined as Record<string, unknown> | undefined),
+            ...(undefined as { kind?: string } | undefined),
+        },
+
         mvcpAnchorLock: undefined as { expiresAt: number } | undefined,
         props: {
             anchoredEndSpace: undefined as { anchorIndex: number } | undefined,
@@ -103,7 +106,7 @@ function resetMocks() {
     mockCtx.state.dataChangeNeedsScrollUpdate = false;
     mockCtx.state.didFinishInitialScroll = true;
     mockCtx.state.initialScroll = undefined;
-    mockCtx.state.initialScrollSession = undefined;
+    mockCtx.state.initialScroll = undefined;
     mockCtx.state.mvcpAnchorLock = undefined;
     mockCtx.state.props.anchoredEndSpace = undefined;
     mockCtx.state.props.contentInsetEndAdjustment = undefined;
@@ -391,7 +394,7 @@ describe("ListComponentScrollView (web)", () => {
         resetMocks();
         mockCtx.state.didFinishInitialScroll = false;
         mockCtx.state.initialScroll = {};
-        mockCtx.state.initialScrollSession = { kind: "bootstrap" };
+        mockCtx.state.initialScroll = { ...mockCtx.state.initialScroll, kind: "index" };
         const { ListComponentScrollView } = await import(
             "../../src/components/ListComponentScrollView?web-scroll-initial-scroll"
         );

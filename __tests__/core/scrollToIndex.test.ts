@@ -343,6 +343,7 @@ describe("scrollToIndex", () => {
 
             try {
                 mockState.hasScrolled = true;
+                mockState.initialScroll = { index: 3, kind: "index" };
                 scrollToIndex(mockCtx, {
                     animated: false,
                     forceScroll: true,
@@ -351,8 +352,7 @@ describe("scrollToIndex", () => {
                 });
 
                 expect(mockState.hasScrolled).toBe(false);
-                expect(mockState.initialScrollSession?.completion?.watchdog).toEqual({
-                    startScroll: 0,
+                expect(mockState.initialScroll?.completion?.watchdog).toEqual({
                     targetOffset: 300,
                 });
             } finally {

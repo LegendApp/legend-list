@@ -83,12 +83,11 @@ describe("initialScrollLifecycle", () => {
                 initialScroll: {
                     contentOffset: 250,
                     index: 0,
-                    viewOffset: 0,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
                     kind: "offset",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 0,
+                },
+
                 props: {
                     adaptiveRender: {
                         initialMode: "light",
@@ -113,7 +112,7 @@ describe("initialScrollLifecycle", () => {
         expect(ctx.state.didFinishInitialScroll).toBe(false);
         expect(ctx.values.get("readyToRender")).toBe(false);
         expect(ctx.values.get("adaptiveRender")).toBe("light");
-        expect(ctx.state.initialScrollSession).toMatchObject({
+        expect(ctx.state.initialScroll ?? ctx.state.initialScrollAnchor).toMatchObject({
             kind: "offset",
             previousDataLength: ctx.state.props.data.length,
         });
@@ -124,11 +123,12 @@ describe("initialScrollLifecycle", () => {
         const ctx = createMockContext(
             {},
             {
-                initialScroll: { index: 5, viewOffset: 100 } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
-                    kind: "bootstrap",
+                initialScroll: {
+                    index: 5,
+                    kind: "index",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 100,
+                },
             },
         );
 
@@ -155,12 +155,10 @@ describe("initialScrollLifecycle", () => {
                 initialScroll: {
                     contentOffset: 250,
                     index: 0,
-                    viewOffset: 0,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
                     kind: "offset",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 0,
+                },
             },
         );
 
@@ -177,11 +175,13 @@ describe("initialScrollLifecycle", () => {
         const ctx = createMockContext(
             {},
             {
-                initialScroll: { index: 5, viewOffset: 100 } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
-                    kind: "bootstrap",
+                initialScroll: {
+                    index: 5,
+                    kind: "index",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 100,
+                },
+
                 scrollingTo: {
                     animated: false,
                     index: 5,
@@ -207,12 +207,11 @@ describe("initialScrollLifecycle", () => {
                 didFinishInitialScroll: false,
                 initialScroll: {
                     index: 2,
-                    viewPosition: 1,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
-                    kind: "bootstrap",
+                    kind: "index",
                     previousDataLength: 3,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewPosition: 1,
+                },
+
                 props: {
                     data: [1, 2, 3],
                 },
@@ -241,7 +240,7 @@ describe("initialScrollLifecycle", () => {
                         return [item.id, index];
                     }),
                 ),
-                initialScroll: {
+                initialScrollAnchor: {
                     index: 2,
                     viewOffset: 0,
                     viewPosition: 1,
@@ -277,7 +276,7 @@ describe("initialScrollLifecycle", () => {
             expect.objectContaining({ forceScroll: true }),
         );
         expect(ctx.state.scroll).toBe(200);
-        expect(ctx.state.initialScroll).toMatchObject({
+        expect(ctx.state.initialScroll ?? ctx.state.initialScrollAnchor).toMatchObject({
             index: 2,
             viewOffset: 0,
             viewPosition: 1,
@@ -292,23 +291,21 @@ describe("initialScrollLifecycle", () => {
             },
             {
                 initialScroll: {
-                    contentOffset: undefined,
-                    index: 1,
-                    viewOffset: 0,
-                    viewPosition: 1,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
                     bootstrap: {
-                        frameHandle: 1,
                         mountFrameCount: 2,
                         passCount: 4,
                         scroll: 50,
                         seedContentOffset: 50,
                         targetIndexSeed: 1,
                     },
-                    kind: "bootstrap",
+                    contentOffset: undefined,
+                    index: 1,
+                    kind: "index",
                     previousDataLength: 0,
-                } as StateContext["state"]["initialScrollSession"],
+                    viewOffset: 0,
+                    viewPosition: 1,
+                },
+
                 positions: [0, 50, 100, 150, 200],
                 props: {
                     data,
@@ -323,21 +320,21 @@ describe("initialScrollLifecycle", () => {
             didDataChange: true,
             initialScrollAtEnd: true,
             latestInitialScroll: ctx.state.initialScroll,
-            latestInitialScrollSessionKind: "bootstrap",
+            latestInitialScrollSessionKind: "index",
             stylePaddingEnd: 0,
             useBootstrapInitialScroll: true,
         });
 
-        expect(ctx.state.initialScroll?.contentOffset).toBeUndefined();
-        expect(ctx.state.initialScroll?.index).toBe(4);
-        expect(ctx.state.initialScroll?.viewOffset).toBeCloseTo(0);
-        expect(ctx.state.initialScroll?.viewPosition).toBe(1);
-        expect(ctx.state.initialScrollSession).toMatchObject({
+        expect((ctx.state.initialScroll ?? ctx.state.initialScrollAnchor)?.contentOffset).toBeUndefined();
+        expect((ctx.state.initialScroll ?? ctx.state.initialScrollAnchor)?.index).toBe(4);
+        expect((ctx.state.initialScroll ?? ctx.state.initialScrollAnchor)?.viewOffset).toBeCloseTo(0);
+        expect((ctx.state.initialScroll ?? ctx.state.initialScrollAnchor)?.viewPosition).toBe(1);
+        expect(ctx.state.initialScroll ?? ctx.state.initialScrollAnchor).toMatchObject({
             bootstrap: {
                 passCount: 0,
                 targetIndexSeed: 4,
             },
-            kind: "bootstrap",
+            kind: "index",
         });
     });
 });

@@ -6,6 +6,7 @@ import {
     materializeFixedLayoutStoreRange,
     materializeFixedLayoutStoreRangeAtOffsets,
 } from "@/core/fixedLayoutMaterialization";
+import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { getDataItem, getDataLength, getIndexedData } from "@/core/IndexedData";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
@@ -459,8 +460,7 @@ export function calculateItemsInView(
         const { doMVCP, forceFullItemPositions, mvcpAdjustmentSource, initialLayout } = params;
         const didDataChange = !!params.dataChanged;
         const isInitialLayout = !!initialLayout;
-        const bootstrapInitialScrollState =
-            state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+        const bootstrapInitialScrollState = state.initialScroll?.bootstrap;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (scrollLength === 0 || !prevNumContainers) {
@@ -492,7 +492,7 @@ export function calculateItemsInView(
 
         let totalSize = getContentSize(ctx);
         let changedContainerIds: Set<number> | undefined;
-        const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "alignItemsAtEndPadding") + peek$(ctx, "headerSize");
+        const topPad = getStartOffsetAdjustment(ctx);
         const numColumns = peek$(ctx, "numColumns");
         const speed = params.scrollVelocity ?? getScrollVelocity(state);
 

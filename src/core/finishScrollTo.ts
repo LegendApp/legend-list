@@ -11,14 +11,12 @@ export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
         cancelScrollCompletionChecks(state);
-        // An older active scroll can finish while its replacement still waits for layout.
-        // Its completion must not settle or release the newer request's ownership.
-        const resolvePendingScroll = ctx.scrollRequestTracker?.isWaitingToRun()
-            ? undefined
-            : state.pendingScrollResolve;
-        if (resolvePendingScroll) {
-            state.pendingScrollResolve = undefined;
-        }
+        // An older active scroll must not settle a replacement still waiting for layout.
+        const pendingResolve = ctx.scrollRequestTracker?.isWaitingToRun() ? undefined : state.pendingScrollResolve;
+        const resolvePendingScroll = () => {
+            if (state.pendingScrollResolve === pendingResolve) state.pendingScrollResolve = undefined;
+            pendingResolve?.();
+        };
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
@@ -36,7 +34,7 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         if (scrollingTo.isInitialScroll || state.initialScroll) {
-            const isOffsetSession = state.initialScrollSession?.kind === "offset";
+            const isOffsetSession = state.initialScroll?.kind === "offset";
             const shouldPreserveResizeTarget =
                 !!scrollingTo.isInitialScroll && getDataLength(state) > 0 && state.initialScroll?.viewPosition === 1;
             finishInitialScroll(ctx, {
@@ -45,7 +43,6 @@ export function finishScrollTo(ctx: StateContext) {
                 },
                 preserveTarget: (isOffsetSession && getDataLength(state) === 0) || shouldPreserveResizeTarget,
                 recalculateItems: true,
-                schedulePreservedTargetClear: shouldPreserveResizeTarget,
                 syncObservedOffset: isOffsetSession,
                 waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,
             });

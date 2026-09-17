@@ -104,6 +104,7 @@ describe("scrollTo", () => {
     });
 
     it("keeps initial iOS scrolls local while arming the native watchdog", () => {
+        mockCtx.state.initialScroll = { contentOffset: 120, kind: "offset" };
         scrollTo(mockCtx, {
             animated: false,
             isInitialScroll: true,
@@ -119,8 +120,7 @@ describe("scrollTo", () => {
             offset: 120,
             targetOffset: 120,
         });
-        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toEqual({
-            startScroll: 25,
+        expect(mockCtx.state.initialScroll?.completion?.watchdog).toEqual({
             targetOffset: 120,
         });
         expect(mockCtx.state.hasScrolled).toBe(false);
@@ -362,14 +362,14 @@ describe("scrollTo", () => {
     });
 
     it("preserves the original watchdog start scroll across forced retries", () => {
-        mockCtx.state.initialScrollSession = {
+        mockCtx.state.initialScroll = {
+            ...mockCtx.state.initialScroll,
             completion: {
                 watchdog: {
-                    startScroll: 25,
                     targetOffset: 100,
                 },
             },
-            kind: "bootstrap",
+            kind: "index",
             previousDataLength: 0,
         };
         mockCtx.state.scroll = 80;
@@ -387,22 +387,21 @@ describe("scrollTo", () => {
             isInitialScroll: true,
             offset: 140,
         });
-        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toEqual({
-            startScroll: 25,
+        expect(mockCtx.state.initialScroll?.completion?.watchdog).toEqual({
             targetOffset: 140,
         });
         expect(mockCtx.state.hasScrolled).toBe(false);
     });
 
     it("clears a stale watchdog target when an initial retry recomputes to zero", () => {
-        mockCtx.state.initialScrollSession = {
+        mockCtx.state.initialScroll = {
+            ...mockCtx.state.initialScroll,
             completion: {
                 watchdog: {
-                    startScroll: 25,
                     targetOffset: 36,
                 },
             },
-            kind: "bootstrap",
+            kind: "index",
             previousDataLength: 0,
         };
 
@@ -419,7 +418,7 @@ describe("scrollTo", () => {
             isInitialScroll: true,
             offset: 0,
         });
-        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toBeUndefined();
+        expect(mockCtx.state.initialScroll?.completion?.watchdog).toBeUndefined();
         expect(mockCtx.state.scrollingTo).toEqual({
             animated: false,
             isInitialScroll: true,
