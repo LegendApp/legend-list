@@ -1,12 +1,12 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { updateContainerItemMetadata } from "@/core/containerItemMetadata";
 import { getDataItem, getIndexedData } from "@/core/IndexedData";
+import type { LayoutStore } from "@/core/LayoutStore";
 import {
-    getLayoutColumn,
-    getLayoutOffset,
-    getLayoutSize,
-    getLayoutSpan,
-    type LayoutAccess,
+    getLayoutColumnForStore,
+    getLayoutOffsetForStore,
+    getLayoutSizeForStore,
+    getLayoutSpanForStore,
 } from "@/core/layoutAccessors";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
@@ -17,7 +17,7 @@ export function syncMountedContainer(
     ctx: StateContext,
     containerIndex: number,
     itemIndex: number,
-    options?: { layout?: LayoutAccess; scrollAdjustPending?: number; updateLayout?: boolean },
+    options?: { layout?: LayoutStore; scrollAdjustPending?: number; updateLayout?: boolean },
 ) {
     const state = ctx.state;
     const {
@@ -37,8 +37,8 @@ export function syncMountedContainer(
     let didRefreshData = false;
 
     if (updateLayout) {
-        const layout = options?.layout;
-        const positionValue = layout ? layout.getOffset(itemIndex) : getLayoutOffset(ctx, itemIndex);
+        const layout = options?.layout ?? state.layoutStoreRuntime?.store;
+        const positionValue = getLayoutOffsetForStore(layout, itemIndex);
         if (positionValue === undefined) {
             set$(ctx, `containerPosition${containerIndex}`, POSITION_OUT_OF_VIEW);
             return { didChangePosition: false, didRefreshData: false };
@@ -46,11 +46,10 @@ export function syncMountedContainer(
 
         const logicalPosition = (positionValue || 0) - (options?.scrollAdjustPending ?? 0);
         const itemSize =
-            (layout ? layout.getSize(itemIndex) : getLayoutSize(ctx, itemIndex)) ??
-            getItemSize(ctx, itemKey, itemIndex, item, undefined, metadata);
+            getLayoutSizeForStore(layout, itemIndex) ?? getItemSize(ctx, itemKey, itemIndex, item, undefined, metadata);
         const position = toPhysicalHorizontalItemPosition(state, logicalPosition, itemSize, peek$(ctx, "totalSize"));
-        const column = (layout ? layout.getColumn(itemIndex) : getLayoutColumn(ctx, itemIndex)) || 1;
-        const span = (layout ? layout.getSpan(itemIndex) : getLayoutSpan(ctx, itemIndex)) || 1;
+        const column = getLayoutColumnForStore(layout, itemIndex) || 1;
+        const span = getLayoutSpanForStore(layout, itemIndex) || 1;
 
         const prevPos = peek$(ctx, `containerPosition${containerIndex}`);
         const prevColumn = peek$(ctx, `containerColumn${containerIndex}`);

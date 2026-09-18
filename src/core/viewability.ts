@@ -1,5 +1,6 @@
 import { getIndexedData, type IndexedData } from "@/core/IndexedData";
-import { getLayoutOffset, getLayoutSize, type LayoutAccess } from "@/core/layoutAccessors";
+import type { LayoutStore } from "@/core/LayoutStore";
+import { getLayoutOffsetForStore, getLayoutSizeForStore } from "@/core/layoutAccessors";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import type {
@@ -111,7 +112,7 @@ export function updateViewableItems(
     end: number,
     startBuffered = start,
     endBuffered = end,
-    layout?: LayoutAccess,
+    layout?: LayoutStore,
 ) {
     const state = ctx.state;
     const indexedData = getIndexedData(state);
@@ -147,7 +148,7 @@ function updateViewableItemsWithConfig(
     state: InternalState,
     ctx: StateContext,
     scrollSize: number,
-    layout?: LayoutAccess,
+    layout?: LayoutStore,
     publishAmounts = false,
 ) {
     const { viewabilityConfig, onViewableItemsChanged } = viewabilityConfigCallbackPair;
@@ -367,7 +368,7 @@ function areViewabilityAmountTokensEqual(prev: ViewAmountToken | undefined, next
 function computeViewability(
     state: InternalState,
     ctx: StateContext,
-    layout: LayoutAccess | undefined,
+    layout: LayoutStore | undefined,
     viewabilityConfig: ViewabilityConfig,
     containerId: number,
     key: string,
@@ -387,8 +388,9 @@ function computeViewability(
     const startOffset = getViewabilityStartOffset(viewabilityConfig);
     const effectiveScrollSize = Math.max(0, scrollSize - startOffset);
     const scroll = scrollState - topPad + startOffset;
-    const position = layout ? layout.getOffset(index) : getLayoutOffset(ctx, index);
-    const size = (layout ? layout.getSize(index) : getLayoutSize(ctx, index)) ?? 0;
+    const store = layout ?? state.layoutStoreRuntime?.store;
+    const position = getLayoutOffsetForStore(store, index);
+    const size = getLayoutSizeForStore(store, index) ?? 0;
 
     if (position === undefined) {
         const value: ViewAmountToken = {
@@ -452,7 +454,7 @@ function publishViewabilityAmount(ctx: StateContext, value: ViewAmountToken) {
 function checkIsViewable(
     state: InternalState,
     ctx: StateContext,
-    layout: LayoutAccess | undefined,
+    layout: LayoutStore | undefined,
     viewabilityConfig: ViewabilityConfig,
     containerId: number,
     key: string,
