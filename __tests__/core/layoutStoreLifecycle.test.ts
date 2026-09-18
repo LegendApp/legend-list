@@ -611,6 +611,45 @@ describe("layout store lifecycle", () => {
         expect(store.getTotalSize()).toBe(300);
     });
 
+    it("defers the initial estimate scan until an active scroll finishes", () => {
+        for (const numColumns of [1, 2]) {
+            for (const isInitialScroll of [false, true]) {
+                const ctx = createLayoutStoreContext(4);
+                ctx.state.props.numColumns = numColumns;
+                const store = syncLayoutStoreStructure(ctx)!;
+                ctx.state.startNoBuffer = 0;
+                ctx.state.endNoBuffer = 1;
+                ctx.state.scrollingTo = { animated: false, isInitialScroll, offset: 100 } as any;
+                for (const [index, size] of [60, 80].entries()) {
+                    ctx.state.idCache[index] = `item-${index}`;
+                    ctx.state.sizesKnown.set(`item-${index}`, size);
+                    store.setMeasuredSize(index, size);
+                }
+                const runtime = ctx.state.layoutStoreRuntime!;
+                runtime.pendingEstimateMeasurements = 5;
+                const readSize = spyOn(ctx.state.sizesKnown, "get");
+                try {
+                    expect(maybeFlushInitialLayoutStoreEstimate(ctx)).toBe(false);
+                    expect(readSize).not.toHaveBeenCalled();
+                    expect(runtime.didFlushInitialEstimate).toBe(false);
+                    expect(runtime.pendingEstimateMeasurements).toBe(5);
+                    expect(store.getEstimatedSize()).toBe(100);
+
+                    ctx.state.scrollingTo = undefined;
+                    expect(maybeFlushInitialLayoutStoreEstimate(ctx)).toBe(true);
+                    expect(readSize).toHaveBeenCalledTimes(2);
+                    expect(runtime.didFlushInitialEstimate).toBe(true);
+                    expect(runtime.pendingEstimateMeasurements).toBe(0);
+                    expect(store.getEstimatedSize()).toBe(70);
+                    expect(store.getTotalSize()).toBe(numColumns === 1 ? 280 : 150);
+                } finally {
+                    readSize.mockRestore();
+                    ctx.state.scheduledWork.dispose();
+                }
+            }
+        }
+    });
+
     it("clamps stale visible anchors when flushing the initial estimate", () => {
         const ctx = createLayoutStoreContext(2);
         const store = syncLayoutStoreStructure(ctx)!;
