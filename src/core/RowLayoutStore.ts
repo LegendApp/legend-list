@@ -136,7 +136,8 @@ export class RowLayoutStore implements MutableLayoutStore {
         return index !== undefined && Number.isInteger(index) && index >= 0 && index < this.length;
     }
 
-    replaceKnownSizeEntries(entries: LayoutStoreSizeEntry[]) {
+    replaceKnownSizeEntries(entries: LayoutStoreSizeEntry[], estimatedSize = this.estimatedSize) {
+        const normalizedEstimate = normalizeSize(estimatedSize);
         const knownSizes = new Map<number, KnownItemSize>();
         for (const entry of entries) {
             this.assertIndex(entry.index);
@@ -148,6 +149,7 @@ export class RowLayoutStore implements MutableLayoutStore {
                 knownSizes.set(entry.index, { kind: SIZE_CACHED, size: entry.size });
             }
         }
+        this.estimatedSize = normalizedEstimate;
         this.knownSizes = knownSizes;
         this.rebuildRowsAndTotals();
     }
