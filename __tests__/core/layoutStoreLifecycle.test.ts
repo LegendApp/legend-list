@@ -353,6 +353,37 @@ describe("layout store lifecycle", () => {
         expect(store?.getMeasuredCount()).toBe(2);
     });
 
+    it("keeps the fallback until two positive measurements are available when seeding", () => {
+        for (const numColumns of [1, 2]) {
+            for (const sizes of [[], [0], [40.25], [0, 40.25], [0, 40.25, 60.75]]) {
+                const ctx = createLayoutStoreContext(5);
+                ctx.state.props.numColumns = numColumns;
+                ctx.state.props.estimatedItemSize = 99.1;
+                for (let index = 0; index < sizes.length; index++) {
+                    ctx.state.idCache[index] = `item-${index}`;
+                    ctx.state.sizesKnown.set(`item-${index}`, sizes[index]!);
+                }
+                // Cached sizes affect geometry but must not count toward the learned average.
+                ctx.state.idCache[4] = "item-4";
+                ctx.state.sizes.set("item-4", 200);
+
+                const store = rebuildLayoutStoreExact(ctx)!;
+
+                expect(store.getEstimatedSize()).toBeCloseTo(sizes.length === 3 ? 50.5 : 99.1, 10);
+                expect(store.getMeasuredCount()).toBe(sizes.length);
+                for (let index = 0; index < sizes.length; index++) {
+                    expect(store.getSize(index)).toBe(sizes[index]!);
+                }
+            }
+            const empty = createLayoutStoreContext(0);
+            empty.state.props.numColumns = numColumns;
+            empty.state.props.estimatedItemSize = 99.1;
+            const store = rebuildLayoutStoreExact(empty)!;
+            expect(store.getEstimatedSize()).toBe(99.1);
+            expect(store.getTotalSize()).toBe(0);
+        }
+    });
+
     it("keeps distant variable fixed snap targets sparse and estimate-backed", () => {
         const ctx = createLayoutStoreContext(1_000_000);
         const getFixedItemSize = mock((_item, index) => (index === 0 ? 300 : 60));
