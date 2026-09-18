@@ -328,21 +328,17 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         const normalizedSize = normalizeSize(size);
         const located = findPieceAtIndexWithPath(this.root, index);
         const existingPiece = located?.node.piece;
-        const existing =
-            located && existingPiece?.type === PIECE_KNOWN
-                ? {
-                      kind: existingPiece.kinds[located.offset] as SizeKind,
-                      size: existingPiece.sizes[located.offset]!,
-                  }
-                : undefined;
-        const didChange = (existing?.size ?? this.estimatedSize) !== normalizedSize;
-        if (located && existingPiece?.type === PIECE_KNOWN && existing) {
-            if (existing.size !== normalizedSize || existing.kind !== SIZE_MEASURED) {
-                const previousMeasuredSize = existing.kind === SIZE_MEASURED ? existing.size : 0;
+        const previousSize =
+            located && existingPiece?.type === PIECE_KNOWN ? existingPiece.sizes[located.offset]! : this.estimatedSize;
+        const didChange = previousSize !== normalizedSize;
+        if (located && existingPiece?.type === PIECE_KNOWN) {
+            const wasMeasured = existingPiece.kinds[located.offset] === SIZE_MEASURED;
+            if (didChange || !wasMeasured) {
+                const previousMeasuredSize = wasMeasured ? previousSize : 0;
                 existingPiece.sizes[located.offset] = normalizedSize;
                 existingPiece.kinds[located.offset] = SIZE_MEASURED;
-                existingPiece.knownSizeTotal += normalizedSize - existing.size;
-                existingPiece.measuredCount += existing.kind === SIZE_MEASURED ? 0 : 1;
+                existingPiece.knownSizeTotal += normalizedSize - previousSize;
+                existingPiece.measuredCount += wasMeasured ? 0 : 1;
                 existingPiece.measuredSizeTotal += normalizedSize - previousMeasuredSize;
                 existingPiece.positiveMeasuredCount += Number(normalizedSize > 0) - Number(previousMeasuredSize > 0);
                 updatePath(located.path);
