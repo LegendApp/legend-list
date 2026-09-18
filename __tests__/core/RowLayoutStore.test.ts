@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
 import { RowLayoutStore } from "../../src/core/RowLayoutStore";
@@ -35,6 +35,36 @@ describe("RowLayoutStore", () => {
         expect(store.getColumn(0)).toBe(1);
         expect(store.getColumn(1)).toBe(2);
         expect(store.getSpan(4)).toBe(1);
+    });
+
+    it("skips repeated measurements after promoting cached or unknown sizes", () => {
+        for (const spans of [undefined, [2, 1, 1]]) {
+            for (const cached of [false, true]) {
+                for (const size of [0, 50, 100]) {
+                    const store = new RowLayoutStore({ estimatedSize: 100, length: 3, numColumns: 2, spans });
+                    if (cached) store.replaceKnownSizeEntries([{ index: 0, size, type: "cached" }]);
+                    store.setMeasuredSize(0, size);
+                    expect(store.getMeasuredCount()).toBe(1);
+                    expect(store.getMeasuredAverageSize()).toBe(size);
+                    expect(store.getPositiveMeasuredAverageSize()).toBe(size > 0 ? size : undefined);
+                    const total = store.getTotalSize();
+                    const offset = store.getOffset(2);
+                    const syncRow = spyOn(store as any, "syncRowHeight");
+                    try {
+                        expect(store.setMeasuredSize(0, size)).toBe(false);
+                        expect(syncRow).not.toHaveBeenCalled();
+                        expect(store.getTotalSize()).toBe(total);
+                        expect(store.getOffset(2)).toBe(offset);
+                        expect(store.getMeasuredCount()).toBe(1);
+                        store.setMeasuredSize(0, size + 10);
+                        expect(syncRow).toHaveBeenCalledTimes(1);
+                        expect(store.getMeasuredAverageSize()).toBe(size + 10);
+                    } finally {
+                        syncRow.mockRestore();
+                    }
+                }
+            }
+        }
     });
 
     it("updates row heights when measured sizes change", () => {

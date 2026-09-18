@@ -284,9 +284,10 @@ export class RowLayoutStore implements MutableLayoutStore {
     setMeasuredSize(index: number, size: number) {
         this.assertIndex(index);
         const normalizedSize = normalizeSize(size);
+        const previous = this.knownSizes.get(index);
+        if (previous?.kind === SIZE_MEASURED && previous.size === normalizedSize) return false;
         const rowIndex = this.getRowIndex(index);
         const previousRowHeight = this.rowLayout.getSize(rowIndex);
-        const previous = this.knownSizes.get(index);
 
         if (previous?.kind === SIZE_MEASURED) {
             this.measuredSizeTotal += normalizedSize - previous.size;
