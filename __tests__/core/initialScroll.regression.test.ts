@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import "../setup";
 
@@ -615,7 +615,13 @@ it("an old expiry callback cannot clear a replacement target's anchor", () => {
     const ctx = revealedEnd();
     const expiry = [...timeouts.values()].find(({ delay }) => delay === 2000)!;
     setInitialScrollTarget(ctx, { index: 3, viewPosition: 1 }, { resetDidFinish: true });
-    finishInitialScroll(ctx, { preserveTarget: true, resolvedOffset: 200 });
+    const cancel = spyOn(ctx.state.scheduledWork, "cancel");
+    try {
+        finishInitialScroll(ctx, { preserveTarget: true, resolvedOffset: 200 });
+        expect(cancel.mock.calls.filter(([key]) => key === "initialScrollAlignment")).toHaveLength(1);
+    } finally {
+        cancel.mockRestore();
+    }
     expiry.callback();
     expect(ctx.state.initialScrollAnchor?.index).toBe(3);
     expect(ctx.state.initialScrollAnchor?.contentOffset).toBe(200);

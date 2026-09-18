@@ -22,7 +22,6 @@ function preserveInitialScrollAnchor(
     state: StateContext["state"],
     target: NonNullable<StateContext["state"]["initialScroll"]>,
 ) {
-    clearInitialScrollAnchor(state);
     // Keep geometry only: completion and measurement state belong to initialization.
     const { bootstrap: _, completion: __, previousDataLength: ___, ...anchor } = target;
     state.initialScrollAnchor = { ...anchor, contentOffset: state.scrollPending ?? state.scroll };
