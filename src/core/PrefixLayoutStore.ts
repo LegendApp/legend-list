@@ -376,16 +376,12 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         current: ReturnType<typeof findPieceAtIndexWithPath>,
     ) {
         let didAppend = false;
-        if (index > 0 && current) {
+        const currentPiece = current?.node.piece;
+        if (index > 0 && current?.offset === 0 && currentPiece?.type === PIECE_UNKNOWN && currentPiece.count > 1) {
             const previous = findPieceAtIndexWithPath(this.root, index - 1);
-            const currentPiece = current?.node.piece;
             const previousPiece = previous?.node.piece;
             if (
-                current &&
                 previous &&
-                current.offset === 0 &&
-                currentPiece?.type === PIECE_UNKNOWN &&
-                currentPiece.count > 1 &&
                 previousPiece?.type === PIECE_KNOWN &&
                 previous.offset === previousPiece.count - 1 &&
                 previousPiece.count < KNOWN_BLOCK_CAPACITY
