@@ -127,6 +127,7 @@ function resetBootstrapInitialScrollSession(
         }
     } else {
         bootstrapInitialScroll.passCount = 0;
+        bootstrapInitialScroll.previousResolvedOffset = undefined;
         bootstrapInitialScroll.scroll = options?.scroll ?? bootstrapInitialScroll.scroll;
         bootstrapInitialScroll.seedContentOffset =
             options?.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
@@ -180,20 +181,7 @@ function rearmBootstrapInitialScroll(
     ctx: StateContext,
     options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number },
 ) {
-    const state = ctx.state;
-    const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
-    if (bootstrapInitialScroll) {
-        bootstrapInitialScroll.passCount = 0;
-        bootstrapInitialScroll.previousResolvedOffset = undefined;
-        bootstrapInitialScroll.scroll = options.scroll;
-        bootstrapInitialScroll.seedContentOffset =
-            options.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
-        bootstrapInitialScroll.targetIndexSeed = options.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
-        bootstrapInitialScroll.visibleIndices = undefined;
-    } else {
-        startBootstrapInitialScrollSession(state, options);
-    }
-    ensureBootstrapInitialScrollFrameTicker(ctx);
+    resetBootstrapInitialScrollSession(ctx.state, options);
     queueBootstrapInitialScrollReevaluation(ctx);
 }
 
