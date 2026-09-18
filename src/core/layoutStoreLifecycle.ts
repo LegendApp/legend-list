@@ -83,10 +83,6 @@ export function materializeLayoutStoreRange(ctx: StateContext, startIndex: numbe
     return range;
 }
 
-function applyLayoutStoreSeed(store: ActiveLayoutStore, seed: LayoutStoreSeed) {
-    store.replaceKnownSizeEntries(seed.sizeEntries, seed.estimatedSize);
-}
-
 function getMaterializeRange(state: InternalState, fallbackStart: number, fallbackEnd: number) {
     const start =
         typeof state.startBuffered === "number" && state.startBuffered >= 0 ? state.startBuffered : fallbackStart;
@@ -309,7 +305,7 @@ export function reconcileLayoutStoreDataChange(
 
         didReconcile = !seed.hasDuplicateKey;
         if (didReconcile) {
-            applyLayoutStoreSeed(store, seed);
+            store.replaceKnownSizeEntries(seed.sizeEntries, seed.estimatedSize);
         }
     }
 
@@ -385,7 +381,7 @@ export function syncLayoutStoreStructure(ctx: StateContext) {
         state.layoutStoreRuntime = runtime;
         if (canSeedLayoutStore(state)) {
             const seed = getLayoutStoreSeed(ctx);
-            applyLayoutStoreSeed(runtime.store, seed);
+            runtime.store.replaceKnownSizeEntries(seed.sizeEntries, seed.estimatedSize);
         }
     }
     runtime.propEstimatedSize = estimatedSize;
@@ -437,7 +433,7 @@ export function rebuildLayoutStoreExact(ctx: StateContext) {
     const store = syncLayoutStoreStructure(ctx);
     if (store && store === previousStore) {
         const seed = getLayoutStoreSeed(ctx);
-        applyLayoutStoreSeed(store, seed);
+        store.replaceKnownSizeEntries(seed.sizeEntries, seed.estimatedSize);
     }
     return state.layoutStoreRuntime?.store;
 }
