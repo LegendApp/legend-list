@@ -137,13 +137,10 @@ export class RowLayoutStore implements MutableLayoutStore {
     }
 
     replaceKnownSizeEntries(entries: LayoutStoreSizeEntry[]) {
+        const knownSizes = new Map<number, KnownItemSize>();
         for (const entry of entries) {
             this.assertIndex(entry.index);
             normalizeSize(entry.size);
-        }
-
-        const knownSizes = new Map<number, KnownItemSize>();
-        for (const entry of entries) {
             const existing = knownSizes.get(entry.index);
             if (entry.type === "measured") {
                 knownSizes.set(entry.index, { kind: SIZE_MEASURED, size: entry.size });
