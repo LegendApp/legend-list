@@ -482,6 +482,46 @@ describe("RowLayoutStore", () => {
         expect({ exitCode: proc.exitCode, stderr: proc.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
     });
 
+    it("preserves the existing layout when a later replacement entry is invalid", () => {
+        const store = new RowLayoutStore({ estimatedSize: 100, length: 4, numColumns: 2 });
+        store.replaceKnownSizeEntries([
+            { index: 0, size: 50, type: "measured" },
+            { index: 1, size: 60, type: "cached" },
+            { index: 2, size: 175, type: "measured" },
+        ]);
+        for (const entry of [
+            { index: 4, size: 80 },
+            { index: 1, size: -1 },
+            { index: 1, size: Number.NaN },
+            { index: 1, size: Number.POSITIVE_INFINITY },
+        ]) {
+            expect(() =>
+                store.replaceKnownSizeEntries([
+                    { index: 0, size: 500, type: "measured" },
+                    { ...entry, type: "cached" },
+                ]),
+            ).toThrow(RangeError);
+            expect([0, 1, 2, 3].map((index) => store.getSize(index))).toEqual([50, 60, 175, 100]);
+            expect(store.getOffset(2)).toBe(60);
+            expect(store.getTotalSize()).toBe(235);
+            expect(store.getMeasuredCount()).toBe(2);
+            expect(store.getMeasuredAverageSize()).toBe(112.5);
+        }
+    });
+
+    it("prefers measurements over duplicate cached entries in either order", () => {
+        const store = new RowLayoutStore({ estimatedSize: 100, length: 2, numColumns: 2 });
+        store.replaceKnownSizeEntries([
+            { index: 0, size: 50, type: "measured" },
+            { index: 0, size: 200, type: "cached" },
+            { index: 1, size: 200, type: "cached" },
+            { index: 1, size: 70, type: "measured" },
+        ]);
+        expect(store.getTotalSize()).toBe(70);
+        expect(store.getMeasuredCount()).toBe(2);
+        expect(store.getMeasuredAverageSize()).toBe(60);
+    });
+
     it("throws for invalid sizes, spans, indexes, and column counts", () => {
         const store = new RowLayoutStore({ estimatedSize: 100, length: 1, numColumns: 1 });
 
