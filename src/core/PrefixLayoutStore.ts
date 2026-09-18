@@ -443,28 +443,19 @@ function createNode(piece: SequencePiece): SequenceNode {
 }
 
 function updateNode(node: SequenceNode) {
-    const pieceStats = getPieceStats(node.piece);
+    const knownPiece = node.piece.type === PIECE_KNOWN ? node.piece : undefined;
     node.logicalCount = getLogicalCount(node.left) + node.piece.count + getLogicalCount(node.right);
-    node.knownCount = getKnownCount(node.left) + pieceStats.knownCount + getKnownCount(node.right);
-    node.knownSizeTotal = getKnownSizeTotal(node.left) + pieceStats.knownSizeTotal + getKnownSizeTotal(node.right);
-    node.measuredCount = getMeasuredCount(node.left) + pieceStats.measuredCount + getMeasuredCount(node.right);
+    node.knownCount = getKnownCount(node.left) + (knownPiece?.count ?? 0) + getKnownCount(node.right);
+    node.knownSizeTotal =
+        getKnownSizeTotal(node.left) + (knownPiece?.knownSizeTotal ?? 0) + getKnownSizeTotal(node.right);
+    node.measuredCount = getMeasuredCount(node.left) + (knownPiece?.measuredCount ?? 0) + getMeasuredCount(node.right);
     node.positiveMeasuredCount =
-        getPositiveMeasuredCount(node.left) + pieceStats.positiveMeasuredCount + getPositiveMeasuredCount(node.right);
+        getPositiveMeasuredCount(node.left) +
+        (knownPiece?.positiveMeasuredCount ?? 0) +
+        getPositiveMeasuredCount(node.right);
     node.measuredSizeTotal =
-        getMeasuredSizeTotal(node.left) + pieceStats.measuredSizeTotal + getMeasuredSizeTotal(node.right);
+        getMeasuredSizeTotal(node.left) + (knownPiece?.measuredSizeTotal ?? 0) + getMeasuredSizeTotal(node.right);
     return node;
-}
-
-function getPieceStats(piece: SequencePiece) {
-    return piece.type === PIECE_KNOWN
-        ? {
-              knownCount: piece.count,
-              knownSizeTotal: piece.knownSizeTotal,
-              measuredCount: piece.measuredCount,
-              measuredSizeTotal: piece.measuredSizeTotal,
-              positiveMeasuredCount: piece.positiveMeasuredCount,
-          }
-        : { knownCount: 0, knownSizeTotal: 0, measuredCount: 0, measuredSizeTotal: 0, positiveMeasuredCount: 0 };
 }
 
 function getLogicalCount(node: SequenceNode | undefined) {
