@@ -289,10 +289,7 @@ export class RowLayoutStore implements MutableLayoutStore {
         const previousRowHeight = this.rowLayout.getSize(rowIndex);
         const previous = this.knownSizes.get(index);
 
-        if (previous?.kind === SIZE_CACHED) {
-            this.measuredCount++;
-            this.measuredSizeTotal += normalizedSize;
-        } else if (previous?.kind === SIZE_MEASURED) {
+        if (previous?.kind === SIZE_MEASURED) {
             this.measuredSizeTotal += normalizedSize - previous.size;
         } else {
             this.measuredCount++;
@@ -383,10 +380,7 @@ export class RowLayoutStore implements MutableLayoutStore {
 
         const itemCount = end - start + 1;
         if (knownCount === itemCount || maxKnownSize > this.estimatedSize) {
-            this.rowLayout.setMeasuredSize(
-                rowIndex,
-                Math.max(maxKnownSize, knownCount < itemCount ? this.estimatedSize : 0),
-            );
+            this.rowLayout.setMeasuredSize(rowIndex, maxKnownSize);
         } else {
             this.rowLayout.clearKnownSize(rowIndex);
         }
