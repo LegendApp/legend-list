@@ -61,6 +61,7 @@ function ListComponentHarness({
     maintainScrollAtEnd,
     onContext,
     onInternalScrollBeginDrag,
+    onInternalScrollEndDrag,
     onLayoutFooter,
     onRenderScrollComponent,
     rtl,
@@ -76,6 +77,7 @@ function ListComponentHarness({
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
     onContext?: (ctx: StateContext) => void;
     onInternalScrollBeginDrag?: (event: unknown) => void;
+    onInternalScrollEndDrag?: (event: unknown) => void;
     onLayoutFooter?: (rect: { height: number; width: number; x: number; y: number }) => void;
     onRenderScrollComponent?: () => void;
     rtl?: boolean;
@@ -106,6 +108,7 @@ function ListComponentHarness({
             ListFooterComponent={ListFooterComponent}
             ListHeaderComponent={<Header events={events} />}
             onInternalScrollBeginDrag={onInternalScrollBeginDrag}
+            onInternalScrollEndDrag={onInternalScrollEndDrag}
             onLayout={() => {}}
             onLayoutFooter={onLayoutFooter}
             onScroll={() => {}}
@@ -244,7 +247,7 @@ describe("ListComponent renderScrollComponent", () => {
         }
     });
 
-    it("forwards the internal drag boundary to native scroll components", async () => {
+    it("forwards the internal drag boundaries to native scroll components", async () => {
         const { Platform } = await import("../../src/platform/Platform");
         const { ListComponent } = await import("../../src/components/ListComponent?native-edge-drag-boundary");
         const events: string[] = [];
@@ -262,6 +265,7 @@ describe("ListComponent renderScrollComponent", () => {
                             ListComponent={ListComponent}
                             label="native"
                             onInternalScrollBeginDrag={() => events.push("drag")}
+                            onInternalScrollEndDrag={() => events.push("drag-end")}
                             onRenderScrollComponent={() => {}}
                         />
                     </StateProvider>,
@@ -274,10 +278,15 @@ describe("ListComponent renderScrollComponent", () => {
                 (receivedScrollProps?.onScrollBeginDrag as ((event: unknown) => void) | undefined)?.({
                     nativeEvent: {},
                 });
+                (receivedScrollProps?.onScrollEndDrag as ((event: unknown) => void) | undefined)?.({
+                    nativeEvent: {},
+                });
             });
 
             expect(typeof receivedScrollProps?.onScrollBeginDrag).toBe("function");
+            expect(typeof receivedScrollProps?.onScrollEndDrag).toBe("function");
             expect(events).toContain("drag");
+            expect(events).toContain("drag-end");
         } finally {
             Platform.OS = originalPlatform;
             act(() => {

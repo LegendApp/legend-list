@@ -197,6 +197,7 @@ export interface InternalState {
     clearPreservedInitialScrollOnNextFinish?: boolean;
     initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
+    isDragging?: boolean;
     isEndReached: boolean | null;
     isFirst?: boolean;
     isStartReached: boolean | null;
@@ -317,6 +318,7 @@ export interface InternalState {
         onMomentumScrollEnd: LegendListPropsInternal["onMomentumScrollEnd"];
         onScroll: LegendListPropsInternal["onScroll"];
         onScrollBeginDrag: LegendListPropsInternal["onScrollBeginDrag"];
+        onScrollEndDrag: LegendListPropsInternal["onScrollEndDrag"];
         onStartReached: LegendListPropsInternal["onStartReached"];
         onStartReachedThreshold: number | null | undefined;
         onStickyHeaderChange: LegendListPropsInternal["onStickyHeaderChange"];

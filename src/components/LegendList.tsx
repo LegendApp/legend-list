@@ -176,6 +176,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onRefresh,
         onScroll: onScrollProp,
         onScrollBeginDrag,
+        onScrollEndDrag,
         onStartReached,
         onStartReachedThreshold = 0.5,
         onStickyHeaderChange,
@@ -516,6 +517,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onReady,
         onScroll: throttleScrollFn,
         onScrollBeginDrag,
+        onScrollEndDrag,
         onStartReached,
         onStartReachedThreshold,
         onStickyHeaderChange,
@@ -870,11 +872,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             },
             onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
             onScrollBeginDrag: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                state.isDragging = true;
                 interruptMaintainScrollAtEnd(ctx);
                 prepareReachedEdgeForNextUserScroll(ctx);
                 state.props.onScrollBeginDrag?.(event as any);
             },
             onScrollEnd: () => prepareReachedEdgeForNextUserScroll(ctx),
+            onScrollEndDrag: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                state.isDragging = false;
+                state.props.onScrollEndDrag?.(event as any);
+            },
         }),
         [],
     );
@@ -900,6 +907,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 ListHeaderComponent={ListHeaderComponent}
                 onInternalScrollBeginDrag={fns.onScrollBeginDrag}
                 onInternalScrollEnd={fns.onScrollEnd}
+                onInternalScrollEndDrag={fns.onScrollEndDrag}
                 onLayout={onLayout!}
                 onLayoutFooter={onLayoutFooter}
                 onMomentumScrollEnd={fns.onMomentumScrollEnd}

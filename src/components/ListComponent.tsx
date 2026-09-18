@@ -55,6 +55,7 @@ interface ListComponentProps<ItemT>
     onLayout: (event: LayoutChangeEvent) => void;
     onLayoutFooter?: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
     onInternalScrollBeginDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+    onInternalScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onInternalScrollEnd?: () => void;
     renderScrollComponent?: (props: LooseScrollViewProps) => React.ReactElement | null;
     style: ViewStyle;
@@ -109,6 +110,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     renderScrollComponent,
     onLayoutFooter,
     onInternalScrollBeginDrag,
+    onInternalScrollEndDrag,
     onInternalScrollEnd,
     scrollAdjustHandler,
     snapToIndices,
@@ -199,7 +201,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                 ? ScrollComponent === ListComponentScrollView
                     ? { onInternalScrollEnd, useWindowScroll }
                     : {}
-                : { onScrollBeginDrag: onInternalScrollBeginDrag })}
+                : { onScrollBeginDrag: onInternalScrollBeginDrag, onScrollEndDrag: onInternalScrollEndDrag })}
             contentContainerStyle={[
                 horizontal ? { height: "100%" } : {},
                 contentContainerStyle,

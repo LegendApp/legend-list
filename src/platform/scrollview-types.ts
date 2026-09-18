@@ -50,6 +50,7 @@ export interface LooseScrollViewProps {
     onMomentumScrollEnd?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onScrollBeginDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+    onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     refreshControl?: ReactElement | null;
     removeClippedSubviews?: boolean;
     scrollEventThrottle?: number;

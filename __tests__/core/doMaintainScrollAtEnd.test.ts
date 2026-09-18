@@ -7,6 +7,7 @@ import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import * as scrollToEndModule from "../../src/core/scrollToEnd";
 import { updateContentMetricsState } from "../../src/core/updateContentMetricsState";
 import { updateScroll } from "../../src/core/updateScroll";
+import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
@@ -20,9 +21,12 @@ describe("doMaintainScrollAtEnd", () => {
     let pendingScrollResolves: Array<() => void> = [];
     let rafCallback: ((time?: number) => void) | null = null;
 
+    let originalPlatform: typeof Platform.OS;
     const originalRAF = globalThis.requestAnimationFrame;
 
     beforeEach(() => {
+        originalPlatform = Platform.OS;
+        Platform.OS = "web";
         rafCallback = null;
         pendingScrollResolves = [];
 
@@ -62,6 +66,7 @@ describe("doMaintainScrollAtEnd", () => {
     });
 
     afterEach(() => {
+        Platform.OS = originalPlatform;
         rafCallback = null;
         pendingScrollResolves = [];
 
@@ -583,6 +588,69 @@ describe("doMaintainScrollAtEnd", () => {
             expect(mockRunTrackedScrollToEnd).toHaveBeenCalledTimes(2);
         });
     });
+
+    for (const platform of ["ios", "android"] as const) {
+        it(`discards a queued follow frame when dragging on ${platform}`, () => {
+            Platform.OS = platform;
+            doMaintainScrollAtEnd(mockCtx);
+            expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+
+            mockState.isDragging = true;
+            rafCallback?.();
+
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+            expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+        });
+
+        it(`keeps a queued end replay through late native adjustment events on ${platform}`, () => {
+            Platform.OS = platform;
+            mockState.scroll = 1000;
+            mockState.scrollLength = 400;
+            mockState.pendingMaintainScrollAtEnd = true;
+            mockCtx.values.set("totalSize", 1600);
+            doMaintainScrollAtEnd(mockCtx);
+            const replay = rafCallback;
+            expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+
+            // The preceding instant scroll completed against predicted geometry.
+            // Native then acknowledges it and applies the last row's -8px measurement.
+            updateScroll(mockCtx, 1008, false, { fromNativeScrollEvent: true });
+            updateScroll(mockCtx, 1000, false, { fromNativeScrollEvent: true });
+            expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+            replay?.();
+            expect(scrollToEndSpy).toHaveBeenCalledTimes(1);
+            expect(mockState.maintainingScrollAtEnd).toBe("instant");
+        });
+
+        it(`coalesces measurement after a late native event during queued follow on ${platform}`, () => {
+            Platform.OS = platform;
+            mockState.queuedInitialLayout = true;
+            mockState.scroll = 1000;
+            mockState.scrollLength = 400;
+            mockState.pendingMaintainScrollAtEnd = true;
+            mockCtx.values.set("totalSize", 1600);
+            doMaintainScrollAtEnd(mockCtx);
+            const replay = rafCallback;
+            updateScroll(mockCtx, 1008, false, { fromNativeScrollEvent: true });
+            // Another row measures before the queued frame can run.
+            doMaintainScrollAtEnd(mockCtx);
+            replay?.();
+            expect(scrollToEndSpy).toHaveBeenCalledTimes(1);
+            expect(mockState.maintainingScrollAtEnd).toBe("instant");
+        });
+
+        it(`keeps the first queued end follow through native layout movement on ${platform}`, () => {
+            Platform.OS = platform;
+            runMaintainScrollAtEnd(false);
+            const follow = rafCallback;
+            mockState.isWithinMaintainScrollAtEndThreshold = false;
+            updateScroll(mockCtx, mockState.scroll - 8, false, { fromNativeScrollEvent: true });
+            follow?.();
+            expect(scrollToEndSpy).toHaveBeenCalledTimes(1);
+            expect(mockState.maintainingScrollAtEnd).toBe("instant");
+        });
+    }
 
     describe("real world scenarios", () => {
         it("should handle chat interface new message scenario", () => {

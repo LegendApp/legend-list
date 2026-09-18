@@ -330,22 +330,53 @@ describe("item size update functions", () => {
                 expect(mockState.maintainingScrollAtEnd).toBeUndefined();
             });
 
-            it("cancels a first-measurement maintain request when the user scrolls away before its frame", () => {
-                mockState.isWithinMaintainScrollAtEndThreshold = true;
+            it.each(["ios", "android"] as const)(
+                "keeps measurements from restarting end following during a drag on %s",
+                (platform) => {
+                    Platform.OS = platform;
+                    mockState.isWithinMaintainScrollAtEndThreshold = true;
+                    mockState.isDragging = true;
+                    doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
 
-                updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+                    updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-                expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
-                expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+                    expect(mockState.sizesKnown.get("item_0")).toBe(150);
+                    expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+                    expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
+                    expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+                    expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
 
-                mockState.scroll = 250;
-                mockState.isWithinMaintainScrollAtEndThreshold = false;
-                rafCallback?.(0);
+                    // A later measurement can follow normally after drag end, without momentum events.
+                    mockState.isDragging = false;
+                    updateItemAndFlush(mockCtx, "item_0", { height: 200, width: 400 });
+                    rafCallback?.(0);
+                    expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(1);
+                },
+            );
 
-                expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
-                expect(mockState.maintainingScrollAtEnd).toBeUndefined();
-                expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
-            });
+            it.each(["web", "ios", "android"] as const)(
+                "cancels a first-measurement follow when the user scrolls away on %s",
+                (platform) => {
+                    Platform.OS = platform;
+                    mockState.isWithinMaintainScrollAtEndThreshold = true;
+
+                    updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+
+                    expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+                    expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+
+                    if (platform !== "web") {
+                        doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
+                    }
+                    mockState.scroll = 250;
+                    mockState.isWithinMaintainScrollAtEndThreshold = false;
+                    rafCallback?.(0);
+
+                    expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
+                    expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+                    expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+                },
+            );
 
             it("preserves a first-measurement maintain request when only geometry moves beyond the threshold", () => {
                 mockState.isWithinMaintainScrollAtEndThreshold = true;

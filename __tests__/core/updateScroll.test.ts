@@ -118,7 +118,8 @@ describe("updateScroll large user jumps", () => {
         expect(flushSyncSpy).not.toHaveBeenCalled();
     });
 
-    it("cancels end maintenance only when native scrolling moves away from the end", () => {
+    it("cancels end maintenance when observed web scrolling moves away from the end", () => {
+        Platform.OS = "web";
         mockCtx = createMockContext(
             { alignItemsAtEndPadding: 400, readyToRender: true, totalSize: 700 },
             {

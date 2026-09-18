@@ -245,7 +245,9 @@ describe("handleLayout", () => {
 
                 handleLayout(mockCtx, mockLayout, setCanRender);
 
-                expect(mockState.isWithinMaintainScrollAtEndThreshold).toBe(false);
+                expect(mockState.isAtEnd).toBe(false);
+                // The queued follow retains the original end anchor across the resize.
+                expect(mockState.isWithinMaintainScrollAtEndThreshold).toBe(true);
                 expect(animationFrameCallback).toBeDefined();
 
                 animationFrameCallback?.(0);
