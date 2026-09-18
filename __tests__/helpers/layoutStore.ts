@@ -116,7 +116,8 @@ class TestLayoutStore {
         return index !== undefined && Number.isInteger(index) && index >= 0 && index < this.length;
     }
 
-    replaceKnownSizeEntries(entries: Array<{ index: number; size: number }>) {
+    replaceKnownSizeEntries(entries: Array<{ index: number; size: number }>, estimatedSize = this.estimatedSize) {
+        this.estimatedSize = estimatedSize;
         this.sizes.length = 0;
         for (const entry of entries) {
             this.setMeasuredSize(entry.index, entry.size);
