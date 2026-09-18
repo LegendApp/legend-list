@@ -269,7 +269,7 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
                 blockEntries.length < KNOWN_BLOCK_CAPACITY
             ) {
                 const entry = sortedEntries[entryIndex]!;
-                blockEntries.push({ kind: entry.kind, size: entry.size });
+                blockEntries.push(entry);
                 cursor++;
                 entryIndex++;
             }
