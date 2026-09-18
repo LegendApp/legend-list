@@ -2,7 +2,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
-import { finishInitialScroll } from "@/core/finishInitialScroll";
+import { clearInitialScrollAnchor, finishInitialScroll } from "@/core/finishInitialScroll";
 import { materializeFixedLayoutStoreIndex } from "@/core/fixedLayoutMaterialization";
 import { getDataLength } from "@/core/IndexedData";
 import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
@@ -61,9 +61,7 @@ export function setInitialScrollTarget(
 ) {
     const { state } = ctx;
     state.scheduledWork.cancel("initialScrollCompletion");
-    state.scheduledWork.cancel("initialScrollAlignment");
-    state.initialScrollAnchor = undefined;
-    state.scheduledWork.cancel("preservedInitialScroll");
+    clearInitialScrollAnchor(state);
     state.initialScroll = { kind: "index", ...state.initialScroll, ...target };
 
     if (options?.resetDidFinish) {
