@@ -44,7 +44,8 @@ export function materializeFixedLayoutStoreRangeAtOffsets(ctx: StateContext, sta
         let materializedEnd = range.start - 1;
         let nextEnd = range.end;
         while (nextEnd > materializedEnd) {
-            didChange = materializeFixedLayoutStoreRange(ctx, materializedEnd + 1, nextEnd) || didChange;
+            if (!materializeFixedLayoutStoreRange(ctx, materializedEnd + 1, nextEnd)) break;
+            didChange = true;
             materializedEnd = nextEnd;
             range = store.findIndexRangeAtOffsets(startOffset, endOffset);
             nextEnd = range?.end ?? materializedEnd;

@@ -298,6 +298,29 @@ describe("layout store lifecycle", () => {
         expect(ctx.state.indexByKey.size).toBe(0);
     });
 
+    it("reuses the offset range when fixed-size materialization leaves geometry unchanged", () => {
+        for (const numColumns of [1, 2]) {
+            for (const alreadyMeasured of [false, true]) {
+                const ctx = createLayoutStoreContext(20);
+                ctx.state.props.numColumns = numColumns;
+                ctx.state.props.getFixedItemSize = () => 100;
+                const store = syncLayoutStoreStructure(ctx)!;
+                const expectedRange = store.findIndexRangeAtOffsets(0, 250)!;
+                if (alreadyMeasured) materializeFixedLayoutStoreRange(ctx, expectedRange.start, expectedRange.end);
+                const findRange = spyOn(store, "findIndexRangeAtOffsets");
+                try {
+                    const result = materializeFixedLayoutStoreRangeAtOffsets(ctx, 0, 250);
+                    expect(result).toEqual({ didChange: false, range: expectedRange });
+                    expect(findRange).toHaveBeenCalledTimes(1);
+                    expect(store.getMeasuredCount()).toBe(expectedRange.end + 1);
+                    expect(store.getTotalSize()).toBe((20 / numColumns) * 100);
+                } finally {
+                    findRange.mockRestore();
+                }
+            }
+        }
+    });
+
     it("refreshes sparse fixed sizes when the data changes", () => {
         const ctx = createLayoutStoreContext(3);
         ctx.state.props.data = [
