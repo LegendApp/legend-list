@@ -227,6 +227,23 @@ describe("PrefixLayoutStore", () => {
         expect(store.getMeasuredAverageSize()).toBe(80);
     });
 
+    it("keeps measurement statistics correct across cached, repeated, and zero sizes", () => {
+        const store = new PrefixLayoutStore(2, 100);
+        store.replaceKnownSizeEntries([{ index: 0, size: 40, type: "cached" }]);
+        expect(store.setMeasuredSize(0, 40)).toBe(false);
+        expect(store.getMeasuredCount()).toBe(1);
+        expect(store.getPositiveMeasuredAverageSize()).toBe(40);
+        expect(store.setMeasuredSize(0, 0)).toBe(true);
+        expect(store.setMeasuredSize(0, 0)).toBe(false);
+        expect(store.getMeasuredCount()).toBe(1);
+        expect(store.getMeasuredAverageSize()).toBe(0);
+        expect(store.getPositiveMeasuredAverageSize()).toBeUndefined();
+        expect(store.setMeasuredSize(0, 60)).toBe(true);
+        expect(store.getMeasuredAverageSize()).toBe(60);
+        expect(store.getPositiveMeasuredAverageSize()).toBe(60);
+        expect(store.getTotalSize()).toBe(160);
+    });
+
     it("rebuilds cached and measured sizes in bulk", () => {
         const store = new PrefixLayoutStore(5, 100);
 
