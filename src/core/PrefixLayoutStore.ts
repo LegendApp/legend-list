@@ -236,7 +236,8 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         }
     }
 
-    replaceKnownSizeEntries(entries: PrefixLayoutStoreSizeEntry[]) {
+    replaceKnownSizeEntries(entries: PrefixLayoutStoreSizeEntry[], estimatedSize = this.estimatedSize) {
+        const normalizedEstimate = normalizeSize(estimatedSize);
         const byIndex = new Map<number, { kind: SizeKind; size: number }>();
         for (const entry of entries) {
             this.assertIndex(entry.index);
@@ -278,6 +279,7 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         if (cursor < this.length) {
             root = joinTrees(root, createUnknownNode(this.length - cursor));
         }
+        this.estimatedSize = normalizedEstimate;
         this.root = root;
     }
 

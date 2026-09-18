@@ -353,6 +353,27 @@ describe("layout store lifecycle", () => {
         expect(store?.getMeasuredCount()).toBe(2);
     });
 
+    it("rebuilds rows once when reseeding with a different measured average", () => {
+        const ctx = createLayoutStoreContext(4);
+        ctx.state.props.numColumns = 2;
+        const store = syncLayoutStoreStructure(ctx)!;
+        store.setMeasuredSize(0, 100);
+        ctx.state.idCache[0] = "item-0";
+        ctx.state.idCache[1] = "item-1";
+        ctx.state.sizesKnown.set("item-0", 60);
+        ctx.state.sizesKnown.set("item-1", 80);
+        const rebuild = spyOn(store as any, "rebuildRowsAndTotals");
+        try {
+            rebuildLayoutStoreExact(ctx);
+            expect(rebuild).toHaveBeenCalledTimes(1);
+            expect(store.getEstimatedSize()).toBe(70);
+            expect(store.getTotalSize()).toBe(150);
+            expect(store.getMeasuredCount()).toBe(2);
+        } finally {
+            rebuild.mockRestore();
+        }
+    });
+
     it("keeps the fallback until two positive measurements are available when seeding", () => {
         for (const numColumns of [1, 2]) {
             for (const sizes of [[], [0], [40.25], [0, 40.25], [0, 40.25, 60.75]]) {

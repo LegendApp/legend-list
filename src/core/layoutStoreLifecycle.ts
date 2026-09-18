@@ -84,8 +84,7 @@ export function materializeLayoutStoreRange(ctx: StateContext, startIndex: numbe
 }
 
 function applyLayoutStoreSeed(store: ActiveLayoutStore, seed: LayoutStoreSeed) {
-    store.setEstimatedSize(seed.estimatedSize);
-    store.replaceKnownSizeEntries(seed.sizeEntries);
+    store.replaceKnownSizeEntries(seed.sizeEntries, seed.estimatedSize);
 }
 
 function getMaterializeRange(state: InternalState, fallbackStart: number, fallbackEnd: number) {
