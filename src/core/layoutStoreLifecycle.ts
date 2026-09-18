@@ -142,6 +142,7 @@ export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext, notifyTo
     if (
         store &&
         !runtime.didFlushInitialEstimate &&
+        !state.scrollingTo &&
         typeof startNoBuffer === "number" &&
         typeof endNoBuffer === "number" &&
         startNoBuffer >= 0 &&
@@ -166,11 +167,9 @@ export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext, notifyTo
 
         if (areAllVisibleSizesKnown && measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS) {
             const nextEstimate = totalMeasuredSize / measuredCount;
-            if (!state.scrollingTo) {
-                runtime.didFlushInitialEstimate = true;
-                runtime.pendingEstimateMeasurements = 0;
-                didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer, { notifyTotalSize });
-            }
+            runtime.didFlushInitialEstimate = true;
+            runtime.pendingEstimateMeasurements = 0;
+            didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer, { notifyTotalSize });
         }
     }
 
