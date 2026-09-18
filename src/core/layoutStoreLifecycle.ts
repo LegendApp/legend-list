@@ -43,12 +43,8 @@ export function clearLayoutStoreKnownSizes(ctx: StateContext) {
     resetLayoutStoreRuntimeState(ctx.state);
 }
 
-function getActiveLayoutStoreRuntime(ctx: StateContext) {
-    return ctx.state.layoutStoreRuntime;
-}
-
 export function getActiveLayoutStore(ctx: StateContext) {
-    return getActiveLayoutStoreRuntime(ctx)?.store;
+    return ctx.state.layoutStoreRuntime?.store;
 }
 
 export function getSparseIdCacheSnapshot(state: InternalState): SparseIdCacheSnapshot {
@@ -65,7 +61,7 @@ export function getSparseIdCacheSnapshot(state: InternalState): SparseIdCacheSna
 
 export function materializeLayoutStoreRange(ctx: StateContext, startIndex: number, endIndex: number) {
     const state = ctx.state;
-    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const runtime = ctx.state.layoutStoreRuntime;
     const store = runtime?.store;
     let range: { end: number; start: number } | undefined;
 
@@ -138,7 +134,7 @@ function flushLayoutStoreEstimate(
 
 export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext, notifyTotalSize = true) {
     const state = ctx.state;
-    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const runtime = ctx.state.layoutStoreRuntime;
     const store = runtime?.store;
     let didFlush = false;
     const startNoBuffer = state.startNoBuffer;
@@ -217,7 +213,7 @@ function getEstimateFlushAnchorIndex(state: InternalState) {
 
 function flushPeriodicLayoutStoreEstimate(ctx: StateContext) {
     const state = ctx.state;
-    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const runtime = ctx.state.layoutStoreRuntime;
     let didFlush = false;
 
     if (runtime && hasEnoughNewMeasurementsForPeriodicFlush(runtime)) {
@@ -243,7 +239,7 @@ function flushPeriodicLayoutStoreEstimate(ctx: StateContext) {
 
 export function schedulePeriodicLayoutStoreEstimateFlush(ctx: StateContext) {
     const state = ctx.state;
-    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const runtime = ctx.state.layoutStoreRuntime;
     let didSchedule = false;
 
     if (
@@ -273,7 +269,7 @@ export function setLayoutStoreMeasuredSize(
     size: number,
     notifyTotalSize = true,
 ) {
-    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const runtime = ctx.state.layoutStoreRuntime;
     const store = runtime?.store;
     let didSet = false;
     if (runtime && store?.hasIndex(index)) {
@@ -324,7 +320,7 @@ export function reconcileLayoutStoreDataChange(
 
 export function syncActiveRowLayoutStoreSpans(ctx: StateContext) {
     const state = ctx.state;
-    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const runtime = ctx.state.layoutStoreRuntime;
     const store = runtime?.store;
     const { numColumns, overrideItemLayout } = state.props;
     const dataLength = getDataLength(state);
@@ -448,7 +444,7 @@ export function rebuildLayoutStoreExact(ctx: StateContext) {
 }
 
 export function syncLayoutStoreState(ctx: StateContext, notifyTotalSize = true) {
-    const runtime = getActiveLayoutStoreRuntime(ctx);
+    const runtime = ctx.state.layoutStoreRuntime;
     let didSync = false;
     if (runtime) {
         const store = runtime.store;
