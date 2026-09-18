@@ -181,7 +181,6 @@ function rearmBootstrapInitialScroll(
     options: { scroll?: number; seedContentOffset?: number; targetIndexSeed?: number },
 ) {
     resetBootstrapInitialScrollSession(ctx.state, options);
-    ensureBootstrapInitialScrollFrameTicker(ctx);
     queueBootstrapInitialScrollReevaluation(ctx);
 }
 

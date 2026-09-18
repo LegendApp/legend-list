@@ -76,8 +76,8 @@ export function validateDataSourceMutationBatch(
     } else if (source.getRevision() !== batch.revision || source.getLength() !== batch.length) {
         reason = "batch does not match the readable source state";
     } else {
-        const resetOperations = batch.operations.filter((operation) => operation.type === "reset");
-        if (resetOperations.length > 0) {
+        const hasReset = batch.operations.some((operation) => operation.type === "reset");
+        if (hasReset) {
             if (batch.operations.length !== 1) {
                 reason = "reset must be the only operation in a batch";
             } else {
