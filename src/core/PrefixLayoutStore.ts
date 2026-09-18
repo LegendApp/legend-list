@@ -345,7 +345,7 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
                 existingPiece.measuredCount += existing.kind === SIZE_MEASURED ? 0 : 1;
                 existingPiece.measuredSizeTotal += normalizedSize - previousMeasuredSize;
                 existingPiece.positiveMeasuredCount += Number(normalizedSize > 0) - Number(previousMeasuredSize > 0);
-                updatePaths([located.path]);
+                updatePath(located.path);
             }
         } else if (!this.tryAppendMeasuredToPreviousBlock(index, normalizedSize, located)) {
             const [before, fromIndex] = splitTree(this.root, index);
@@ -395,7 +395,8 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
                 previousPiece.positiveMeasuredCount += Number(size > 0);
                 previousPiece.measuredSizeTotal += size;
                 currentPiece.count--;
-                updatePaths([previous.path, current.path]);
+                updatePath(previous.path);
+                updatePath(current.path);
                 didAppend = true;
             }
         }
@@ -539,11 +540,9 @@ function findPieceAtIndexWithPath(root: SequenceNode | undefined, index: number)
     return result;
 }
 
-function updatePaths(paths: SequenceNode[][]) {
-    for (const path of paths) {
-        for (let index = path.length - 1; index >= 0; index--) {
-            updateNode(path[index]!);
-        }
+function updatePath(path: SequenceNode[]) {
+    for (let index = path.length - 1; index >= 0; index--) {
+        updateNode(path[index]!);
     }
 }
 
