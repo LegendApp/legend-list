@@ -116,9 +116,11 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
 
     clearKnownSize(index: number) {
         this.assertIndex(index);
-        const existing = this.getKnownValue(index);
-        const didChange = existing !== undefined && existing.size !== this.estimatedSize;
-        if (existing) {
+        const located = findPieceAtIndex(this.root, index);
+        const piece = located?.node.piece;
+        const knownSize = located && piece?.type === PIECE_KNOWN ? piece.sizes[located.offset] : undefined;
+        const didChange = knownSize !== undefined && knownSize !== this.estimatedSize;
+        if (knownSize !== undefined) {
             const [before, fromIndex] = splitTree(this.root, index);
             const [, after] = splitTree(fromIndex, 1);
             this.root = joinTrees(joinTrees(before, createUnknownNode(1)), after);
@@ -356,14 +358,6 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         if (!this.hasIndex(index)) {
             throw new RangeError(`PrefixLayoutStore index ${index} is out of bounds for length ${this.length}`);
         }
-    }
-
-    private getKnownValue(index: number) {
-        const located = findPieceAtIndex(this.root, index);
-        const piece = located?.node.piece;
-        return located && piece?.type === PIECE_KNOWN
-            ? { kind: piece.kinds[located.offset] as SizeKind, size: piece.sizes[located.offset]! }
-            : undefined;
     }
 
     private tryAppendMeasuredToPreviousBlock(
