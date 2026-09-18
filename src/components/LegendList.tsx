@@ -789,10 +789,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         return observer.start();
     }, [dataSource]);
-    syncLayoutStoreStructure(ctx);
     if (shouldExactSyncLayoutStore) {
         rebuildLayoutStoreExact(ctx);
         syncLayoutStoreState(ctx);
+    } else {
+        syncLayoutStoreStructure(ctx);
     }
 
     if (didDataChangeLocal && !isFirstLocal) {
