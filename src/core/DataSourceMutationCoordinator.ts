@@ -257,7 +257,7 @@ export function applyDataSourceMutationBatches(
     const updatedEntries = collectUpdatedEntries(ctx, operations);
     const isUpdateOnly = updatedEntries !== undefined;
     let entries = updatedEntries ?? collectMaterializedEntries(ctx);
-    const anchorPositions = snapshotAnchorPositions(ctx);
+    const anchorPositions = state.dataSourceAnchorPositions ?? snapshotAnchorPositions(ctx);
     const invalidatedKeys = new Set<string>();
     const removedKeys = new Set<string>();
     const rerenderKeys = new Set<string>();
