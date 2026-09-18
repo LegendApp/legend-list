@@ -20,7 +20,6 @@ function isNonNegativeInteger(value: number) {
 }
 
 function validateOperation(operation: DataSourceOperation, length: number) {
-    let nextLength = length;
     let reason: string | undefined;
 
     if (operation.type === "splice") {
@@ -32,8 +31,6 @@ function validateOperation(operation: DataSourceOperation, length: number) {
             operation.index + operation.deleteCount > length
         ) {
             reason = "splice range is invalid";
-        } else {
-            nextLength = length - operation.deleteCount + operation.insertCount;
         }
     } else if (operation.type === "move") {
         if (
@@ -55,7 +52,7 @@ function validateOperation(operation: DataSourceOperation, length: number) {
         }
     }
 
-    return { nextLength, reason };
+    return reason;
 }
 
 export function validateDataSourceMutationBatch(
@@ -85,11 +82,10 @@ export function validateDataSourceMutationBatch(
             }
         } else {
             for (const operation of batch.operations) {
-                const result = validateOperation(operation, nextLength);
-                nextLength = result.nextLength;
-                if (result.reason) {
-                    reason = result.reason;
-                    break;
+                reason = validateOperation(operation, nextLength);
+                if (reason) break;
+                if (operation.type === "splice") {
+                    nextLength = nextLength - operation.deleteCount + operation.insertCount;
                 }
             }
             if (!reason && nextLength !== batch.length) {

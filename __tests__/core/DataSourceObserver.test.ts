@@ -52,6 +52,37 @@ describe("DataSourceObserver", () => {
         expect(onReset).not.toHaveBeenCalled();
     });
 
+    it("validates each operation against the length produced by earlier splices", () => {
+        for (const invalidAfterShrink of [false, true]) {
+            const mutable = createMutableSource(3);
+            const onBatch = mock(() => {});
+            const onReset = mock(() => {});
+            const observer = new DataSourceObserver(mutable.source, { onBatch, onReset });
+            observer.start();
+            const batch: DataSourceMutationBatch = {
+                length: 3,
+                operations: [
+                    { deleteCount: 0, index: 3, insertCount: 2, type: "splice" },
+                    { count: 1, from: 4, to: 0, type: "move" },
+                    { deleteCount: 2, index: 3, insertCount: 0, type: "splice" },
+                    { count: 1, index: invalidAfterShrink ? 3 : 2, layout: "preserve", type: "update" },
+                ],
+                previousLength: 3,
+                previousRevision: 0,
+                revision: 1,
+            };
+            mutable.emit(batch);
+            if (invalidAfterShrink) {
+                expect(onReset.mock.calls[0]?.[0].reason).toBe("update range is invalid");
+                expect(onBatch).not.toHaveBeenCalled();
+            } else {
+                expect(onBatch).toHaveBeenCalledWith(batch);
+                expect(onReset).not.toHaveBeenCalled();
+            }
+            observer.stop();
+        }
+    });
+
     it("uses the reset callback when a revision is missed", () => {
         const mutable = createMutableSource();
         const onBatch = mock(() => {});
