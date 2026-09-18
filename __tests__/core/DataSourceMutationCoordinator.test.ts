@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import { applyDataSourceMutationBatches, transformDataSourceIndex } from "../../src/core/DataSourceMutationCoordinator";
@@ -534,4 +534,51 @@ describe("mutation boundaries and event reconciliation", () => {
             ),
         ).toEqual([1, 2, 2, 3]);
     });
+});
+
+it("reuses the original anchor snapshot until reconciliation releases it", () => {
+    const keys = ["a", "b"];
+    const source = createSource(keys);
+    const store = new PrefixLayoutStore(2, 10);
+    const ctx = createMockContext(
+        {},
+        {
+            idCache: ["a", "b"],
+            idsInView: ["b"],
+            indexByKey: new Map([
+                ["a", 0],
+                ["b", 1],
+            ]),
+            layoutStoreRuntime: new LayoutStoreRuntime(store, 10),
+            props: { dataSource: source },
+        },
+    );
+    const getOffset = spyOn(store, "getOffset");
+    try {
+        const prepend = (key: string) => {
+            const previousLength = keys.length;
+            keys.unshift(key);
+            expect(
+                applyDataSourceMutationBatches(ctx, source, [
+                    createBatch(previousLength, keys.length, [
+                        { deleteCount: 0, index: 0, insertCount: 1, type: "splice" },
+                    ]),
+                ]).applied,
+            ).toBe(true);
+        };
+        prepend("x");
+        const original = ctx.state.dataSourceAnchorPositions;
+        expect(original?.get("b")).toBe(10);
+        getOffset.mockClear();
+        prepend("y");
+        expect(ctx.state.dataSourceAnchorPositions).toBe(original);
+        expect(getOffset).not.toHaveBeenCalled();
+
+        ctx.state.dataSourceAnchorPositions = undefined;
+        prepend("z");
+        expect(ctx.state.dataSourceAnchorPositions?.get("b")).toBe(30);
+        expect(getOffset).toHaveBeenCalledTimes(1);
+    } finally {
+        getOffset.mockRestore();
+    }
 });
