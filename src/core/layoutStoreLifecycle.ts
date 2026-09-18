@@ -293,21 +293,6 @@ export function setLayoutStoreMeasuredSize(
     return didSet;
 }
 
-function getLayoutStoreSeedEstimate(input: {
-    dataLength: number;
-    fallbackSize: number;
-    fallbackTotalSize: number;
-    measuredCount: number;
-    measuredTotalSize: number;
-}) {
-    const { dataLength, fallbackSize, fallbackTotalSize, measuredCount, measuredTotalSize } = input;
-    return measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS
-        ? measuredTotalSize / measuredCount
-        : dataLength > 0
-          ? fallbackTotalSize / dataLength
-          : fallbackSize;
-}
-
 export function reconcileLayoutStoreDataChange(
     ctx: StateContext,
     options?: LayoutStoreDataChangeReconciliationOptions,
@@ -528,7 +513,6 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
         statePendingDataComparison.nextData === data
             ? statePendingDataComparison
             : undefined;
-    const fallbackTotalSize = dataLength * fallbackSize;
     let hasDuplicateKey = false;
     let measuredCount = 0;
     let measuredTotalSize = 0;
@@ -612,13 +596,8 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
     }
 
     return {
-        estimatedSize: getLayoutStoreSeedEstimate({
-            dataLength,
-            fallbackSize,
-            fallbackTotalSize,
-            measuredCount,
-            measuredTotalSize,
-        }),
+        estimatedSize:
+            measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS ? measuredTotalSize / measuredCount : fallbackSize,
         hasDuplicateKey,
         sizeEntries,
     };
