@@ -434,8 +434,9 @@ function getLayoutStoreKindForStore(store: ActiveLayoutStore) {
 
 export function rebuildLayoutStoreExact(ctx: StateContext) {
     const state = ctx.state;
+    const previousStore = state.layoutStoreRuntime?.store;
     const store = syncLayoutStoreStructure(ctx);
-    if (store) {
+    if (store && store === previousStore) {
         const seed = getLayoutStoreSeed(ctx);
         applyLayoutStoreSeed(store, seed);
     }

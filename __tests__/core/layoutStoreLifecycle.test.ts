@@ -16,6 +16,7 @@ import {
     syncLayoutStoreState,
     syncLayoutStoreStructure,
 } from "../../src/core/layoutStoreLifecycle";
+import { PrefixLayoutStore } from "../../src/core/PrefixLayoutStore";
 import { RowLayoutStore } from "../../src/core/RowLayoutStore";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -352,6 +353,37 @@ describe("layout store lifecycle", () => {
         expect(store?.getTotalSize()).toBe(250);
         expect(store?.getMeasuredCount()).toBe(2);
     });
+
+    for (const previousColumns of [undefined, 1, 2]) {
+        for (const numColumns of [1, 2]) {
+            it(`seeds once during an exact rebuild (${previousColumns ?? "new"} to ${numColumns} columns)`, () => {
+                const ctx = createLayoutStoreContext(4);
+                if (previousColumns !== undefined) {
+                    ctx.state.props.numColumns = previousColumns;
+                    syncLayoutStoreStructure(ctx)!.setMeasuredSize(3, 200);
+                }
+                ctx.state.props.numColumns = numColumns;
+                ctx.state.idCache[0] = "item-0";
+                ctx.state.idCache[1] = "item-1";
+                ctx.state.sizesKnown.set("item-0", 60);
+                ctx.state.sizesKnown.set("item-1", 80);
+                const replace = spyOn(
+                    numColumns === 1 ? PrefixLayoutStore.prototype : RowLayoutStore.prototype,
+                    "replaceKnownSizeEntries",
+                );
+                try {
+                    const store = rebuildLayoutStoreExact(ctx)!;
+                    expect(replace).toHaveBeenCalledTimes(1);
+                    expect(store.getEstimatedSize()).toBe(70);
+                    expect(store.getMeasuredCount()).toBe(2);
+                    expect(store.getSize(3)).toBe(70);
+                    expect(store.getTotalSize()).toBe(numColumns === 1 ? 280 : 150);
+                } finally {
+                    replace.mockRestore();
+                }
+            });
+        }
+    }
 
     it("rebuilds rows once when reseeding with a different measured average", () => {
         const ctx = createLayoutStoreContext(4);
