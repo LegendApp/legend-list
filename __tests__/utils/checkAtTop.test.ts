@@ -22,6 +22,7 @@ describe("checkAtTop", () => {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2,
                 },
+                queuedInitialLayout: true,
                 scroll: 0,
                 scrollLength: 300,
                 totalSize: 600,
@@ -50,6 +51,7 @@ describe("checkAtTop", () => {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2,
                 },
+                queuedInitialLayout: true,
                 scroll: 20,
                 scrollLength: 300,
                 totalSize: 600,
@@ -74,6 +76,7 @@ describe("checkAtTop", () => {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0,
                 },
+                queuedInitialLayout: true,
                 scroll: 0,
                 scrollLength: 300,
             },
@@ -99,6 +102,7 @@ describe("checkAtTop", () => {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
+                queuedInitialLayout: true,
                 scroll: 20,
                 scrollingTo: { animated: true, offset: 100 } as any,
                 scrollLength: 300,
@@ -129,8 +133,10 @@ describe("checkAtTop", () => {
             {
                 isStartReached: null,
                 props: {
+                    onStartReached: () => {},
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
+                queuedInitialLayout: true,
                 scroll: 200,
                 scrollLength: 300,
             },
@@ -171,6 +177,7 @@ describe("checkAtTop", () => {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
+                queuedInitialLayout: true,
                 scroll: 200,
                 scrollLength: 300,
                 totalSize: 600,
@@ -212,6 +219,7 @@ describe("checkAtTop", () => {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
+                queuedInitialLayout: true,
                 scroll: 200,
                 scrollLength: 300,
                 totalSize: 600,
@@ -253,6 +261,7 @@ describe("checkAtTop", () => {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
+                queuedInitialLayout: true,
                 scroll: 200,
                 scrollLength: 300,
                 totalSize: 600,
@@ -291,6 +300,7 @@ describe("checkAtTop", () => {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
+                queuedInitialLayout: true,
                 scroll: 0,
                 scrollLength: 300,
                 totalSize: 600,

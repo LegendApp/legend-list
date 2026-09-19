@@ -54,6 +54,7 @@ describe("reached edge gate", () => {
                     onStartReached: ({ distanceFromStart }) => calls.push(distanceFromStart),
                     onStartReachedThreshold: 0.2,
                 },
+                queuedInitialLayout: true,
                 scroll: 50,
                 scrollLength: 300,
                 totalSize: 1000,

@@ -43,7 +43,8 @@ export function checkAtTop(ctx: StateContext, allowedEdge?: ReachedEdge, allowGa
     set$(ctx, "isAtStart", scroll <= EDGE_POSITION_EPSILON);
     set$(ctx, "isNearStart", scroll <= threshold);
 
-    const shouldSkipThresholdChecks = hasActiveInitialScroll(state) || !!state.scrollingTo;
+    const shouldSkipThresholdChecks =
+        !state.queuedInitialLayout || hasActiveInitialScroll(state) || !!state.scrollingTo;
 
     if (!shouldSkipThresholdChecks) {
         state.isStartReached = checkThreshold(
@@ -58,10 +59,16 @@ export function checkAtTop(ctx: StateContext, allowedEdge?: ReachedEdge, allowGa
                 scrollPosition: scroll,
             },
             (distance) => {
-                if (canDispatchReachedEdge(ctx, "start", allowedEdge, allowGateCreatedInCurrentCheck)) {
+                let dispatched = false;
+                if (
+                    state.props.onStartReached &&
+                    canDispatchReachedEdge(ctx, "start", allowedEdge, allowGateCreatedInCurrentCheck)
+                ) {
                     markReachedEdge(ctx);
-                    state.props.onStartReached?.({ distanceFromStart: distance });
+                    state.props.onStartReached({ distanceFromStart: distance });
+                    dispatched = true;
                 }
+                return dispatched;
             },
             (snapshot) => {
                 state.startReachedSnapshot = snapshot;

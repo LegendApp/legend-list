@@ -16,6 +16,12 @@ export function resetInitialRenderState(
     if (resetLayout) {
         state.didContainersLayout = false;
         state.queuedInitialLayout = false;
+        // A fresh dataset has not delivered either edge notification yet.
+        state.edgeReachedGate = undefined;
+        state.isStartReached = null;
+        state.isEndReached = null;
+        state.startReachedSnapshot = undefined;
+        state.endReachedSnapshot = undefined;
     }
     if (resetInitialScroll) {
         state.didFinishInitialScroll = false;

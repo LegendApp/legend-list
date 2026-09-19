@@ -13,6 +13,39 @@ const baseContext = (overrides: Partial<{ scrollPosition: number; contentSize?: 
     }) as const;
 
 describe("checkThreshold", () => {
+    it("retries a suppressed callback without recording a reached snapshot", () => {
+        const snapshots: Array<ThresholdSnapshot | undefined> = [];
+        const reached = checkThreshold(
+            10,
+            false,
+            50,
+            false,
+            undefined,
+            baseContext(),
+            () => false,
+            (snapshot) => {
+                snapshots.push(snapshot);
+            },
+        );
+        expect(reached).toBe(false);
+        expect(snapshots).toEqual([]);
+
+        expect(
+            checkThreshold(
+                10,
+                false,
+                50,
+                reached,
+                undefined,
+                baseContext(),
+                () => true,
+                (snapshot) => {
+                    snapshots.push(snapshot);
+                },
+            ),
+        ).toBe(true);
+        expect(snapshots).toHaveLength(1);
+    });
     it("fires when starting inside threshold with wasReached null", () => {
         const onReachedCalls: number[] = [];
         const snapshotCalls: Array<ThresholdSnapshot | undefined> = [];
@@ -24,7 +57,10 @@ describe("checkThreshold", () => {
             null,
             undefined,
             baseContext(),
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (snap) => snapshotCalls.push(snap),
         );
 
@@ -48,7 +84,10 @@ describe("checkThreshold", () => {
             null,
             undefined,
             baseContext(),
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (snap) => snapshotCalls.push(snap),
         );
 
@@ -67,7 +106,10 @@ describe("checkThreshold", () => {
             null,
             undefined,
             baseContext(),
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (snap) => snapshotCalls.push(snap),
         );
 
@@ -86,7 +128,10 @@ describe("checkThreshold", () => {
             false,
             undefined,
             baseContext(),
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (snap) => snapshotCalls.push(snap),
         );
 
@@ -112,7 +157,10 @@ describe("checkThreshold", () => {
             false,
             snapshot,
             context,
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (snap) => snapshotCalls.push(snap),
         );
         expect(onReachedCalls).toEqual([20]);
@@ -124,7 +172,10 @@ describe("checkThreshold", () => {
             true,
             snapshotCalls.at(-1),
             context,
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (snap) => snapshotCalls.push(snap),
         );
 
@@ -144,7 +195,10 @@ describe("checkThreshold", () => {
             false,
             undefined,
             context,
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (s) => {
                 snapshot = s;
             },
@@ -159,7 +213,10 @@ describe("checkThreshold", () => {
             true,
             snapshot,
             changedContext,
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (s) => {
                 snapshot = s;
             },
@@ -185,7 +242,10 @@ describe("checkThreshold", () => {
             false,
             snapshot,
             context,
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (s) => {
                 snapshot = s;
             },
@@ -199,7 +259,10 @@ describe("checkThreshold", () => {
             true,
             snapshot,
             context,
-            (dist) => onReachedCalls.push(dist),
+            (dist) => {
+                onReachedCalls.push(dist);
+                return true;
+            },
             (s) => {
                 snapshot = s;
             },

@@ -4,7 +4,7 @@ import "../setup"; // Import global test setup
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
-import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
+import * as checkThresholdsModule from "../../src/utils/checkThresholds";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
@@ -36,7 +36,7 @@ const getFirstOnLoadCall = (mockFn: Mock<(payload: OnLoadPayload) => unknown>): 
 describe("setDidLayout", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
-    let checkAtBottomSpy: Mock<typeof checkAtBottomModule.checkAtBottom>;
+    let checkThresholdsSpy: Mock<typeof checkThresholdsModule.checkThresholds>;
     let doMaintainScrollAtEndSpy: Mock<typeof doMaintainScrollAtEndModule.doMaintainScrollAtEnd>;
 
     beforeEach(() => {
@@ -58,12 +58,12 @@ describe("setDidLayout", () => {
         mockState.refScroller = { current: { scrollTo: () => {} } } as any;
         mockCtx.state = mockState;
 
-        checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom").mockImplementation((_ctx) => {});
+        checkThresholdsSpy = spyOn(checkThresholdsModule, "checkThresholds").mockImplementation((_ctx) => {});
         doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockReturnValue(true);
     });
 
     afterEach(() => {
-        checkAtBottomSpy.mockRestore();
+        checkThresholdsSpy.mockRestore();
         doMaintainScrollAtEndSpy.mockRestore();
     });
 
@@ -76,10 +76,10 @@ describe("setDidLayout", () => {
             expect(mockState.queuedInitialLayout).toBe(true);
         });
 
-        it("should call checkAtBottom", () => {
+        it("should call checkThresholds", () => {
             setDidLayout(mockCtx);
 
-            expect(checkAtBottomSpy).toHaveBeenCalledWith(mockCtx);
+            expect(checkThresholdsSpy).toHaveBeenCalledWith(mockCtx);
         });
 
         it("should set containersDidLayout to true", () => {
@@ -140,7 +140,7 @@ describe("setDidLayout", () => {
 
             setDidLayout(mockCtx);
 
-            expect(checkAtBottomSpy).toHaveBeenCalled();
+            expect(checkThresholdsSpy).toHaveBeenCalled();
             expect(mockState.queuedInitialLayout).toBe(true);
             expect(mockState.didContainersLayout).toBe(true);
         });
@@ -187,7 +187,7 @@ describe("setDidLayout", () => {
             setDidLayout(mockCtx);
 
             expect(mockState.queuedInitialLayout).toBe(true);
-            expect(checkAtBottomSpy).toHaveBeenCalled();
+            expect(checkThresholdsSpy).toHaveBeenCalled();
             expect(mockState.didContainersLayout).toBe(true);
         });
     });
@@ -303,14 +303,14 @@ describe("setDidLayout", () => {
             expect(Number.isNaN(elapsedTimeInMs)).toBe(true);
         });
 
-        it("should handle checkAtBottom throwing error", () => {
-            checkAtBottomSpy.mockImplementation((_ctx) => {
-                throw new Error("checkAtBottom failed");
+        it("should handle checkThresholds throwing error", () => {
+            checkThresholdsSpy.mockImplementation((_ctx) => {
+                throw new Error("checkThresholds failed");
             });
 
             expect(() => {
                 setDidLayout(mockCtx);
-            }).toThrow("checkAtBottom failed");
+            }).toThrow("checkThresholds failed");
         });
 
         it("should handle set$ throwing error", () => {
@@ -326,7 +326,7 @@ describe("setDidLayout", () => {
                 setDidLayout(mockCtx);
             }).not.toThrow();
 
-            expect(checkAtBottomSpy).toHaveBeenCalled();
+            expect(checkThresholdsSpy).toHaveBeenCalled();
         });
     });
 
@@ -340,7 +340,7 @@ describe("setDidLayout", () => {
             setDidLayout(mockCtx);
 
             expect(mockState.queuedInitialLayout).toBe(true);
-            expect(checkAtBottomSpy).toHaveBeenCalledWith(mockCtx);
+            expect(checkThresholdsSpy).toHaveBeenCalledWith(mockCtx);
             expect(mockState.didContainersLayout).toBe(true);
             expect(onLoadSpy).toHaveBeenCalledWith({ elapsedTimeInMs: expect.any(Number) });
         });
@@ -355,7 +355,7 @@ describe("setDidLayout", () => {
             }).not.toThrow();
 
             expect(mockState.queuedInitialLayout).toBe(true);
-            expect(checkAtBottomSpy).toHaveBeenCalled();
+            expect(checkThresholdsSpy).toHaveBeenCalled();
             expect(mockState.didContainersLayout).toBe(true);
         });
     });

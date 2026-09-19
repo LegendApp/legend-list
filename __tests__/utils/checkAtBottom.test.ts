@@ -193,6 +193,7 @@ describe("checkAtBottom", () => {
         const state = createMockState({
             isEndReached: null,
             props: {
+                onEndReached: () => {},
                 onEndReachedThreshold: 0.2, // threshold = 60
             },
             queuedInitialLayout: true,

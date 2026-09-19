@@ -1,12 +1,13 @@
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
-import { checkAtBottom } from "@/utils/checkAtBottom";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function setDidLayout(ctx: StateContext) {
     const state = ctx.state;
     state.queuedInitialLayout = true;
-    checkAtBottom(ctx);
+    // Evaluate both edges together so overlapping initial windows share eligibility.
+    checkThresholds(ctx);
 
     setInitialRenderState(ctx, { didLayout: true });
     if (state.pendingMaintainScrollAtEnd) {

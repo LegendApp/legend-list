@@ -24,7 +24,7 @@ export const checkThreshold = (
     wasReached: boolean | null,
     snapshot: ThresholdSnapshot | undefined,
     context: ThresholdContext,
-    onReached: (dist: number) => void,
+    onReached: (dist: number) => boolean,
     setSnapshot: (snap: ThresholdSnapshot | undefined) => void,
 ) => {
     // Distance from the edge in absolute terms. Normalised for easier hysteresis checks.
@@ -45,38 +45,35 @@ export const checkThreshold = (
         });
     };
 
+    let reached = !!wasReached;
     if (!wasReached) {
         // First time we enter this window: trigger and remember it
-        if (!within) {
-            return false;
-        }
-        onReached(distance);
-        updateSnapshot();
-        return true;
-    }
-
-    // Add some hysteresis so that minor jitter does not constantly flip the flag
-    // - When a positive threshold is set we wait until the user scrolls 30% beyond it
-    // - When the threshold is zero (or negative) any movement away from the edge counts as a reset
-    const reset = isOutsideThresholdHysteresis(distance, atThreshold, threshold);
-
-    if (reset) {
-        setSnapshot(undefined);
-        return false;
-    }
-
-    if (within) {
-        // Keep the snapshot current without treating a data/layout change as a fresh threshold entry.
-        const changed =
-            !snapshot ||
-            snapshot.atThreshold !== atThreshold ||
-            snapshot.contentSize !== context.contentSize ||
-            snapshot.dataLength !== context.dataLength;
-
-        if (changed) {
+        // A shared edge gate may defer dispatch. Do not latch an undelivered event.
+        if (within && onReached(distance)) {
             updateSnapshot();
+            reached = true;
+        }
+    } else {
+        // Add some hysteresis so that minor jitter does not constantly flip the flag
+        // - When a positive threshold is set we wait until the user scrolls 30% beyond it
+        // - When the threshold is zero (or negative) any movement away from the edge counts as a reset
+        const reset = isOutsideThresholdHysteresis(distance, atThreshold, threshold);
+
+        if (reset) {
+            setSnapshot(undefined);
+            reached = false;
+        } else if (within) {
+            // Keep the snapshot current without treating a data/layout change as a fresh threshold entry.
+            const changed =
+                !snapshot ||
+                snapshot.atThreshold !== atThreshold ||
+                snapshot.contentSize !== context.contentSize ||
+                snapshot.dataLength !== context.dataLength;
+
+            if (changed) {
+                updateSnapshot();
+            }
         }
     }
-
-    return true;
+    return reached;
 };
