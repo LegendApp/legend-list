@@ -20,6 +20,7 @@ steps:
       selector:
         identifier: Return
   - await: { visible: { id: qa-short-keyboard-action } }
+  - await: { idle: true, stableFor: 600 }
   - echo: Append one reply; expect native telemetry to observe runway travel and its
       completed release.
   - tap: { id: qa-short-keyboard-action }

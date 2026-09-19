@@ -20,7 +20,7 @@ steps:
       toX: 0.5
       toY: 0.85
       durationMs: 400
-      settle: true
+      momentum: false
   - await: { visible: { id: qa-user-away } }
   - echo: Append while away, then verify the settled position was not pulled back to
       the end.
