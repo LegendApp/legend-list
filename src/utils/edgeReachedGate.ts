@@ -61,7 +61,8 @@ export function beginReachedEdgeUserScroll(ctx: StateContext, scrollDelta: numbe
     }
 
     const allowedEdge = scrollDelta < 0 ? "start" : "end";
-    state.edgeReachedGate = "closed";
+    // Keep the gesture eligible until a callback dispatch closes the gate via
+    // markReachedEdge. The first event may still be outside the target window.
     resetEdgeLatch(ctx, allowedEdge);
     return allowedEdge;
 }
