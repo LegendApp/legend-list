@@ -241,6 +241,55 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    for (const finish of ["native", "unmount", "inactivity"] as const) {
+        it(`cleans up the pending scroll-end fallback after ${finish}`, async () => {
+            resetMocks();
+            supportsScrollEnd = finish === "native";
+            const boundaries: string[] = [];
+            const onInternalScrollEnd = mock(() => boundaries.push("end"));
+            const { ListComponentScrollView } = await import(
+                "../../src/components/ListComponentScrollView?web-scroll-end-cleanup"
+            );
+            let renderer: TestRenderer.ReactTestRenderer | undefined;
+            try {
+                act(() => {
+                    renderer = TestRenderer.create(
+                        <ListComponentScrollView
+                            onInternalScrollEnd={onInternalScrollEnd}
+                            onLayout={() => {}}
+                            onScroll={() => {}}
+                            style={{}}
+                        >
+                            <div />
+                        </ListComponentScrollView>,
+                    );
+                });
+                act(() => {
+                    // A burst of scroll events should schedule only one boundary.
+                    scrollListeners.get("scroll")?.({} as Event);
+                    scrollListeners.get("scroll")?.({} as Event);
+                    scrollListeners.get("scroll")?.({} as Event);
+                });
+                expect(onInternalScrollEnd).not.toHaveBeenCalled();
+                if (finish === "native") {
+                    act(() => scrollListeners.get("scrollend")?.({} as Event));
+                    expect(onInternalScrollEnd).toHaveBeenCalledTimes(1);
+                } else if (finish === "unmount") {
+                    act(() => renderer?.unmount());
+                    renderer = undefined;
+                    expect(scrollListeners.has("scroll")).toBe(false);
+                }
+                await act(async () => {
+                    await new Promise((resolve) => setTimeout(resolve, 230));
+                });
+                expect(boundaries).toEqual(finish === "unmount" ? [] : ["end"]);
+                expect(flush).toHaveBeenCalledTimes(finish === "unmount" ? 0 : 1);
+            } finally {
+                act(() => renderer?.unmount());
+            }
+        });
+    }
+
     it("flushes immediately for any active programmatic scroll target", async () => {
         resetMocks();
         mockCtx.state.scrollingTo = { animated: true };

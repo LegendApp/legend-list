@@ -16,6 +16,78 @@ async function flushFrames() {
 }
 
 describe("mounted grid reached callbacks", () => {
+    for (const height of [1, 24, 450, 473.75, 474, 474.25, 498, 566]) {
+        for (const numColumns of [1, 3]) {
+            it(`mounts short content of height ${height} in ${numColumns} columns without duplicate callbacks`, async () => {
+                const { LegendList } = await import("../../src/components/LegendList");
+                const ref = React.createRef<LegendListRef>();
+                let scrollProps: any;
+                const ScrollSurface = React.forwardRef(function ShortScrollSurface(
+                    props: any,
+                    forwardedRef: React.Ref<any>,
+                ) {
+                    scrollProps = props;
+                    React.useImperativeHandle(forwardedRef, () => ({ measure: () => {}, scrollTo: () => {} }));
+                    return <>{props.children}</>;
+                });
+                const ends: number[] = [];
+                const starts: number[] = [];
+                const rendered = render(
+                    <LegendList
+                        data={Array.from({ length: numColumns }, (_, id) => ({ id: String(id) }))}
+                        estimatedItemSize={height}
+                        getFixedItemSize={() => height}
+                        keyExtractor={(item: { id: string }) => item.id}
+                        numColumns={numColumns}
+                        onEndReached={({ distanceFromEnd }: { distanceFromEnd: number }) => ends.push(distanceFromEnd)}
+                        onEndReachedThreshold={0.1}
+                        onStartReached={({ distanceFromStart }: { distanceFromStart: number }) =>
+                            starts.push(distanceFromStart)
+                        }
+                        onStartReachedThreshold={0.1}
+                        recycleItems={false}
+                        ref={ref}
+                        renderItem={({ item }: { item: { id: string } }) => <Text>{item.id}</Text>}
+                        renderScrollComponent={(props: any) => <ScrollSurface {...props} />}
+                    />,
+                );
+                const layout = () =>
+                    act(() =>
+                        scrollProps.onLayout({ nativeEvent: { layout: { height: 474, width: 300, x: 0, y: 0 } } }),
+                    );
+                await flushFrames();
+                expect(ends).toEqual([]);
+                layout();
+                await flushFrames();
+                expect(ref.current?.getState().contentLength).toBeCloseTo(height);
+                expect(starts).toEqual([0]);
+                expect(ends).toHaveLength(height <= 521.4 ? 1 : 0);
+                layout();
+                await flushFrames();
+                const y = Math.max(0, height - 474);
+                if (height > 521.4) act(() => scrollProps.onScrollBeginDrag({ nativeEvent: {} }));
+                for (let step = 1; step <= 4; step++) {
+                    act(() =>
+                        scrollProps.onScroll({
+                            nativeEvent: {
+                                contentOffset: { x: 0, y: (y * step) / 4 },
+                                contentSize: { height, width: 300 },
+                                layoutMeasurement: { height: 474, width: 300 },
+                                velocity: { x: 0, y: y > 0 ? 1 : 0 },
+                            },
+                            timeStamp: Date.now(),
+                        }),
+                    );
+                    await flushFrames();
+                }
+                expect(ends).toHaveLength(1);
+                expect(ref.current?.getState().isAtEnd).toBe(true);
+                expect(ref.current?.getState().scroll).toBeCloseTo(y);
+                expect(starts).toEqual([0]);
+                rendered.unmount();
+            });
+        }
+    }
     for (const offsets of [[92], [20, 40, 60, 92]]) {
         it(`delivers end during a native grid drag with ${offsets.length} scroll events`, async () => {
             const { LegendList } = await import("../../src/components/LegendList");

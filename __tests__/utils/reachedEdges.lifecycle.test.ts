@@ -37,6 +37,44 @@ function scenario(size = 566, viewport = 474, callbacks = "both", threshold = 0.
 
 describe("reached edges lifecycle", () => {
     for (const edge of ["start", "end"] as const) {
+        it(`retains a pending gesture when the ${edge} callback is temporarily absent`, () => {
+            const { ctx, start, end } = scenario(566, 474, "both", 0.1);
+            const position = (offset: number) => (edge === "end" ? offset : 92 - offset);
+            ctx.state.scroll = position(0);
+            setDidLayout(ctx);
+            prepareReachedEdgeForNextUserScroll(ctx);
+            updateScroll(ctx, position(20), true, { fromNativeScrollEvent: true });
+            const startCallback = ctx.state.props.onStartReached;
+            const endCallback = ctx.state.props.onEndReached;
+            if (edge === "start") ctx.state.props.onStartReached = undefined;
+            else ctx.state.props.onEndReached = undefined;
+            updateScroll(ctx, position(60), true, { fromNativeScrollEvent: true });
+            expect(ctx.state.edgeReachedGate).toBe("prepared");
+            const calls = edge === "end" ? end : start;
+            expect(calls).toEqual([]);
+            ctx.state.props.onStartReached = startCallback;
+            ctx.state.props.onEndReached = endCallback;
+            updateScroll(ctx, position(61), true, { fromNativeScrollEvent: true });
+            expect(calls).toEqual([31]);
+            expect(ctx.state.edgeReachedGate).toBe("closed");
+        });
+
+        it(`allows a gesture to reverse toward ${edge} before delivering a callback`, () => {
+            const { ctx, start, end } = scenario(566, 474, "both", 0.1);
+            const position = (offset: number) => (edge === "start" ? offset : 92 - offset);
+            ctx.state.scroll = position(0);
+            setDidLayout(ctx);
+            prepareReachedEdgeForNextUserScroll(ctx);
+            updateScroll(ctx, position(20), true, { fromNativeScrollEvent: true });
+            const calls = edge === "start" ? start : end;
+            expect(calls).toEqual([0]);
+            updateScroll(ctx, position(10), true, { fromNativeScrollEvent: true });
+            updateScroll(ctx, position(0), true, { fromNativeScrollEvent: true });
+            expect(calls).toEqual([0, 10]);
+            expect(edge === "start" ? end : start).toEqual([]);
+        });
+    }
+    for (const edge of ["start", "end"] as const) {
         it(`preserves pending ${edge} eligibility across programmatic threshold checks`, () => {
             const { ctx, start, end } = scenario(566, 474, "both", 0.1);
             const position = (offset: number) => (edge === "end" ? offset : 92 - offset);
