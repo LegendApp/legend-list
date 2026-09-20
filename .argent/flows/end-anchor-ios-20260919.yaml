@@ -1,0 +1,31 @@
+executionPrerequisite: iOS Legend List fixture catalog open at the top, connected to this repository's Metro on port 8081.
+steps:
+  - echo: Open End Anchor Resize from the fixture catalog.
+  - scroll-to: { target: { id: open-end-anchor-resize }, direction: down }
+  - tap: { id: open-end-anchor-resize }
+  - await: { visible: { text: "End anchoring:" } }
+  - await: { idle: true }
+  - echo: Resize at end; expect the footer to remain at the bottom.
+  - tap: { text: Toggle pin }
+  - await: { visible: { text: Pinned messages } }
+  - tap: { text: Footer 16 }
+  - echo: Read history and resize without returning to end.
+  - tap: { text: History }
+  - tap: { text: Toggle pin }
+  - await: { hidden: { text: Pinned messages } }
+  - echo: Return to end and switch to short content.
+  - tap: { text: { matches: '^End$' } }
+  - tap: { text: Short content }
+  - await: { visible: { text: Long content } }
+  - echo: Resize short content and remove the footer.
+  - tap: { text: Toggle pin }
+  - tap: { text: Footer 80 }
+  - echo: Restore long content and test animated end following while resizing.
+  - tap: { text: Long content }
+  - tap: { text: Instant }
+  - await: { visible: { text: Animated } }
+  - tap: { text: History }
+  - await: { visible: { text: Message 4 } }
+  - tap: { text: { matches: '^End$' } }
+  - tap: { text: Toggle pin }
+  - await: { visible: { text: Message 29 } }

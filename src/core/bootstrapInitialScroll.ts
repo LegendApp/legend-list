@@ -319,7 +319,7 @@ function createRetargetedBottomAlignedInitialScroll(options: {
         index: initialScrollAtEnd ? Math.max(0, dataLength - 1) : target.index,
         preserveForBottomPadding: true,
         preserveForFooterLayout,
-        viewOffset: -stylePaddingEnd - (preserveForFooterLayout ? footerSize : 0),
+        viewOffset: -stylePaddingEnd - (initialScrollAtEnd ? footerSize : 0),
         viewPosition: 1 as const,
     };
 }
@@ -357,11 +357,12 @@ function clearPendingInitialScrollFooterLayout(
     /*
      * Once footer layout is no longer part of the active correction, convert the
      * richer footer-aware target back into the normal end-aligned target shape.
-     * The important part is rebuilding viewOffset without the footer size.
+     * Keep the footer in the end offset even after its preservation marker
+     * expires; item alignment does not otherwise include the footer.
      */
     const clearedFooterTarget = createInitialScrollAtEndTarget({
         dataLength,
-        footerSize: 0,
+        footerSize: peek$(ctx, "footerSize") || 0,
         preserveForFooterLayout: undefined,
         stylePaddingEnd,
     });
@@ -399,7 +400,10 @@ function getPreservedEndAnchorOffsetDiff(ctx: StateContext) {
     const initialScroll = state.initialScroll;
     if (
         !state.didFinishInitialScroll ||
-        state.scrollingTo?.isInitialScroll ||
+        state.scrollingTo ||
+        state.pendingScrollResolve ||
+        state.maintainingScrollAtEnd ||
+        state.isDragging ||
         !initialScroll ||
         initialScroll.viewPosition !== 1 ||
         state.props.data.length === 0 ||
@@ -409,7 +413,7 @@ function getPreservedEndAnchorOffsetDiff(ctx: StateContext) {
     }
 
     const currentOffset =
-        typeof state.lastNativeScroll === "number" && Number.isFinite(state.lastNativeScroll)
+        Platform.OS !== "web" && typeof state.lastNativeScroll === "number" && Number.isFinite(state.lastNativeScroll)
             ? state.lastNativeScroll
             : getObservedBootstrapInitialScrollOffset(state);
 
@@ -451,6 +455,12 @@ function schedulePreservedEndAnchorCorrectionFrame(
 
         if (hasObservedNativeScrollAfterRequest) {
             activeCorrection.lastRequestTime = Date.now();
+            // Web layout/end following may already have moved the DOM before
+            // its scroll event arrives. Apply the remaining delta from that
+            // observed position, not from an already advanced cached target.
+            if (Platform.OS === "web") {
+                state.scroll = getObservedBootstrapInitialScrollOffset(state);
+            }
             requestAdjust(ctx, offsetDiff);
         }
 

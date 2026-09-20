@@ -40,7 +40,7 @@ export function finishMaintainScrollAtEnd(ctx: StateContext) {
     }
 }
 
-export function doMaintainScrollAtEnd(ctx: StateContext) {
+export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?: boolean }) {
     const state = ctx.state;
     let didMaintain = false;
     // Measurements can arrive after drag start canceled the previous follow.
@@ -54,6 +54,9 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
             pendingNativeMVCPAdjust,
             props: { maintainScrollAtEnd },
         } = state;
+        // ResizeObserver runs after DOM layout and before paint. Instant web
+        // viewport following can commit now; data/item changes still wait for RAF.
+        const immediate = options?.immediate && Platform.OS === "web" && !maintainScrollAtEnd?.animated;
         const isWithinMaintainScrollAtEndThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
         const isReplayingPendingMaintain = !!state.pendingMaintainScrollAtEnd;
         // A waiting request owns the next target, even if scrollingTo still describes an older end scroll.
@@ -94,8 +97,15 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
         } else if (shouldMaintainScrollAtEnd && (state.scrollingTo || state.pendingScrollResolve)) {
             // A content change during scrollToEnd belongs to the same end-follow intent.
             // Wait for the active request instead of letting runNowIfIdle discard it.
-            state.pendingMaintainScrollAtEnd = true;
-            state.maintainingScrollAtEnd ??= maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
+            if (immediate && state.scrollingTo?.isScrollToEnd && !state.scrollingTo.animated) {
+                // Retarget the same end request without replacing its promise.
+                state.pendingMaintainScrollAtEnd = false;
+                ctx.scrollToEnd!({ animated: false });
+                didMaintain = true;
+            } else {
+                state.pendingMaintainScrollAtEnd = true;
+                state.maintainingScrollAtEnd ??= maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
+            }
         } else if (shouldMaintainScrollAtEnd && didContainersLayout) {
             // Run this only if scroll is at the bottom and after initial layout
             state.pendingMaintainScrollAtEnd = false;
@@ -106,12 +116,12 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
                 state.scroll = 0;
             }
 
-            if (!state.maintainingScrollAtEnd) {
+            if (!state.maintainingScrollAtEnd || (immediate && state.maintainingScrollAtEnd === "pending-instant")) {
                 const pendingState = maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
                 const activeState = maintainScrollAtEnd.animated ? "animated" : "instant";
                 const scrollAtRequest = state.scroll;
                 state.maintainingScrollAtEnd = pendingState;
-                requestAnimationFrame(() => {
+                const run = () => {
                     if (state.maintainingScrollAtEnd === pendingState) {
                         if (state.isDragging) {
                             finishMaintainScrollAtEnd(ctx);
@@ -146,7 +156,12 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
                             }
                         }
                     }
-                });
+                };
+                if (immediate) {
+                    run();
+                } else {
+                    requestAnimationFrame(run);
+                }
             } else {
                 // Coalesce follow-up requests while the current maintain pass is still settling.
                 state.pendingMaintainScrollAtEnd = true;

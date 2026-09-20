@@ -285,7 +285,7 @@ describe("handleLayout", () => {
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { immediate: true });
             doMaintainScrollAtEndSpy.mockRestore();
         });
 

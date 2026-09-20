@@ -14,6 +14,7 @@ import ChatFloatingComposerExample from "./ChatFloatingComposerExample";
 import ColumnsExample from "./ColumnsExample";
 import CountriesExample from "./CountriesExample";
 import CountriesWithHeadersStickyExample from "./CountriesWithHeadersStickyExample";
+import EndResizeExample from "./EndResizeExample";
 import ExtraDataExample from "./ExtraDataExample";
 import FixedSizeItemsExample from "./FixedSizeItemsExample";
 import HeaderMvcpExample from "./HeaderMvcpExample";
@@ -37,6 +38,14 @@ export type FixtureRoute = {
 };
 
 export const FIXTURE_ROUTES: FixtureRoute[] = [
+    {
+        description:
+            "Checks instant end following when a late pinned bar resizes the viewport, with and without a footer.",
+        element: () => <EndResizeExample />,
+        group: "Chat & Messaging",
+        path: "end-resize",
+        title: "End Resize",
+    },
     {
         description: "Checks image request priority with slow recycled rows and fast scrolling.",
         element: () => <RecycleImagePriorityExample />,

@@ -252,7 +252,8 @@ describe("bootstrapInitialScroll", () => {
             preserveForFooterLayout: undefined,
             viewPosition: 1,
         });
-        expect(ctx.state.initialScroll?.viewOffset).toBeCloseTo(0);
+        // Expiring footer preservation must not remove the footer from the end target.
+        expect(ctx.state.initialScroll?.viewOffset).toBe(-40);
         expect(ctx.state.initialScrollSession).toMatchObject({
             kind: "bootstrap",
         });

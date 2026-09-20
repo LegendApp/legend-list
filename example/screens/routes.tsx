@@ -52,6 +52,7 @@ import CountriesReorderFixture from "~/screens/fixtures/countries-reorder";
 import CountriesWithHeadersFixture from "~/screens/fixtures/countries-with-headers";
 import CountriesWithHeadersFixedFixture from "~/screens/fixtures/countries-with-headers-fixed";
 import CountriesWithHeadersStickyFixture from "~/screens/fixtures/countries-with-headers-sticky";
+import EndAnchorResizeFixture from "~/screens/fixtures/end-anchor-resize";
 import ExtraDataFixture from "~/screens/fixtures/extra-data";
 import FilterElementsFixture from "~/screens/fixtures/filter-elements";
 import HorizontalAlignItemsFixture from "~/screens/fixtures/horizontal-align-items";
@@ -358,6 +359,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "chat-keyboard-single-message",
         title: "Chat Keyboard Single Message",
+    },
+    {
+        component: EndAnchorResizeFixture,
+        description: "Checks footer offsets and end following through viewport resizes and explicit scrolling.",
+        groupKey: "chat",
+        groupTitle: "Chat & Keyboard",
+        kind: "fixture",
+        slug: "end-anchor-resize",
+        title: "End Anchor Resize",
     },
     {
         component: ChatResizeOuterFixture,

@@ -1,6 +1,6 @@
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetPosition } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -42,10 +42,9 @@ export function calculateOffsetWithOffsetPosition(
 
         offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);
 
-        if (!isOutOfBounds && index === state.props.data.length - 1) {
-            const footerSize = peek$(ctx, "footerSize") || 0;
-            offset += footerSize;
-        }
+        // Align the item itself. End-of-list callers include the footer in
+        // viewOffset; adding it here both doubles that offset and shifts
+        // explicit top/center alignment of the last item.
     }
 
     return offset;
