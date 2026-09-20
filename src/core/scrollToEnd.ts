@@ -1,3 +1,4 @@
+import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollToEndOptions } from "@/types.base";
@@ -16,7 +17,7 @@ export function scrollToEnd(ctx: StateContext, options?: ScrollToEndOptions) {
     scrollToIndex(ctx, {
         ...options,
         index,
-        viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
+        viewOffset: getEndAlignedViewOffset(paddingBottom, footerSize) + (options?.viewOffset || 0),
         viewPosition: 1,
     });
     if (state.scrollingTo) {

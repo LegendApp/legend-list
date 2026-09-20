@@ -42,9 +42,9 @@ export function calculateOffsetWithOffsetPosition(
 
         offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);
 
-        // Align the item itself. End-of-list callers include the footer in
-        // viewOffset; adding it here both doubles that offset and shifts
-        // explicit top/center alignment of the last item.
+        // Aligns the item itself. End-of-content targets carry padding and footer
+        // in viewOffset (see endOfContentTarget.ts); adding the footer here would
+        // count it twice and shift top/center alignment of the last item.
     }
 
     return offset;

@@ -27,6 +27,7 @@ import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { resetContainerLayoutReady } from "@/core/containerLayoutReady";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
@@ -267,7 +268,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ? {
               index: Math.max(0, dataProp.length - 1),
               preserveForBottomPadding: true,
-              viewOffset: -stylePaddingEndState,
+              viewOffset: getEndAlignedViewOffset(stylePaddingEndState),
               viewPosition: 1,
           }
         : hasInitialScrollIndex
@@ -280,7 +281,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                             : undefined,
                     viewOffset:
                         initialScrollIndexProp.viewOffset ??
-                        (initialScrollIndexProp.viewPosition === 1 ? -stylePaddingEndState : 0),
+                        (initialScrollIndexProp.viewPosition === 1 ? getEndAlignedViewOffset(stylePaddingEndState) : 0),
                     viewPosition: initialScrollIndexProp.viewPosition ?? 0,
                 }
               : {
@@ -288,7 +289,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     preserveForBottomPadding: shouldBottomAlignNumericInitialScrollIndex ? true : undefined,
                     viewOffset:
                         initialScrollOffsetProp ??
-                        (shouldBottomAlignNumericInitialScrollIndex ? -stylePaddingEndState : 0),
+                        (shouldBottomAlignNumericInitialScrollIndex
+                            ? getEndAlignedViewOffset(stylePaddingEndState)
+                            : 0),
                     viewPosition: shouldBottomAlignNumericInitialScrollIndex ? 1 : undefined,
                 }
           : initialScrollUsesOffsetOnly

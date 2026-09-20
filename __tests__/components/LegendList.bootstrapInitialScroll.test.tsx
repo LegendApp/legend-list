@@ -6,7 +6,7 @@ import { Text } from "react-native";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { Platform } from "../../src/platform/Platform";
-import type { StateContext } from "../../src/state/state";
+import { type StateContext, set$ } from "../../src/state/state";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 import { act, render } from "../helpers/testingLibrary";
 
@@ -1344,5 +1344,128 @@ describe("LegendList bootstrap initial scroll", () => {
         } finally {
             finishTracker.restore();
         }
+    });
+});
+
+describe("LegendList initial scroll footer alignment", () => {
+    const data = Array.from({ length: 6 }, (_, index) => ({ id: `item-${index}`, label: `Item ${index}` }));
+
+    async function mountWithFooter(
+        name: string,
+        props: Record<string, unknown>,
+        footerHeight = 40,
+        paddingBottom = 10,
+    ) {
+        const { LegendList } = await import(`../../src/components/LegendList?footer-alignment-${name}`);
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                ListFooterComponent={<Text>Footer</Text>}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom }}
+                {...props}
+            />,
+        );
+        const state = await getStateFromRender();
+        expect(getBootstrapSession(state)).toBeDefined();
+        await act(async () => {
+            lastListProps.onLayoutFooter?.({ height: footerHeight, width: 320, x: 0, y: 0 });
+        });
+        return state;
+    }
+
+    it("counts padding and footer for initialScrollAtEnd and marks footer preservation", async () => {
+        const state = await mountWithFooter("at-end", { initialScrollAtEnd: true });
+
+        expect(state.initialScroll).toMatchObject({
+            index: 5,
+            preserveForFooterLayout: true,
+            viewOffset: -50,
+            viewPosition: 1,
+        });
+    });
+
+    it("counts padding and footer for a numeric initialScrollIndex on the last row", async () => {
+        const state = await mountWithFooter("numeric-last", { initialScrollIndex: 5 });
+
+        expect(state.initialScroll).toMatchObject({ index: 5, viewOffset: -50, viewPosition: 1 });
+    });
+
+    it("counts padding and footer for an out-of-range numeric initialScrollIndex", async () => {
+        const state = await mountWithFooter("numeric-beyond", { initialScrollIndex: 99 });
+
+        expect(state.initialScroll).toMatchObject({ index: 99, viewOffset: -50, viewPosition: 1 });
+    });
+
+    it("counts padding and footer for a bottom-aligned object target on the last row", async () => {
+        const state = await mountWithFooter("object-last", { initialScrollIndex: { index: 5, viewPosition: 1 } });
+
+        expect(state.initialScroll).toMatchObject({ index: 5, viewOffset: -50, viewPosition: 1 });
+    });
+
+    it("does not add the footer to an explicit viewOffset on the last row", async () => {
+        const state = await mountWithFooter("object-explicit", {
+            initialScrollIndex: { index: 5, viewOffset: 0, viewPosition: 1 },
+        });
+
+        expect(state.initialScroll).toMatchObject({ index: 5, viewOffset: 0, viewPosition: 1 });
+    });
+
+    it("does not add the footer to a numeric initialScrollIndex before the last row", async () => {
+        const state = await mountWithFooter("numeric-middle", { initialScrollIndex: 2 });
+
+        expect(state.initialScroll).toMatchObject({ index: 2, viewOffset: 0 });
+    });
+
+    it("does not add the footer to a top-aligned last-row target", async () => {
+        const state = await mountWithFooter("object-top", { initialScrollIndex: { index: 5, viewPosition: 0 } });
+
+        expect(state.initialScroll).toMatchObject({ index: 5, viewOffset: 0, viewPosition: 0 });
+    });
+
+    it("follows footer size changes on a numeric last-row target while bootstrap is active", async () => {
+        const state = await mountWithFooter("numeric-resize", { initialScrollIndex: 5 });
+
+        await act(async () => {
+            lastListProps.onLayoutFooter?.({ height: 90, width: 320, x: 0, y: 0 });
+        });
+
+        expect(state.initialScroll).toMatchObject({ index: 5, viewOffset: -100, viewPosition: 1 });
+    });
+
+    it("drops the footer from a numeric last-row target when data grows past it", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?footer-alignment-numeric-grow");
+        const ctx = await (async () => {
+            const element = (rows: typeof data) => (
+                <LegendList
+                    data={rows}
+                    estimatedItemSize={50}
+                    estimatedListSize={{ height: 200, width: 320 }}
+                    initialScrollIndex={5}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    ListFooterComponent={<Text>Footer</Text>}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                    style={{ paddingBottom: 10 }}
+                />
+            );
+            const rendered = render(element(data));
+            const context = await getContextFromRender();
+            expect(getBootstrapSession(context.state)).toBeDefined();
+            await act(async () => {
+                lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
+            });
+            set$(context, "footerSize", 40);
+            expect(context.state.initialScroll?.viewOffset).toBe(-50);
+            rendered.rerender(
+                element([...data, ...Array.from({ length: 4 }, (_, i) => ({ id: `more-${i}`, label: `More ${i}` }))]),
+            );
+            await flushAsync();
+            return context;
+        })();
+
+        expect(ctx.state.initialScroll).toMatchObject({ index: 5, viewOffset: -10, viewPosition: 1 });
     });
 });

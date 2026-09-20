@@ -1,3 +1,4 @@
+import { getEndAlignedViewOffset, isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
@@ -274,16 +275,17 @@ function rearmBootstrapInitialScroll(
 function createInitialScrollAtEndTarget(options: {
     dataLength: number;
     footerSize: number;
+    index?: number;
     preserveForFooterLayout?: boolean;
     stylePaddingEnd: number;
 }) {
-    const { dataLength, footerSize, preserveForFooterLayout, stylePaddingEnd } = options;
+    const { dataLength, footerSize, index, preserveForFooterLayout, stylePaddingEnd } = options;
     return {
         contentOffset: undefined,
-        index: Math.max(0, dataLength - 1),
+        index: index ?? Math.max(0, dataLength - 1),
         preserveForBottomPadding: true,
         preserveForFooterLayout,
-        viewOffset: -stylePaddingEnd - footerSize,
+        viewOffset: getEndAlignedViewOffset(stylePaddingEnd, footerSize),
         viewPosition: 1 as const,
     };
 }
@@ -313,13 +315,16 @@ function createRetargetedBottomAlignedInitialScroll(options: {
 }) {
     const { dataLength, footerSize, initialScrollAtEnd, stylePaddingEnd, target } = options;
     const preserveForFooterLayout = shouldPreserveInitialScrollForFooterLayout(target);
+    // Numeric last-row targets align the end of the content like initialScrollAtEnd. Once
+    // data grows past the target row it is an ordinary row again and stops counting the footer.
+    const alignsToContentEnd = initialScrollAtEnd || isEndOfContentTarget(target, dataLength);
     return {
         ...target,
         contentOffset: undefined,
         index: initialScrollAtEnd ? Math.max(0, dataLength - 1) : target.index,
         preserveForBottomPadding: true,
         preserveForFooterLayout,
-        viewOffset: -stylePaddingEnd - (initialScrollAtEnd ? footerSize : 0),
+        viewOffset: getEndAlignedViewOffset(stylePaddingEnd, alignsToContentEnd ? footerSize : 0),
         viewPosition: 1 as const,
     };
 }
@@ -718,14 +723,14 @@ export function handleBootstrapInitialScrollFooterLayout(
 ) {
     const { dataLength, footerSize, initialScrollAtEnd, stylePaddingEnd } = options;
     const state = ctx.state;
+    const initialScroll = state.initialScroll;
     /*
-     * Only initialScrollAtEnd uses footer size as part of its target math.
+     * Only end-of-content targets use footer size as part of their target math.
      */
-    if (!initialScrollAtEnd) {
+    if (!initialScrollAtEnd && !isEndOfContentTarget(initialScroll, dataLength)) {
         return;
     }
 
-    const initialScroll = state.initialScroll;
     /*
      * Footer layout cannot affect offset-session targets, empty lists, or
      * already-cleared initial-scroll targets.
@@ -762,6 +767,7 @@ export function handleBootstrapInitialScrollFooterLayout(
         const updatedInitialScroll = createInitialScrollAtEndTarget({
             dataLength,
             footerSize,
+            index: initialScrollAtEnd ? undefined : initialScroll.index,
             preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
             stylePaddingEnd,
         });
