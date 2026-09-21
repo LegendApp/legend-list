@@ -1,3 +1,4 @@
+import { PixelRatio } from "@/platform/PixelRatio";
 import type { ViewStyle } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
@@ -22,7 +23,11 @@ export function clearWarnDevOnceForTests() {
 }
 
 export function roundSize(size: number) {
-    return Math.floor(size * 8) / 8; // Round to nearest quater pixel to avoid accumulating rounding errors
+    // Round down to a whole physical pixel to avoid accumulating
+    // rounding errors. Without it, a prepend shifts the items and the MVCP anchor by a fractional
+    // pixel size, the renderer can snap them to different pixels, and the list jitters
+    const scale = PixelRatio.get();
+    return Math.floor(size * scale) / scale;
 }
 
 export function isNullOrUndefined(value: unknown) {

@@ -23,7 +23,7 @@ describe("ScrollAdjust native axis", () => {
         );
 
         const style = (toJSON() as any)?.props?.style;
-        expect(style?.top).toBe(10_000_075);
+        expect(style?.top).toBe(1_000_075);
         expect(style?.left).toBe(0);
 
         unmount();
@@ -37,7 +37,7 @@ describe("ScrollAdjust native axis", () => {
         );
 
         const style = (toJSON() as any)?.props?.style;
-        expect(style?.left).toBe(10_000_075);
+        expect(style?.left).toBe(1_000_075);
         expect(style?.top).toBe(0);
 
         unmount();
