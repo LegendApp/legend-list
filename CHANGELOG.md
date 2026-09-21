@@ -1,3 +1,11 @@
+## 3.4.0
+
+- Feat: Add `onReady`, called after each initial placement and scroll cycle completes, including cycles restarted by a `dataKey` change.
+- Fix: End-following and animated programmatic scrolling now stay aligned through footer, viewport, and native layout changes, while user dragging cancels queued follow requests.
+- Fix: `onStartReached` and `onEndReached` callbacks now fire reliably after layout and dataset resets, including short lists and gestures that cross a threshold over multiple events.
+- Fix: Numeric `initialScrollIndex` values that target the last row now include the footer when opening at the end.
+- Perf: Fast scrolling now prepares rows in the direction you are moving, including upward and end-aligned scrolling, so the next content is ready sooner.
+
 ## 3.3.11
 
 - Fix: `scrollToEnd` and `maintainScrollAtEnd` keep reaching the end as content changes, while scrolling away or requesting another position cancels automatic following.
