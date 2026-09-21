@@ -120,6 +120,7 @@ export function createMockState(
             estimatedItemSize: undefined,
             getFixedItemSize: undefined,
             getItemType: undefined,
+            hasItemSeparator: false,
             horizontal: false,
             initialScroll: undefined,
             itemsAreEqual: undefined,

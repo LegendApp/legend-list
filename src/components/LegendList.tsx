@@ -503,6 +503,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         estimatedItemSize,
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
         getItemType: useWrapIfItem(getItemType),
+        hasItemSeparator: !!props.ItemSeparatorComponent,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
         itemsAreEqual,

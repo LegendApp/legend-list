@@ -1,5 +1,6 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { updateContainerItemMetadata } from "@/core/containerItemMetadata";
+import { updateContainerTrailingItem } from "@/core/containerTrailingItem";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -114,6 +115,8 @@ export function syncMountedContainer(
             }
         }
     }
+
+    updateContainerTrailingItem(ctx, containerIndex, itemIndex);
 
     return { didChangePosition, didRefreshData };
 }

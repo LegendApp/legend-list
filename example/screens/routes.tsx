@@ -14,6 +14,7 @@ import { DirectoryExample } from "~/screens/examples/DirectoryExample";
 import { DEBUGGING_HOME_ENTRIES, DEBUGGING_ROUTE_SLUG } from "~/screens/examples/debuggingConfig";
 import { GalleryGridExample } from "~/screens/examples/GalleryGridExample";
 import { InfiniteCalendarExample } from "~/screens/examples/InfiniteCalendarExample";
+import { ItemSeparatorsExample } from "~/screens/examples/ItemSeparatorsExample";
 import { MediaRailsExample } from "~/screens/examples/MediaRailsExample";
 import { NotificationsInboxExample } from "~/screens/examples/NotificationsInboxExample";
 import { OptimizationExample } from "~/screens/examples/OptimizationExample";
@@ -151,6 +152,12 @@ const ADVANCED_ROUTES: RouteDefinition[] = [
         description: "Consume semantic list state through Reanimated SharedValues.",
         slug: "reanimated-shared-values",
         title: "Reanimated SharedValues",
+    },
+    {
+        component: ItemSeparatorsExample,
+        description: "Color separators from the items on both sides of the boundary.",
+        slug: "item-separators",
+        title: "Item Separators",
     },
 ];
 

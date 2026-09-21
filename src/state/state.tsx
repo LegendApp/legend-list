@@ -57,6 +57,7 @@ export type ListenerType =
     | `containerSpan${number}`
     | `containerItemData${number}`
     | `containerItemIndex${number}`
+    | `containerItemTrailingData${number}`
     | `containerItemKey${number}`
     | `containerLayoutReady${number}`
     | `containerPosition${number}`
@@ -122,6 +123,8 @@ export type ListenerTypeValueMap = {
     [K in ListenerType as K extends `containerLayoutReady${number}` ? K : never]: boolean;
 } & {
     [K in ListenerType as K extends `containerItemData${number}` ? K : never]: any;
+} & {
+    [K in ListenerType as K extends `containerItemTrailingData${number}` ? K : never]: any;
 } & {
     [K in ListenerType as K extends `containerItemIndex${number}` ? K : never]: number;
 } & {
