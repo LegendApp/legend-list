@@ -7,8 +7,14 @@ import { updateContentMetricsState } from "./updateContentMetricsState";
 
 const SCROLL_ADJUST_EPSILON = 0.1;
 
+/*
+ * onLayout sizes are snapped to physical pixels, so a size that is not a whole
+ * number of pixels alternates between two values from one layout to the next.
+ */
+const SUBPIXEL_SIZE_EPSILON = 1;
+
 function setContentLengthSignal(ctx: StateContext, signalName: "footerSize" | "headerSize", size: number) {
-    const didChange = peek$(ctx, signalName) !== size;
+    const didChange = Math.abs((peek$(ctx, signalName) ?? 0) - size) >= SUBPIXEL_SIZE_EPSILON;
 
     if (didChange) {
         set$(ctx, signalName, size);
