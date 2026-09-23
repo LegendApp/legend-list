@@ -400,6 +400,28 @@ function getObservedBootstrapInitialScrollOffset(state: InternalState) {
         : (state.scrollPending ?? state.scroll ?? 0);
 }
 
+/*
+ * A row that was appended or prepended in this commit has no position until
+ * calculateItemsInView runs, and calculateOffsetForIndex reads a missing
+ * position as 0. A bootstrap session seeded from that would lay rows out
+ * around the top of the list and let the frame watchdog scroll there, so the
+ * target is resolved only once its row has a position.
+ */
+function resolveBootstrapTargetOffset(
+    ctx: StateContext,
+    target: ScrollIndexWithOffsetAndContentOffset,
+    fallbackOffset: number,
+) {
+    if (target.index !== undefined && ctx.state.positions[target.index] === undefined) {
+        return fallbackOffset;
+    }
+    return resolveInitialScrollOffset(ctx, target);
+}
+
+function isInitialScrollInFlight(state: InternalState) {
+    return !!state.scrollingTo?.isInitialScroll;
+}
+
 function getPreservedEndAnchorOffsetDiff(ctx: StateContext) {
     const state = ctx.state;
     const initialScroll = state.initialScroll;
@@ -649,9 +671,15 @@ export function handleBootstrapInitialScrollDataChange(
 
         /*
          * If the finished target already drifted away, first drop any pending
-         * footer-preservation state instead of reusing the stale target.
+         * footer-preservation state instead of reusing the stale target. While
+         * the list's own initial scroll is still in flight it has not drifted;
+         * it is on its way to the target.
          */
-        if (!shouldResetDidFinish && didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
+        if (
+            !shouldResetDidFinish &&
+            !isInitialScrollInFlight(state) &&
+            didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)
+        ) {
             clearPendingInitialScrollFooterLayout(ctx, {
                 dataLength,
                 stylePaddingEnd,
@@ -674,7 +702,11 @@ export function handleBootstrapInitialScrollDataChange(
                 resetDidFinish: shouldResetDidFinish,
             });
             rearmBootstrapInitialScroll(ctx, {
-                scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
+                scroll: resolveBootstrapTargetOffset(
+                    ctx,
+                    updatedInitialScroll,
+                    getObservedBootstrapInitialScrollOffset(state),
+                ),
                 seedContentOffset:
                     shouldResetDidFinish && !bootstrapInitialScroll
                         ? getObservedBootstrapInitialScrollOffset(state)
@@ -702,7 +734,7 @@ export function handleBootstrapInitialScrollDataChange(
             resetDidFinish: shouldResetDidFinish,
         });
         rearmBootstrapInitialScroll(ctx, {
-            scroll: resolveInitialScrollOffset(ctx, initialScroll),
+            scroll: resolveBootstrapTargetOffset(ctx, initialScroll, getObservedBootstrapInitialScrollOffset(state)),
             seedContentOffset:
                 shouldResetDidFinish && !bootstrapInitialScroll
                     ? getObservedBootstrapInitialScrollOffset(state)
@@ -796,7 +828,11 @@ export function handleBootstrapInitialScrollFooterLayout(
                 resetDidFinish: didFinishInitialScroll,
             });
             rearmBootstrapInitialScroll(ctx, {
-                scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
+                scroll: resolveBootstrapTargetOffset(
+                    ctx,
+                    updatedInitialScroll,
+                    getObservedBootstrapInitialScrollOffset(state),
+                ),
                 targetIndexSeed: updatedInitialScroll.index,
             });
         }
@@ -993,7 +1029,7 @@ function abortBootstrapInitialScroll(ctx: StateContext) {
 
         dispatchInitialScroll(ctx, {
             forceScroll: true,
-            resolvedOffset: bootstrapInitialScroll.scroll,
+            resolvedOffset: resolveBootstrapTargetOffset(ctx, initialScroll, bootstrapInitialScroll.scroll),
             target: initialScroll,
             waitForCompletionFrame: Platform.OS === "web",
         });
