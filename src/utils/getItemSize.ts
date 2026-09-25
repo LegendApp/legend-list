@@ -27,6 +27,7 @@ function getKnownOrFixedSize(
             : getFixedItemSize(data, index, itemType);
         if (fixedSize !== undefined) {
             size = fixedSize + ctx.scrollAxisGap;
+            state.positionsAreCurrent = false;
             state.sizesKnown.set(key, size);
         }
     }

@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 import { Dimensions } from "react-native";
 
+import * as calculateItemsModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { handleLayout } from "../../src/core/handleLayout";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
+import { updateItemPositions } from "../../src/core/updateItemPositions";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -49,6 +51,25 @@ describe("handleLayout", () => {
             x: 0,
             y: 0,
         };
+    });
+
+    it("uses the initial positions and allocates the first range only once", () => {
+        mockState.props.data = Array.from({ length: 200 }, (_, id) => ({ id }));
+        updateItemPositions(mockCtx, true);
+        const positions = [...mockState.positions];
+        const calculate = spyOn(calculateItemsModule, "calculateItemsInView");
+        const clearKeys = spyOn(mockState.indexByKey, "clear");
+        try {
+            handleLayout(mockCtx, mockLayout, setCanRender);
+            expect(calculate).toHaveBeenCalledTimes(1);
+            expect(mockState.positions).toEqual(positions);
+            expect(clearKeys).not.toHaveBeenCalled();
+            expect(mockState.positionsAreCurrent).toBe(true);
+            expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
+        } finally {
+            calculate.mockRestore();
+            clearKeys.mockRestore();
+        }
     });
 
     describe("basic layout handling", () => {

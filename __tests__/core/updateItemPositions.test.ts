@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
+import { setSize } from "../../src/core/setSize";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
+import { updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import { listen$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
+import { getKnownOrFixedItemSize } from "../../src/utils/getItemSize";
 import { createMockContext } from "../__mocks__/createMockContext";
 import {
     clearLayoutValues,
@@ -38,6 +42,97 @@ describe("updateItemPositions", () => {
             },
         );
         mockState = mockCtx.state;
+    });
+
+    describe("reusing completed single-column positions", () => {
+        beforeEach(() => {
+            mockState.props.estimatedItemSize = 100;
+        });
+        it("does not revisit every item when only the render range changes", () => {
+            updateItemPositions(mockCtx, true);
+            const reads = spyOn(mockState.sizesKnown, "get");
+            try {
+                updateItemPositions(mockCtx, false);
+                expect(reads).not.toHaveBeenCalled();
+                expect(mockState.positions).toEqual([0, 100, 200, 300, 400]);
+            } finally {
+                reads.mockRestore();
+            }
+        });
+
+        it("repositions the suffix after a measured item grows", () => {
+            updateItemPositions(mockCtx, true);
+            updateOneItemSize(mockCtx, "item1", { height: 150, width: 400 });
+            updateItemPositions(mockCtx, false);
+            expect(mockState.positions).toEqual([0, 150, 250, 350, 450]);
+        });
+
+        it("does not hide a size change whose total cancels another change", () => {
+            updateItemPositions(mockCtx, true);
+            setSize(mockCtx, "item1", 150);
+            setSize(mockCtx, "item2", 50);
+            updateItemPositions(mockCtx, false);
+            expect(mockState.positions).toEqual([0, 150, 200, 300, 400]);
+        });
+
+        it("still refreshes unknown estimates from measured averages for MVCP", () => {
+            updateItemPositions(mockCtx, true);
+            updateOneItemSize(mockCtx, "item1", { height: 150, width: 400 });
+            updateItemPositions(mockCtx, false);
+            expect(mockState.positions).toEqual([0, 150, 250, 350, 450]);
+            updateItemPositions(mockCtx, false, { doMVCP: true, scrollBottomBuffered: 600, startIndex: 0 });
+            expect(mockState.positions).toEqual([0, 150, 300, 450, 600]);
+        });
+
+        it("rebuilds keys and positions after replacing the dataset", () => {
+            updateItemPositions(mockCtx, true);
+            mockState.props.data = [{ id: "new1" }, { id: "new2" }];
+            resetLayoutCachesForDataChange(mockState);
+            updateItemPositions(mockCtx, true);
+            expect(mockState.positions).toEqual([0, 100]);
+            expect([...mockState.indexByKey.keys()]).toEqual(["new1", "new2"]);
+        });
+
+        it("does not reuse an incomplete position pass after a fast scroll", () => {
+            mockState.props.data = Array.from({ length: 200 }, (_, index) => ({ id: `row-${index}` }));
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 100,
+                scrollVelocity: 20,
+                startIndex: 0,
+            });
+            expect(mockState.positions.length).toBeLessThan(200);
+            expect(mockState.positionsAreCurrent).toBe(false);
+            updateItemPositions(mockCtx, false);
+            expect(mockState.positions[199]).toBe(19_900);
+            expect(mockState.positionsAreCurrent).toBe(true);
+        });
+
+        it("repositions after resolving a previously unknown fixed size", () => {
+            let hasFixedSize = false;
+            mockState.props.getFixedItemSize = () => (hasFixedSize ? 150 : undefined);
+            updateItemPositions(mockCtx, true);
+            hasFixedSize = true;
+            expect(getKnownOrFixedItemSize(mockCtx, 0)).toBe(150);
+            updateItemPositions(mockCtx, false);
+            expect(mockState.positions[1]).toBe(150);
+        });
+
+        it("honors an explicit full recalculation", () => {
+            updateItemPositions(mockCtx, true);
+            const reads = spyOn(mockState.sizesKnown, "get");
+            try {
+                updateItemPositions(mockCtx, false, {
+                    doMVCP: false,
+                    forceFullUpdate: true,
+                    scrollBottomBuffered: 600,
+                    startIndex: 0,
+                });
+                expect(reads).toHaveBeenCalled();
+            } finally {
+                reads.mockRestore();
+            }
+        });
     });
 
     describe("basic single-column positioning", () => {

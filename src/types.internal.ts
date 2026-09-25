@@ -242,6 +242,7 @@ export interface InternalState {
     pendingScrollResolve?: (() => void) | undefined;
     runPendingScrollToEnd?: () => void;
     positions: Array<number | undefined>;
+    positionsAreCurrent?: boolean;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
     queuedInitialLayout?: boolean | undefined;

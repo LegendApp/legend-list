@@ -54,11 +54,11 @@ export function handleLayout(
         state.lastBatchingAction = Date.now();
         state.scrollForNextCalculateItemsInView = undefined;
 
-        if (scrollLength > 0) {
-            doInitialAllocateContainers(ctx);
-        }
+        const didAllocate = scrollLength > 0 && doInitialAllocateContainers(ctx);
 
-        if (needsCalculate) {
+        // Allocation calculates the first range synchronously unless an initial
+        // scroll target defers it to a frame.
+        if (needsCalculate && (!didAllocate || state.initialScroll)) {
             calculateItemsInView(ctx, { doMVCP: true });
         }
         if (didChange || otherAxisSize !== prevOtherAxisSize) {
