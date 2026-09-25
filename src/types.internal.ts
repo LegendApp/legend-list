@@ -248,6 +248,7 @@ export interface InternalState {
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
+    scrollBufferDirection?: -1 | 1;
     scrollingTo?: InternalScrollTarget | undefined;
     scrollTargetPinnedRange?: { end: number; start: number };
     horizontalRTLScrollType?: "normal" | "inverted" | "negative";

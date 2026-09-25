@@ -4,11 +4,13 @@ import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
 import * as updateItemPositionsModule from "../../src/core/updateItemPositions";
+import { updateScroll } from "../../src/core/updateScroll";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { getExpandedContainerPoolSize } from "../../src/utils/containerPool";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
+import { getScrollVelocity } from "../../src/utils/getScrollVelocity";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import * as setDidLayoutModule from "../../src/utils/setDidLayout";
 import { resetInitialRenderState } from "../../src/utils/setInitialRenderState";
@@ -665,6 +667,80 @@ describe("calculateItemsInView", () => {
             expect(mockState.startBuffered).toBe(1);
             expect(mockState.endBuffered).toBe(6);
         });
+
+        for (const horizontal of [false, true]) {
+            it(`follows the first reversal after a pause (horizontal=${horizontal})`, () => {
+                setupFixedSizeItems(100, 50);
+                mockCtx.values.set("readyToRender", true);
+                mockState.props.horizontal = horizontal;
+                mockState.props.drawDistance = 250;
+                mockState.scroll = 1000;
+                mockState.scrollLength = 300;
+                mockState.didFinishInitialScroll = true;
+                mockState.triggerCalculateItemsInView = (params) => calculateItemsInView(mockCtx, params);
+                calculateItemsInView(mockCtx, { scrollVelocity: 4 });
+
+                // Settled history needs two samples for velocity, but the first
+                // real movement already tells us which way the buffer should face.
+                mockState.scheduledWork.cancel("renderRangeProjection");
+                mockState.scrollHistory.length = 0;
+                updateScroll(mockCtx, 990, false, { fromNativeScrollEvent: true });
+                expect(getScrollVelocity(mockState)).toBe(0);
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([12, 28]);
+
+                mockState.scrollHistory.length = 0;
+                updateScroll(mockCtx, 1000, false, { fromNativeScrollEvent: true });
+                expect(getScrollVelocity(mockState)).toBe(0);
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
+
+                // Idle calculations and a duplicate offset must keep that direction.
+                mockState.scrollHistory.length = 0;
+                updateScroll(mockCtx, 1000, true, { fromNativeScrollEvent: true });
+                calculateItemsInView(mockCtx);
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
+
+                // A layout correction is not a user reversal.
+                mockState.lastScrollAdjustForHistory = mockState.scrollAdjustHandler.getAdjust() - 50;
+                updateScroll(mockCtx, 990, false, { fromNativeScrollEvent: true });
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
+            });
+
+            it(`keeps buffer direction when projection settles (horizontal=${horizontal})`, () => {
+                setupFixedSizeItems(100, 50);
+                mockCtx.values.set("readyToRender", true);
+                mockState.props.horizontal = horizontal;
+                mockState.props.drawDistance = 250;
+                mockState.scroll = 1000;
+                mockState.scrollLength = 300;
+                mockState.triggerCalculateItemsInView = () => calculateItemsInView(mockCtx);
+                const timeout = spyOn(mockState.scheduledWork, "timeout");
+
+                calculateItemsInView(mockCtx, { scrollVelocity: 4 });
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([20, 36]);
+                timeout.mock.calls.at(-1)![0]();
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
+                // A second idle calculation must not shift the buffer again.
+                calculateItemsInView(mockCtx);
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
+
+                calculateItemsInView(mockCtx, { scrollVelocity: -4 });
+                timeout.mock.calls.at(-1)![0]();
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([12, 28]);
+
+                calculateItemsInView(mockCtx, { scrollVelocity: 4 });
+                mockState.scrollHistory = [
+                    { scroll: 900, time: Date.now() - 16 },
+                    { scroll: 1000, time: Date.now() },
+                ];
+                resetInitialRenderState(mockCtx, { resetLayout: true });
+                mockCtx.values.set("readyToRender", true);
+                expect(mockState.scheduledWork.has("renderRangeProjection")).toBe(false);
+                calculateItemsInView(mockCtx);
+                // A new dataset has no remembered direction: use initial placement.
+                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([12, 28]);
+                timeout.mockRestore();
+            });
+        }
 
         it("does not project buffered range before the list is ready to render", () => {
             const now = Date.now();

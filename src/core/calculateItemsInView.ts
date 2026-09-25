@@ -431,7 +431,14 @@ export function calculateItemsInView(
         let scrollBufferTop = drawDistance;
         let scrollBufferBottom = drawDistance;
 
-        if (speed > 0 || (speed === 0 && scroll < Math.max(50, drawDistance))) {
+        // Settling projection clears velocity, not the direction of the render buffer.
+        if (speed !== 0) {
+            state.scrollBufferDirection = speed > 0 ? 1 : -1;
+        }
+        const bufferForward =
+            state.scrollBufferDirection === 1 ||
+            (state.scrollBufferDirection === undefined && scroll < Math.max(50, drawDistance));
+        if (bufferForward) {
             // If we're scrolling fast, or we're at the top of the list and not scrolling
             scrollBufferTop = drawDistance * 0.5;
             scrollBufferBottom = drawDistance * 1.5;

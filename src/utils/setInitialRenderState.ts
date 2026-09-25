@@ -16,6 +16,9 @@ export function resetInitialRenderState(
     if (resetLayout) {
         state.didContainersLayout = false;
         state.queuedInitialLayout = false;
+        state.scrollBufferDirection = undefined;
+        state.scrollHistory.length = 0;
+        state.scheduledWork.cancel("renderRangeProjection");
         // A fresh dataset has not delivered either edge notification yet.
         state.edgeReachedGate = undefined;
         state.isStartReached = null;
