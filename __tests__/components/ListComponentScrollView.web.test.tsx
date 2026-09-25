@@ -125,6 +125,7 @@ describe("ListComponentScrollView (web)", () => {
                 const { ListComponentScrollView } = await import(
                     "../../src/components/ListComponentScrollView?external-viewport-offset"
                 );
+                const ref = { current: null as any };
                 const onScroll = mock();
                 const onLayout = mock(() => {
                     expect(mockCtx.state.scroll).toBe(-216);
@@ -138,6 +139,7 @@ describe("ListComponentScrollView (web)", () => {
                                 horizontal={horizontal}
                                 onLayout={onLayout}
                                 onScroll={onScroll}
+                                ref={ref}
                                 scrollElement={useWindowScroll ? undefined : owner}
                                 style={{}}
                                 useWindowScroll={useWindowScroll}
@@ -150,6 +152,11 @@ describe("ListComponentScrollView (web)", () => {
                     expect(onLayout).toHaveBeenCalled();
                     const axis = horizontal ? "x" : "y";
                     expect(onScroll.mock.calls.at(-1)?.[0].nativeEvent.contentOffset[axis]).toBe(-216);
+                    expect(ref.current.getCurrentScrollOffset()).toBe(0);
+                    listPosition = 835;
+                    expect(ref.current.getRawScrollOffset()).toBe(-835);
+                    expect(ref.current.getCurrentScrollOffset()).toBe(0);
+                    listPosition = 216;
                     ownerScroll = 316;
                     act(() => emitScroll());
                     expect(onScroll.mock.calls.at(-1)?.[0].nativeEvent.contentOffset[axis]).toBe(100);

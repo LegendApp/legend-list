@@ -37,6 +37,7 @@ export interface ScrollableNodeLike {
 export interface LegendListScrollerRef {
     flashScrollIndicators(): void;
     getCurrentScrollOffset?(): number;
+    getRawScrollOffset?(): number;
     isScrollInRange?(): boolean;
     getContentNode?(): unknown;
     getMaxScrollOffset?(): number;

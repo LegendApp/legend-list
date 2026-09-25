@@ -114,6 +114,65 @@ describe("getEffectiveDrawDistance", () => {
         }
     });
 
+    it("refreshes the external list position before expanding its buffer", () => {
+        const originalRAF = globalThis.requestAnimationFrame;
+        let frame: FrameRequestCallback | undefined;
+        globalThis.requestAnimationFrame = (callback) => {
+            frame = callback;
+            return 1;
+        };
+        const ctx = createMockContext({}, { props: { drawDistance: 320, hasExternalScroll: true } });
+        let offset = -252;
+        ctx.state.refScroller.current = { getRawScrollOffset: () => offset } as any;
+        ctx.state.scroll = ctx.state.scrollPending = offset;
+        ctx.state.triggerCalculateItemsInView = () => {
+            expect(ctx.state.scroll).toBe(-835);
+            expect(ctx.state.scrollPending).toBe(-835);
+        };
+        try {
+            scheduleFullDrawDistancePrewarm(ctx);
+            offset = -835;
+            frame!(0);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+            globalThis.requestAnimationFrame = originalRAF;
+        }
+    });
+
+    for (const mode of ["native", "initial", "target", "adjustment"] as const) {
+        it(`preserves the pending scroll state during ${mode} prewarming`, () => {
+            const originalRAF = globalThis.requestAnimationFrame;
+            let frame: FrameRequestCallback | undefined;
+            globalThis.requestAnimationFrame = (callback) => {
+                frame = callback;
+                return 1;
+            };
+            const ctx = createMockContext({}, { props: { drawDistance: 320, hasExternalScroll: mode !== "native" } });
+            ctx.state.scroll = ctx.state.scrollPending = 500;
+            ctx.state.refScroller.current = { getRawScrollOffset: () => -835 } as any;
+            if (mode === "initial") {
+                ctx.state.initialScroll = { index: 10 };
+                ctx.state.didFinishInitialScroll = false;
+            }
+            if (mode === "target") ctx.state.scrollingTo = { offset: 500 } as any;
+            if (mode === "adjustment") ctx.state.pendingNativeMVCPAdjust = {} as any;
+            let calculated = false;
+            ctx.state.triggerCalculateItemsInView = () => {
+                calculated = true;
+                expect(ctx.state.scroll).toBe(500);
+                expect(ctx.state.scrollPending).toBe(500);
+            };
+            try {
+                scheduleFullDrawDistancePrewarm(ctx);
+                frame!(0);
+                expect(calculated).toBe(true);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+                globalThis.requestAnimationFrame = originalRAF;
+            }
+        });
+    }
+
     it("does not schedule full drawDistance prewarm when drawDistance is already initial-sized", () => {
         const originalRAF = globalThis.requestAnimationFrame;
         const rafCallbacks: Array<(time: number) => void> = [];

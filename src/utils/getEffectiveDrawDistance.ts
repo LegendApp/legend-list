@@ -1,4 +1,6 @@
 import { peek$, type StateContext } from "@/state/state";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
+import { toLogicalHorizontalOffset } from "@/utils/rtl";
 
 export const INITIAL_DRAW_DISTANCE = 50;
 
@@ -20,5 +22,22 @@ export function scheduleFullDrawDistancePrewarm(ctx: StateContext) {
         return;
     }
 
-    state.scheduledWork.frame(() => state.triggerCalculateItemsInView?.(), "fullDrawDistancePrewarm");
+    state.scheduledWork.frame(() => {
+        if (
+            state.props.hasExternalScroll &&
+            !hasActiveInitialScroll(state) &&
+            !state.scrollingTo &&
+            !state.pendingNativeMVCPAdjust
+        ) {
+            // A preceding list can grow after allocation, before ResizeObserver delivers
+            // its new position. Expand the buffer against the current owner viewport.
+            const offset = state.refScroller.current?.getRawScrollOffset?.();
+            if (offset !== undefined) {
+                state.scroll = state.scrollPending = state.props.horizontal
+                    ? toLogicalHorizontalOffset(state, offset, state.totalSize)
+                    : offset;
+            }
+        }
+        state.triggerCalculateItemsInView?.();
+    }, "fullDrawDistancePrewarm");
 }
