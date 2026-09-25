@@ -1,6 +1,7 @@
 import type { InternalState } from "@/types.internal";
 
 export function resetLayoutCachesForDataChange(state: InternalState) {
+    state.positionsAreCurrent = false;
     state.indexByKey.clear();
     state.idCache.length = 0;
     state.positions.length = 0;

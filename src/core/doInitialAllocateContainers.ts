@@ -53,7 +53,12 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
                     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
                 });
             } else {
-                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                // The first render already initialized keys and positions. Do not
+                // discard that work when layout first supplies a viewport, unless data
+                // or columns changed while allocation was waiting for layout.
+                const reuseInitialPositions =
+                    !state.didLoad && state.positionsAreCurrent && !state.didDataChange && !state.didColumnsChange;
+                calculateItemsInView(ctx, { dataChanged: !reuseInitialPositions, doMVCP: true });
             }
         }
 

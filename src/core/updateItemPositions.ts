@@ -50,6 +50,24 @@ export function updateItemPositions(
     const dataLength = data!.length;
     const numColumns = peek$(ctx, "numColumns") ?? 1;
     const hasColumns = numColumns > 1;
+    // Range expansion does not change single-column positions. Reuse a completed
+    // pass until sizes/data change; MVCP still refreshes average-based estimates.
+    const canReuseEstimates = !doMVCP || (!state.didContainersLayout && Object.keys(state.averageSizes).length === 0);
+    if (
+        state.positionsAreCurrent &&
+        !dataChanged &&
+        !forceFullUpdate &&
+        state.positionRecalculationStartIndex === undefined &&
+        !scrollingTo &&
+        !hasColumns &&
+        !snapToIndices &&
+        positions.length === dataLength &&
+        canReuseEstimates
+    ) {
+        return;
+    }
+    state.positionsAreCurrent = false;
+
     const indexByKeyForChecking = IS_DEV ? new Map() : undefined;
     const extraData = peek$(ctx, "extraData");
     const layoutConfig = overrideItemLayout ? { span: 1 } : undefined;
@@ -219,6 +237,10 @@ export function updateItemPositions(
     // otherwise expect that a diff will be applied while updating item sizes
     if (!didBreakEarly) {
         updateTotalSize(ctx);
+        state.positionsAreCurrent = !hasColumns;
+        if (startIndex <= (state.positionRecalculationStartIndex ?? -1)) {
+            state.positionRecalculationStartIndex = undefined;
+        }
     }
 
     if (snapToIndices) {

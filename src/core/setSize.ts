@@ -7,6 +7,7 @@ export function setSize(ctx: StateContext, itemKey: string, size: number, notify
     const previousSize = sizes.get(itemKey);
     const diff = previousSize !== undefined ? size - previousSize : size;
     if (diff !== 0) {
+        state.positionsAreCurrent = false;
         addTotalSize(ctx, itemKey, diff, notifyTotalSize);
     }
 
