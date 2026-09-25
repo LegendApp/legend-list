@@ -67,8 +67,10 @@ function installAnimationFrameQueue() {
 function renderPaddingAdjustment({
     scroll = 75924.25,
     style = { paddingBottom: "607px" },
+    externalOffset,
 }: {
     scroll?: number;
+    externalOffset?: number;
     style?: { paddingBottom: string };
 } = {}) {
     const contentNode = {
@@ -91,10 +93,18 @@ function renderPaddingAdjustment({
     function Setup() {
         ctx = useStateContext();
         ctx.state = createMockState({
-            props: { horizontal: false },
+            props: { hasExternalScroll: externalOffset !== undefined, horizontal: false },
             refScroller: {
                 current: {
                     getScrollableNode: () => scrollElement,
+                    ...(externalOffset === undefined
+                        ? {}
+                        : {
+                              getContentNode: () => contentNode,
+                              getCurrentScrollOffset: () => Math.max(0, Math.min(1000, externalOffset)),
+                              getMaxScrollOffset: () => 1000,
+                              isScrollInRange: () => externalOffset >= 0 && externalOffset <= 1000,
+                          }),
                 },
             } as any,
             scroll,
@@ -481,4 +491,25 @@ describe("ScrollAdjust (web)", () => {
             act(() => renderer?.unmount());
         }
     });
+});
+
+describe("shared owner scroll adjustments", () => {
+    it("applies a list-local correction without confusing the parent's offset with the list's offset", () => {
+        const { ctx, renderer, scrollElement } = renderPaddingAdjustment({ externalOffset: 300, scroll: 320 });
+        act(() => {
+            set$(ctx, "scrollAdjust", 20);
+        });
+        expect(scrollElement.scrollBy).toHaveBeenCalledWith({ behavior: "auto", left: 0, top: 20 });
+        act(() => renderer.unmount());
+    });
+    for (const offset of [-200, 1500]) {
+        it(`does not pull an offscreen list into view (local offset ${offset})`, () => {
+            const { ctx, renderer, scrollElement } = renderPaddingAdjustment({ externalOffset: offset, scroll: 320 });
+            act(() => {
+                set$(ctx, "scrollAdjust", 20);
+            });
+            expect(scrollElement.scrollBy).not.toHaveBeenCalled();
+            act(() => renderer.unmount());
+        });
+    }
 });

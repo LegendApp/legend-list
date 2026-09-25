@@ -44,8 +44,8 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
     const state = ctx.state;
     let didMaintain = false;
     // Measurements can arrive after drag start canceled the previous follow.
-    // Keep automatic scrolling suspended until the user releases the drag.
-    if (state.isDragging) {
+    // Suspend following during a drag or while a shared owner is scrolled outside this list.
+    if (state.isDragging || state.refScroller.current?.isScrollInRange?.() === false) {
         finishMaintainScrollAtEnd(ctx);
     } else {
         const {
@@ -123,7 +123,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                 state.maintainingScrollAtEnd = pendingState;
                 const run = () => {
                     if (state.maintainingScrollAtEnd === pendingState) {
-                        if (state.isDragging) {
+                        if (state.isDragging || state.refScroller.current?.isScrollInRange?.() === false) {
                             finishMaintainScrollAtEnd(ctx);
                         } else {
                             const isStillWithinThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");

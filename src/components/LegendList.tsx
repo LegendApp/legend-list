@@ -84,7 +84,7 @@ import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 export const LegendList = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     typedForwardRef(function LegendList<T>(
-        props: LegendListPropsBase<T, LooseScrollViewProps>,
+        props: LegendListPropsBase<T, LooseScrollViewProps> & { scrollElement?: HTMLElement | null },
         forwardedRef: ForwardedRef<LegendListRef>,
     ) {
         // Handle children mode - convert children to data array at the top level
@@ -113,6 +113,7 @@ export const LegendList = typedMemo(
 );
 
 type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> & {
+    scrollElement?: HTMLElement | null;
     childrenMode?: boolean;
     data: ReadonlyArray<T>;
     renderItem: (props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode;
@@ -195,6 +196,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stickyHeaderIndices: stickyHeaderIndicesProp,
         style: styleProp,
         useWindowScroll = false,
+        scrollElement,
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
         ...rest
@@ -334,7 +336,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         keyExtractor,
     ]);
 
-    const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !renderScrollComponent;
+    const scrollElementResolved = Platform.OS === "web" && !renderScrollComponent ? scrollElement : undefined;
+    const useWindowScrollResolved =
+        Platform.OS === "web" && !!useWindowScroll && scrollElementResolved === undefined && !renderScrollComponent;
+
+    const hasExternalScroll = useWindowScrollResolved || scrollElementResolved !== undefined;
 
     const refState = useRef<InternalState | undefined>(undefined);
     const hasOverrideItemLayout = !!overrideItemLayout;
@@ -503,6 +509,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         estimatedItemSize,
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
         getItemType: useWrapIfItem(getItemType),
+        hasExternalScroll,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
         itemsAreEqual,
@@ -732,6 +739,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onLayoutChange,
         onLayoutProp,
         ref: refScroller as unknown as React.RefObject<LooseView | null>, // the type of ScrollView doesn't include measure?
+        webExternalScroll: hasExternalScroll,
     });
 
     useLayoutEffect(() => {
@@ -935,6 +943,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 refScrollView={combinedRef}
                 renderScrollComponent={renderScrollComponent}
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}
+                scrollElement={scrollElementResolved}
                 scrollEventThrottle={0}
                 snapToIndices={snapToIndices}
                 stickyHeaderIndices={stickyHeaderIndices}

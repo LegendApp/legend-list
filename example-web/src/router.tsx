@@ -16,7 +16,9 @@ function RootLayout() {
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     const isHome = pathname === "/";
     const isWindowScrollExample =
-        appMode === "examples" && (pathname === "/cards-feed" || pathname === "/library-benchmark");
+        appMode === "fixtures"
+            ? FIXTURE_ROUTES.some((fixture) => `/${fixture.path}` === pathname && fixture.usesWindowScroll)
+            : pathname === "/cards-feed" || pathname === "/library-benchmark";
 
     if (isHome) {
         return <Outlet />;

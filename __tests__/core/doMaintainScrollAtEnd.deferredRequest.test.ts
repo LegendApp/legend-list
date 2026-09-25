@@ -49,6 +49,23 @@ describe("end following while an imperative request waits for layout", () => {
         await Promise.resolve();
     };
 
+    it("does not follow an offscreen list whose local offset is clamped to the end", async () => {
+        ctx.state.refScroller.current!.isScrollInRange = () => false;
+        expect(doMaintainScrollAtEnd(ctx)).toBe(false);
+        await flushFrame();
+        expect(follow).not.toHaveBeenCalled();
+    });
+
+    it("abandons a queued follow when the shared owner moves past the list before the next frame", async () => {
+        let isInRange = true;
+        ctx.state.refScroller.current!.isScrollInRange = () => isInRange;
+        expect(doMaintainScrollAtEnd(ctx)).toBe(true);
+        isInRange = false;
+        await flushFrame();
+        expect(follow).not.toHaveBeenCalled();
+        expect(ctx.state.maintainingScrollAtEnd).toBeUndefined();
+    });
+
     for (const supersedesEnd of [false, true]) {
         it(`does not replay end following after a deferred history request (supersedes end: ${supersedesEnd})`, async () => {
             if (supersedesEnd) {

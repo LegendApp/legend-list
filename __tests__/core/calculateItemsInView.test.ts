@@ -82,6 +82,105 @@ describe("calculateItemsInView", () => {
         return performance.now() - start;
     }
 
+    describe("external scroll viewport", () => {
+        it("honors alwaysRender while the list is outside the viewport", () => {
+            setupFixedSizeItems(100, 40);
+            mockState.props.hasExternalScroll = true;
+            mockState.props.alwaysRenderIndicesArr = [5];
+            mockState.props.alwaysRenderIndicesSet = new Set([5]);
+            mockState.scrollLength = 640;
+            mockState.scroll = -2000;
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+            expect(getRenderedContainerKeys()).toEqual(["item_5"]);
+        });
+
+        for (const offset of [-2000, 6000]) {
+            it(`skips repeated layout work while the list stays outside the viewport at ${offset}`, () => {
+                setupFixedSizeItems(100, 40);
+                mockState.props.hasExternalScroll = true;
+                mockState.enableScrollForNextCalculateItemsInView = true;
+                mockState.scrollLength = 640;
+                mockState.scroll = offset;
+                calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                const updatePositions = spyOn(updateItemPositionsModule, "updateItemPositions");
+                try {
+                    mockState.scroll += 20;
+                    calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                    expect(updatePositions).not.toHaveBeenCalled();
+                    mockState.scroll = 0;
+                    calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                    expect(updatePositions).toHaveBeenCalled();
+                    expect(mockState.startNoBuffer).toBe(0);
+                    expect(mockState.endNoBuffer).toBe(16);
+                } finally {
+                    updatePositions.mockRestore();
+                }
+            });
+        }
+
+        it("reports rows leaving view when the owner scrolls past the list", () => {
+            setupFixedSizeItems(20, 40);
+            mockState.props.hasExternalScroll = true;
+            mockState.scrollLength = 640;
+            const onViewableItemsChanged = mock();
+            mockState.viewabilityConfigCallbackPairs = [
+                {
+                    onViewableItemsChanged,
+                    viewabilityConfig: { id: "external", itemVisiblePercentThreshold: 1 },
+                },
+            ];
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+            expect(onViewableItemsChanged.mock.calls.at(-1)?.[0].viewableItems.length).toBeGreaterThan(0);
+
+            mockState.scroll = 1000;
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+            expect(onViewableItemsChanged.mock.calls.at(-1)?.[0].viewableItems).toEqual([]);
+            expect(mockState.idsInView).toEqual([]);
+        });
+
+        it("renders only the viewport below preceding content plus the directional buffer", () => {
+            setupFixedSizeItems(200, 40);
+            mockState.props.hasExternalScroll = true;
+            mockState.props.drawDistance = 320 / 1.5;
+            mockState.scrollLength = 640;
+            mockState.scroll = -216;
+            mockCtx.values.set("readyToRender", true);
+
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+
+            expect(mockState.startNoBuffer).toBe(0);
+            expect(mockState.endNoBuffer).toBe(10);
+            expect(mockState.endBuffered).toBe(18);
+            expect(getRenderedContainerKeys()).toHaveLength(19);
+        });
+
+        it("does not mount rows for an external list below the viewport and its buffer", () => {
+            setupFixedSizeItems(200, 40);
+            mockState.props.hasExternalScroll = true;
+            mockState.scrollLength = 640;
+            mockState.scroll = -1000;
+
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+
+            expect(mockState.endNoBuffer).toBeNull();
+            expect(mockState.startNoBuffer).toBeNull();
+            expect(getRenderedContainerKeys()).toHaveLength(0);
+        });
+
+        it("keeps the real viewport when the owner scrolls beyond the list's local maximum", () => {
+            setupFixedSizeItems(20, 40);
+            mockState.props.hasExternalScroll = true;
+            mockState.scrollLength = 640;
+            mockState.scroll = 600;
+
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+
+            expect(mockState.startNoBuffer).toBe(15);
+            expect(mockState.endNoBuffer).toBe(19);
+            expect(getRenderedContainerKeys()).toHaveLength(5);
+        });
+    });
+
     describe("container render priority", () => {
         for (const velocity of [12, -12, 0]) {
             it(`assigns new rows in physical slot order at velocity ${velocity}`, () => {

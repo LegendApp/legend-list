@@ -56,6 +56,18 @@ describe("onScroll", () => {
     });
 
     describe("basic scroll handling", () => {
+        it("preserves external offsets before the list during a pending scroll request", () => {
+            mockState.props.hasExternalScroll = true;
+            mockState.scrollingTo = { animated: true, offset: 300 } as any;
+            mockScrollEvent.nativeEvent.contentOffset.y = -216;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(mockState.scroll).toBe(-216);
+            expect(mockState.scrollPending).toBe(-216);
+            expect(mockState.scrollingTo?.offset).toBe(300);
+        });
+
         it("should update scroll position for vertical scrolling", () => {
             onScroll(mockCtx, mockScrollEvent);
 

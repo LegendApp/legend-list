@@ -12,6 +12,7 @@ const WEB_UNBOUNDED_HEIGHT_CONTAINER_RATIO = 0.9;
 const WEB_UNBOUNDED_HEIGHT_VIEWPORT_RATIO = 0.9;
 
 type LegendListDevProps<T> = LegendListPropsBase<T, LooseScrollViewProps> & {
+    scrollElement?: HTMLElement | null;
     childrenMode?: boolean;
     renderScrollComponent?: ((props: LooseScrollViewProps) => ReactElement | null) | undefined;
     useWindowScroll?: boolean | undefined;
@@ -19,7 +20,15 @@ type LegendListDevProps<T> = LegendListPropsBase<T, LooseScrollViewProps> & {
 
 function useDevChecksImpl(props: LegendListDevProps<any>) {
     const ctx = useStateContext();
-    const { anchoredEndSpace, childrenMode, keyExtractor, numColumns, renderScrollComponent, useWindowScroll } = props;
+    const {
+        anchoredEndSpace,
+        childrenMode,
+        keyExtractor,
+        numColumns,
+        renderScrollComponent,
+        scrollElement,
+        useWindowScroll,
+    } = props;
     const hasAnchoredEndSpace = !!anchoredEndSpace;
 
     useEffect(() => {
@@ -32,13 +41,13 @@ function useDevChecksImpl(props: LegendListDevProps<any>) {
     }, [hasAnchoredEndSpace, numColumns]);
 
     useEffect(() => {
-        if (useWindowScroll && renderScrollComponent) {
+        if ((useWindowScroll || scrollElement !== undefined) && renderScrollComponent) {
             warnDevOnce(
                 "useWindowScrollRenderScrollComponent",
-                "useWindowScroll is not supported when renderScrollComponent is provided.",
+                "useWindowScroll and scrollElement are not supported when renderScrollComponent is provided.",
             );
         }
-    }, [renderScrollComponent, useWindowScroll]);
+    }, [renderScrollComponent, scrollElement, useWindowScroll]);
 
     useEffect(() => {
         if (!keyExtractor && !ctx.state.isFirst && ctx.state.didDataChange && !childrenMode) {
@@ -52,9 +61,9 @@ function useDevChecksImpl(props: LegendListDevProps<any>) {
     useEffect(() => {
         const state = ctx.state;
         const dataLength = state.props.data.length;
-        const useWindowScrollResolved = state.props.useWindowScroll;
+        const usesExternalScroll = state.props.hasExternalScroll;
 
-        if (Platform.OS !== "web" || useWindowScrollResolved || dataLength < WEB_UNBOUNDED_HEIGHT_MIN_DATA_LENGTH) {
+        if (Platform.OS !== "web" || usesExternalScroll || dataLength < WEB_UNBOUNDED_HEIGHT_MIN_DATA_LENGTH) {
             return;
         }
 

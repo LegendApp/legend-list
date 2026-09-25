@@ -139,3 +139,27 @@ describe("useOnLayoutSync web measurement baseline", () => {
         expect(onLayoutChange).toHaveBeenCalledWith({ height: 180, width: 320, x: 0, y: 0 }, false);
     });
 });
+
+it("delegates external viewport layout without observing an imperative ref or null owner", async () => {
+    const { useOnLayoutSync } = await importWebUseOnLayoutSync();
+    const onLayoutChange = mock();
+    const onLayoutProp = mock();
+    let onLayout: ReturnType<typeof useOnLayoutSync>["onLayout"];
+    function Probe() {
+        const ref = React.useRef({ getScrollableNode: () => null } as any);
+        ({ onLayout } = useOnLayoutSync({ onLayoutChange, onLayoutProp, ref, webExternalScroll: true }));
+        return null;
+    }
+    let renderer: TestRenderer.ReactTestRenderer;
+    act(() => {
+        renderer = TestRenderer.create(<Probe />);
+    });
+    expect(resizeObserverCallback).toBeUndefined();
+    const layout = { height: 500, width: 360, x: 20, y: 200 };
+    act(() => {
+        onLayout?.({ nativeEvent: { layout } } as any);
+    });
+    expect(onLayoutChange).toHaveBeenCalledWith(layout, false);
+    expect(onLayoutProp).toHaveBeenCalledWith({ nativeEvent: { layout } });
+    act(() => renderer!.unmount());
+});

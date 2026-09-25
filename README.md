@@ -112,6 +112,39 @@ export default LegendListExample
 
 ---
 
+### Sharing a scrollbar on the web
+
+React DOM lists can use an ancestor element's scrollbar with `scrollElement`:
+
+```tsx
+import { LegendList } from "@legendapp/list/react";
+import { useState } from "react";
+
+function History({ swaps, renderSwap }) {
+    const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
+
+    return (
+        <div ref={setScrollElement} style={{ height: 600, overflow: "auto" }}>
+            <ProfileHeader />
+            <LegendList
+                data={swaps}
+                renderItem={renderSwap}
+                keyExtractor={(swap) => swap.id}
+                scrollElement={scrollElement}
+            />
+        </div>
+    );
+}
+```
+
+Use a state-backed callback ref so the list receives the element after mounting and whenever it changes. `null` waits for an external element; `undefined` keeps the default list-owned scrollbar. The element must be an ancestor of the list. Keep the list's own height unconstrained so its content contributes to the parent's scroll range.
+
+Multiple lists can share the same element, including lists in separate columns. Each uses the owner's viewport on the scroll axis and its own width/height on the cross axis. Content above the list is accounted for automatically, including preceding content that resizes. `scrollToIndex`, `scrollToOffset`, and `scrollToEnd` remain list-relative and move the shared owner.
+
+`maintainVisibleContentPosition` anchors changes to the list's own rows; it does not freeze the layout of surrounding content. An offscreen list does not pull the owner back into view to apply a measurement correction.
+
+`useWindowScroll` continues to use the browser window. Both modes share the same web implementation; `scrollElement` takes precedence when provided. As with window scrolling, external mode does not configure the owner's scrollbar styling or CSS snapping. It is not supported with `renderScrollComponent`.
+
 ## How to Build
 
 1. `bun i`

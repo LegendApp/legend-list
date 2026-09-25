@@ -37,6 +37,8 @@ export interface ScrollableNodeLike {
 export interface LegendListScrollerRef {
     flashScrollIndicators(): void;
     getCurrentScrollOffset?(): number;
+    isScrollInRange?(): boolean;
+    getContentNode?(): unknown;
     getMaxScrollOffset?(): number;
     getNativeScrollRef?(): unknown;
     getScrollEventTarget?(): ScrollEventTargetLike | null;
@@ -338,6 +340,7 @@ export interface InternalState {
         stylePaddingRight: number | undefined;
         stylePaddingTop: number | undefined;
         useWindowScroll: boolean;
+        hasExternalScroll?: boolean;
     };
 }
 

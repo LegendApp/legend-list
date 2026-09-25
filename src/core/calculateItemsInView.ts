@@ -179,7 +179,7 @@ function trackVisibleRange(
     scrollBottom: number,
 ) {
     let didPassVisibleEnd = false;
-    if (range.startNoBuffer === null && top + size > scroll) {
+    if (range.startNoBuffer === null && top + size > scroll && top <= scrollBottom) {
         range.startNoBuffer = i;
     }
     // Subtract 10px for a little buffer so it can be slightly off screen, but still
@@ -301,14 +301,14 @@ function updateViewabilityForCachedRange(
 
     maybeEmitFirstVisibleItemChanged(state, visibleRange.startNoBuffer);
 
-    if (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null) {
+    if (state.props.hasExternalScroll || (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null)) {
         updateViewableItems(
             state,
             ctx,
             viewabilityConfigCallbackPairs,
             scrollLength,
-            visibleRange.startNoBuffer,
-            visibleRange.endNoBuffer,
+            visibleRange.startNoBuffer ?? 0,
+            visibleRange.endNoBuffer ?? -1,
             startBuffered,
             endBuffered,
         );
@@ -390,7 +390,7 @@ export function calculateItemsInView(
             scrollAdjustPad = scrollAdjustPending - topPad;
             // Subtract top padding to put scroll into the coordinate system of the item positions
             scroll = Math.round(nextScrollState + scrollExtra + scrollAdjustPad);
-            if (scroll + scrollLength > totalSize) {
+            if (!state.props.hasExternalScroll && scroll + scrollLength > totalSize) {
                 // Sometimes we may have scrolled past the visible area which can make items at the top of the
                 // screen not render. So make sure we clamp scroll to the end.
                 scroll = Math.max(0, totalSize - scrollLength);
@@ -460,10 +460,11 @@ export function calculateItemsInView(
             : 0;
 
         const updateScrollRange = () => {
-            const scrollStart = Math.max(0, scroll);
+            const scrollStart = state.props.hasExternalScroll ? scroll : Math.max(0, scroll);
             // Preserve a full item-space viewport during native overscroll without
             // treating header/padding offset as visible item space.
-            const overscrollBeforeContent = Math.max(0, -nativeScrollState);
+            // An external owner's negative offset is preceding content, not native bounce.
+            const overscrollBeforeContent = state.props.hasExternalScroll ? 0 : Math.max(0, -nativeScrollState);
             scrollBottom = Math.max(scrollStart, scroll + scrollLength + overscrollBeforeContent);
             scrollTopBuffered = scrollStart - scrollBufferTop + projectedBufferAdjustment;
             scrollBottomBuffered = scrollBottom + scrollBufferBottom + projectedBufferAdjustment;
@@ -655,7 +656,7 @@ export function calculateItemsInView(
                         nextTop = top;
                     }
                 }
-                if (visibleRange.startNoBuffer !== null) {
+                if (startBuffered !== null) {
                     if (top <= scrollBottomBuffered) {
                         endBuffered = i;
                         if (scrollBottomBuffered > totalSize) {
@@ -666,6 +667,8 @@ export function calculateItemsInView(
                     } else {
                         foundEnd = true;
                     }
+                } else if (top > scrollBottomBuffered) {
+                    foundEnd = true;
                 }
             }
         }
@@ -690,6 +693,14 @@ export function calculateItemsInView(
                           bottom: nextBottom,
                           top: nextTop,
                       };
+        } else if (enableScrollForNextCalculateItemsInView && state.props.hasExternalScroll) {
+            // A shared owner can keep scrolling while this list is entirely out of range.
+            // Re-enter calculation only when the buffer reaches the list again.
+            if (scrollBottomBuffered < 0) {
+                state.scrollForNextCalculateItemsInView = { bottom: 0, top: null };
+            } else if (scrollTopBuffered > totalSize) {
+                state.scrollForNextCalculateItemsInView = { bottom: null, top: totalSize };
+            }
         }
 
         let numContainers = prevNumContainers;
@@ -720,7 +731,13 @@ export function calculateItemsInView(
             (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
         // Place newly added items into containers
-        if (startBuffered !== null && endBuffered !== null) {
+        if (
+            (startBuffered !== null && endBuffered !== null) ||
+            alwaysRenderIndicesArr.length ||
+            hasScrollTargetPinnedRange
+        ) {
+            const allocationStart = startBuffered ?? 0;
+            const allocationEnd = endBuffered ?? -1;
             const needNewContainers: number[] = [];
             const needNewContainersSet = new Set<number>();
             const addPinnedIndex = (index: number) => {
@@ -736,7 +753,7 @@ export function calculateItemsInView(
                 }
             };
 
-            for (let i = startBuffered; i <= endBuffered; i++) {
+            for (let i = allocationStart; i <= allocationEnd; i++) {
                 const id = idCache[i] ?? getId(state, i);
                 if (!containerItemKeys.has(id)) {
                     needNewContainersSet.add(i);
@@ -761,8 +778,8 @@ export function calculateItemsInView(
                     stickyState?.currentStickyIdx ?? -1,
                     needNewContainers,
                     needNewContainersSet,
-                    startBuffered,
-                    endBuffered,
+                    allocationStart,
+                    allocationEnd,
                 );
             } else if (previousStickyIndex !== -1) {
                 // Clear activeStickyIndex when no sticky indices are configured
@@ -773,8 +790,8 @@ export function calculateItemsInView(
                 const availableContainerAllocations = findAvailableContainers(
                     ctx,
                     needNewContainers,
-                    startBuffered,
-                    endBuffered,
+                    allocationStart,
+                    allocationEnd,
                     pendingRemoval,
                     protectedContainerKeys,
                     // Initial end alignment has no scroll velocity yet. Keep its
@@ -958,18 +975,18 @@ export function calculateItemsInView(
 
         if (
             viewabilityConfigCallbackPairs &&
-            visibleRange.startNoBuffer !== null &&
-            visibleRange.endNoBuffer !== null
+            (state.props.hasExternalScroll ||
+                (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null))
         ) {
             updateViewableItems(
                 ctx.state,
                 ctx,
                 viewabilityConfigCallbackPairs,
                 scrollLength,
-                visibleRange.startNoBuffer,
-                visibleRange.endNoBuffer,
-                startBuffered ?? visibleRange.startNoBuffer,
-                endBuffered ?? visibleRange.endNoBuffer,
+                visibleRange.startNoBuffer ?? 0,
+                visibleRange.endNoBuffer ?? -1,
+                startBuffered ?? visibleRange.startNoBuffer ?? 0,
+                endBuffered ?? visibleRange.endNoBuffer ?? -1,
             );
         }
 

@@ -77,6 +77,13 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omi
     | "progressViewOffset"
     | "refreshing"
 > & {
+    /**
+     * Web only: use an ancestor element's scrollbar instead of creating a scrollable list.
+     * Pass a state-backed callback ref value so changes to the element are observed.
+     * null waits for the element to mount; undefined uses the list's own scrollbar.
+     * Takes precedence over useWindowScroll. Not supported with renderScrollComponent.
+     */
+    scrollElement?: HTMLElement | null;
     anchoredEndSpace?: AnchoredEndSpaceConfig;
     refScrollView?: Ref<HTMLElement | ScrollViewMethods>;
     ListHeaderComponentStyle?: CSSProperties | undefined;
@@ -94,7 +101,7 @@ export type LegendListRef = Omit<
 > & {
     getAnimatableRef(): HTMLElement | ScrollViewMethods;
     getNativeScrollRef(): HTMLElement | ScrollViewMethods;
-    getScrollableNode(): HTMLElement;
+    getScrollableNode(): HTMLElement | null;
     getScrollResponder(): HTMLElement | null;
 };
 

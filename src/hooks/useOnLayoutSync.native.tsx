@@ -14,6 +14,7 @@ export function useOnLayoutSync<T extends View = View>(
     }: {
         ref: React.RefObject<T | null>;
         measureInLayoutEffect?: boolean;
+        webExternalScroll?: boolean;
         onLayoutProp?: (event: LayoutChangeEvent) => void;
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     },

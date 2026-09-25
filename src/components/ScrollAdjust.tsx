@@ -29,9 +29,10 @@ export function getScrollAdjustTarget(ctx: StateContext, contentNode: HTMLElemen
 
     if (scrollElement) {
         resolvedContentNode =
-            contentNode?.isConnected && contentNode.parentElement === scrollElement
+            (scrollView?.getContentNode?.() as HTMLElement | null) ??
+            (contentNode?.isConnected && contentNode.parentElement === scrollElement
                 ? contentNode
-                : scrollElement.querySelector<HTMLElement>(`:scope > .${LEGEND_LIST_CONTENT_CONTAINER_CLASS}`);
+                : scrollElement.querySelector<HTMLElement>(`:scope > .${LEGEND_LIST_CONTENT_CONTAINER_CLASS}`));
     }
 
     return scrollElement ? { contentNode: resolvedContentNode, scrollElement } : null;
@@ -64,21 +65,26 @@ export function ScrollAdjust() {
                 const horizontal = !!ctx.state.props.horizontal;
                 const axis = getScrollAdjustAxis(horizontal);
                 const { contentNode, scrollElement: el } = target;
-                const currentScroll = horizontal ? el.scrollLeft : el.scrollTop;
+                const scroller = ctx.state.refScroller.current;
+                const parentScroll = horizontal ? el.scrollLeft : el.scrollTop;
+                const isExternal = ctx.state.props.hasExternalScroll;
+                const currentScroll = (isExternal ? scroller?.getCurrentScrollOffset?.() : undefined) ?? parentScroll;
+                // An offscreen list must not pull a shared scroll owner back to itself.
+                const isOutsideList = scroller?.isScrollInRange?.() === false;
                 const userOffsetDelta = (scrollAdjustUserOffset || 0) - lastScrollAdjustUserOffsetRef.current;
                 const intendedScroll = userOffsetDelta !== 0 ? currentScroll + userOffsetDelta : ctx.state.scroll;
                 // Reconcile against live DOM scroll so browser clamping/anchoring
                 // is not applied a second time as another relative scrollBy.
                 const scrollDelta = intendedScroll - currentScroll;
-                const shouldScroll = Math.abs(scrollDelta) > 0.01;
+                const shouldScroll = !isOutsideList && Math.abs(scrollDelta) > 0.01;
                 const scrollBy = () => scrollAdjustBy(el, axis.x * scrollDelta, axis.y * scrollDelta);
 
                 contentNodeRef.current = contentNode;
 
                 if (shouldScroll && contentNode) {
-                    const totalSize = contentNode[axis.contentSizeKey];
+                    const totalSize = isExternal ? el[axis.contentSizeKey] : contentNode[axis.contentSizeKey];
                     const viewportSize = el[axis.viewportSizeKey];
-                    const nextScroll = currentScroll + scrollDelta;
+                    const nextScroll = parentScroll + scrollDelta;
                     const needsTemporaryPadding =
                         scrollDelta > 0 &&
                         !ctx.state.adjustingFromInitialMount &&

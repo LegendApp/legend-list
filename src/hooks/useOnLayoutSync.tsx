@@ -1,6 +1,6 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useLayoutEffect } from "react";
+import { useCallback, useLayoutEffect } from "react";
 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import { getContainerLayoutBaseline } from "@/core/containerLayoutBaseline";
@@ -14,16 +14,28 @@ export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLEl
         onLayoutProp,
         onLayoutChange,
         webLayoutResync,
+        webExternalScroll = false,
     }: {
         ref: React.RefObject<T | null>;
         measureInLayoutEffect?: boolean;
         onLayoutProp?: (event: LayoutChangeEvent) => void;
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
         webLayoutResync?: () => boolean;
+        webExternalScroll?: boolean;
     },
     deps?: any[],
 ): { onLayout?: (event: LayoutChangeEvent) => void } {
+    const onExternalLayout = useCallback(
+        (event: LayoutChangeEvent) => {
+            onLayoutChange(event.nativeEvent.layout, false);
+            onLayoutProp?.(event);
+        },
+        [onLayoutChange, onLayoutProp],
+    );
+
     useLayoutEffect(() => {
+        // The web scroll adapter measures the owner's viewport and list-relative position.
+        if (webExternalScroll) return;
         const current = ref.current;
         const scrollableNode = (current as ScrollViewMethods | null)?.getScrollableNode?.() ?? null;
         const element = (scrollableNode || current) as HTMLElement | null;
@@ -73,9 +85,9 @@ export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLEl
                 emit(toLayout(rectObserved), false);
             }
         });
-    }, [measureInLayoutEffect, ...(deps || [])]);
+    }, [measureInLayoutEffect, webExternalScroll, ...(deps || [])]);
 
-    return {};
+    return webExternalScroll ? { onLayout: onExternalLayout } : {};
 }
 
 function toLayout(rect: Pick<DOMRectReadOnly, "height" | "left" | "top" | "width"> | undefined): LayoutRectangle {

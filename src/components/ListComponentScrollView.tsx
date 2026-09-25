@@ -21,6 +21,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { useRafCoalescer } from "@/utils/useRafCoalescer";
+import { observeScrollLayout } from "./observeScrollLayout";
 import {
     LEGEND_LIST_CONTENT_CONTAINER_CLASS,
     LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS,
@@ -29,15 +30,16 @@ import {
 import {
     clampOffset,
     getContentSize,
-    getElementDocumentPosition,
+    getElementScrollPosition,
     getLayoutMeasurement,
     getLayoutRectangle,
     getMaxOffset,
     getScrollContentSize,
-    getWindowScrollPosition,
+    getScrollPosition,
+    isWindowTarget,
+    resolveExternalScrollOffset,
     resolveScrollableNode,
     resolveScrollEventTarget,
-    resolveWindowScrollTarget,
     type ScrollEventTarget,
 } from "./webScrollUtils";
 
@@ -47,10 +49,12 @@ export interface ScrollViewMethods {
     getBoundingClientRect(): DOMRect | null | undefined;
     getCurrentScrollOffset(): number;
     getMaxScrollOffset(): number;
-    getScrollableNode(): HTMLElement;
+    getScrollableNode(): HTMLElement | null;
     getScrollEventTarget(): ScrollEventTarget | null;
     getScrollResponder(): HTMLElement | null;
     isWindowScroll?(): boolean;
+    getContentNode?(): HTMLElement | null;
+    isScrollInRange?(): boolean;
     scrollBy(x: number, y: number): void;
     scrollTo(options: { x?: number; y?: number; animated?: boolean }): void;
     scrollToEnd(options?: { animated?: boolean }): void;
@@ -84,6 +88,7 @@ export interface ListComponentScrollViewProps {
     children: ReactNode;
     style: CSSProperties;
     useWindowScroll?: boolean;
+    scrollElement?: HTMLElement | null;
     onLayout: (event: LayoutChangeEvent) => void;
 }
 
@@ -158,6 +163,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         showsVerticalScrollIndicator = true,
         refreshControl,
         useWindowScroll = false,
+        scrollElement: externalScrollElement,
         onLayout,
         ...props
     }: ListComponentScrollViewProps,
@@ -167,36 +173,46 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     const [anchoredEndSpaceSize] = useArr$(["anchoredEndSpaceSize"]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
-    const isWindowScroll = useWindowScroll;
+    const externalTarget =
+        externalScrollElement === undefined && useWindowScroll
+            ? typeof window === "undefined"
+                ? null
+                : window
+            : externalScrollElement;
+    const isWindowScroll = isWindowTarget(externalTarget);
+    const isExternalScroll = externalTarget !== undefined;
     const getScrollTarget = useCallback(
-        () => resolveScrollEventTarget(scrollRef.current, isWindowScroll),
-        [isWindowScroll],
+        () => resolveScrollEventTarget(scrollRef.current, externalTarget),
+        [externalTarget],
     );
 
     const getMaxScrollOffset = useCallback(() => {
         const scrollElement = scrollRef.current;
-        const contentSize = getScrollContentSize(scrollElement, contentRef.current, isWindowScroll);
-        const layoutMeasurement = getLayoutMeasurement(scrollElement, isWindowScroll, horizontal);
+        const contentSize = getScrollContentSize(scrollElement, contentRef.current, externalTarget);
+        const layoutMeasurement = getLayoutMeasurement(scrollElement, externalTarget, horizontal);
         return getMaxOffset(contentSize, layoutMeasurement, horizontal);
-    }, [horizontal, isWindowScroll]);
+    }, [externalTarget, horizontal]);
+
+    const getRawScrollOffset = useCallback(() => {
+        const element = scrollRef.current;
+        if (isExternalScroll) {
+            const scroll = getScrollPosition(externalTarget);
+            const listPos = getElementScrollPosition(element, externalTarget);
+            return horizontal ? scroll.x - listPos.left : scroll.y - listPos.top;
+        }
+        return (horizontal ? element?.scrollLeft : element?.scrollTop) ?? 0;
+    }, [externalTarget, horizontal, isExternalScroll]);
+
+    const isScrollInRange = useCallback(() => {
+        if (!isExternalScroll) return true;
+        const offset = getRawScrollOffset();
+        return offset >= -1 && offset <= getMaxScrollOffset() + 1;
+    }, [getMaxScrollOffset, getRawScrollOffset, isExternalScroll]);
 
     const getCurrentScrollOffset = useCallback(() => {
-        const scrollElement = scrollRef.current;
-
-        if (isWindowScroll) {
-            const maxOffset = getMaxScrollOffset();
-            const scroll = getWindowScrollPosition();
-            const listPos = getElementDocumentPosition(scrollElement, scroll);
-            const rawOffset = horizontal ? scroll.x - listPos.left : scroll.y - listPos.top;
-            return clampOffset(rawOffset, maxOffset);
-        }
-
-        if (!scrollElement) {
-            return 0;
-        }
-
-        return horizontal ? scrollElement.scrollLeft : scrollElement.scrollTop;
-    }, [getMaxScrollOffset, horizontal, isWindowScroll]);
+        const offset = getRawScrollOffset();
+        return isExternalScroll ? clampOffset(offset, getMaxScrollOffset()) : offset;
+    }, [getMaxScrollOffset, getRawScrollOffset, isExternalScroll]);
 
     const scrollToLocalOffset = useCallback(
         (offset: number, animated: boolean) => {
@@ -211,10 +227,10 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             const behavior = animated ? "smooth" : "auto";
             const options: ScrollToOptions = { behavior };
 
-            if (isWindowScroll) {
-                const scroll = getWindowScrollPosition();
-                const listPos = getElementDocumentPosition(scrollElement, scroll);
-                const { left, top } = resolveWindowScrollTarget({
+            if (isExternalScroll) {
+                const scroll = getScrollPosition(externalTarget);
+                const listPos = getElementScrollPosition(scrollElement, externalTarget);
+                const { left, top } = resolveExternalScrollOffset({
                     clampedOffset,
                     horizontal,
                     listPos,
@@ -230,17 +246,19 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
             target.scrollTo(options);
         },
-        [getMaxScrollOffset, getScrollTarget, horizontal, isWindowScroll],
+        [externalTarget, getMaxScrollOffset, getScrollTarget, horizontal, isExternalScroll],
     );
 
     useImperativeHandle(ref, () => {
         const api: ScrollViewMethods = {
             getBoundingClientRect: () => scrollRef.current?.getBoundingClientRect(),
+            getContentNode: () => contentRef.current,
             getCurrentScrollOffset,
             getMaxScrollOffset,
-            getScrollableNode: () => resolveScrollableNode(scrollRef.current, isWindowScroll)!,
-            getScrollEventTarget: () => getScrollTarget(),
-            getScrollResponder: () => resolveScrollableNode(scrollRef.current, isWindowScroll),
+            getScrollableNode: () => resolveScrollableNode(scrollRef.current, externalTarget),
+            getScrollEventTarget: getScrollTarget,
+            getScrollResponder: () => resolveScrollableNode(scrollRef.current, externalTarget),
+            isScrollInRange,
             isWindowScroll: () => isWindowScroll,
             scrollBy: (x: number, y: number) => {
                 const target = getScrollTarget();
@@ -264,7 +282,16 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             },
         };
         return api as unknown as HTMLDivElement & ScrollViewMethods;
-    }, [getCurrentScrollOffset, getMaxScrollOffset, getScrollTarget, horizontal, isWindowScroll, scrollToLocalOffset]);
+    }, [
+        externalTarget,
+        getCurrentScrollOffset,
+        getMaxScrollOffset,
+        isScrollInRange,
+        getScrollTarget,
+        horizontal,
+        isWindowScroll,
+        scrollToLocalOffset,
+    ]);
 
     // DOM scroll events can fire multiple times inside one paint. Coalesce them into a single
     // RN-shaped event per frame so downstream scroll bookkeeping sees stable measurements.
@@ -274,8 +301,10 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         }
 
         const contentSize = getContentSize(contentRef.current);
-        const layoutMeasurement = getLayoutMeasurement(scrollRef.current, isWindowScroll, horizontal);
-        const offset = getCurrentScrollOffset();
+        const layoutMeasurement = getLayoutMeasurement(scrollRef.current, externalTarget, horizontal);
+        // Preserve the owner's position before/after this list for viewport calculations.
+        // Imperative scroll targets still use the clamped list-local offset.
+        const offset = getRawScrollOffset();
 
         const scrollEvent = {
             nativeEvent: {
@@ -295,7 +324,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         };
 
         onScroll(scrollEvent);
-    }, [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll]);
+    }, [externalTarget, getRawScrollOffset, horizontal, onScroll]);
 
     const scrollEventCoalescer = useRafCoalescer(emitScroll);
     const scrollEndFallbackRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -375,14 +404,14 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 const offset = getCurrentScrollOffset();
                 // A wheel gesture away from the end supersedes queued following.
                 // Stop the browser animation too, without consuming the gesture.
-                if (interruptMaintainScrollAtEnd(ctx)) {
+                if (interruptMaintainScrollAtEnd(ctx) && isScrollInRange()) {
                     scrollToLocalOffset(offset, false);
                 }
             }
         };
         target.addEventListener("wheel", onWheel, { passive: true });
         return () => target.removeEventListener("wheel", onWheel);
-    }, [ctx, getCurrentScrollOffset, getScrollTarget, horizontal, scrollToLocalOffset]);
+    }, [ctx, getCurrentScrollOffset, getScrollTarget, horizontal, isScrollInRange, scrollToLocalOffset]);
 
     // Set initial scroll offset
     useEffect(() => {
@@ -392,48 +421,27 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             }
         };
         doScroll();
-        requestAnimationFrame(doScroll);
+        const frame = requestAnimationFrame(doScroll);
+        return () => cancelAnimationFrame(frame);
     }, [contentOffset?.x, contentOffset?.y, horizontal, scrollToLocalOffset]);
 
-    // Handle layout callback and observe size changes at the ScrollView level
+    // The adapter owns layout in both external modes; the list itself is unbounded.
     useLayoutEffect(() => {
-        if (!onLayout || !scrollRef.current) return;
         const element = scrollRef.current;
-
-        const fireLayout = () => {
-            onLayout({
-                nativeEvent: {
-                    layout: getLayoutRectangle(element, isWindowScroll, horizontal),
-                },
-            });
-        };
-
-        // Initial
-        fireLayout();
-
-        // Observe ScrollView size changes
-        const resizeObserver = new ResizeObserver(() => {
-            fireLayout();
-        });
-        resizeObserver.observe(element);
-
-        const onWindowResize = () => {
-            fireLayout();
-        };
-        if (isWindowScroll && typeof window !== "undefined" && typeof window.addEventListener === "function") {
-            window.addEventListener("resize", onWindowResize);
-        }
-
-        return () => {
-            resizeObserver.disconnect();
-            if (isWindowScroll && typeof window !== "undefined" && typeof window.removeEventListener === "function") {
-                window.removeEventListener("resize", onWindowResize);
+        if (!onLayout || !element) return;
+        return observeScrollLayout(element, externalTarget, () => {
+            if (isExternalScroll && !ctx.state.lastLayout && !ctx.state.initialScroll) {
+                // Seed the first range before layout allocates rows. The list may begin
+                // below a header, or entirely outside the owner's viewport.
+                ctx.state.scroll = ctx.state.scrollPending = getRawScrollOffset();
             }
-        };
-    }, [isWindowScroll, onLayout]);
+            onLayout({ nativeEvent: { layout: getLayoutRectangle(element, externalTarget, horizontal) } });
+            if (isExternalScroll) emitScroll();
+        });
+    }, [ctx, emitScroll, externalTarget, getRawScrollOffset, horizontal, isExternalScroll, onLayout]);
 
     const hiddenScrollIndicatorClassName =
-        !isWindowScroll &&
+        !isExternalScroll &&
         (horizontal
             ? !showsHorizontalScrollIndicator && LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS
             : !showsVerticalScrollIndicator && LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS);
@@ -445,7 +453,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     }, [hiddenScrollIndicatorClassName]);
 
     const scrollViewStyle: CSSProperties = {
-        ...(isWindowScroll
+        ...(isExternalScroll
             ? {}
             : {
                   overflow: "auto",
@@ -493,11 +501,10 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         scrollEventThrottle: _scrollEventThrottle,
         ScrollComponent: _ScrollComponent,
         snapToOffsets,
-        useWindowScroll: _useWindowScroll,
         className: scrollViewClassNameProp,
         ...webProps
     } = props as ListComponentScrollViewProps & ExtraPropsFromRN & HTMLAttributes<HTMLDivElement>;
-    const snapOffsets = !isWindowScroll ? getFiniteSnapOffsets(snapToOffsets) : [];
+    const snapOffsets = !isExternalScroll ? getFiniteSnapOffsets(snapToOffsets) : [];
     if (snapOffsets.length > 0) {
         scrollViewStyle.scrollSnapType = horizontal ? "x mandatory" : "y mandatory";
         contentStyle.position = contentStyle.position ?? "relative";
