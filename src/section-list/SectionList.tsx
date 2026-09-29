@@ -1,10 +1,10 @@
 import * as React from "react";
 import {
+    type SectionListScrollParams as NativeSectionListScrollParams,
     Platform,
     type SectionBase,
     type SectionListData,
     type SectionListRenderItemInfo,
-    type SectionListScrollParams,
 } from "react-native";
 
 import type {
@@ -23,6 +23,10 @@ import {
 } from "./flattenSections";
 
 const { typedForwardRef, typedMemo } = internal;
+
+type SectionListScrollParams = NativeSectionListScrollParams & {
+    viewPositionFallback?: "start" | "end";
+};
 
 export type SectionListViewToken<ItemT, SectionT> = {
     item: ItemT;
@@ -282,7 +286,14 @@ export const SectionList = typedMemo(
         );
 
         const scrollToLocation = React.useCallback(
-            ({ sectionIndex, itemIndex, viewOffset, viewPosition, animated }: SectionListScrollParams) => {
+            ({
+                sectionIndex,
+                itemIndex,
+                viewOffset,
+                viewPosition,
+                viewPositionFallback,
+                animated,
+            }: SectionListScrollParams) => {
                 const meta = sectionMeta[sectionIndex];
                 if (!meta) return;
                 const target = itemIndex === -1 ? (meta.header ?? meta.items[0] ?? meta.footer) : meta.items[itemIndex];
@@ -293,6 +304,7 @@ export const SectionList = typedMemo(
                     index: target,
                     viewOffset,
                     viewPosition,
+                    viewPositionFallback,
                 });
             },
             [sectionMeta],

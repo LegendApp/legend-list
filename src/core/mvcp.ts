@@ -1,5 +1,7 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { getViewPositionOffset } from "@/core/calculateOffsetWithOffsetPosition";
 import { Platform } from "@/platform/Platform";
+import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollAdjustmentSource } from "@/types.internal";
@@ -403,15 +405,33 @@ export function prepareMVCP(
                 }
             }
 
-            if (scrollingToViewPosition && scrollingToViewPosition > 0) {
+            if (
+                scrollingTo &&
+                scrollingToViewPosition !== undefined &&
+                (scrollingToViewPosition > 0 || scrollingTo.viewPositionFallback)
+            ) {
                 const newSize = getItemSize(ctx, targetId!, scrollTarget!, state.props.data[scrollTarget!]);
-                const prevSize = scrollingTo?.itemSize;
+                const prevSize = scrollingTo.itemSize;
                 if (newSize !== undefined && prevSize !== undefined && newSize !== prevSize) {
-                    const diff = newSize - prevSize;
-                    if (diff !== 0) {
-                        positionDiff += diff * scrollingToViewPosition!;
-                        scrollingTo.itemSize = newSize;
+                    if (scrollingTo.viewPositionFallback) {
+                        const viewport = state.scrollLength - getContentInsetEnd(ctx);
+                        const previousSpace = viewport - Math.max(0, prevSize - ctx.scrollAxisGap);
+                        const nextSpace = viewport - Math.max(0, newSize - ctx.scrollAxisGap);
+                        positionDiff +=
+                            getViewPositionOffset(
+                                nextSpace,
+                                scrollingToViewPosition,
+                                scrollingTo.viewPositionFallback,
+                            ) -
+                            getViewPositionOffset(
+                                previousSpace,
+                                scrollingToViewPosition,
+                                scrollingTo.viewPositionFallback,
+                            );
+                    } else {
+                        positionDiff += (newSize - prevSize) * scrollingToViewPosition;
                     }
+                    scrollingTo.itemSize = newSize;
                 }
             }
 

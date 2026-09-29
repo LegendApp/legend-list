@@ -36,6 +36,7 @@ export function dispatchInitialScroll(
         precomputedWithViewOffset: true,
         viewOffset: target.viewOffset,
         viewPosition: target.viewPosition,
+        viewPositionFallback: target.viewPositionFallback,
         waitForInitialScrollCompletionFrame: waitForCompletionFrame,
     });
 }

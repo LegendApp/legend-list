@@ -5,13 +5,25 @@ import type { ScrollIndexWithOffsetPosition } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 
+export function getViewPositionOffset(
+    availableSpace: number,
+    viewPosition: number,
+    viewPositionFallback?: "start" | "end",
+) {
+    let alignment = viewPosition;
+    if (availableSpace < 0 && viewPositionFallback !== undefined) {
+        alignment = viewPositionFallback === "start" ? 0 : 1;
+    }
+    return -alignment * availableSpace;
+}
+
 export function calculateOffsetWithOffsetPosition(
     ctx: StateContext,
     offsetParam: number,
     params: Partial<ScrollIndexWithOffsetPosition>,
 ) {
     const state = ctx.state;
-    const { index, viewOffset, viewPosition } = params;
+    const { index, viewOffset, viewPosition, viewPositionFallback } = params;
     let offset = offsetParam;
 
     if (viewOffset) {
@@ -40,7 +52,8 @@ export function calculateOffsetWithOffsetPosition(
         const itemSize = Math.max(0, measuredItemSize - (isOutOfBounds ? 0 : ctx.scrollAxisGap));
         const trailingInset = getContentInsetEnd(ctx);
 
-        offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);
+        const availableSpace = state.scrollLength - trailingInset - itemSize;
+        offset += getViewPositionOffset(availableSpace, viewPosition, viewPositionFallback);
 
         // Aligns the item itself. End-of-content targets carry padding and footer
         // in viewOffset (see endOfContentTarget.ts); adding the footer here would

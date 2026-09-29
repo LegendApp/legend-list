@@ -195,6 +195,8 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
               index: number;
               viewOffset?: number | undefined;
               viewPosition?: number | undefined;
+              /** Alignment used only when the item exceeds the viewport. Omit to preserve viewPosition. */
+              viewPositionFallback?: "start" | "end";
           };
 
     /**
@@ -687,6 +689,8 @@ export type LegendListRef = {
         index: number;
         viewOffset?: number | undefined;
         viewPosition?: number | undefined;
+        /** Alignment used only when the item exceeds the viewport. Omit to preserve viewPosition. */
+        viewPositionFallback?: "start" | "end";
     }): Promise<void>;
 
     /**
@@ -702,6 +706,8 @@ export type LegendListRef = {
         item: any;
         viewOffset?: number | undefined;
         viewPosition?: number | undefined;
+        /** Alignment used only when the item exceeds the viewport. Omit to preserve viewPosition. */
+        viewPositionFallback?: "start" | "end";
     }): Promise<void>;
 
     /**
@@ -815,6 +821,8 @@ export interface ScrollIndexWithOffset {
     index: number;
     viewOffset?: number;
     viewPosition?: number;
+    /** Alignment used only when the item exceeds the viewport. Omit to preserve viewPosition. */
+    viewPositionFallback?: "start" | "end";
 }
 
 export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {

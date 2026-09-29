@@ -278,13 +278,19 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
               ? {
                     index: initialScrollIndexProp.index ?? 0,
                     preserveForBottomPadding:
-                        initialScrollIndexProp.viewOffset === undefined && initialScrollIndexProp.viewPosition === 1
+                        initialScrollIndexProp.viewOffset === undefined &&
+                        initialScrollIndexProp.viewPosition === 1 &&
+                        initialScrollIndexProp.viewPositionFallback === undefined
                             ? true
                             : undefined,
                     viewOffset:
                         initialScrollIndexProp.viewOffset ??
-                        (initialScrollIndexProp.viewPosition === 1 ? getEndAlignedViewOffset(stylePaddingEndState) : 0),
+                        (initialScrollIndexProp.viewPosition === 1 &&
+                        initialScrollIndexProp.viewPositionFallback === undefined
+                            ? getEndAlignedViewOffset(stylePaddingEndState)
+                            : 0),
                     viewPosition: initialScrollIndexProp.viewPosition ?? 0,
+                    viewPositionFallback: initialScrollIndexProp.viewPositionFallback,
                 }
               : {
                     index: initialScrollIndexProp ?? 0,

@@ -31,6 +31,7 @@ export function scrollToIndex(
         forceScroll,
         isInitialScroll,
         viewPosition,
+        viewPositionFallback,
     }: ScrollToIndexParams & { forceScroll?: boolean; isInitialScroll?: boolean },
 ) {
     const state = ctx.state;
@@ -56,5 +57,6 @@ export function scrollToIndex(
         offset: firstIndexOffset,
         viewOffset,
         viewPosition: viewPosition ?? 0,
+        viewPositionFallback,
     });
 }

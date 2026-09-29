@@ -278,7 +278,7 @@ function createInitialScrollAtEndTarget(options: {
     index?: number;
     preserveForFooterLayout?: boolean;
     stylePaddingEnd: number;
-}) {
+}): InternalInitialScrollTarget {
     const { dataLength, footerSize, index, preserveForFooterLayout, stylePaddingEnd } = options;
     return {
         contentOffset: undefined,
@@ -338,7 +338,8 @@ function areEquivalentBootstrapInitialScrollTargets(
         current.preserveForBottomPadding === next.preserveForBottomPadding &&
         current.preserveForFooterLayout === next.preserveForFooterLayout &&
         current.viewOffset === next.viewOffset &&
-        current.viewPosition === next.viewPosition
+        current.viewPosition === next.viewPosition &&
+        current.viewPositionFallback === next.viewPositionFallback
     );
 }
 
@@ -774,6 +775,7 @@ export function handleBootstrapInitialScrollFooterLayout(
         const didTargetChange =
             initialScroll.index !== updatedInitialScroll.index ||
             initialScroll.viewPosition !== updatedInitialScroll.viewPosition ||
+            initialScroll.viewPositionFallback !== updatedInitialScroll.viewPositionFallback ||
             initialScroll.viewOffset !== updatedInitialScroll.viewOffset;
 
         /*

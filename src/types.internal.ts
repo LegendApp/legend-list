@@ -83,6 +83,8 @@ export interface ScrollTarget {
     targetOffset?: number;
     viewOffset?: number;
     viewPosition?: number;
+    /** Alignment used only when the item exceeds the viewport. Omit to preserve viewPosition. */
+    viewPositionFallback?: "start" | "end";
 }
 
 type BootstrapInitialScrollSession = {

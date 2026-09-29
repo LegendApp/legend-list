@@ -7,6 +7,7 @@ import { doInitialAllocateContainers } from "../../src/core/doInitialAllocateCon
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { handleLayout } from "../../src/core/handleLayout";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
+import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -53,6 +54,32 @@ describe("handleLayout", () => {
             y: 0,
         };
     });
+
+    for (const fallback of [undefined, "start", "end"] as const) {
+        it(`recomputes only opt-in active targets after viewport resize (${fallback})`, () => {
+            const calculate = spyOn(calculateItemsModule, "calculateItemsInView").mockImplementation(() => {});
+            const scroll = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation(() => {});
+            try {
+                mockState.queuedInitialLayout = false;
+                mockState.scrollLength = 800;
+                mockState.scrollingTo = { index: 1, viewPosition: 0.5, viewPositionFallback: fallback };
+                handleLayout(mockCtx, mockLayout, setCanRender);
+                if (fallback) {
+                    expect(scroll).toHaveBeenCalledWith(mockCtx, {
+                        forceScroll: true,
+                        index: 1,
+                        viewPosition: 0.5,
+                        viewPositionFallback: fallback,
+                    });
+                } else {
+                    expect(scroll).not.toHaveBeenCalled();
+                }
+            } finally {
+                calculate.mockRestore();
+                scroll.mockRestore();
+            }
+        });
+    }
 
     it("uses the initial positions and allocates the first range only once", () => {
         mockState.props.data = Array.from({ length: 200 }, (_, id) => ({ id }));

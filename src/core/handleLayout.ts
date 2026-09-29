@@ -1,6 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { getWindowSize } from "@/platform/getWindowSize";
 import type { LayoutRectangle } from "@/platform/scrollview-types";
@@ -60,6 +61,15 @@ export function handleLayout(
         // scroll target defers it to a frame.
         if (needsCalculate && (!didAllocate || state.initialScroll)) {
             calculateItemsInView(ctx, { doMVCP: true });
+        }
+        const scrollTarget = state.scrollingTo;
+        if (
+            scrollLength !== previousLength &&
+            scrollTarget?.viewPositionFallback &&
+            !scrollTarget.isInitialScroll &&
+            scrollTarget.index !== undefined
+        ) {
+            scrollToIndex(ctx, { ...scrollTarget, forceScroll: true, index: scrollTarget.index });
         }
         if (didChange || otherAxisSize !== prevOtherAxisSize) {
             set$(ctx, "scrollSize", { height: layout.height, width: layout.width });

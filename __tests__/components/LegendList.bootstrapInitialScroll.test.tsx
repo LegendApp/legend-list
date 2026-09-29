@@ -4,6 +4,7 @@ import type * as React from "react";
 import { Text } from "react-native";
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { Platform } from "../../src/platform/Platform";
 import { type StateContext, set$ } from "../../src/state/state";
@@ -173,6 +174,46 @@ afterEach(() => {
 });
 
 describe("LegendList bootstrap initial scroll", () => {
+    for (const platform of ["web", "ios", "android"] as const) {
+        it(`retains oversized alignment through initial props and dataKey changes on ${platform}`, async () => {
+            Platform.OS = platform;
+            const data = Array.from({ length: 20 }, (_, index) => ({ id: `row-${index}` }));
+            const { LegendList } = await import("../../src/components/LegendList?bootstrap-position-fallback");
+            const list = (dataKey: string, viewPositionFallback: "start" | "end") => (
+                <LegendList
+                    data={data}
+                    dataKey={dataKey}
+                    estimatedItemSize={50}
+                    estimatedListSize={{ height: 200, width: 320 }}
+                    initialScrollIndex={{ index: 5, viewPosition: 0.5, viewPositionFallback }}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={() => <Text>Row</Text>}
+                />
+            );
+            const rendered = render(list("first", "start"));
+            const ctx = await getContextFromRender();
+            seedMeasuredLayout(
+                ctx.state,
+                data.length,
+                data.map((_, index) => (index === 5 ? 600 : 50)),
+            );
+            ctx.values.set("totalSize", 1550);
+            expect(ctx.state.initialScroll?.viewPositionFallback).toBe("start");
+            expect(resolveInitialScrollOffset(ctx, ctx.state.initialScroll!)).toBe(250);
+            rendered.rerender(list("second", "end"));
+            await flushAsync();
+            seedMeasuredLayout(
+                ctx.state,
+                data.length,
+                data.map((_, index) => (index === 5 ? 600 : 50)),
+            );
+            ctx.values.set("totalSize", 1550);
+            expect(ctx.state.initialScroll?.viewPositionFallback).toBe("end");
+            expect(resolveInitialScrollOffset(ctx, ctx.state.initialScroll!)).toBe(650);
+            rendered.unmount();
+        });
+    }
+
     it("short-circuits zero-valued targets without starting bootstrap", async () => {
         const data = [{ id: "item-0", label: "Item 0" }];
         const { LegendList } = await import("../../src/components/LegendList?bootstrap-zero");
