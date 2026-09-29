@@ -1,3 +1,7 @@
+## 3.6.0
+
+- Feat: Add `viewPositionFallback` to align oversized items to the start or end of the viewport during initial or programmatic scrolling, while keeping `viewPosition` alignment for items that fit.
+
 ## 3.5.0
 
 - Feat: Add `scrollElement` so web lists can share an ancestor element's scrollbar
