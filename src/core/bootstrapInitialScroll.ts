@@ -14,6 +14,7 @@ import { requestAdjust } from "@/utils/requestAdjust";
 import { getStylePaddingEnd } from "@/utils/rtl";
 
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
+const SUBPIXEL_SIZE_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES = 24;
 const BOOTSTRAP_REVEAL_ABORT_WARNING =
@@ -771,10 +772,16 @@ export function handleBootstrapInitialScrollFooterLayout(
             preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
             stylePaddingEnd,
         });
+        /*
+         * onLayout reports pixel-snapped sizes, so a footer that is not a whole
+         * number of physical pixels alternates between two values from one
+         * layout to the next. Treating that as a change would restart bootstrap
+         * on every layout.
+         */
         const didTargetChange =
             initialScroll.index !== updatedInitialScroll.index ||
             initialScroll.viewPosition !== updatedInitialScroll.viewPosition ||
-            initialScroll.viewOffset !== updatedInitialScroll.viewOffset;
+            Math.abs((initialScroll.viewOffset ?? 0) - (updatedInitialScroll.viewOffset ?? 0)) >= SUBPIXEL_SIZE_EPSILON;
 
         /*
          * No footer-driven target change means the only remaining job is to
