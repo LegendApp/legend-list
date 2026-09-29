@@ -1,3 +1,9 @@
+## 3.5.0
+
+- Feat: Add `scrollElement` so web lists can share an ancestor element's scrollbar
+- Fix: Stopping scrolling keeps rows prepared in the last scroll direction instead of shifting the render buffer backward.
+- Perf: Single-column lists do less layout work during initial rendering and scrolling when item sizes and data are unchanged.
+
 ## 3.4.0
 
 - Feat: Add `onReady`, called after each initial placement and scroll cycle completes, including cycles restarted by a `dataKey` change.
