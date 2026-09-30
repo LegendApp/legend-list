@@ -74,6 +74,7 @@ import MutableCellsFixture from "~/screens/fixtures/mutable-cells";
 import MvcpTestFixture from "~/screens/fixtures/mvcp-test";
 import NativeContentShrinkFixture from "~/screens/fixtures/native-content-shrink";
 import ProductShelfFixture from "~/screens/fixtures/product-shelf";
+import ReachedEdgeDpadFixture from "~/screens/fixtures/reached-edge-dpad";
 import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
 import ScrollRegressionQaFixture from "~/screens/fixtures/scroll-regression-qa";
 import SectionListFixedSizeFixture from "~/screens/fixtures/section-list-fixed-size";
@@ -314,6 +315,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "bidirectional-infinite-list",
         title: "Bidirectional Infinite List",
+    },
+    {
+        component: ReachedEdgeDpadFixture,
+        description: "Paginates a scrollEnabled={false} list that only scrolls through D-pad focus movement.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "reached-edge-dpad",
+        title: "Reached Edge D-pad",
     },
     {
         component: MvcpTestFixture,
