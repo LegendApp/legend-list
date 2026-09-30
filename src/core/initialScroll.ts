@@ -62,15 +62,18 @@ export function setInitialScrollTarget(
     });
 }
 
+export function resolveUnclampedInitialScrollOffset(ctx: StateContext, initialScroll: ScrollIndexWithOffset) {
+    const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
+    return calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
+}
+
 export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: ScrollIndexWithOffset) {
     const state = ctx.state;
     if (state.initialScrollSession?.kind === "offset") {
         return (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
     }
 
-    const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
-    const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
-    return clampScrollOffset(ctx, resolvedOffset, initialScroll);
+    return clampScrollOffset(ctx, resolveUnclampedInitialScrollOffset(ctx, initialScroll), initialScroll);
 }
 
 function getAdvanceableInitialScrollState(

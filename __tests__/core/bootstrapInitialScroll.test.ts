@@ -770,6 +770,156 @@ describe("bootstrapInitialScroll", () => {
         expect(ctx.state.scroll).toBe(500);
     });
 
+    it("holds the final web scroll until the DOM scroller can reach the anchored end space", () => {
+        Platform.OS = "web";
+
+        const data = Array.from({ length: 4 }, (_, index) => ({ id: `item-${index}` }));
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        let domMaxOffset = 0;
+        const ctx = createMockContext(
+            {
+                anchoredEndSpaceSize: 380,
+                totalSize: 400,
+            },
+            {
+                containerItemKeys: new Map(data.map((item, index) => [item.id, index])),
+                didFinishInitialScroll: false,
+                endBuffered: 3,
+                indexByKey: new Map(data.map((item, index) => [item.id, index])),
+                initialScroll: {
+                    contentOffset: 0,
+                    index: 3,
+                    viewOffset: 0,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    bootstrap: {
+                        frameHandle: undefined,
+                        mountFrameCount: 0,
+                        passCount: 0,
+                        scroll: 300,
+                        seedContentOffset: 0,
+                        targetIndexSeed: 3,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: data.length,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300],
+                props: {
+                    anchoredEndSpace: { anchorIndex: 3 },
+                    data,
+                    estimatedItemSize: 50,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 0,
+                        getMaxScrollOffset: () => domMaxOffset,
+                        getScrollableNode: () => ({}),
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as StateContext["state"]["refScroller"],
+                scrollLength: 480,
+                sizesKnown: new Map(data.map((item) => [item.id, 100])),
+                startBuffered: 0,
+                triggerCalculateItemsInView: () => {},
+            },
+        );
+
+        // The store already includes the 380px space, but the DOM has not rendered it yet.
+        evaluateBootstrapInitialScroll(ctx);
+        evaluateBootstrapInitialScroll(ctx);
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(scrollToCalls).toEqual([]);
+        expect(ctx.state.initialScrollSession).toMatchObject({ bootstrap: { scroll: 300 }, kind: "bootstrap" });
+
+        domMaxOffset = 300;
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 300 }]);
+    });
+
+    it.each([
+        {
+            expectedOffset: 100,
+            initialScroll: { index: 1, viewOffset: 0 },
+            name: "a start-aligned target",
+        },
+        {
+            expectedOffset: 300,
+            initialScroll: { index: 3, preserveForBottomPadding: true, viewOffset: 0, viewPosition: 1 },
+            name: "an end-aligned last item",
+        },
+    ])("holds the initial scroll of $name until anchoredEndSpace is measured", ({ expectedOffset, initialScroll }) => {
+        Platform.OS = "web";
+
+        const data = Array.from({ length: 4 }, (_, index) => ({ id: `item-${index}` }));
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            {
+                totalSize: 400,
+            },
+            {
+                containerItemKeys: new Map(data.map((item, index) => [item.id, index])),
+                didFinishInitialScroll: false,
+                endBuffered: 3,
+                indexByKey: new Map(data.map((item, index) => [item.id, index])),
+                initialScroll: {
+                    contentOffset: 0,
+                    ...initialScroll,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    bootstrap: {
+                        frameHandle: undefined,
+                        mountFrameCount: 0,
+                        passCount: 0,
+                        scroll: 0,
+                        seedContentOffset: 0,
+                        targetIndexSeed: initialScroll.index,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: data.length,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300],
+                props: {
+                    anchoredEndSpace: { anchorIndex: 3 },
+                    data,
+                    estimatedItemSize: 50,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 0,
+                        getMaxScrollOffset: () => 1000,
+                        getScrollableNode: () => ({}),
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as StateContext["state"]["refScroller"],
+                scrollLength: 480,
+                sizesKnown: new Map(data.map((item) => [item.id, 100])),
+                startBuffered: 0,
+                triggerCalculateItemsInView: () => {},
+            },
+        );
+
+        // All rows are measured and the list fits its viewport, but the space is not in the store
+        // yet, so the target resolves to 0. The session must stay armed instead of finishing there.
+        evaluateBootstrapInitialScroll(ctx);
+        evaluateBootstrapInitialScroll(ctx);
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(scrollToCalls).toEqual([]);
+        expect(ctx.state.initialScrollSession).toMatchObject({ bootstrap: {}, kind: "bootstrap" });
+
+        ctx.values.set("anchoredEndSpaceSize", 380);
+        ctx.values.set("totalSize", 400);
+        evaluateBootstrapInitialScroll(ctx);
+        evaluateBootstrapInitialScroll(ctx);
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: expectedOffset }]);
+    });
+
     it("dispatches a final Android scroll even when the bootstrap seed already matches the resolved offset", () => {
         Platform.OS = "android";
 
