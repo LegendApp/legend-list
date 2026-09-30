@@ -504,6 +504,86 @@ describe("mounted grid reached callbacks", () => {
     }
 });
 
+describe("native scroll idle rearms the reached-edge gate", () => {
+    // onStartReached fires at mount and closes the gate shared with onEndReached.
+    async function setup() {
+        const { LegendList } = await import("../../src/components/LegendList");
+        let scrollProps: any;
+        const ScrollSurface = React.forwardRef(function DpadScrollSurface(props: any, forwardedRef: React.Ref<any>) {
+            scrollProps = props;
+            React.useImperativeHandle(forwardedRef, () => ({ measure: () => {}, scrollTo: () => {} }));
+            return <>{props.children}</>;
+        });
+        const starts: number[] = [];
+        const ends: number[] = [];
+        const rendered = render(
+            <LegendList
+                data={Array.from({ length: 10 }, (_, id) => ({ id: String(id) }))}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onEndReached={() => ends.push(ends.length)}
+                onStartReached={() => starts.push(starts.length)}
+                recycleItems={false}
+                renderItem={({ item }: { item: { id: string } }) => <Text>{item.id}</Text>}
+                renderScrollComponent={(props: any) => <ScrollSurface {...props} />}
+                scrollEnabled={false}
+            />,
+        );
+        await flushFrames();
+        act(() => scrollProps.onLayout({ nativeEvent: { layout: { height: 540, width: 300, x: 0, y: 0 } } }));
+        await flushFrames();
+        expect(starts).toHaveLength(1);
+        expect(ends).toHaveLength(0);
+
+        const scrollTo = async (y: number) => {
+            act(() =>
+                scrollProps.onScroll({
+                    nativeEvent: {
+                        contentOffset: { x: 0, y },
+                        contentSize: { height: 1000, width: 300 },
+                        layoutMeasurement: { height: 540, width: 300 },
+                        velocity: { x: 0, y: 0 },
+                    },
+                    timeStamp: Date.now(),
+                }),
+            );
+            await flushFrames();
+        };
+        const waitForScrollIdle = () =>
+            act(async () => {
+                await new Promise((resolve) => setTimeout(resolve, 250));
+            });
+        return { ends, rendered, scrollProps: () => scrollProps, scrollTo, waitForScrollIdle };
+    }
+
+    it("delivers onEndReached once scrolling goes idle when no drag ever starts", async () => {
+        const { ends, rendered, scrollTo, waitForScrollIdle } = await setup();
+
+        await scrollTo(300);
+        await scrollTo(400);
+        expect(ends).toHaveLength(0);
+
+        await waitForScrollIdle();
+        await scrollTo(460);
+        expect(ends).toHaveLength(1);
+        rendered.unmount();
+    });
+
+    it("does not rearm while a drag is held", async () => {
+        const { ends, rendered, scrollProps, scrollTo, waitForScrollIdle } = await setup();
+
+        act(() => scrollProps().onScrollBeginDrag({ nativeEvent: {} }));
+        await scrollTo(300);
+        expect(ends).toHaveLength(1);
+
+        await waitForScrollIdle();
+        await scrollTo(400);
+        expect(ends).toHaveLength(1);
+        rendered.unmount();
+    });
+});
+
 describe("empty list reached callbacks", () => {
     it("re-pages once when delivered rows become empty inside padded content", async () => {
         const { LegendList } = await import("../../src/components/LegendList");

@@ -5,6 +5,7 @@ export const EDGE_POSITION_EPSILON = 1;
 // Quiet windows for release settlement and stalled momentum.
 export const USER_MOMENTUM_WAIT_TIMEOUT_MS = 100;
 export const USER_MOMENTUM_STALL_TIMEOUT_MS = 500;
+export const SCROLL_END_FALLBACK_MS = 200;
 
 // use colorful overlays to visualize the padding and scroll adjustments
 // green means paddingTop (used for aligning elements at the bottom)

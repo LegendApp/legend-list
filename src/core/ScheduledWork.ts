@@ -18,6 +18,7 @@ export type ScheduledWorkKey =
     | "platformScrollCompletion"
     | "scrollTargetRetarget"
     | "preservedInitialScroll"
+    | "reachedEdgeScrollIdle"
     | "reachedEdgeSettle"
     | "renderRangeProjection";
 

@@ -11,6 +11,7 @@ import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import { isScreenReaderEnabled } from "@/platform/screenReader";
 import { peek$, type StateContext } from "@/state/state";
+import { prepareReachedEdgeWhenScrollIdle } from "@/utils/edgeReachedGate";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { toLogicalHorizontalOffset } from "@/utils/rtl";
 
@@ -200,6 +201,9 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         nativeGeometryChanged,
         previousNativeScroll,
     });
+    if (Platform.OS !== "web") {
+        prepareReachedEdgeWhenScrollIdle(ctx);
+    }
     trackInitialScrollNativeProgress(state, newScroll);
     // Rows measured at the new offset can start a correction; it must not pull back a scroll the list didn't make.
     clearFinishedBootstrapInitialScrollTargetIfMovedAway(
