@@ -1,8 +1,14 @@
 import { getEndAlignedViewOffset, isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
-import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
+import {
+    dispatchInitialScroll,
+    resolveInitialScrollOffset,
+    resolveUnclampedInitialScrollOffset,
+    setInitialScrollTarget,
+} from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
+import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import type { InternalState } from "@/types.internal";
@@ -399,6 +405,39 @@ function getObservedBootstrapInitialScrollOffset(state: InternalState) {
     return typeof observedOffset === "number" && Number.isFinite(observedOffset)
         ? observedOffset
         : (state.scrollPending ?? state.scroll ?? 0);
+}
+
+/*
+ * anchoredEndSpaceSize is only written once every row below the anchor has a real
+ * measurement. Until then the store has no end space, so a target that needs it resolves
+ * against a content size that is too short and is clamped, for example to 0 when the list
+ * fits its viewport. Hold the session instead of finishing on that clamped offset (web only).
+ * End-of-content targets always align against the space. Other targets need it only when
+ * they sit past the end of the content without it.
+ */
+function isAwaitingAnchoredEndSpace(ctx: StateContext, initialScroll: InternalInitialScrollTarget) {
+    const state = ctx.state;
+    if (Platform.OS !== "web" || !state.props.anchoredEndSpace || peek$(ctx, "anchoredEndSpaceSize") !== undefined) {
+        return false;
+    }
+
+    if (isEndOfContentTarget(initialScroll, state.props.data.length)) {
+        return true;
+    }
+
+    const contentMaxOffset = Math.max(0, getContentSize(ctx) - state.scrollLength);
+    return resolveUnclampedInitialScrollOffset(ctx, initialScroll) > contentMaxOffset + 1;
+}
+
+function isScrollerBehindContentSize(ctx: StateContext, resolvedOffset: number) {
+    const state = ctx.state;
+    const scrollerMaxOffset = state.refScroller.current?.getMaxScrollOffset?.();
+    if (scrollerMaxOffset === undefined || !Number.isFinite(scrollerMaxOffset)) {
+        return false;
+    }
+
+    const contentMaxOffset = Math.max(0, getContentSize(ctx) - state.scrollLength);
+    return resolvedOffset > scrollerMaxOffset + 1 && scrollerMaxOffset < contentMaxOffset - 1;
 }
 
 function getPreservedEndAnchorOffsetDiff(ctx: StateContext) {
@@ -941,6 +980,11 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         doVisibleIndicesMatch(previousVisibleIndices, visibleIndices);
     if (!didRevealSettle) {
         // This pass becomes the baseline; the next matching pass proves stability.
+        queueBootstrapInitialScrollReevaluation(state);
+        return;
+    }
+
+    if (isAwaitingAnchoredEndSpace(ctx, initialScroll) || isScrollerBehindContentSize(ctx, resolvedOffset)) {
         queueBootstrapInitialScrollReevaluation(state);
         return;
     }
