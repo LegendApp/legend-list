@@ -19,6 +19,7 @@ import ExternalScrollExample from "./ExternalScrollExample";
 import ExtraDataExample from "./ExtraDataExample";
 import FixedSizeItemsExample from "./FixedSizeItemsExample";
 import HeaderMvcpExample from "./HeaderMvcpExample";
+import HorizontalItemWidthExample from "./HorizontalItemWidthExample";
 import InitialScrollAtEndExample from "./InitialScrollAtEndExample";
 import InitialScrollIndexExample from "./InitialScrollIndexExample";
 import LazyListExample from "./LazyListExample";
@@ -109,6 +110,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "bidirectional-infinite-list",
         title: "Bidirectional Infinite List",
+    },
+    {
+        description: "Horizontal items wider than estimatedItemSize keep their natural width, including the last item.",
+        element: () => <HorizontalItemWidthExample />,
+        group: "Data & Layout",
+        path: "horizontal-item-width",
+        title: "Horizontal Item Width",
     },
     {
         description: "Checks multi-column measurement and placement behavior.",
