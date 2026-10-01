@@ -236,6 +236,87 @@ describe("mounted grid reached callbacks", () => {
     }
 });
 
+describe("native scroll idle rearms the reached-edge gate", () => {
+    async function setup() {
+        const { LegendList } = await import("../../src/components/LegendList");
+        let scrollProps: any;
+        const ScrollSurface = React.forwardRef(function DpadScrollSurface(props: any, forwardedRef: React.Ref<any>) {
+            scrollProps = props;
+            React.useImperativeHandle(forwardedRef, () => ({ measure: () => {}, scrollTo: () => {} }));
+            return <>{props.children}</>;
+        });
+        const ends: number[] = [];
+        const list = (count: number) => (
+            <LegendList
+                data={Array.from({ length: count }, (_, id) => ({ id: String(id) }))}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onEndReached={() => ends.push(ends.length)}
+                onEndReachedThreshold={1.5}
+                recycleItems={false}
+                renderItem={({ item }: { item: { id: string } }) => <Text>{item.id}</Text>}
+                renderScrollComponent={(props: any) => <ScrollSurface {...props} />}
+                scrollEnabled={false}
+            />
+        );
+        const scrollTo = async (y: number, count: number) => {
+            act(() =>
+                scrollProps.onScroll({
+                    nativeEvent: {
+                        contentOffset: { x: 0, y },
+                        contentSize: { height: count * 100, width: 300 },
+                        layoutMeasurement: { height: 540, width: 300 },
+                        velocity: { x: 0, y: 0 },
+                    },
+                    timeStamp: Date.now(),
+                }),
+            );
+            await flushFrames();
+        };
+        const waitForScrollIdle = () =>
+            act(async () => {
+                await new Promise((resolve) => setTimeout(resolve, 250));
+            });
+
+        const rendered = render(list(8));
+        await flushFrames();
+        act(() => scrollProps.onLayout({ nativeEvent: { layout: { height: 540, width: 300, x: 0, y: 0 } } }));
+        await flushFrames();
+        expect(ends).toHaveLength(1);
+
+        rendered.rerender(list(16));
+        await flushFrames();
+        return { ends, rendered, scrollProps: () => scrollProps, scrollTo, waitForScrollIdle };
+    }
+
+    it("re-delivers onEndReached once scrolling goes idle when no drag ever starts", async () => {
+        const { ends, rendered, scrollTo, waitForScrollIdle } = await setup();
+
+        await scrollTo(300, 16);
+        await scrollTo(400, 16);
+        expect(ends).toHaveLength(1);
+
+        await waitForScrollIdle();
+        await scrollTo(500, 16);
+        expect(ends).toHaveLength(2);
+        rendered.unmount();
+    });
+
+    it("does not rearm while a drag is held", async () => {
+        const { ends, rendered, scrollProps, scrollTo, waitForScrollIdle } = await setup();
+
+        act(() => scrollProps().onScrollBeginDrag({ nativeEvent: {} }));
+        await scrollTo(300, 16);
+        expect(ends).toHaveLength(2);
+
+        await waitForScrollIdle();
+        await scrollTo(400, 16);
+        expect(ends).toHaveLength(2);
+        rendered.unmount();
+    });
+});
+
 describe("empty list reached callbacks", () => {
     it("fires neither edge while empty, then delivers the start edge when rows arrive", async () => {
         const { LegendList } = await import("../../src/components/LegendList");

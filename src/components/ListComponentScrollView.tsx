@@ -13,6 +13,7 @@ import {
     useRef,
 } from "react";
 
+import { SCROLL_END_FALLBACK_MS } from "@/constants";
 import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
@@ -100,7 +101,6 @@ interface ExtraPropsFromRN {
 }
 
 const SCROLLBAR_HIDDEN_STYLE_ID = "legend-list-scrollbar-axis-hidden-style";
-const SCROLL_END_FALLBACK_MS = 200;
 const SCROLLBAR_HIDDEN_STYLE = `.${LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS}::-webkit-scrollbar:vertical{width:0;display:none;}.${LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS}::-webkit-scrollbar:horizontal{height:0;display:none;}`;
 
 function ensureScrollbarHiddenStyle() {
