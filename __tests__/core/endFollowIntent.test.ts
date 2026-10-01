@@ -169,7 +169,7 @@ describe("canonical scroll geometry", () => {
         });
     }
 
-    it("updates metrics after an observed scroll and independently reports physical and useful end", () => {
+    it("reports the remaining inset until the physical end is reached", () => {
         const metrics = mock(() => {});
         const ctx = createMockContext(
             { totalSize: 500 },
@@ -187,7 +187,11 @@ describe("canonical scroll geometry", () => {
         );
         updateScroll(ctx, 300, true);
         expect(metrics).toHaveBeenLastCalledWith(
-            expect.objectContaining({ contentLength: 600, distanceFromEnd: 100, isAtEnd: true, scroll: 300 }),
+            expect.objectContaining({ contentLength: 600, distanceFromEnd: 100, isAtEnd: false, scroll: 300 }),
+        );
+        updateScroll(ctx, 400, true);
+        expect(metrics).toHaveBeenLastCalledWith(
+            expect.objectContaining({ contentLength: 600, distanceFromEnd: 0, isAtEnd: true, scroll: 400 }),
         );
     });
 

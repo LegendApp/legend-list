@@ -1,6 +1,5 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
 import { getDistanceFromEnd } from "@/core/emitMetrics";
-import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
@@ -35,8 +34,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
         return;
     }
     if (contentSize > 0 && queuedInitialLayout) {
-        const insetEnd = getContentInsetEnd(ctx);
-        const distanceFromEnd = contentSize - scroll - scrollLength - insetEnd;
+        const distanceFromEnd = contentSize - scroll - scrollLength;
         const isContentLess = contentSize < scrollLength;
         set$(ctx, "isAtEnd", isContentLess || distanceFromEnd <= EDGE_POSITION_EPSILON);
         set$(ctx, "isNearEnd", isContentLess || distanceFromEnd <= onEndReachedThreshold! * scrollLength);
