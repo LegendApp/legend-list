@@ -7,6 +7,7 @@ import AdaptiveRenderExample from "./AdaptiveRenderExample";
 import AddToEndExample from "./AddToEndExample";
 import AiChatFloatingComposerExample from "./AiChatFloatingComposerExample";
 import AlwaysRenderExample from "./AlwaysRenderExample";
+import AnchoredEndSpaceExactEstimateExample from "./AnchoredEndSpaceExactEstimateExample";
 import BidirectionalInfiniteListExample from "./BidirectionalInfiniteListExample";
 import ChatEndFollowExample from "./ChatEndFollowExample";
 import ChatExample from "./ChatExample";
@@ -137,6 +138,14 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Data & Layout",
         path: "extra-data",
         title: "Extra Data",
+    },
+    {
+        description:
+            "Rows measure at exactly estimatedItemSize; scrolling to the last row with anchoredEndSpace should align it to the viewport start.",
+        element: () => <AnchoredEndSpaceExactEstimateExample />,
+        group: "Scroll & Position",
+        path: "anchored-end-space-exact-estimate",
+        title: "Anchored End Space Exact Estimate",
     },
     {
         description: "Validates sizing when every row uses the same height.",
