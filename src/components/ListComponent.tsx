@@ -68,24 +68,20 @@ interface ListComponentProps<ItemT>
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizontal }: { horizontal: boolean }) {
-    const [alignItemsAtEndPadding = 0] = useArr$(["alignItemsAtEndPadding"]);
+const Spacer = typedMemo(function Spacer({
+    horizontal,
+    sizeKey,
+}: {
+    horizontal: boolean;
+    sizeKey: "alignItemsAtEndPadding" | "anchoredEndSpaceSize";
+}) {
+    const [size = 0] = useArr$([sizeKey]);
 
-    if (alignItemsAtEndPadding <= 0) {
+    if (size <= 0) {
         return null;
     }
 
-    return (
-        <View
-            style={
-                horizontal
-                    ? { flexShrink: 0, width: alignItemsAtEndPadding }
-                    : { flexShrink: 0, height: alignItemsAtEndPadding }
-            }
-        >
-            {null}
-        </View>
-    );
+    return <View style={horizontal ? { flexShrink: 0, width: size } : { flexShrink: 0, height: size }}>{null}</View>;
 });
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -125,10 +121,11 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
     const [anchoredEndSpaceSize = 0, otherAxisSize = 0] = useArr$(["anchoredEndSpaceSize", "otherAxisSize"]);
     const shouldRenderAlignItemsAtEndSpacer = ctx.state.props.alignItemsAtEndPaddingEnabled;
+    const ownsAnchoredEndSpace = !!ctx.state.props.anchoredEndSpace && ctx.state.props.anchoredEndSpaceOwner === "list";
+    // Padding on a content container that overflows its scroller is not scrollable on web, so it needs an element
+    const shouldRenderAnchoredEndSpaceSpacer = ownsAnchoredEndSpace && Platform.OS === "web";
     const shouldMaterializeAnchoredEndSpace =
-        !!ctx.state.props.anchoredEndSpace &&
-        ctx.state.props.anchoredEndSpaceOwner === "list" &&
-        anchoredEndSpaceSize > 0;
+        ownsAnchoredEndSpace && !shouldRenderAnchoredEndSpaceSpacer && anchoredEndSpaceSize > 0;
     let anchoredEndSpaceStyle: ViewStyle | undefined;
     if (shouldMaterializeAnchoredEndSpace) {
         const paddingEnd = horizontal ? (isHorizontalRTL(ctx.state) ? "Left" : "Right") : "Bottom";
@@ -236,7 +233,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                 </LayoutView>
             )}
             {ListEmptyComponent && getComponent(ListEmptyComponent)}
-            {shouldRenderAlignItemsAtEndSpacer && <AlignItemsAtEndSpacer horizontal={horizontal} />}
+            {shouldRenderAlignItemsAtEndSpacer && <Spacer horizontal={horizontal} sizeKey="alignItemsAtEndPadding" />}
 
             {canRender && !ListEmptyComponent && (
                 <Containers
@@ -253,6 +250,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     {getComponent(ListFooterComponent)}
                 </LayoutView>
             )}
+            {shouldRenderAnchoredEndSpaceSpacer && <Spacer horizontal={horizontal} sizeKey="anchoredEndSpaceSize" />}
             {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>
     );

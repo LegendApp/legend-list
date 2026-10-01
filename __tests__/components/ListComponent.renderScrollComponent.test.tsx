@@ -247,6 +247,59 @@ describe("ListComponent renderScrollComponent", () => {
         }
     });
 
+    it.each([
+        { axis: "vertical", padding: "paddingBottom", size: "height" },
+        { axis: "horizontal", padding: "paddingRight", size: "width" },
+    ])("renders $axis anchored end space as an element on web", async ({ axis, padding, size }) => {
+        const { Platform } = await import("react-native");
+        const previousPlatform = Platform.OS;
+        const { ListComponent } = await import(`../../src/components/ListComponent?web-anchored-end-space-${axis}`);
+        const events: string[] = [];
+        let ctx!: StateContext;
+        let renderer!: TestRenderer.ReactTestRenderer;
+        const getSpacerStyles = () =>
+            renderer.root
+                .findAllByType(View)
+                .map((view) => view.props.style)
+                .filter((style) => style?.flexShrink === 0 && style[size] !== undefined);
+
+        try {
+            Platform.OS = "web" as any;
+            act(() => {
+                renderer = TestRenderer.create(
+                    <StateProvider>
+                        <ListComponentHarness
+                            anchoredEndSpaceSize={80}
+                            contentContainerStyle={{ [padding]: 12 }}
+                            events={events}
+                            horizontal={axis === "horizontal"}
+                            ListComponent={ListComponent}
+                            label="web"
+                            onContext={(value) => {
+                                ctx = value;
+                            }}
+                        />
+                    </StateProvider>,
+                );
+            });
+
+            expect(getContentContainerStyle(renderer)[padding]).toBe(12);
+            expect(getSpacerStyles()).toEqual([{ flexShrink: 0, [size]: 80 }]);
+
+            act(() => set$(ctx, "anchoredEndSpaceSize", 0));
+            expect(getSpacerStyles()).toEqual([]);
+
+            ctx.state.props.anchoredEndSpaceOwner = "scroll";
+            act(() => set$(ctx, "anchoredEndSpaceSize", 80));
+            expect(getSpacerStyles()).toEqual([]);
+        } finally {
+            Platform.OS = previousPlatform;
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("forwards the internal drag boundaries to native scroll components", async () => {
         const { Platform } = await import("../../src/platform/Platform");
         const { ListComponent } = await import("../../src/components/ListComponent?native-edge-drag-boundary");
