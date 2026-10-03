@@ -142,6 +142,40 @@ const settle = async () => {
     flushUI();
 };
 
+// Holds back long timers (the freeze release timeout) until the test runs them; short
+// timers pass through. The shared setup restores the real timers after each test.
+function captureLongTimers() {
+    const originalSetTimeout = globalThis.setTimeout;
+    const originalClearTimeout = globalThis.clearTimeout;
+    const pending = new Map<number, { callback: () => void; delay: number }>();
+    let nextId = 1;
+
+    globalThis.setTimeout = ((callback: () => void, delay?: number, ...args: unknown[]) => {
+        if ((delay ?? 0) < 1000) {
+            return originalSetTimeout(callback, delay, ...args);
+        }
+        const id = -nextId++;
+        pending.set(id, { callback, delay: delay ?? 0 });
+        return id;
+    }) as typeof setTimeout;
+    globalThis.clearTimeout = ((id?: ReturnType<typeof setTimeout>) => {
+        if (typeof id === "number" && pending.delete(id)) {
+            return;
+        }
+        originalClearTimeout(id);
+    }) as typeof clearTimeout;
+
+    return {
+        pending,
+        runAll: () => {
+            for (const [id, timer] of [...pending]) {
+                pending.delete(id);
+                timer.callback();
+            }
+        },
+    };
+}
+
 describe("useKeyboardScrollToEnd", () => {
     it("freezes on the UI runtime before it closes the keyboard", async () => {
         const { result, scrolls } = await renderHook();
@@ -303,6 +337,66 @@ describe("useKeyboardScrollToEnd", () => {
         await settle();
 
         expect(second.uiValue).toBe(false);
+    });
+
+    it("releases the freeze after a timeout when the scroll never settles, and ignores the late settlement", async () => {
+        const timers = captureLongTimers();
+        const { result, scrolls } = await renderHook();
+
+        const stalled = result.scrollMessageToEnd({
+            animated: true,
+            closeKeyboard: true,
+        });
+        await settle();
+
+        expect(freezeUnderTest!.uiValue).toBe(true);
+        const delays = [...timers.pending.values()].map((timer) => timer.delay);
+
+        timers.runAll();
+        await settle();
+
+        expect(freezeUnderTest!.uiValue).toBe(false);
+        expect(delays).toEqual([2000]);
+
+        // A newer call supersedes the stalled scroll, which settles it late. That must
+        // neither release the newer call's freeze nor release twice.
+        const next = result.scrollMessageToEnd({
+            animated: true,
+            closeKeyboard: true,
+        });
+        await stalled;
+        await settle();
+
+        expect(scrolls[0].pending).toBe(false);
+        expect(freezeUnderTest!.uiValue).toBe(true);
+
+        scrolls[1].resolve();
+        await next;
+        await settle();
+
+        expect(freezeUnderTest!.uiValue).toBe(false);
+        expect(timers.pending.size).toBe(0);
+    });
+
+    it("clears the release timeout when a call settles and when the owner retires", async () => {
+        const timers = captureLongTimers();
+        const { renderer, result, scrolls } = await renderHook();
+
+        const settled = result.scrollMessageToEnd({ animated: true, closeKeyboard: false });
+        scrolls[0].resolve();
+        await settled;
+        await settle();
+
+        expect(timers.pending.size).toBe(0);
+
+        void result.scrollMessageToEnd({ animated: true, closeKeyboard: false });
+        expect(timers.pending.size).toBe(1);
+        act(() => {
+            renderer.unmount();
+        });
+
+        expect(timers.pending.size).toBe(0);
+        expect(freezeUnderTest!.uiValue).toBe(false);
     });
 
     it("never closes the keyboard when closeKeyboard is false", async () => {
