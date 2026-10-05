@@ -249,4 +249,31 @@ describe("useContainerMeasurement web", () => {
         expect(calculateSpy).toHaveBeenCalledTimes(1);
         calculateSpy.mockRestore();
     });
+    it("keeps the known size when the container has no box by the time a shrink is confirmed", () => {
+        const frameCallbacks: FrameRequestCallback[] = [];
+        globalThis.requestAnimationFrame = mock((callback: FrameRequestCallback) => {
+            frameCallbacks.push(callback);
+            return frameCallbacks.length;
+        });
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        const ctx = createContext();
+        ctx.state.sizesKnown.set("item_0", 200);
+        const state = createMeasurementState("item_0", 200);
+        // The list is hidden between the observed shrink and its confirmation frame.
+        const ref = { current: { getBoundingClientRect: () => ({ height: 0, width: 0 }) } as any };
+
+        processContainerLayout({
+            containerId: 0,
+            ctx,
+            rectangle: { height: 150, width: 400, x: 0, y: 0 },
+            ref,
+            state,
+        });
+
+        expect(frameCallbacks).toHaveLength(1);
+        frameCallbacks[0](0);
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(200);
+        expect(calculateSpy).not.toHaveBeenCalled();
+        calculateSpy.mockRestore();
+    });
 });
