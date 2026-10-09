@@ -61,9 +61,35 @@ export const unstable_batchedUpdates: (fn: AnyFunction) => void = (fn) => {
     fn();
 };
 
-class AnimatedValue<T = number> {
+type InterpolationConfig = {
+    extrapolateLeft?: "clamp" | "extend";
+    extrapolateRight?: "clamp" | "extend";
+    inputRange: [number, number];
+    outputRange: [number, number];
+};
+
+// Evaluates like the real graph so tests can assert what a sticky transform resolves to.
+class AnimatedNode {
+    constructor(private readonly evaluate: () => number) {}
+    __getValue(): number {
+        return this.evaluate();
+    }
+    interpolate({ extrapolateLeft, extrapolateRight, inputRange, outputRange }: InterpolationConfig) {
+        return new AnimatedNode(() => {
+            const [inMin, inMax] = inputRange;
+            const [outMin, outMax] = outputRange;
+            let input = this.__getValue();
+            if (input < inMin && extrapolateLeft === "clamp") input = inMin;
+            if (input > inMax && extrapolateRight === "clamp") input = inMax;
+            return outMin + ((input - inMin) / (inMax - inMin)) * (outMax - outMin);
+        });
+    }
+}
+
+class AnimatedValue<T = number> extends AnimatedNode {
     private _value: T;
     constructor(value: T) {
+        super(() => this._value as unknown as number);
         this._value = value;
     }
     setValue(value: T) {
@@ -84,6 +110,9 @@ const AnimatedScrollView = createHostComponent("AnimatedScrollView");
 const AnimatedView = createHostComponent("AnimatedView");
 
 export const Animated = {
+    add(a: AnimatedNode, b: AnimatedNode) {
+        return new AnimatedNode(() => a.__getValue() + b.__getValue());
+    },
     // In tests we simply return the passed component without wrapping
     createAnimatedComponent<T extends AnyFunction>(Component: T): T {
         return Component;
@@ -93,6 +122,9 @@ export const Animated = {
         return (event: any) => listener?.(event);
     },
     ScrollView: AnimatedScrollView,
+    subtract(a: AnimatedNode, b: AnimatedNode) {
+        return new AnimatedNode(() => a.__getValue() - b.__getValue());
+    },
     timing(_value: any, _config: any) {
         return { start: (cb?: AnyFunction) => cb?.() };
     },
