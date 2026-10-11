@@ -162,7 +162,7 @@ export interface StateContext {
                 dataSource: object | undefined;
                 dataKey: InternalState["props"]["dataKey"];
                 config: ViewabilityConfig;
-                since: Map<string, { item: any; since: number }>;
+                since: Map<string, number>;
                 deadline?: number;
             };
         }

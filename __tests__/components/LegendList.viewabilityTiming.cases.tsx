@@ -284,6 +284,31 @@ for (const mode of ["array", "source"] as const) {
     });
 }
 
+test("retains visibility credit across immutable same-key array row updates", async () => {
+    const s = await mountScenario();
+    try {
+        await s.advance(50);
+        const items = s.props.data!.map((item, index) => (index === 0 ? { ...item, text: "updated" } : item));
+        await s.rerender({ data: items });
+        await s.advance(99);
+        expect(s.callback).not.toHaveBeenCalled();
+        await s.advance(100);
+        expect(s.callback).toHaveBeenCalledTimes(1);
+        expect(s.callback.mock.calls[0][0].changed).toMatchObject([
+            { isViewable: true, item: { text: "updated" }, key: "0" },
+        ]);
+        await s.advance(150);
+        const updatedItems = items.map((item, index) => (index === 0 ? { ...item, text: "updated again" } : item));
+        await s.rerender({ data: updatedItems });
+        await s.advance(300);
+        expect(s.callback).toHaveBeenCalledTimes(1);
+        expect(s.ctx.mapViewabilityConfigStates.get("")!.viewableItems[0].item).toBe(updatedItems[0]);
+        expect(s.clock.pending.size).toBe(0);
+    } finally {
+        s.dispose();
+    }
+});
+
 for (const change of ["copy", "append", "repeated copies"] as const) {
     test(`retains pending visibility after array ${change}`, async () => {
         const s = await mountScenario();

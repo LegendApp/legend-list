@@ -176,20 +176,6 @@ function updateViewableItemsWithConfig(
                 since: new Map(),
             };
         }
-        // Source mutations already prune removed keys and explicitly preserve update timing.
-        if (data.kind === "array") {
-            for (const [key, entry] of timing.since) {
-                const index = state.indexByKey.get(key);
-                if (
-                    index === undefined ||
-                    index >= data.getLength() ||
-                    data.getKey(index) !== key ||
-                    data.getItem(index) !== entry.item
-                ) {
-                    timing.since.delete(key);
-                }
-            }
-        }
     } else if (timing) {
         state.scheduledWork.cancel(timerKey);
         timing = viewabilityState.minimumViewTime = undefined;
@@ -240,7 +226,7 @@ function updateViewableItemsWithConfig(
                     publishAmounts,
                 );
             }
-            const since = timing?.since.get(viewToken.key)?.since;
+            const since = timing?.since.get(viewToken.key);
             if (timing && (since === undefined || now - since < minimumViewTime)) {
                 isStillViewable = false;
             }
@@ -281,12 +267,12 @@ function updateViewableItemsWithConfig(
             if (amount.isViewable) {
                 if (timing) {
                     visibleKeys!.add(key);
-                    let entry = timing.since.get(key);
-                    if (!entry) {
-                        entry = { item, since: now };
-                        timing.since.set(key, entry);
+                    let since = timing.since.get(key);
+                    if (since === undefined) {
+                        since = now;
+                        timing.since.set(key, since);
                     }
-                    const deadline = entry.since + minimumViewTime;
+                    const deadline = since + minimumViewTime;
                     if (now < deadline) {
                         nextDeadline = Math.min(nextDeadline ?? deadline, deadline);
                         continue;
