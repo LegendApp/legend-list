@@ -1,5 +1,8 @@
 ## Unreleased
 
+- Fix: Retain index-keyed measurements across array edits and preserve existing public wrapper and handwritten-ref types.
+- Fix: Clamp invalid public item sizes to zero with a development warning instead of throwing during layout.
+- Breaking: Invalid `numColumns` values become 1 with a development warning. Viewability now honors `waitForInteraction` and uninterrupted `minimumViewTime`; visibility hook callbacks replay after subscription. See [v4 migration](docs/v4-migration.md) for runtime corrections and lazy callback evaluation.
 - Breaking: Sparse layout prepares fixed sizes lazily. Distant mixed-size offsets, total size, and snap points remain approximate until the relevant rows are prepared. This deliberately avoids a full-list fixed-size pass.
 - Breaking: Unmeasured rows use one list-wide estimate instead of per-item-type averages. Per-type averages remain available through `getState().getAverageItemSizes()`.
 - Breaking: Key-based state lookups and the known-size map cover prepared rows, rather than eagerly indexing every array item. See [v4 migration](docs/v4-migration.md).

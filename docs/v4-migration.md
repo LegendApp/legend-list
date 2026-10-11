@@ -47,3 +47,25 @@ Native wheel, keyboard, or accessibility input without drag-begin can still fail
 escape following while content streams continuously. That is a pre-existing gap.
 A heuristic based only on upward offsets could mistake late native acknowledgements
 for input, so this migration keeps the released cancellation rules.
+
+## Other behavior corrections
+
+- Invalid `numColumns` values (anything other than a positive integer) become 1
+  with a development warning.
+- Non-finite or negative public item estimates, fixed layout sizes, and scroll-axis
+  measurements become 0 with one development warning. Main allowed invalid values
+  to degrade layout; v4 keeps the non-throwing public path while preventing invalid
+  item geometry. Valid zero and fractional fixed sizes retain their meaning.
+- `waitForInteraction` now gates visibility until interaction is recorded, and
+  `minimumViewTime` counts uninterrupted eligibility per key and configuration.
+  Code relying on the old ignored interaction gate or delayed-snapshot timing must
+  adopt these corrected semantics. Visibility hooks replay their current value
+  after subscription instead of invoking callbacks during render; amount hooks use
+  the list's default configuration rather than whichever callback pair ran last.
+- Renderers receive updated indices when retained keys move. A prepend can invoke
+  `renderItem` for retained mounted rows whose index changed; keep renderers pure.
+
+Source mode is additive: `getState().data` is `[]` because the source owns its items.
+Array-mode `getState().data` still returns the supplied array. macOS receives native
+scroll adjustment handling; this changes platform handling, not the public list
+prop contract.
