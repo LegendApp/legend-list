@@ -1,3 +1,9 @@
+## Unreleased
+
+- Breaking: Sparse layout prepares fixed sizes lazily. Distant mixed-size offsets, total size, and snap points remain approximate until the relevant rows are prepared. This deliberately avoids a full-list fixed-size pass.
+- Breaking: Unmeasured rows use one list-wide estimate instead of per-item-type averages. Per-type averages remain available through `getState().getAverageItemSizes()`.
+- Breaking: Key-based state lookups and the known-size map cover prepared rows, rather than eagerly indexing every array item. See [v4 migration](docs/v4-migration.md).
+
 ## 3.9.2
 
 - Fix: On web, items no longer jump for a frame when a scroll event repositions them before a pending size correction is applied. #596
