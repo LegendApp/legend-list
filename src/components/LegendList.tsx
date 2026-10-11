@@ -272,7 +272,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ...rest
     } = props;
     const numColumnsProp = normalizeNumColumnsProp(numColumnsPropRaw);
-    const estimatedItemSize = normalizeLayoutSize(estimatedItemSizeProp);
+    const estimatedItemSize = normalizeLayoutSize(estimatedItemSizeProp, 100);
 
     const keyExtractor = useMemo(
         () =>

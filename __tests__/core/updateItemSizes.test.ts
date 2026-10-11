@@ -67,6 +67,19 @@ describe("updateItemSizes", () => {
         Platform.OS = prevPlatform;
     });
 
+    it("reports normalized measurement geometry to item-size callbacks", () => {
+        syncLayoutStoreStructure(mockCtx);
+        const onItemSizeChanged = mock(() => {});
+        mockState.props.onItemSizeChanged = onItemSizeChanged;
+        for (const height of [Number.NaN, -10, Number.POSITIVE_INFINITY]) {
+            updateItemSizes(mockCtx, { itemKey: "item_0", size: { height: 100, width: 400 } });
+            onItemSizeChanged.mockClear();
+            updateItemSizes(mockCtx, { itemKey: "item_0", size: { height, width: 400 } });
+            expect(mockState.layoutStoreRuntime!.store.getSize(0)).toBe(0);
+            expect(onItemSizeChanged).toHaveBeenCalledWith(expect.objectContaining({ previous: 100, size: 0 }));
+        }
+    });
+
     it("keeps native scrollbar jumps responsive after a measured row shifts the visible anchor", () => {
         for (const height of [50, 150]) {
             for (const destination of [80000, 1000]) {

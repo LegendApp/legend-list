@@ -229,9 +229,9 @@ function applyItemSize(
         ? prepareMVCP(ctx, false, "item-size")
         : undefined;
     const diff = updateOneItemSize(ctx, itemKey, sizeObj, resolvedMeasurementItem, false);
-    const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
     if (diff !== 0) {
+        const size = state.sizesKnown.get(itemKey)!;
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;
