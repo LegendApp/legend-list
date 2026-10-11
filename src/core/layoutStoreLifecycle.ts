@@ -515,7 +515,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
 
     for (const index of materializedIndices ?? []) {
         const isIndexInRange = index >= 0 && index < dataLength;
-        if (!isIndexInRange && options.mode !== "reconcile") {
+        if (!isIndexInRange && (options.mode !== "reconcile" || !state.props.hasReliableKeyExtractor)) {
             continue;
         }
         const previousKey = options.previousIdCache?.get(index);
