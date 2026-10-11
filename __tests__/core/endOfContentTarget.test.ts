@@ -101,21 +101,19 @@ describe("end-of-content vs item-aligned offsets", () => {
                 didContainersLayout: true,
                 idCache: data.map((item) => item.id),
                 indexByKey: new Map(data.map((item, index) => [item.id, index])),
-                initialScroll,
-                initialScrollSession: session
-                    ? ({
-                          bootstrap: {
-                              frameHandle: undefined,
+                initialScroll: initialScroll && {
+                    kind: "index",
+                    ...initialScroll,
+                    bootstrap: session
+                        ? {
                               mountFrameCount: 1,
                               passCount: 0,
                               scroll: 0,
                               seedContentOffset: 0,
                               targetIndexSeed: 0,
-                          },
-                          kind: "bootstrap",
-                          previousDataLength: rows,
-                      } as StateContext["state"]["initialScrollSession"])
-                    : undefined,
+                          }
+                        : undefined,
+                },
                 lastLayout: { height: horizontal ? 300 : VIEWPORT, width: horizontal ? VIEWPORT : 300, x: 0, y: 0 },
                 otherAxisSize: 300,
                 positions: data.map((_, index) => index * ROW),
@@ -314,6 +312,7 @@ describe("end-of-content vs item-aligned offsets", () => {
             const target: Target = { index: 3, viewOffset: 0 };
             const ctx = setup({ footer: 0, initialScroll: target, session: true });
 
+            const before = ctx.state.initialScroll;
             handleBootstrapInitialScrollFooterLayout(ctx, {
                 dataLength: ROWS,
                 footerSize: 80,
@@ -321,13 +320,14 @@ describe("end-of-content vs item-aligned offsets", () => {
                 stylePaddingEnd: 0,
             });
 
-            expect(ctx.state.initialScroll).toBe(target);
+            expect(ctx.state.initialScroll).toBe(before);
         });
 
         it("ignores footer layout for an explicit last-row alignment", () => {
             const target: Target = { index: LAST, viewOffset: 0, viewPosition: 1 };
             const ctx = setup({ footer: 0, initialScroll: target, session: true });
 
+            const before = ctx.state.initialScroll;
             handleBootstrapInitialScrollFooterLayout(ctx, {
                 dataLength: ROWS,
                 footerSize: 80,
@@ -335,7 +335,7 @@ describe("end-of-content vs item-aligned offsets", () => {
                 stylePaddingEnd: 0,
             });
 
-            expect(ctx.state.initialScroll).toBe(target);
+            expect(ctx.state.initialScroll).toBe(before);
         });
     });
 });

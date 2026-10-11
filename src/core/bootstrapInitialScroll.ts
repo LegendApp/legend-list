@@ -267,7 +267,8 @@ export function handleBootstrapInitialScrollFooterLayout(
 ) {
     const { state } = ctx;
     const target = state.initialScroll ?? state.initialScrollAnchor;
-    if (!options.dataLength || (!options.initialScrollAtEnd && !isEndOfContentTarget(target, options.dataLength))) return;
+    if (!options.dataLength || (!options.initialScrollAtEnd && !isEndOfContentTarget(target, options.dataLength)))
+        return;
     const initial = state.initialScroll;
     if (!initial) {
         updateInitialScrollAnchor(ctx, options);
