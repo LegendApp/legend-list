@@ -64,6 +64,14 @@ for input, so this migration keeps the released cancellation rules.
   adopt these corrected semantics. Visibility hooks replay their current value
   after subscription instead of invoking callbacks during render; amount hooks use
   the list's default configuration rather than whichever callback pair ran last.
+- Viewability deadlines use the current measured viewport and row geometry. Main
+  delayed geometry checks using a captured viewport size, which could mark a
+  partially visible row read after the viewport shrank. For example, Notifications
+  Inbox keeps its fourth row unread when less than 60% is visible; it becomes read
+  only after meeting that threshold for 120ms. After Add 3 newer, the settled
+  example has 18 unread / 81 read rather than main's premature 17 unread / 82 read.
+  This follows the [FlatList viewability rules](https://reactnative.dev/docs/flatlist#viewabilityconfig):
+  the item fraction, rather than the viewport fraction, determines eligibility.
 - Renderers receive updated indices when retained keys move. A prepend can invoke
   `renderItem` for retained mounted rows whose index changed; keep renderers pure.
 
