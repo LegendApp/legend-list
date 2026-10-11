@@ -340,3 +340,73 @@ it("does not cancel another configuration when a callback pair is removed", () =
         expect(retained).toHaveLength(1);
         expect(pending.size).toBe(0);
     }));
+
+it("fires the original deadline after an idle shallow array copy", () =>
+    scenario(({ advance, calls, ctx, update, pending }) => {
+        update(0);
+        advance(50);
+        ctx.state.props.data = [...ctx.state.props.data!];
+        advance(100);
+        expect(calls).toHaveLength(1);
+        expect(calls[0].changed).toMatchObject([{ isViewable: true, key: "a" }]);
+        expect(pending.size).toBe(0);
+    }));
+
+it("retains visibility credit through repeated array copies and append calculations", () =>
+    scenario(({ advance, calls, ctx, update, pending }) => {
+        update(0);
+        for (const time of [25, 50, 75]) {
+            advance(time);
+            ctx.state.props.data = [...ctx.state.props.data!, { id: `new-${time}` }];
+            update();
+            expect(pending.size).toBe(1);
+        }
+        advance(100);
+        expect(calls).toHaveLength(1);
+        advance(150);
+        ctx.state.props.data = [...ctx.state.props.data!];
+        update();
+        expect(calls).toHaveLength(1);
+        expect(pending.size).toBe(0);
+    }));
+
+for (const published of [false, true]) {
+    it(`restarts array visibility for a same-key item replacement (published: ${published})`, () =>
+        scenario(({ advance, calls, ctx, update }) => {
+            update(0);
+            advance(published ? 150 : 50);
+            ctx.state.props.data = ctx.state.props.data!.map((item, index) => (index === 0 ? { ...item } : item));
+            update();
+            if (published) expect(calls[1].changed).toMatchObject([{ isViewable: false, key: "a" }]);
+            advance(published ? 249 : 149);
+            expect(calls).toHaveLength(published ? 2 : 0);
+            advance(published ? 250 : 150);
+            expect(calls.at(-1)!.changed).toMatchObject([{ isViewable: true, key: "a" }]);
+        }));
+}
+
+it("restarts visibility when dataKey changes despite retained array items", () =>
+    scenario(({ advance, calls, ctx, update }) => {
+        update(0);
+        advance(50);
+        ctx.state.props.dataKey = "new-dataset";
+        update();
+        advance(149);
+        expect(calls).toHaveLength(0);
+        advance(150);
+        expect(calls).toHaveLength(1);
+    }));
+
+it("prunes a removed array key before its pending deadline", () =>
+    scenario(({ advance, calls, ctx, update, pending }) => {
+        update(0);
+        advance(50);
+        ctx.state.props.data = [{ id: "replacement" }];
+        ctx.state.idCache = ["replacement"];
+        ctx.state.indexByKey = new Map([["replacement", 0]]);
+        advance(100);
+        expect(calls).toHaveLength(0);
+        expect(pending.size).toBe(1);
+        advance(200);
+        expect(calls[0].changed).toMatchObject([{ isViewable: true, key: "replacement" }]);
+    }));

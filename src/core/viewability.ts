@@ -180,9 +180,33 @@ function updateViewableItemsWithConfig(
     const timerKey = `viewability:${configId}` as const;
     let timing = viewabilityState.minimumViewTime;
     if (minimumViewTime > 0) {
-        if (!timing || timing.data !== data || !areViewabilityConfigsEqual(timing.config, viewabilityConfig)) {
+        if (
+            !timing ||
+            timing.dataSource !== state.props.dataSource ||
+            timing.dataKey !== state.props.dataKey ||
+            !areViewabilityConfigsEqual(timing.config, viewabilityConfig)
+        ) {
             state.scheduledWork.cancel(timerKey);
-            timing = viewabilityState.minimumViewTime = { config: viewabilityConfig, data, since: new Map() };
+            timing = viewabilityState.minimumViewTime = {
+                config: viewabilityConfig,
+                dataKey: state.props.dataKey,
+                dataSource: state.props.dataSource,
+                since: new Map(),
+            };
+        }
+        // Source mutations already prune removed keys and explicitly preserve update timing.
+        if (data.kind === "array") {
+            for (const [key, entry] of timing.since) {
+                const index = state.indexByKey.get(key);
+                if (
+                    index === undefined ||
+                    index >= data.getLength() ||
+                    data.getKey(index) !== key ||
+                    data.getItem(index) !== entry.item
+                ) {
+                    timing.since.delete(key);
+                }
+            }
         }
     } else if (timing) {
         state.scheduledWork.cancel(timerKey);
@@ -234,10 +258,8 @@ function updateViewableItemsWithConfig(
                     publishAmounts,
                 );
             }
-            if (
-                timing &&
-                (!timing.since.has(viewToken.key) || now - timing.since.get(viewToken.key)! < minimumViewTime)
-            ) {
+            const since = timing?.since.get(viewToken.key)?.since;
+            if (timing && (since === undefined || now - since < minimumViewTime)) {
                 isStillViewable = false;
             }
             if (!isStillViewable) {
@@ -277,9 +299,12 @@ function updateViewableItemsWithConfig(
             if (amount.isViewable) {
                 if (timing) {
                     visibleKeys!.add(key);
-                    const since = timing.since.get(key) ?? now;
-                    timing.since.set(key, since);
-                    const deadline = since + minimumViewTime;
+                    let entry = timing.since.get(key);
+                    if (!entry) {
+                        entry = { item, since: now };
+                        timing.since.set(key, entry);
+                    }
+                    const deadline = entry.since + minimumViewTime;
                     if (now < deadline) {
                         nextDeadline = Math.min(nextDeadline ?? deadline, deadline);
                         continue;
@@ -312,8 +337,7 @@ function updateViewableItemsWithConfig(
                 const scheduledTiming = timing;
                 state.scheduledWork.timeout(
                     () => {
-                        if (viewabilityState.minimumViewTime !== scheduledTiming || getIndexedData(state) !== data)
-                            return;
+                        if (viewabilityState.minimumViewTime !== scheduledTiming) return;
                         scheduledTiming.deadline = undefined;
                         const currentPairs = state.viewabilityConfigCallbackPairs;
                         const currentPair = currentPairs
@@ -321,7 +345,7 @@ function updateViewableItemsWithConfig(
                             : viewabilityConfigCallbackPair;
                         if (currentPair && hasViewabilityConsumers(ctx, currentPairs ?? [currentPair])) {
                             updateViewableItemsWithConfig(
-                                data,
+                                getIndexedData(state),
                                 currentPair,
                                 state,
                                 ctx,
