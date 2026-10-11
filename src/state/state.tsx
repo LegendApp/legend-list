@@ -159,9 +159,10 @@ export interface StateContext {
             startBuffered: number;
             viewableItems: ViewToken[];
             minimumViewTime?: {
-                data: object;
+                dataSource: object | undefined;
+                dataKey: InternalState["props"]["dataKey"];
                 config: ViewabilityConfig;
-                since: Map<string, number>;
+                since: Map<string, { item: any; since: number }>;
                 deadline?: number;
             };
         }

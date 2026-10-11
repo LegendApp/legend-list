@@ -283,3 +283,30 @@ for (const mode of ["array", "source"] as const) {
         expect(callback).toHaveBeenCalledTimes(1);
     });
 }
+
+for (const change of ["copy", "append", "repeated copies"] as const) {
+    test(`retains pending visibility after array ${change}`, async () => {
+        const s = await mountScenario();
+        try {
+            const items = s.props.data!;
+            await s.advance(50);
+            await s.rerender({ data: change === "append" ? [...items, { id: "new", text: "new" }] : [...items] });
+            if (change === "repeated copies") {
+                await s.advance(75);
+                await s.rerender({ data: [...items] });
+                await s.scroll(0);
+            }
+            await s.advance(99);
+            expect(s.callback).not.toHaveBeenCalled();
+            await s.advance(100);
+            expect(s.callback).toHaveBeenCalledTimes(1);
+            expect(s.callback.mock.calls[0][0].viewableItems.map((item: any) => item.key)).toEqual(["0"]);
+            await s.advance(150);
+            await s.rerender({ data: [...items, { id: "newer", text: "newer" }] });
+            await s.advance(300);
+            expect(s.callback).toHaveBeenCalledTimes(1);
+        } finally {
+            s.dispose();
+        }
+    });
+}

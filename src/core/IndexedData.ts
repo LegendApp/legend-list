@@ -61,7 +61,7 @@ export class DataSourceAdapter<ItemT> implements IndexedData<ItemT> {
 }
 
 // Share adapter ownership between React renders and imperative layout reads.
-// Timing and span caches use this identity, so unchanged inputs must retain it.
+// Span caches use this identity, so unchanged inputs must retain it.
 export function resolveIndexedData<ItemT>(
     indexedData: IndexedData<ItemT> | undefined,
     data: readonly ItemT[],
