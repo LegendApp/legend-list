@@ -111,3 +111,83 @@ it("remeasures unchanged legacy rows when their registered layout trigger fires"
         ctx.state.scheduledWork.dispose();
     }
 });
+
+it("remeasures only mounted invalidated source rows after commit and rejects old generations", async () => {
+    mock.module("@/constants-platform", () => ({ IsNewArchitecture: false }));
+    const React = await import("react");
+    const { act, render } = await import("../helpers/testingLibrary");
+    const { useContainerMeasurement } = await import("../../src/hooks/useContainerMeasurement");
+    const { applyDataSourceMutationBatches } = await import("../../src/core/DataSourceMutationCoordinator");
+    const { syncLayoutStoreStructure } = await import("../../src/core/layoutStoreLifecycle");
+    const item = { id: "item_0" };
+    const source = {
+        getItem: () => item,
+        getKey: () => item.id,
+        getLength: () => 1,
+        getRevision: () => 0,
+        subscribe: () => () => {},
+    };
+    const ctx = createMockContext(
+        { containerItemKey0: item.id, otherAxisSize: 400, readyToRender: true },
+        {
+            didContainersLayout: true,
+            idCache: [item.id],
+            indexByKey: new Map([[item.id, 0]]),
+            props: { dataSource: source, estimatedItemSize: 100 },
+        },
+    );
+    ctx.state.containerItemKeys.set(item.id, 0);
+    const store = syncLayoutStoreStructure(ctx)!;
+    const calculate = spyOn(calculateModule, "calculateItemsInView").mockImplementation(() => {});
+    const callbacks: Array<(x: number, y: number, width: number, height: number) => void> = [];
+    const measure = mock((callback: (typeof callbacks)[number]) => callbacks.push(callback));
+    const unaffected = mock(() => {});
+    ctx.containerLayoutTriggers.set(3, unaffected);
+    const ref = { current: { measure } } as any;
+    let onLayout: (event: any) => void;
+    let commits = 0;
+    function Row() {
+        ({ onLayout } = useContainerMeasurement({ containerId: 0, ctx, horizontal: false, itemKey: item.id, ref }));
+        React.useLayoutEffect(() => {
+            commits++;
+        });
+        return null;
+    }
+    const screen = render(React.createElement(Row));
+    try {
+        await act(async () => onLayout({ nativeEvent: { layout: { height: 160, width: 400, x: 0, y: 0 } } }));
+        for (let round = 1; round <= 2; round++) {
+            const previousCommits = commits;
+            await act(async () => {
+                const result = applyDataSourceMutationBatches(ctx, source, [
+                    {
+                        length: 1,
+                        operations: [{ count: 1, index: 0, layout: "invalidate", type: "update" }],
+                        previousLength: 1,
+                        previousRevision: round - 1,
+                        revision: round,
+                    },
+                ]);
+                expect(result.applied).toBe(true);
+                expect(measure).toHaveBeenCalledTimes(round - 1);
+            });
+            expect(commits).toBeGreaterThan(previousCommits);
+            expect(measure).toHaveBeenCalledTimes(round);
+            expect(ctx.state.sizesKnown.get(item.id)).toBeUndefined();
+            expect(store.getSize(0)).toBe(100);
+            if (round === 2) {
+                callbacks[0](0, 0, 400, 250);
+                expect(ctx.state.sizesKnown.get(item.id)).toBeUndefined();
+                expect(store.getSize(0)).toBe(100);
+            }
+            callbacks[round - 1](0, 0, 400, 160);
+            expect(ctx.state.sizesKnown.get(item.id)).toBe(160);
+            expect(store.getSize(0)).toBe(160);
+        }
+        expect(unaffected).not.toHaveBeenCalled();
+    } finally {
+        screen.unmount();
+        calculate.mockRestore();
+        ctx.state.scheduledWork.dispose();
+    }
+});

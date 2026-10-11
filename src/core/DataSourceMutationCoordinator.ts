@@ -366,6 +366,9 @@ export function applyDataSourceMutationBatches(
             set$(ctx, `containerItemData${containerId}`, item);
             const versionKey = `containerDataVersion${containerId}` as const;
             set$(ctx, versionKey, (peek$(ctx, versionKey) ?? 0) + 1);
+            if (invalidatedKeys.has(key)) {
+                ctx.containerLayoutTriggers.get(containerId)?.();
+            }
         }
     }
 
