@@ -1,6 +1,7 @@
 import { getDataItem } from "@/core/IndexedData";
 import { setSize } from "@/core/setSize";
 import type { StateContext } from "@/state/state";
+import { normalizeLayoutSize } from "@/utils/layoutMeasurement";
 import { getId } from "./getId";
 
 export interface ResolvedItemSize {
@@ -20,7 +21,7 @@ export function getFixedItemLayoutSize(ctx: StateContext, index: number, data: a
             ? resolved.fixedItemSize
             : getFixedItemSize(data, index, itemType);
         if (fixedSize !== undefined) {
-            size = fixedSize + ctx.scrollAxisGap;
+            size = normalizeLayoutSize(fixedSize + ctx.scrollAxisGap);
         }
     }
 

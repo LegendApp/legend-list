@@ -1,4 +1,5 @@
 import { PixelRatio } from "@/platform/PixelRatio";
+import { warnDevOnce } from "@/utils/helpers";
 
 const FLOATING_POINT_SLACK = 0.01;
 
@@ -14,4 +15,15 @@ export function isNativeLayoutNoise(delta: number) {
 
 export function isNativeLayoutSizeNoise(heightDelta: number, widthDelta: number) {
     return isWithinEpsilon(heightDelta) && isWithinEpsilon(widthDelta);
+}
+
+export function normalizeLayoutSize(size: number) {
+    if (!Number.isFinite(size) || size < 0) {
+        warnDevOnce(
+            "invalid-layout-size",
+            `Item sizes must be finite non-negative numbers. Received ${size}; using 0 instead.`,
+        );
+        return 0;
+    }
+    return size;
 }

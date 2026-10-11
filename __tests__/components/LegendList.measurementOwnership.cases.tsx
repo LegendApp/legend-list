@@ -372,3 +372,63 @@ for (const keyed of [false, true]) {
         }
     });
 }
+
+for (const numColumns of [1, 2]) {
+    for (const invalidSize of [Number.NaN, -10, Number.POSITIVE_INFINITY]) {
+        for (const input of ["estimate", "fixed", "measurement"] as const) {
+            test(`does not throw for an invalid public ${input} size (${invalidSize}, ${numColumns} columns)`, async () => {
+                let ctx!: StateContext;
+                let listProps: any;
+                clearWarnDevOnceForTests();
+                const warn = spyOn(console, "warn").mockImplementation(() => {});
+                mock.module("@/components/ListComponent", () => ({
+                    ListComponent: (componentProps: any) => {
+                        ctx = useStateContext();
+                        listProps = componentProps;
+                        return null;
+                    },
+                }));
+                const { LegendList } = await import(
+                    `../../src/components/LegendList?invalid-size-${input}-${invalidSize}-${numColumns}`
+                );
+                const ref = React.createRef<LegendListRef>();
+                const screen = render(
+                    <LegendList
+                        data={[{ height: input === "fixed" ? invalidSize : 40 }, { height: 40 }, { height: 40 }]}
+                        estimatedItemSize={input === "estimate" ? invalidSize : 40}
+                        estimatedListSize={{ height: 300, width: 320 }}
+                        getFixedItemSize={input === "fixed" ? (item: { height: number }) => item.height : undefined}
+                        numColumns={numColumns}
+                        recycleItems={false}
+                        ref={ref}
+                        renderItem={() => null}
+                    />,
+                );
+                try {
+                    await act(async () =>
+                        listProps.onLayout({ nativeEvent: { layout: { height: 300, width: 320, x: 0, y: 0 } } }),
+                    );
+                    const store = ctx.state.layoutStoreRuntime!.store;
+                    materializeLayoutStoreRange(ctx, 0, 2);
+                    if (input === "measurement")
+                        await act(async () => ref.current!.setItemSize("0", { height: invalidSize, width: 320 }));
+                    expect(store.getSize(0)).toBe(0);
+                    if (input === "estimate") expect(ctx.state.props.estimatedItemSize).toBe(0);
+                    else expect(ctx.state.sizesKnown.get("0")).toBe(0);
+                    expect(Number.isFinite(store.getTotalSize())).toBe(true);
+                    const sizeWarnings = warn.mock.calls.filter(([message]) =>
+                        String(message).includes("Item sizes must be finite non-negative numbers"),
+                    );
+                    expect(sizeWarnings).toHaveLength(1);
+                    // A subsequent valid public measurement still corrects geometry.
+                    await act(async () => ref.current!.setItemSize("0", { height: 60, width: 320 }));
+                    expect(store.getSize(0)).toBe(60);
+                    expect(ctx.state.sizesKnown.get("0")).toBe(60);
+                } finally {
+                    screen.unmount();
+                    warn.mockRestore();
+                }
+            });
+        }
+    }
+}

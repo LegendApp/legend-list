@@ -19,7 +19,7 @@ import { checkThresholds } from "@/utils/checkThresholds";
 import { getId } from "@/utils/getId";
 import { getItemSize, type ResolvedItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
-import { isNativeLayoutNoise } from "@/utils/layoutMeasurement";
+import { isNativeLayoutNoise, normalizeLayoutSize } from "@/utils/layoutMeasurement";
 
 export function runOrScheduleMVCPRecalculate(ctx: StateContext, isFollowingEnd?: boolean) {
     // Runs the MVCP recalculation pass after item-size changes.
@@ -364,7 +364,7 @@ export function updateOneItemSize(
         layoutStore && index !== undefined
             ? layoutStore.getSize(index)
             : getItemSize(ctx, itemKey, itemIndex, itemData, notifyTotalSize, resolvedItemSize);
-    const rawSize = horizontal ? sizeObj.width : sizeObj.height;
+    const rawSize = normalizeLayoutSize(horizontal ? sizeObj.width : sizeObj.height);
     if (fixedItemSize === undefined) {
         state.fixedItemSizeKeys?.delete(itemKey);
     } else {
