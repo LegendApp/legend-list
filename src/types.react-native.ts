@@ -14,10 +14,11 @@ import type {
 
 import type {
     AnchoredEndSpaceConfig,
+    LegendListDataSourcePropsBase,
+    LegendListPropsBase,
     LegendListRef as LegendListRefBase,
     LegendListState as LegendListStateBase,
 } from "@/types.base";
-import type { LegendListPropsBase } from "@/types.internal";
 
 export type {
     AdaptiveRender,
@@ -61,10 +62,8 @@ export type {
     ViewToken,
 } from "@/types.base";
 
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-
-type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = DistributiveOmit<
-    LegendListPropsBase<ItemT, ScrollViewProps, TItemType>,
+type LegendListPropsOverrides<Props> = Omit<
+    Props,
     | "anchoredEndSpace"
     | "contentInsetEndAdjustment"
     | "onScroll"
@@ -84,7 +83,12 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Dis
 export type LegendListProps<
     ItemT = any,
     TItemType extends string | undefined = string | undefined,
-> = LegendListPropsOverrides<ItemT, TItemType>;
+> = LegendListPropsOverrides<LegendListPropsBase<ItemT, ScrollViewProps, TItemType>>;
+
+export type LegendListDataSourceProps<
+    ItemT = any,
+    TItemType extends string | undefined = string | undefined,
+> = LegendListPropsOverrides<LegendListDataSourcePropsBase<ItemT, ScrollViewProps, TItemType>>;
 
 export type LegendListRef = Omit<
     LegendListRefBase,
@@ -100,10 +104,10 @@ export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
     elementAtIndex: (index: number) => View | null | undefined;
 };
 
-// Contextually type source callbacks before inferring the item generic.
-export type LegendListComponent = {
-    <ItemT = any>(
-        props: Extract<LegendListProps<ItemT>, { dataSource: unknown }> & React.RefAttributes<LegendListRef>,
-    ): React.ReactElement | null;
-    <ItemT = any>(props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>): React.ReactElement | null;
-};
+export type LegendListComponent = <ItemT = any>(
+    props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>,
+) => React.ReactElement | null;
+
+export type LegendListDataSourceComponent = <ItemT = any>(
+    props: LegendListDataSourceProps<ItemT> & React.RefAttributes<LegendListRef>,
+) => React.ReactElement | null;

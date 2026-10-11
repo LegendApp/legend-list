@@ -64,12 +64,8 @@ export type SectionListGetFixedItemSize<ItemT, SectionT extends SectionBase<Item
 ) => number | undefined;
 
 type SectionListLegendProps<ItemT, SectionT extends SectionBase<ItemT>> = Omit<
-    Extract<
-        LegendListProps<SectionListFlatItem<ItemT, SectionT>>,
-        { data: readonly SectionListFlatItem<ItemT, SectionT>[] }
-    >,
+    LegendListProps<SectionListFlatItem<ItemT, SectionT>>,
     | "data"
-    | "dataSource"
     | "children"
     | "renderItem"
     | "keyExtractor"

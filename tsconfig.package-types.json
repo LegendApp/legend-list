@@ -11,6 +11,7 @@
         }
     },
     "include": [
+        "__tests__/types/publicCompat.types.tsx",
         "__tests__/types/publicWrappers.types.tsx",
         "__tests__/types/publicInference.types.tsx"
     ]

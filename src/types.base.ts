@@ -550,18 +550,23 @@ type ItemEventCallbackKeys =
 
 type ItemEventCallbacks<ItemT> = Pick<LegendListSpecificProps<ItemT, string | undefined>, ItemEventCallbackKeys>;
 
-// Only source event payloads include unloaded items. Item-dependent layout callbacks
-// still require loaded items, and array/children callbacks retain their existing contract.
 export type LegendListPropsBase<
     ItemT,
     TScrollViewProps = Record<string, any>,
     TItemType extends string | undefined = string | undefined,
 > = BaseScrollViewProps<TScrollViewProps> &
+    LegendListSpecificProps<ItemT, TItemType> &
+    (LegendListArrayDataModeProps<ItemT, TItemType> | ChildrenModeProps);
+
+// Source event payloads include unloaded items; layout callbacks require loaded items.
+export type LegendListDataSourcePropsBase<
+    ItemT,
+    TScrollViewProps = Record<string, any>,
+    TItemType extends string | undefined = string | undefined,
+> = BaseScrollViewProps<TScrollViewProps> &
     Omit<LegendListSpecificProps<ItemT, TItemType>, ItemEventCallbackKeys> &
-    (
-        | ((LegendListArrayDataModeProps<ItemT, TItemType> | ChildrenModeProps) & ItemEventCallbacks<ItemT>)
-        | (LegendListDataSourceModeProps<ItemT, TItemType> & ItemEventCallbacks<ItemT | undefined>)
-    );
+    LegendListDataSourceModeProps<ItemT, TItemType> &
+    ItemEventCallbacks<ItemT | undefined>;
 
 export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;
@@ -696,7 +701,7 @@ export type LegendListState = {
 
 export type LegendListRef = {
     /** Releases waitForInteraction viewability tracking and recalculates the visible items. */
-    recordInteraction(): void;
+    recordInteraction?(): void;
 
     /**
      * Clears internal virtualization caches.

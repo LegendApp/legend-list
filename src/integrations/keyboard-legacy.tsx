@@ -17,7 +17,11 @@ import {
 } from "react-native-reanimated";
 
 import { internal, type LegendListMetrics, type LegendListRef } from "@legendapp/list/react-native";
-import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
+import {
+    AnimatedLegendList,
+    type AnimatedLegendListDataSourceProps,
+    type AnimatedLegendListProps,
+} from "@legendapp/list/reanimated";
 
 const { typedForwardRef, useCombinedRef } = internal;
 
@@ -26,16 +30,21 @@ type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed
 type KeyboardAnimationMode = "idle" | "running";
 type AnimatedScrollView = React.ElementRef<typeof Reanimated.ScrollView>;
 
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-
-type KeyboardControllerLegendListProps<ItemT> = DistributiveOmit<
-    AnimatedLegendListProps<ItemT>,
+type KeyboardControllerLegendListPropsOverrides<Props> = Omit<
+    Props,
     "onScroll" | "contentInset" | "automaticallyAdjustContentInsets"
 > & {
     onScroll?: KeyboardOnScrollHandler;
     contentInset?: Insets | undefined;
     safeAreaInsetBottom?: number;
 };
+
+type KeyboardControllerLegendListProps<ItemT> = KeyboardControllerLegendListPropsOverrides<
+    AnimatedLegendListProps<ItemT>
+>;
+type KeyboardControllerLegendListDataSourceProps<ItemT> = KeyboardControllerLegendListPropsOverrides<
+    AnimatedLegendListDataSourceProps<ItemT>
+>;
 
 const clampProgress = (progress: number) => {
     "worklet";
@@ -81,7 +90,7 @@ const calculateKeyboardTargetOffset = (
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoidingLegendList<ItemT>(
-    props: KeyboardControllerLegendListProps<ItemT>,
+    props: KeyboardControllerLegendListProps<ItemT> | KeyboardControllerLegendListDataSourceProps<ItemT>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     const {
@@ -568,8 +577,12 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
         return contentContainerStyleProp ? [contentContainerStyleProp, minSizeStyle] : minSizeStyle;
     }, [alignItemsAtEndMinSize, contentContainerStyleProp, horizontal]);
 
+    const AnimatedLegendListInternal = AnimatedLegendList as React.ComponentType<
+        (AnimatedLegendListProps<ItemT> | AnimatedLegendListDataSourceProps<ItemT>) & React.RefAttributes<LegendListRef>
+    >;
+
     return (
-        <AnimatedLegendList
+        <AnimatedLegendListInternal
             {...rest}
             animatedProps={animatedProps}
             automaticallyAdjustContentInsets={false}
@@ -587,8 +600,7 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
     );
 }) as {
     <ItemT>(
-        props: Extract<KeyboardControllerLegendListProps<ItemT>, { dataSource: unknown }> &
-            React.RefAttributes<LegendListRef>,
+        props: KeyboardControllerLegendListDataSourceProps<ItemT> & React.RefAttributes<LegendListRef>,
     ): React.ReactElement | null;
     <ItemT>(
         props: KeyboardControllerLegendListProps<ItemT> & React.RefAttributes<LegendListRef>,

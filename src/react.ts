@@ -1,7 +1,7 @@
 import { LegendListRuntime, internal as sharedInternal } from "@/entrypoints/shared";
-import type { LegendListComponent } from "@/types.web";
+import type { LegendListComponent, LegendListDataSourceComponent } from "@/types.web";
 
-export const LegendList = LegendListRuntime as LegendListComponent;
+export const LegendList = LegendListRuntime as LegendListDataSourceComponent & LegendListComponent;
 
 /** @internal */
 export const internal = sharedInternal;

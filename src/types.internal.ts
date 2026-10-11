@@ -12,6 +12,7 @@ import type {
     Insets,
     LayoutRectangle,
     LegendListDataSource,
+    LegendListDataSourcePropsBase,
     LegendListPropsBase,
     NativeScrollEvent,
     NativeSyntheticEvent,
@@ -23,7 +24,7 @@ import type {
 import type { StylesAsSharedValue } from "@/typesInternal";
 import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
 
-export type { BaseScrollViewProps, LegendListPropsBase } from "@/types.base";
+export type { BaseScrollViewProps, LegendListDataSourcePropsBase, LegendListPropsBase } from "@/types.base";
 
 export type ScrollAdjustmentSource = "data" | "item-size";
 
@@ -122,7 +123,10 @@ interface InternalInitialScrollTarget extends ScrollIndexWithOffsetAndContentOff
     preserveForFooterLayout?: boolean;
 }
 
-type LegendListPropsInternal = LegendListPropsBase<any, Record<string, any>, string | undefined> & {
+type LegendListPropsInternal = (
+    | LegendListPropsBase<any, Record<string, any>, string | undefined>
+    | LegendListDataSourcePropsBase<any, Record<string, any>, string | undefined>
+) & {
     data: readonly any[];
     renderItem: (props: any) => React.ReactNode;
 };

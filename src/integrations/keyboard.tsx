@@ -12,7 +12,11 @@ import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import type { AnchoredEndSpaceConfig } from "@legendapp/list/react";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { internal } from "@legendapp/list/react-native";
-import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
+import {
+    AnimatedLegendList,
+    type AnimatedLegendListDataSourceProps,
+    type AnimatedLegendListProps,
+} from "@legendapp/list/reanimated";
 
 const { typedForwardRef, useCombinedRef } = internal;
 
@@ -33,10 +37,8 @@ type KeyboardChatScrollViewPropsUnique = Omit<
     | "offset"
 >;
 
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-
-type KeyboardAwareLegendListProps<ItemT> = DistributiveOmit<
-    AnimatedLegendListProps<ItemT>,
+type KeyboardAwareLegendListPropsOverrides<Props> = Omit<
+    Props,
     "anchoredEndSpace" | "contentInsetEndAdjustment" | "renderScrollComponent"
 > &
     KeyboardChatScrollViewPropsUnique & {
@@ -44,6 +46,11 @@ type KeyboardAwareLegendListProps<ItemT> = DistributiveOmit<
         contentInsetEndAdjustment?: SharedValue<number>;
         keyboardOffset?: number;
     };
+
+type KeyboardAwareLegendListProps<ItemT> = KeyboardAwareLegendListPropsOverrides<AnimatedLegendListProps<ItemT>>;
+type KeyboardAwareLegendListDataSourceProps<ItemT> = KeyboardAwareLegendListPropsOverrides<
+    AnimatedLegendListDataSourceProps<ItemT>
+>;
 
 type KeyboardChatScrollViewContentInsets = Parameters<
     NonNullable<KeyboardChatScrollViewProps["onContentInsetChange"]>
@@ -139,7 +146,7 @@ export function useKeyboardScrollToEnd({ freeze: freezeProp, listRef }: UseKeybo
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLegendList<ItemT>(
-    props: KeyboardAwareLegendListProps<ItemT>,
+    props: KeyboardAwareLegendListProps<ItemT> | KeyboardAwareLegendListDataSourceProps<ItemT>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     const {
@@ -207,7 +214,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     );
 
     const AnimatedLegendListInternal = AnimatedLegendList as unknown as React.ComponentType<
-        AnimatedLegendListProps<ItemT> & {
+        (AnimatedLegendListProps<ItemT> | AnimatedLegendListDataSourceProps<ItemT>) & {
             anchoredEndSpace?: AnchoredEndSpaceConfig;
             anchoredEndSpaceOwnerInternal?: "list" | "scroll";
             ref?: ForwardedRef<LegendListRef>;
@@ -225,8 +232,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     );
 }) as {
     <ItemT>(
-        props: Extract<KeyboardAwareLegendListProps<ItemT>, { dataSource: unknown }> &
-            React.RefAttributes<LegendListRef>,
+        props: KeyboardAwareLegendListDataSourceProps<ItemT> & React.RefAttributes<LegendListRef>,
     ): React.ReactElement | null;
     <ItemT>(props: KeyboardAwareLegendListProps<ItemT> & React.RefAttributes<LegendListRef>): React.ReactElement | null;
 };

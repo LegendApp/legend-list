@@ -80,6 +80,7 @@ import type {
 import type {
     AnchoredEndSpaceOwner,
     InternalState,
+    LegendListDataSourcePropsBase,
     LegendListPropsBase,
     LegendListScrollerRef,
 } from "@/types.internal";
@@ -105,7 +106,12 @@ import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 export const LegendList = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     typedForwardRef(function LegendList<T>(
-        props: LegendListPropsBase<T, LooseScrollViewProps> & { scrollElement?: HTMLElement | null },
+        props: (
+            | LegendListPropsBase<T, LooseScrollViewProps>
+            | LegendListDataSourcePropsBase<T, LooseScrollViewProps>
+        ) & {
+            scrollElement?: HTMLElement | null;
+        },
         forwardedRef: ForwardedRef<LegendListRef>,
     ) {
         // Handle children mode - convert children to data array at the top level
@@ -135,7 +141,10 @@ export const LegendList = typedMemo(
     }),
 );
 
-type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> & {
+type LegendListInnerProps<T> = Omit<
+    LegendListPropsBase<T, LooseScrollViewProps> | LegendListDataSourcePropsBase<T, LooseScrollViewProps>,
+    "children"
+> & {
     scrollElement?: HTMLElement | null;
     childrenMode?: boolean;
     data: ReadonlyArray<T>;
