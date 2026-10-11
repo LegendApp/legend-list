@@ -440,6 +440,9 @@ describe("post-reveal native observations", () => {
     it.each(["ios", "android", "web"] as const)("waits for acknowledgement before retrying on %s", (platform) => {
         Platform.OS = platform;
         const ctx = revealedEnd();
+        // Browser observations remain at the applied offset while cached scroll advances optimistically.
+        let observed = ctx.state.scroll;
+        if (platform === "web") ctx.state.refScroller.current!.getCurrentScrollOffset = () => observed;
         footerLayout(ctx, 40);
         frame();
         for (let i = 0; i < 4; i++) frame();
@@ -449,11 +452,14 @@ describe("post-reveal native observations", () => {
         // A later observation confirms that the platform applied only part of the correction.
         ctx.state.lastNativeScroll = 620;
         ctx.state.lastNativeScrollTime = ctx.state.initialScrollAnchor!.lastRequestTime! + 1;
-        ctx.state.scroll = ctx.state.scrollPending = 620;
+        if (platform !== "web") ctx.state.scroll = ctx.state.scrollPending = 620;
+        observed = 620;
         frame();
         expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenLastCalledWith(20);
         expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(2);
+        expect(ctx.state.scroll).toBe(640);
         ctx.state.lastNativeScroll = 640;
+        observed = 640;
         frame();
         expect(frames.size).toBe(0);
         expect(ctx.state.initialScroll).toBeUndefined();

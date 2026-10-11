@@ -21,13 +21,16 @@ export function retargetInitialScroll(
     padding: number,
     atEnd: boolean,
 ): Target {
-    if (target.kind === "end") return { ...target, index: Math.max(0, dataLength - 1) };
+    if (target.kind === "end")
+        return { ...target, index: Math.max(0, dataLength - 1), viewOffset: -padding - footerSize };
     return {
         ...target,
         contentOffset: undefined,
         index: atEnd ? Math.max(0, dataLength - 1) : target.index,
         preserveForBottomPadding: true,
-        viewOffset: -padding - (atEnd || isEndOfContentTarget(target, dataLength) || target.preserveForFooterLayout ? footerSize : 0),
+        viewOffset:
+            -padding -
+            (atEnd || isEndOfContentTarget(target, dataLength) || target.preserveForFooterLayout ? footerSize : 0),
         viewPosition: 1,
     };
 }
@@ -35,12 +38,32 @@ export function retargetInitialScroll(
 export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
     const { state } = ctx;
     const anchor = state.initialScrollAnchor;
-    if (!anchor || state.scrollingTo || getDataLength(state) === 0) return false;
+    if (
+        !anchor ||
+        state.scrollingTo ||
+        state.pendingScrollResolve ||
+        state.maintainingScrollAtEnd ||
+        state.isDragging ||
+        getDataLength(state) === 0
+    )
+        return false;
     // Layout can change while an adjustment is in flight. Keep its acknowledgement
     // boundary so the next frame cannot apply the outstanding delta twice.
     const correct = () => {
-        if (state.initialScrollAnchor !== anchor || state.scrollingTo) return;
-        const observed = state.lastNativeScroll ?? getObservedScrollOffset(state);
+        if (
+            state.initialScrollAnchor !== anchor ||
+            state.scrollingTo ||
+            state.pendingScrollResolve ||
+            state.maintainingScrollAtEnd ||
+            state.isDragging
+        )
+            return;
+        const observed =
+            Platform.OS !== "web" &&
+            typeof state.lastNativeScroll === "number" &&
+            Number.isFinite(state.lastNativeScroll)
+                ? state.lastNativeScroll
+                : getObservedScrollOffset(state);
         const offset = resolveInitialScrollOffset(ctx, anchor);
         const diff = offset - observed;
         if (Math.abs(diff) <= 1) return;
@@ -48,6 +71,7 @@ export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
             anchor.lastRequestTime = Date.now();
             anchor.lastRequestOffset = observed;
             anchor.contentOffset = offset;
+            if (Platform.OS === "web") state.scroll = observed;
             requestAdjust(ctx, diff);
         }
         state.scheduledWork.frame(correct, "initialScrollAlignment");
@@ -98,7 +122,14 @@ export function updateInitialScrollAnchor(
         clearInitialScrollAnchor(state);
         return;
     }
-    if (!dataLength || (footerSize !== undefined && target.kind !== "end" && !target.preserveForFooterLayout && !isEndOfContentTarget(target, dataLength))) return;
+    if (
+        !dataLength ||
+        (footerSize !== undefined &&
+            target.kind !== "end" &&
+            !target.preserveForFooterLayout &&
+            !isEndOfContentTarget(target, dataLength))
+    )
+        return;
     if (
         Math.abs(getObservedScrollOffset(state) - (target.contentOffset ?? resolveInitialScrollOffset(ctx, target))) > 1
     ) {

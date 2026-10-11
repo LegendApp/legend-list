@@ -1,15 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
-import {
-    handleBootstrapInitialScrollLayoutChange,
-    schedulePreservedEndAnchorCorrection,
-} from "../../src/core/bootstrapInitialScroll";
+import { handleBootstrapInitialScrollLayoutChange } from "../../src/core/bootstrapInitialScroll";
 import { calculateOffsetWithOffsetPosition } from "../../src/core/calculateOffsetWithOffsetPosition";
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
 import { clearPreservedInitialScrollTarget } from "../../src/core/finishInitialScroll";
 import { handleLayout } from "../../src/core/handleLayout";
 import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
+import { schedulePreservedEndAnchorCorrection } from "../../src/core/initialScrollAnchor";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
 import { Platform } from "../../src/platform/Platform";
 import { getContentSize } from "../../src/state/getContentSize";
@@ -43,14 +41,14 @@ describe.each(["web", "ios", "android"] as const)("end anchoring across a late v
                 didFinishInitialScroll: true,
                 idCache: data.map((item) => item.id),
                 indexByKey: new Map(data.map((item, index) => [item.id, index])),
-                initialScroll: {
+                initialScroll: undefined,
+                initialScrollAnchor: {
                     index: 7,
                     preserveForBottomPadding: true,
                     preserveForFooterLayout: true,
                     viewOffset: -footer - padding,
                     viewPosition: 1,
                 },
-                initialScrollSession: undefined,
                 lastLayout: { height: horizontal ? 300 : 400, width: horizontal ? 400 : 300, x: 0, y: 0 },
                 otherAxisSize: 300,
                 positions: data.map((_, index) => index * 100),
@@ -116,7 +114,7 @@ describe.each(["web", "ios", "android"] as const)("end anchoring across a late v
                 it(`counts footer/padding once: horizontal=${horizontal}, footer=${footer}, padding=${padding}`, () => {
                     const { ctx } = setup(footer, horizontal, padding);
                     const end = getContentSize(ctx) - ctx.state.scrollLength;
-                    expect(resolveInitialScrollOffset(ctx, ctx.state.initialScroll!)).toBe(end);
+                    expect(resolveInitialScrollOffset(ctx, ctx.state.initialScrollAnchor!)).toBe(end);
                     scrollToEnd(ctx, { animated: false });
                     expect(ctx.state.scrollingTo?.targetOffset).toBe(end);
                 });

@@ -244,6 +244,9 @@ function getVisibleLoopItemSize(
     id: string,
     preferKnownOrFixedSize: boolean,
 ) {
+    if (!state.didContainersLayout && state.props.getFixedItemSize && getDataItem(state, index) !== undefined) {
+        preferKnownOrFixedSize = true;
+    }
     return (
         (preferKnownOrFixedSize ? getKnownOrFixedItemSize(ctx, index) : undefined) ??
         getLayoutSizeForStore(layout, index) ??
@@ -445,7 +448,7 @@ export function calculateItemsInView(
             containerItemKeys,
             idCache,
             indexByKey,
-            props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
+            props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
             scrollLength,
             startBufferedId: startBufferedIdOrig,
@@ -903,7 +906,7 @@ export function calculateItemsInView(
                           bottom: nextBottom,
                           top: nextTop,
                       };
-        } else if (enableScrollForNextCalculateItemsInView && state.props.hasExternalScroll) {
+        } else if (state.props.hasExternalScroll) {
             // A shared owner can keep scrolling while this list is entirely out of range.
             // Re-enter calculation only when the buffer reaches the list again.
             if (scrollBottomBuffered < 0) {
@@ -1007,7 +1010,7 @@ export function calculateItemsInView(
                     // use its displacement without treating initial insets as motion.
                     hasActiveInitialScroll(state)
                         ? initialScroll?.viewPosition === 1
-                        : (speed || (state.hasScrolled ? state.scroll - state.scrollPrev : 0)) < 0,
+                        : speed < 0 || (speed === 0 && state.scrollBufferDirection === -1),
                 );
                 for (const allocation of availableContainerAllocations) {
                     const i = allocation.itemIndex;

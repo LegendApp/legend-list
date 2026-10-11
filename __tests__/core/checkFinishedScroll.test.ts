@@ -4,6 +4,7 @@ import "../setup";
 import { checkFinishedScroll, checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValue } from "../helpers/layoutStore";
 
 describe("checkFinishedScrollFallback", () => {
     let originalPlatform: typeof Platform.OS;
@@ -444,7 +445,7 @@ describe("checkFinishedScrollFallback", () => {
 
         // More rows measure after that correction, moving the actual end again.
         ctx.values.set("totalSize", 1551208);
-        ctx.state.positions[1] = 1550208;
+        setLayoutValue(ctx.state, "positions", 1, 1550208);
         ctx.state.scroll = 1550500;
         ctx.state.scrollPending = 1550500;
         flushTimers(1);

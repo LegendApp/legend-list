@@ -61,7 +61,7 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
                 });
             } else {
                 calculateItemsInView(ctx, {
-                    dataChanged: state.didDataChange || state.didColumnsChange,
+                    ...((state.didDataChange || state.didColumnsChange) && { dataChanged: true }),
                     initialLayout: true,
                 });
             }

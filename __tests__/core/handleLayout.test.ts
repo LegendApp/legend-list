@@ -6,9 +6,10 @@ import * as calculateItemsModule from "../../src/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "../../src/core/doInitialAllocateContainers";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { handleLayout } from "../../src/core/handleLayout";
+import { getLayoutOffset } from "../../src/core/layoutAccessors";
+import { rebuildLayoutStoreExact } from "../../src/core/layoutStoreLifecycle";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
-import { updateItemPositions } from "../../src/core/updateItemPositions";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -83,16 +84,17 @@ describe("handleLayout", () => {
 
     it("uses the initial positions and allocates the first range only once", () => {
         mockState.props.data = Array.from({ length: 200 }, (_, id) => ({ id }));
-        updateItemPositions(mockCtx, true);
-        const positions = [...mockState.positions];
+        rebuildLayoutStoreExact(mockCtx);
+        const store = mockState.layoutStoreRuntime!.store;
+        const positions = [0, 1, 199].map((index) => getLayoutOffset(mockCtx, index));
         const calculate = spyOn(calculateItemsModule, "calculateItemsInView");
         const clearKeys = spyOn(mockState.indexByKey, "clear");
         try {
             handleLayout(mockCtx, mockLayout, setCanRender);
             expect(calculate).toHaveBeenCalledTimes(1);
-            expect(mockState.positions).toEqual(positions);
+            expect([0, 1, 199].map((index) => getLayoutOffset(mockCtx, index))).toEqual(positions);
             expect(clearKeys).not.toHaveBeenCalled();
-            expect(mockState.positionsAreCurrent).toBe(true);
+            expect(mockState.layoutStoreRuntime!.store).toBe(store);
             expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
         } finally {
             calculate.mockRestore();
@@ -104,7 +106,7 @@ describe("handleLayout", () => {
         it(`rebuilds keys when data changes before allocation (startsEmpty=${startsEmpty})`, () => {
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
             mockState.props.data = startsEmpty ? [] : [{ id: "old-a" }, { id: "old-b" }];
-            updateItemPositions(mockCtx, true);
+            rebuildLayoutStoreExact(mockCtx);
             if (startsEmpty) handleLayout(mockCtx, mockLayout, setCanRender);
             mockState.props.data = [{ id: "new-a" }, { id: "new-b" }];
             mockState.didDataChange = true;
@@ -116,14 +118,14 @@ describe("handleLayout", () => {
 
             expect(mockState.idCache).toEqual(["new-a", "new-b"]);
             expect([...mockState.indexByKey.keys()]).toEqual(["new-a", "new-b"]);
-            expect(mockState.positions).toEqual([0, 100]);
+            expect([0, 1].map((index) => getLayoutOffset(mockCtx, index))).toEqual([0, 100]);
             expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
         });
     }
 
     it("rebuilds column layout changed before allocation", () => {
         mockState.props.data = [{ id: 0 }, { id: 1 }];
-        updateItemPositions(mockCtx, true);
+        rebuildLayoutStoreExact(mockCtx);
         mockState.didColumnsChange = true;
         mockState.props.numColumns = 2;
         mockCtx.values.set("numColumns", 2);
@@ -131,7 +133,7 @@ describe("handleLayout", () => {
         try {
             handleLayout(mockCtx, mockLayout, setCanRender);
             expect(clearKeys).toHaveBeenCalled();
-            expect(mockState.positions).toEqual([0, 0]);
+            expect([0, 1].map((index) => getLayoutOffset(mockCtx, index))).toEqual([0, 0]);
         } finally {
             clearKeys.mockRestore();
         }

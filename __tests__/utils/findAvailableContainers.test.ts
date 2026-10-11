@@ -31,7 +31,7 @@ describe("findAvailableContainers", () => {
             containerItemMetadata: new Map(),
             indexByKey: new Map(),
             props: {
-                data: [],
+                data: Array.from({ length: 100 }, (_, id) => ({ id })),
                 stickyHeaderIndicesSet: new Set(),
             },
             stickyContainerPool: new Set(),

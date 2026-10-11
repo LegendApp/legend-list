@@ -228,8 +228,8 @@ describe("calculateItemsInView", () => {
         it("prioritizes the first upward movement after velocity history expires", () => {
             setupFixedSizeItems(100, 100);
             mockState.didFinishInitialScroll = true;
-            mockState.scroll = 4000;
-            mockState.scrollPrev = 4500;
+            mockState.scroll = 4500;
+            updateScroll(mockCtx, 4000, false, { fromNativeScrollEvent: true });
             mockState.hasScrolled = true;
             mockState.scrollLength = 300;
             calculateItemsInView(mockCtx, { scrollVelocity: 0 });
@@ -243,12 +243,18 @@ describe("calculateItemsInView", () => {
                 setupFixedSizeItems(100, 100);
                 mockState.didFinishInitialScroll = false;
                 mockState.scrollLength = 300;
-                mockState.initialScroll = { index: 97, viewPosition };
-                mockState.initialScrollSession = {
-                    bootstrap: { mountFrameCount: 0, passCount: 0, scroll: 9500, targetIndexSeed: 97 },
-                    kind: "bootstrap",
-                    previousDataLength: 0,
-                } as any;
+                mockState.initialScroll = {
+                    bootstrap: {
+                        mountFrameCount: 0,
+                        passCount: 0,
+                        scroll: 9500,
+                        seedContentOffset: 9500,
+                        targetIndexSeed: 97,
+                    },
+                    index: 97,
+                    kind: "index",
+                    viewPosition,
+                };
                 calculateItemsInView(mockCtx, { scrollVelocity: 0 });
                 const indices = getRenderedContainerKeys().map((key) => mockState.indexByKey.get(key)!);
                 expect(indices.length).toBeGreaterThanOrEqual(3);
