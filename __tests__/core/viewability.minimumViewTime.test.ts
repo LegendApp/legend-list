@@ -8,6 +8,7 @@ import { resetViewabilityTimers, setupViewability, updateViewableItems } from ".
 import type { OnViewableItemsChangedInfo, ViewabilityConfig } from "../../src/types.base";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { setLayoutValue } from "../helpers/layoutStore";
+import { createViewabilityClock } from "../helpers/viewabilityClock";
 
 function scenario(run: (test: ReturnType<typeof createScenario>) => void) {
     const test = createScenario();
@@ -414,3 +415,85 @@ it("prunes a removed array key before its pending deadline", () =>
         advance(200);
         expect(calls[0].changed).toMatchObject([{ isViewable: true, key: "replacement" }]);
     }));
+
+it("keeps the Notifications Inbox fourth row unread below 60% after viewport measurement and prepend", () => {
+    const ctx = createMockContext(
+        {},
+        {
+            props: {
+                data: Array.from({ length: 96 }, (_, index) => ({ id: String(index), isUnread: index < 18 })),
+                estimatedItemSize: 108,
+                keyExtractor: (item) => item.id,
+            },
+            scrollLength: 874,
+        },
+    );
+    const store = new PrefixLayoutStore(96, 108);
+    ctx.state.layoutStoreRuntime = new LayoutStoreRuntime(store, 108);
+    const calls: OnViewableItemsChangedInfo[] = [];
+    ctx.state.viewabilityConfigCallbackPairs = setupViewability({
+        onViewableItemsChanged: (info) => {
+            calls.push(info);
+            const visible = new Set(info.viewableItems.map((token) => token.key));
+            ctx.state.props.data = ctx.state.props.data!.map((item) =>
+                visible.has(item.id) && item.isUnread ? { ...item, isUnread: false } : item,
+            );
+        },
+        viewabilityConfig: {
+            id: "notifications-inbox-read",
+            itemVisiblePercentThreshold: 60,
+            minimumViewTime: 120,
+        },
+    });
+    const clock = createViewabilityClock(ctx.state.scheduledWork);
+    const update = (start: number, end: number) => {
+        for (let index = start; index <= end; index++) {
+            ctx.state.indexByKey.set(ctx.state.props.data![index].id, index);
+        }
+        updateViewableItems(ctx, ctx.state.viewabilityConfigCallbackPairs!, ctx.state.scrollLength, start, end);
+    };
+    const unread = () => ctx.state.props.data!.filter((item) => item.isUnread).length;
+    try {
+        // Before native onLayout, window height and estimated rows overstate visibility.
+        update(0, 3);
+        clock.advance(20);
+        for (let index = 0; index < 4; index++) store.setMeasuredSize(index, 160);
+        ctx.state.scrollLength = 536;
+        update(0, 3);
+        clock.advance(119);
+        expect(calls).toHaveLength(0);
+        clock.advance(120);
+        expect(calls[0].viewableItems.map((token) => token.key)).toEqual(["0", "1", "2"]);
+        expect(unread()).toBe(15);
+        expect(ctx.state.props.data![3].isUnread).toBe(true);
+
+        clock.advance(200);
+        ctx.state.props.data = [
+            ...Array.from({ length: 3 }, (_, index) => ({ id: `new-${index}`, isUnread: true })),
+            ...ctx.state.props.data!,
+        ];
+        ctx.state.idCache.length = 0;
+        ctx.state.indexByKey.clear();
+        store.splice(0, 0, 3);
+        for (let index = 0; index < 3; index++) store.setMeasuredSize(index, 160);
+        ctx.state.scroll = 3 * 160; // MVCP preserves the same rows after Add 3 newer.
+        update(3, 6);
+        clock.advance(1000);
+        expect(calls).toHaveLength(1);
+        expect(unread()).toBe(18);
+        expect(ctx.state.props.data!.length - unread()).toBe(81);
+        expect(ctx.state.props.data![6].isUnread).toBe(true);
+
+        // Exactly 60% is eligible, but needs its own full 120ms of eligibility.
+        ctx.state.scrollLength = 3 * 160 + 0.6 * 160;
+        update(3, 6);
+        clock.advance(1119);
+        expect(unread()).toBe(18);
+        clock.advance(1120);
+        expect(unread()).toBe(17);
+        expect(calls[1].changed).toMatchObject([{ isViewable: true, key: "3" }]);
+    } finally {
+        clock.restore();
+        ctx.state.scheduledWork.dispose();
+    }
+});
