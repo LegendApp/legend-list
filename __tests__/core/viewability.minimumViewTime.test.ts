@@ -371,17 +371,21 @@ it("retains visibility credit through repeated array copies and append calculati
     }));
 
 for (const published of [false, true]) {
-    it(`restarts array visibility for a same-key item replacement (published: ${published})`, () =>
-        scenario(({ advance, calls, ctx, update }) => {
+    it(`retains array visibility credit for a same-key item replacement (published: ${published})`, () =>
+        scenario(({ advance, calls, ctx, update, pending }) => {
             update(0);
             advance(published ? 150 : 50);
             ctx.state.props.data = ctx.state.props.data!.map((item, index) => (index === 0 ? { ...item } : item));
             update();
-            if (published) expect(calls[1].changed).toMatchObject([{ isViewable: false, key: "a" }]);
-            advance(published ? 249 : 149);
-            expect(calls).toHaveLength(published ? 2 : 0);
-            advance(published ? 250 : 150);
-            expect(calls.at(-1)!.changed).toMatchObject([{ isViewable: true, key: "a" }]);
+            expect(calls).toHaveLength(published ? 1 : 0);
+            expect(pending.size).toBe(published ? 0 : 1);
+            advance(published ? 249 : 99);
+            expect(calls).toHaveLength(published ? 1 : 0);
+            advance(published ? 250 : 100);
+            expect(calls).toHaveLength(1);
+            expect(calls[0].changed).toMatchObject([{ isViewable: true, key: "a" }]);
+            expect(ctx.mapViewabilityConfigStates.get("")!.viewableItems[0].item).toBe(ctx.state.props.data![0]);
+            expect(pending.size).toBe(0);
         }));
 }
 
