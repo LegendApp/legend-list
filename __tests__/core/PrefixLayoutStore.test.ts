@@ -50,6 +50,31 @@ describe("PrefixLayoutStore", () => {
         expect(store.findFirstUnmeasuredIndex()).toBeUndefined();
     });
 
+    it("hops measured blocks and keeps cached sizes unresolved", () => {
+        const store = new PrefixLayoutStore(1000, 100);
+        for (let index = 0; index < 300; index++) store.setCachedSize(index, 140);
+        expect(store.getMeasuredCount()).toBe(0);
+        expect(store.getMeasuredAverageSize()).toBeUndefined();
+        expect(store.findFirstUnmeasuredIndex(129)).toBe(129);
+        for (let index = 0; index < 300; index++) store.setMeasuredSize(index, 140);
+        expect(store.findFirstUnmeasuredIndex(1)).toBe(300);
+        store.setCachedSize(129, 0);
+        expect(store.getMeasuredCount()).toBe(299);
+        expect(store.getPositiveMeasuredAverageSize()).toBe(140);
+        expect(store.findFirstUnmeasuredIndex(1)).toBe(129);
+        expect(store.findFirstUnmeasuredIndex(130)).toBe(300);
+        store.splice(128, 0, 2);
+        expect(store.findFirstUnmeasuredIndex(130)).toBe(131);
+        store.move(131, 10, 1);
+        expect(store.findFirstUnmeasuredIndex(10)).toBe(10);
+        expect(store.findFirstUnmeasuredIndex(11)).toBe(129);
+        store.invalidateRange(90, 1);
+        expect(store.findFirstUnmeasuredIndex(11)).toBe(90);
+        store.resize(90);
+        expect(store.findFirstUnmeasuredIndex(11)).toBeUndefined();
+        expect(store.findFirstUnmeasuredIndex(1000)).toBeUndefined();
+    });
+
     it("uses aggregate estimates for initially unmeasured items", () => {
         const store = new PrefixLayoutStore(5, 80);
 

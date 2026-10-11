@@ -110,26 +110,8 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         return range;
     }
 
-    findFirstUnmeasuredIndex(): number | undefined {
-        let node = this.root;
-        let index = 0;
-        while (node && getMeasuredCount(node) < getLogicalCount(node)) {
-            if (getMeasuredCount(node.left) < getLogicalCount(node.left)) {
-                node = node.left;
-            } else {
-                index += getLogicalCount(node.left);
-                const piece = node.piece;
-                if (piece.type === PIECE_UNKNOWN) return index;
-                if (piece.measuredCount < piece.count) {
-                    for (let offset = 0; offset < piece.count; offset++) {
-                        if (piece.kinds[offset] !== SIZE_MEASURED) return index + offset;
-                    }
-                }
-                index += piece.count;
-                node = node.right;
-            }
-        }
-        return undefined;
+    findFirstUnmeasuredIndex(fromIndex = 0): number | undefined {
+        return findFirstUnmeasuredIndex(this.root, 0, fromIndex);
     }
 
     clearKnownSizes() {
@@ -347,7 +329,15 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         }
     }
 
+    setCachedSize(index: number, size: number) {
+        return this.setKnownSize(index, size, SIZE_CACHED);
+    }
+
     setMeasuredSize(index: number, size: number) {
+        return this.setKnownSize(index, size, SIZE_MEASURED);
+    }
+
+    private setKnownSize(index: number, size: number, kind: SizeKind) {
         this.assertIndex(index);
         const normalizedSize = normalizeSize(size);
         const located = findPieceAtIndexWithPath(this.root, index);
@@ -357,21 +347,22 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         const didChange = previousSize !== normalizedSize;
         if (located && existingPiece?.type === PIECE_KNOWN) {
             const wasMeasured = existingPiece.kinds[located.offset] === SIZE_MEASURED;
-            if (didChange || !wasMeasured) {
+            if (didChange || existingPiece.kinds[located.offset] !== kind) {
                 const previousMeasuredSize = wasMeasured ? previousSize : 0;
                 existingPiece.sizes[located.offset] = normalizedSize;
-                existingPiece.kinds[located.offset] = SIZE_MEASURED;
+                existingPiece.kinds[located.offset] = kind;
                 existingPiece.knownSizeTotal += normalizedSize - previousSize;
-                existingPiece.measuredCount += wasMeasured ? 0 : 1;
-                existingPiece.measuredSizeTotal += normalizedSize - previousMeasuredSize;
-                existingPiece.positiveMeasuredCount += Number(normalizedSize > 0) - Number(previousMeasuredSize > 0);
+                existingPiece.measuredCount += Number(kind === SIZE_MEASURED) - Number(wasMeasured);
+                const measuredSize = kind === SIZE_MEASURED ? normalizedSize : 0;
+                existingPiece.measuredSizeTotal += measuredSize - previousMeasuredSize;
+                existingPiece.positiveMeasuredCount += Number(measuredSize > 0) - Number(previousMeasuredSize > 0);
                 updatePath(located.path);
             }
-        } else if (!this.tryAppendMeasuredToPreviousBlock(index, normalizedSize, located)) {
+        } else if (!this.tryAppendKnownToPreviousBlock(index, normalizedSize, kind, located)) {
             const [before, fromIndex] = splitTree(this.root, index);
             const [, after] = splitTree(fromIndex, 1);
-            const measured = createKnownNodeFromEntries([{ kind: SIZE_MEASURED, size: normalizedSize }]);
-            this.root = joinTrees(joinTrees(before, measured), after);
+            const known = createKnownNodeFromEntries([{ kind, size: normalizedSize }]);
+            this.root = joinTrees(joinTrees(before, known), after);
         }
         return didChange;
     }
@@ -382,9 +373,10 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         }
     }
 
-    private tryAppendMeasuredToPreviousBlock(
+    private tryAppendKnownToPreviousBlock(
         index: number,
         size: number,
+        kind: SizeKind,
         current: ReturnType<typeof findPieceAtIndexWithPath>,
     ) {
         let didAppend = false;
@@ -400,12 +392,14 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
             ) {
                 ensureKnownPieceCapacity(previousPiece, previousPiece.count + 1);
                 previousPiece.sizes[previousPiece.count] = size;
-                previousPiece.kinds[previousPiece.count] = SIZE_MEASURED;
+                previousPiece.kinds[previousPiece.count] = kind;
                 previousPiece.count++;
                 previousPiece.knownSizeTotal += size;
-                previousPiece.measuredCount++;
-                previousPiece.positiveMeasuredCount += Number(size > 0);
-                previousPiece.measuredSizeTotal += size;
+                if (kind === SIZE_MEASURED) {
+                    previousPiece.measuredCount++;
+                    previousPiece.positiveMeasuredCount += Number(size > 0);
+                    previousPiece.measuredSizeTotal += size;
+                }
                 currentPiece.count--;
                 updatePath(previous.path);
                 updatePath(current.path);
@@ -419,6 +413,27 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
 // Keep the existing internal name as the compatibility seam while the implementation is a
 // packed implicit sparse sequence tree rather than an absolute-index prefix tree.
 export class PrefixLayoutStore extends SparseSequenceLayoutStore {}
+
+function findFirstUnmeasuredIndex(
+    node: SequenceNode | undefined,
+    index: number,
+    fromIndex: number,
+): number | undefined {
+    if (!node || index + node.logicalCount <= fromIndex || node.measuredCount === node.logicalCount) return undefined;
+    const left = findFirstUnmeasuredIndex(node.left, index, fromIndex);
+    if (left !== undefined) return left;
+    index += getLogicalCount(node.left);
+    const piece = node.piece;
+    if (index + piece.count > fromIndex) {
+        if (piece.type === PIECE_UNKNOWN) return Math.max(index, fromIndex);
+        if (piece.measuredCount < piece.count) {
+            for (let offset = Math.max(0, fromIndex - index); offset < piece.count; offset++) {
+                if (piece.kinds[offset] !== SIZE_MEASURED) return index + offset;
+            }
+        }
+    }
+    return findFirstUnmeasuredIndex(node.right, index + piece.count, fromIndex);
+}
 
 function createUnknownNode(count: number) {
     return count > 0 ? createNode({ count, type: PIECE_UNKNOWN }) : undefined;

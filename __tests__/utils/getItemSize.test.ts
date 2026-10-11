@@ -54,6 +54,14 @@ describe("getItemSize", () => {
         expect(mockState.sizes.get("item_0")).toBe(150);
     });
 
+    it("clamps an invalid fixed size before adding the scroll-axis gap", () => {
+        mockCtx.scrollAxisGap = 10;
+        for (const size of [-5, Number.NaN, Number.POSITIVE_INFINITY]) {
+            mockState.props.getFixedItemSize = () => size;
+            expect(callGetItemSize(String(size), 0, { id: 0 })).toBe(10);
+        }
+    });
+
     it("adds scroll-axis gap to fixed item sizes", () => {
         mockCtx.scrollAxisGap = 16;
         mockState.props.horizontal = true;

@@ -124,10 +124,18 @@ export class RowLayoutStore implements MutableLayoutStore {
         return this.positiveMeasuredCount > 0 ? this.measuredSizeTotal / this.positiveMeasuredCount : undefined;
     }
 
-    findFirstUnmeasuredIndex(): number | undefined {
-        if (this.measuredCount < this.length) {
-            for (let index = 0; index < this.length; index++) {
-                if (this.knownSizes.get(index)?.kind !== SIZE_MEASURED) return index;
+    findFirstUnmeasuredIndex(fromIndex = 0): number | undefined {
+        if (fromIndex < this.length && this.measuredCount < this.length) {
+            let row = this.rowLayout.findFirstUnmeasuredIndex(this.getRowIndex(fromIndex));
+            while (row !== undefined) {
+                for (
+                    let index = Math.max(fromIndex, this.getRowStartIndex(row));
+                    index <= this.getRowEndIndex(row);
+                    index++
+                ) {
+                    if (this.knownSizes.get(index)?.kind !== SIZE_MEASURED) return index;
+                }
+                row = this.rowLayout.findFirstUnmeasuredIndex(row + 1);
             }
         }
         return undefined;
@@ -377,10 +385,13 @@ export class RowLayoutStore implements MutableLayoutStore {
         const start = this.getRowStartIndex(rowIndex);
         const end = this.getRowEndIndex(rowIndex);
         let knownCount = 0;
+        let measuredCount = 0;
         let maxKnownSize = 0;
 
         for (let index = start; index <= end; index++) {
-            const knownSize = this.knownSizes.get(index)?.size;
+            const entry = this.knownSizes.get(index);
+            const knownSize = entry?.size;
+            measuredCount += Number(entry?.kind === SIZE_MEASURED);
             if (knownSize !== undefined) {
                 knownCount++;
                 maxKnownSize = Math.max(maxKnownSize, knownSize);
@@ -388,8 +399,10 @@ export class RowLayoutStore implements MutableLayoutStore {
         }
 
         const itemCount = end - start + 1;
-        if (knownCount === itemCount || maxKnownSize > this.estimatedSize) {
+        if (measuredCount === itemCount) {
             this.rowLayout.setMeasuredSize(rowIndex, maxKnownSize);
+        } else if (knownCount === itemCount || maxKnownSize > this.estimatedSize) {
+            this.rowLayout.setCachedSize(rowIndex, maxKnownSize);
         } else {
             this.rowLayout.clearKnownSize(rowIndex);
         }

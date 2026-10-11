@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import * as doScrollToModule from "@/core/doScrollTo";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
-import { syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
+import { syncLayoutStoreState, syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
 import { Platform } from "@/platform/Platform";
 import { scrollToIndex } from "../../src/core/scrollToIndex";
 import { getContentSize } from "../../src/state/getContentSize";
@@ -215,17 +215,101 @@ describe("scrollToIndex", () => {
             );
             syncLayoutStoreStructure(ctx);
 
-            scrollToIndex(ctx, { animated: false, index: 9_000, viewPosition: 0 });
+            scrollToIndex(ctx, { animated: false, index: 900_000, viewPosition: 0 });
 
-            expect(ctx.state.scrollingTo?.offset).toBe(90_000);
-            expect(Math.min(...fixedSizeIndexes)).toBe(0);
-            expect(Math.max(...fixedSizeIndexes)).toBeLessThan(9_200);
-            expect(fixedSizeIndexes.length).toBeLessThan(9_200);
-            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBeLessThan(9_200);
-            expect(ctx.state.idCache[8_999]).toBeUndefined();
+            expect(ctx.state.scrollingTo?.offset).toBe(9_000_000);
+            expect(fixedSizeIndexes).toContain(0);
+            expect(fixedSizeIndexes.every((index) => index < 900_200)).toBe(true);
+            expect(fixedSizeIndexes.length).toBeLessThan(900_200);
+            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBeLessThan(900_200);
+            expect(ctx.state.idCache[899_999]).toBeUndefined();
             expect(Object.keys(ctx.state.idCache)).toHaveLength(1);
             ctx.state.scheduledWork.dispose();
         });
+
+        for (const loaded of [false, true]) {
+            it(`keeps million-row source navigation sparse (loaded target: ${loaded})`, () => {
+                const getItem = mock((index: number) => (loaded && index === 900_000 ? { index } : undefined));
+                const getFixedItemSize = mock((item: { index: number }) => {
+                    expect(item.index).toBe(900_000);
+                    return 40;
+                });
+                const getItemType = mock((item: { index: number }) => {
+                    expect(item.index).toBe(900_000);
+                    return "row";
+                });
+                const ctx = createMockContext(
+                    {},
+                    {
+                        props: {
+                            data: [],
+                            dataSource: {
+                                getItem,
+                                getKey: (index) => String(index),
+                                getLength: () => 1_000_000,
+                                getRevision: () => 0,
+                                subscribe: () => () => {},
+                            },
+                            estimatedItemSize: 100,
+                            getFixedItemSize,
+                            getItemType,
+                        },
+                        refScroller: mockState.refScroller,
+                        scrollLength: 1000,
+                    },
+                );
+                syncLayoutStoreStructure(ctx);
+                syncLayoutStoreState(ctx);
+                const target = { index: 900_000, kind: "index" as const };
+                expect(resolveInitialScrollOffset(ctx, target)).toBe(90_000_000);
+                scrollToIndex(ctx, { ...target, animated: false });
+                expect(mockScrollCalls.at(-1).y).toBe(90_000_000);
+                expect(getItem.mock.calls.length).toBeLessThan(30);
+                expect(getFixedItemSize.mock.calls.length).toBeLessThanOrEqual(2);
+                expect(getItemType.mock.calls.length).toBe(getFixedItemSize.mock.calls.length);
+                if (!loaded) expect(getFixedItemSize).not.toHaveBeenCalled();
+                expect(ctx.state.layoutStoreRuntime!.store.getMeasuredCount()).toBe(loaded ? 1 : 0);
+                expect(Object.keys(ctx.state.idCache)).toHaveLength(1);
+                ctx.state.scheduledWork.dispose();
+            });
+        }
+
+        for (const numColumns of [1, 2]) {
+            it(`retries only unresolved prefix callbacks (${numColumns} columns)`, () => {
+                const unresolved = new Set([0, 37, 4000]);
+                const getFixedItemSize = mock((_item, index) => (unresolved.has(index) ? undefined : 140));
+                const ctx = createMockContext(
+                    {},
+                    {
+                        props: {
+                            data: Array.from({ length: 10_000 }, (_, index) => index),
+                            estimatedItemSize: 100,
+                            getFixedItemSize,
+                            numColumns,
+                        },
+                        scrollLength: 600,
+                    },
+                );
+                const store = syncLayoutStoreStructure(ctx)!;
+                const target = { index: 9000, kind: "index" as const };
+                const offset = resolveInitialScrollOffset(ctx, target);
+                expect(getFixedItemSize).toHaveBeenCalledTimes(9001);
+                expect(store.getMeasuredCount()).toBe(8998);
+                // Each bootstrap retry touches the three gaps, never their measured suffixes.
+                for (let pass = 0; pass < 10; pass++) {
+                    expect(resolveInitialScrollOffset(ctx, target)).toBe(offset);
+                }
+                expect(getFixedItemSize).toHaveBeenCalledTimes(9031);
+                unresolved.clear();
+                resolveInitialScrollOffset(ctx, target);
+                expect(getFixedItemSize).toHaveBeenCalledTimes(9034);
+                expect(store.getOffset(9000)).toBe((9000 / numColumns) * 140);
+                resolveInitialScrollOffset(ctx, target);
+                expect(getFixedItemSize).toHaveBeenCalledTimes(9034);
+                expect(Object.keys(ctx.state.idCache)).toHaveLength(0);
+                ctx.state.scheduledWork.dispose();
+            });
+        }
     });
 
     describe("bounds handling", () => {
