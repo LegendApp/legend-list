@@ -1,5 +1,5 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { materializeFixedLayoutStoreIndex } from "@/core/fixedLayoutMaterialization";
+import { materializeFixedLayoutStorePrefix } from "@/core/fixedLayoutMaterialization";
 import { getDataLength } from "@/core/IndexedData";
 import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
@@ -41,7 +41,7 @@ export function scrollToIndex(
     const dataLength = getDataLength(state);
     index = clampScrollIndex(index, dataLength);
     const itemSize = getItemSizeAtIndex(ctx, index);
-    if (materializeFixedLayoutStoreIndex(ctx, index)) {
+    if (materializeFixedLayoutStorePrefix(ctx, index)) {
         syncLayoutStoreState(ctx);
     }
 

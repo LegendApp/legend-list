@@ -23,6 +23,33 @@ function nextRandom(seed: number) {
 }
 
 describe("PrefixLayoutStore", () => {
+    it("finds the first unresolved prefix through cached sizes and sequence mutations", () => {
+        const store = new PrefixLayoutStore(1_000_000, 100);
+        expect(store.findFirstUnmeasuredIndex()).toBe(0);
+        store.replaceKnownSizeEntries([
+            { index: 0, size: 100, type: "measured" },
+            { index: 1, size: 100, type: "cached" },
+            { index: 2, size: 100, type: "measured" },
+        ]);
+        expect(store.findFirstUnmeasuredIndex()).toBe(1);
+        store.setMeasuredSize(1, 100);
+        expect(store.findFirstUnmeasuredIndex()).toBe(3);
+        store.splice(1, 0, 1);
+        expect(store.findFirstUnmeasuredIndex()).toBe(1);
+        store.setMeasuredSize(1, 100);
+        expect(store.findFirstUnmeasuredIndex()).toBe(4);
+        store.move(4, 1, 1);
+        expect(store.findFirstUnmeasuredIndex()).toBe(1);
+        store.invalidateRange(0, 1);
+        expect(store.findFirstUnmeasuredIndex()).toBe(0);
+        store.resize(0);
+        expect(store.findFirstUnmeasuredIndex()).toBeUndefined();
+        store.resize(2);
+        store.setMeasuredSize(0, 0);
+        store.setMeasuredSize(1, 100);
+        expect(store.findFirstUnmeasuredIndex()).toBeUndefined();
+    });
+
     it("uses aggregate estimates for initially unmeasured items", () => {
         const store = new PrefixLayoutStore(5, 80);
 

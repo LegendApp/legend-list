@@ -2,7 +2,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { clearInitialScrollAnchor } from "@/core/finishInitialScroll";
-import { materializeFixedLayoutStoreIndex } from "@/core/fixedLayoutMaterialization";
+import { materializeFixedLayoutStoreIndex, materializeFixedLayoutStorePrefix } from "@/core/fixedLayoutMaterialization";
 import { getDataLength } from "@/core/IndexedData";
 import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
@@ -71,7 +71,9 @@ export function resolveInitialScrollOffset(
         return (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
     }
 
-    if (materializeFixedLayoutStoreIndex(ctx, initialScroll.index)) {
+    const materialize =
+        initialScroll.kind === "end" ? materializeFixedLayoutStoreIndex : materializeFixedLayoutStorePrefix;
+    if (materialize(ctx, initialScroll.index)) {
         syncLayoutStoreState(ctx);
     }
     if (initialScroll.kind === "end") return Math.max(0, getContentSize(ctx) - state.scrollLength);

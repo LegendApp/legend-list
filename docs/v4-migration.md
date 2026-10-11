@@ -7,24 +7,26 @@ and index-keyed measurement retention. Source-mode wrappers opt into
 ## Approximate distant layout
 
 `getFixedItemSize` resolves individual prepared rows. It no longer triggers a full
-array pass that makes every mixed-size offset exact. Initial sampling, visible and
-buffered ranges, pinned rows, and scroll targets prepare fixed sizes; other rows
-share the list estimate. This keeps ordinary work proportional to prepared state.
+array pass on ordinary layout. Initial sampling, visible and buffered ranges, and
+pinned rows prepare fixed sizes; other rows share the list estimate.
 
-Until those rows are prepared, `getState().positionAtIndex()`, `contentLength`,
-distant scroll targets, restored offsets, and `snapToIndices` can be approximate.
-A distant SectionList target has the same limitation. Offsets and total size can
-change as more fixed or measured sizes become known. A uniform fixed size with a
-matching `estimatedItemSize` avoids this mixed-size estimation error; varying fixed
-sizes do not provide globally exact layout. Choose a representative estimate and
-allow measurement corrections when restoring distant positions.
+`initialScrollIndex` and `scrollToIndex` resolve fixed sizes through the target so
+its prefix offset is exact when every preceding row supplies a fixed size. This
+includes SectionList index navigation. Resolving a previously unknown mixed-size
+prefix requires work proportional to that prefix, rather than the whole list;
+subsequent requests reuse it. Rows beyond the target remain lazy. Rows whose
+callback returns `undefined` still require measurement and correction.
+
+Until rows are prepared, `getState().positionAtIndex()`, `contentLength`, restored
+offsets, `initialScrollAtEnd`, `scrollToEnd`, and `snapToIndices` can be approximate.
+Offsets and total size can change as more fixed or measured sizes become known.
+A uniform fixed size with a matching `estimatedItemSize` avoids this mixed-size
+estimation error. Choose a representative estimate when restoring distant offsets.
 
 Unmeasured rows now use one list-wide estimate, initially `estimatedItemSize` and
 later the measured mean, instead of a per-`getItemType` average. The store's mean
 can include prepared fixed-size rows. `getState().getAverageItemSizes()` continues
 to report per-type averages, but those averages do not drive row positions.
-Restoring type-specific positions or exact distant fixed-size offsets would require
-full-list work and is deliberately deferred.
 
 ## Sparse state queries
 
