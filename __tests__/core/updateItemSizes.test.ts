@@ -139,6 +139,22 @@ describe("updateItemSizes", () => {
         ctx.state.scheduledWork.dispose();
     });
 
+    it("repairs estimate-backed native geometry from a retained known size despite layout noise", () => {
+        const store = syncLayoutStoreStructure(mockCtx)!;
+        mockState.sizesKnown.set("item_0", 160);
+        const calculate = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        try {
+            updateItemSizesBatch(mockCtx, [{ itemKey: "item_0", size: { height: 160.1, width: 400 } }]);
+            expect(store.getSize(0)).toBe(160);
+            expect(store.getMeasuredCount()).toBe(1);
+            expect(mockState.sizesKnown.get("item_0")).toBe(160);
+            expect(store.getOffset(1)).toBe(160);
+        } finally {
+            calculate.mockRestore();
+            mockState.scheduledWork.dispose();
+        }
+    });
+
     it("updates only the measured item without draining unrelated anchor resets", () => {
         const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
 
