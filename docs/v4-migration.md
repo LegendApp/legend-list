@@ -35,3 +35,15 @@ resolved keys and fixed sizes across array data. Prefer index-based navigation;
 `positionAtIndex()` is available for in-range indexes but follows the approximate
 layout contract above. Key extraction and item-dependent layout/comparison callbacks
 are also lazy, so they must not depend on being invoked for every logical row.
+
+## End following
+
+Programmatic scroll requests cancel active and queued `maintainScrollAtEnd`
+following, including requests waiting for layout. Drag-begin cancels native
+following; upward user scrolling also cancels on web. This matches main and the
+released v3.4–v3.6 behavior.
+
+Native wheel, keyboard, or accessibility input without drag-begin can still fail to
+escape following while content streams continuously. That is a pre-existing gap.
+A heuristic based only on upward offsets could mistake late native acknowledgements
+for input, so this migration keeps the released cancellation rules.

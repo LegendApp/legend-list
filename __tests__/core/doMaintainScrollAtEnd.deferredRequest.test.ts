@@ -50,6 +50,21 @@ describe("end following while an imperative request waits for layout", () => {
         await Promise.resolve();
     };
 
+    it("cancels active and queued end following immediately for an explicit scroll request", async () => {
+        ctx.state.maintainingScrollAtEnd = "instant";
+        ctx.state.pendingMaintainScrollAtEnd = true;
+        ctx.state.didDataChange = true;
+        const request = createImperativeHandle(ctx).scrollToOffset({ animated: false, offset: 100 });
+
+        expect(ctx.state.maintainingScrollAtEnd).toBeUndefined();
+        expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+        // The explicit request owns the list even while it waits for layout.
+        expect(doMaintainScrollAtEnd(ctx)).toBe(false);
+        expect(follow).not.toHaveBeenCalled();
+        cancelImperativeScroll(ctx.state);
+        await request;
+    });
+
     it("does not follow an offscreen list whose local offset is clamped to the end", async () => {
         ctx.state.refScroller.current!.isScrollInRange = () => false;
         expect(doMaintainScrollAtEnd(ctx)).toBe(false);
