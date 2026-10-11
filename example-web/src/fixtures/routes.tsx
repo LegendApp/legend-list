@@ -7,6 +7,7 @@ import AdaptiveRenderExample from "./AdaptiveRenderExample";
 import AddToEndExample from "./AddToEndExample";
 import AiChatFloatingComposerExample from "./AiChatFloatingComposerExample";
 import AlwaysRenderExample from "./AlwaysRenderExample";
+import AnchoredEndSpaceExample from "./AnchoredEndSpaceExample";
 import BidirectionalInfiniteListExample from "./BidirectionalInfiniteListExample";
 import ChatEndFollowExample from "./ChatEndFollowExample";
 import ChatExample from "./ChatExample";
@@ -158,6 +159,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "initial-scroll-index",
         title: "Initial Scroll Index",
+    },
+    {
+        description: "Checks that anchoredEndSpace extends the scrollable range on both axes.",
+        element: () => <AnchoredEndSpaceExample />,
+        group: "Scroll & Position",
+        path: "anchored-end-space",
+        title: "Anchored End Space",
     },
     {
         description: "Starts at the end of the list and checks bottom-aligned landing behavior.",
