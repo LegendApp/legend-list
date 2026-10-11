@@ -89,6 +89,7 @@ import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
+import { normalizeLayoutSize } from "@/utils/layoutMeasurement";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -212,7 +213,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataVersion,
         drawDistance = 250,
         contentInsetEndAdjustment,
-        estimatedItemSize = 100,
+        estimatedItemSize: estimatedItemSizeProp = 100,
         estimatedListSize,
         extraData,
         getFixedItemSize,
@@ -271,6 +272,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ...rest
     } = props;
     const numColumnsProp = normalizeNumColumnsProp(numColumnsPropRaw);
+    const estimatedItemSize = normalizeLayoutSize(estimatedItemSizeProp);
 
     const keyExtractor = useMemo(
         () =>

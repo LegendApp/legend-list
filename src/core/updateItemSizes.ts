@@ -16,7 +16,7 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getItemSize, type ResolvedItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
-import { isNativeLayoutNoise } from "@/utils/layoutMeasurement";
+import { isNativeLayoutNoise, normalizeLayoutSize } from "@/utils/layoutMeasurement";
 
 export function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
@@ -318,7 +318,7 @@ export function updateOneItemSize(
         layoutStore && index !== undefined
             ? layoutStore.getSize(index)
             : getItemSize(ctx, itemKey, itemIndex, itemData, notifyTotalSize, resolvedItemSize);
-    const rawSize = horizontal ? sizeObj.width : sizeObj.height;
+    const rawSize = normalizeLayoutSize(horizontal ? sizeObj.width : sizeObj.height);
     const prevSizeKnown = sizesKnown.get(itemKey);
     const isKnownNativeNoise =
         Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown);
