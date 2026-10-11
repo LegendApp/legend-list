@@ -394,7 +394,11 @@ for (const numColumns of [1, 2]) {
                 const ref = React.createRef<LegendListRef>();
                 const screen = render(
                     <LegendList
-                        data={[{ height: input === "fixed" ? invalidSize : 40 }, { height: 40 }, { height: 40 }]}
+                        data={
+                            input === "estimate"
+                                ? Array.from({ length: 10_000 }, () => ({ height: 40 }))
+                                : [{ height: input === "fixed" ? invalidSize : 40 }, { height: 40 }, { height: 40 }]
+                        }
                         estimatedItemSize={input === "estimate" ? invalidSize : 40}
                         estimatedListSize={{ height: 300, width: 320 }}
                         getFixedItemSize={input === "fixed" ? (item: { height: number }) => item.height : undefined}
@@ -412,9 +416,12 @@ for (const numColumns of [1, 2]) {
                     materializeLayoutStoreRange(ctx, 0, 2);
                     if (input === "measurement")
                         await act(async () => ref.current!.setItemSize("0", { height: invalidSize, width: 320 }));
-                    expect(store.getSize(0)).toBe(0);
-                    if (input === "estimate") expect(ctx.state.props.estimatedItemSize).toBe(0);
-                    else expect(ctx.state.sizesKnown.get("0")).toBe(0);
+                    expect(store.getSize(0)).toBe(input === "estimate" ? 100 : 0);
+                    if (input === "estimate") {
+                        expect(ctx.state.props.estimatedItemSize).toBe(100);
+                        expect(store.getTotalSize()).toBe(Math.ceil(10_000 / numColumns) * 100);
+                        expect(ctx.state.endBuffered).toBeLessThan(100);
+                    } else expect(ctx.state.sizesKnown.get("0")).toBe(0);
                     expect(Number.isFinite(store.getTotalSize())).toBe(true);
                     const sizeWarnings = warn.mock.calls.filter(([message]) =>
                         String(message).includes("Item sizes must be finite non-negative numbers"),

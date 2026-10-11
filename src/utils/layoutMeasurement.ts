@@ -17,13 +17,13 @@ export function isNativeLayoutSizeNoise(heightDelta: number, widthDelta: number)
     return isWithinEpsilon(heightDelta) && isWithinEpsilon(widthDelta);
 }
 
-export function normalizeLayoutSize(size: number) {
+export function normalizeLayoutSize(size: number, fallback = 0) {
     if (!Number.isFinite(size) || size < 0) {
         warnDevOnce(
             "invalid-layout-size",
-            `Item sizes must be finite non-negative numbers. Received ${size}; using 0 instead.`,
+            `Item sizes must be finite non-negative numbers. Received ${size}; using ${fallback} instead.`,
         );
-        return 0;
+        return fallback;
     }
     return size;
 }
