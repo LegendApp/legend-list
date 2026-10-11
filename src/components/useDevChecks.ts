@@ -33,7 +33,6 @@ function useDevChecksImpl(props: LegendListDevProps) {
         useWindowScroll,
     } = props;
     const hasAnchoredEndSpace = !!anchoredEndSpace;
-    const dataChangeEpoch = ctx.state.dataChangeEpoch;
     const shouldWarnAboutIndexKeys =
         !keyExtractor && !ctx.state.props.dataSource && !ctx.state.isFirst && ctx.state.didDataChange && !childrenMode;
 
@@ -62,7 +61,7 @@ function useDevChecksImpl(props: LegendListDevProps) {
                 "Without a keyExtractor, measured sizes stay with their index. Appends keep layout, but inserts, removals, and reorders move content to rows with the wrong size. Pass a keyExtractor that returns a stable unique id.",
             );
         }
-    }, [dataChangeEpoch, shouldWarnAboutIndexKeys]);
+    }, [shouldWarnAboutIndexKeys]);
 
     useEffect(() => {
         const state = ctx.state;

@@ -827,7 +827,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal || didDataChangeLocal || state.didColumnsChange) {
         refState.current.lastBatchingAction = Date.now();
         if (!dataSource && !keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
-            // Measurements stay with their index, matching array lists on main.
+            // Index keys retain measurements at the same index.
             refState.current.sizes.clear();
         }
     }
