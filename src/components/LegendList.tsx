@@ -36,12 +36,7 @@ import { handleLayout } from "@/core/handleLayout";
 import { getDataLength, type IndexedData, resolveIndexedData } from "@/core/IndexedData";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
-import {
-    clearLayoutStoreKnownSizes,
-    rebuildLayoutStoreExact,
-    syncLayoutStoreState,
-    syncLayoutStoreStructure,
-} from "@/core/layoutStoreLifecycle";
+import { rebuildLayoutStoreExact, syncLayoutStoreState, syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
 import { onScroll } from "@/core/onScroll";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
@@ -830,15 +825,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal || didDataChangeLocal || state.didColumnsChange) {
         refState.current.lastBatchingAction = Date.now();
         if (!dataSource && !keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
-            // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset.
+            // Measurements stay with their index, matching array lists on main.
             refState.current.sizes.clear();
-            refState.current.sizesKnown.clear();
-            for (const key in refState.current.averageSizes) {
-                delete refState.current.averageSizes[key];
-            }
-            clearLayoutStoreKnownSizes(ctx);
-            refState.current.totalSize = 0;
-            set$(ctx, "totalSize", 0);
         }
     }
 

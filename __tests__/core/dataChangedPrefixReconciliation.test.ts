@@ -1,7 +1,10 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkResetContainers } from "@/core/checkResetContainers";
+import { getIndexedData } from "@/core/IndexedData";
 import { reconcileLayoutStoreDataChange, syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
 import { RowLayoutStore } from "@/core/RowLayoutStore";
+import { updateItemSizes } from "@/core/updateItemSizes";
+import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";
@@ -456,23 +459,76 @@ describe("dataChanged prefix reconciliation", () => {
     });
 
     describe("store reconciliation boundaries", () => {
-        it("keeps prefix layout active for single-column data changes without a reliable key extractor", () => {
-            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
+        it("retains index-keyed measurements after an append", () => {
+            const previousData = [{ id: "a" }, { id: "b" }];
+            const ctx = createDataChangeContext([...previousData, { id: "c" }], {
                 estimatedItemSize: 100,
                 hasReliableKeyExtractor: false,
             });
             ctx.state.props.keyExtractor = (_item: TestItem, index: number) => String(index);
+            ctx.state.previousData = previousData;
+            ctx.state.idCache[0] = "0";
             ctx.state.sizesKnown.set("0", 25);
-            ctx.state.sizes.set("0", 25);
+            // LegendList clears the transient cache before a no-keyExtractor data change.
+            ctx.state.sizes.clear();
 
             runDataChange(ctx);
 
-            expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
-            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(300);
-            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
-            expect(ctx.state.sizesKnown.size).toBe(0);
+            const store = ctx.state.layoutStoreRuntime!.store;
+            expect(store.getTotalSize()).toBe(225);
+            expect(store.getSize(0)).toBe(25);
+            expect(store.getMeasuredCount()).toBe(1);
+            expect(ctx.state.sizesKnown.get("0")).toBe(25);
             expect(ctx.state.sizes.size).toBe(0);
             expect(countLayoutValues(ctx.state, "positions")).toBe(0);
+        });
+
+        it("shrinks index-keyed data without scanning unmaterialized keys", () => {
+            const previousData = Array.from({ length: 1000 }, (_, index) => ({ id: String(index) }));
+            const ctx = createDataChangeContext(previousData.slice(0, 500), {
+                hasReliableKeyExtractor: false,
+            });
+            ctx.state.props.keyExtractor = (_item: TestItem, index: number) => String(index);
+            ctx.state.previousData = previousData;
+            const previousIdCache = new Map([
+                [3, "3"],
+                [900, "900"],
+            ]);
+            ctx.state.sizesKnown.set("3", 45);
+            ctx.state.sizesKnown.set("900", 60);
+            const getKey = spyOn(getIndexedData(ctx.state), "getKey");
+            try {
+                expect(reconcileLayoutStoreDataChange(ctx, { previousIdCache })).toBe(true);
+                const store = ctx.state.layoutStoreRuntime!.store;
+                expect(store.length).toBe(500);
+                expect(store.getSize(3)).toBe(45);
+                expect(store.getMeasuredCount()).toBe(1);
+                expect(getKey).not.toHaveBeenCalled();
+            } finally {
+                getKey.mockRestore();
+            }
+        });
+
+        it("keeps an unchanged native measurement exact after an index-keyed append", () => {
+            const previousOS = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                const previousData = [{ id: "a" }];
+                const ctx = createDataChangeContext([...previousData, { id: "b" }], {
+                    hasReliableKeyExtractor: false,
+                });
+                ctx.state.props.keyExtractor = (_item: TestItem, index: number) => String(index);
+                ctx.state.previousData = previousData;
+                ctx.state.idCache[0] = "0";
+                ctx.state.sizesKnown.set("0", 25);
+                runDataChange(ctx);
+                updateItemSizes(ctx, { itemKey: "0", size: { height: 25, width: 320 } });
+                expect(ctx.state.layoutStoreRuntime!.store.getSize(0)).toBe(25);
+                expect(ctx.state.layoutStoreRuntime!.store.getMeasuredCount()).toBe(1);
+                expect(ctx.state.sizesKnown.get("0")).toBe(25);
+            } finally {
+                Platform.OS = previousOS;
+            }
         });
 
         it("keeps row layout active for multi-column data changes", () => {

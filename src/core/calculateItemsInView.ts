@@ -671,15 +671,16 @@ export function calculateItemsInView(
 
         const hasActiveLayoutStore = !!getActiveLayoutStore(ctx);
         const didApplyDataSourceMutation = !!state.dataSourceMutationApplied && !state.dataSourceNeedsReset;
-        const shouldReconcileLayoutStoreDataChange =
+        const canReconcileLayoutStoreDataChange =
             !forceFullItemPositions &&
             didDataChange &&
             !state.isFirst &&
             hasActiveLayoutStore &&
             !state.dataSourceNeedsReset &&
             !didApplyDataSourceMutation &&
-            state.props.hasReliableKeyExtractor;
-        const previousIdCache = shouldReconcileLayoutStoreDataChange ? getSparseIdCacheSnapshot(state) : undefined;
+            // Index-keyed arrays retain measurements at the same index.
+            (state.props.hasReliableKeyExtractor || !state.props.dataSource);
+        const previousIdCache = canReconcileLayoutStoreDataChange ? getSparseIdCacheSnapshot(state) : undefined;
         if (didDataChange && !didApplyDataSourceMutation) {
             if (state.dataSourceNeedsReset) {
                 // A source reset invalidates geometry, including the keyed cache used
@@ -688,7 +689,7 @@ export function calculateItemsInView(
                 triggerMountedContainerLayouts(ctx);
             }
             resetLayoutCachesForDataChange(state, {
-                includeLayoutStoreMeasurements: !shouldReconcileLayoutStoreDataChange,
+                includeLayoutStoreMeasurements: !canReconcileLayoutStoreDataChange,
             });
         }
 
@@ -702,7 +703,7 @@ export function calculateItemsInView(
             : undefined;
         let didReconcileLayoutStoreDataChange = false;
 
-        if (!layoutStoreMaterializedRange && shouldReconcileLayoutStoreDataChange) {
+        if (!layoutStoreMaterializedRange && canReconcileLayoutStoreDataChange) {
             didReconcileLayoutStoreDataChange = reconcileLayoutStoreDataChange(ctx, {
                 didKeyExtractorChange: state.dataChangeKeyExtractorChanged,
                 previousIdCache,
@@ -718,8 +719,8 @@ export function calculateItemsInView(
         }
 
         if (!layoutStoreMaterializedRange && didDataChange && hasActiveLayoutStore && !didApplyDataSourceMutation) {
-            const didFailReliableReconcile = shouldReconcileLayoutStoreDataChange && !didReconcileLayoutStoreDataChange;
-            if (didFailReliableReconcile || !state.props.hasReliableKeyExtractor) {
+            const didFailReliableReconcile = canReconcileLayoutStoreDataChange && !didReconcileLayoutStoreDataChange;
+            if (didFailReliableReconcile) {
                 clearUnsafeSizeCaches(state);
                 triggerMountedContainerLayouts(ctx);
             }

@@ -33,6 +33,9 @@ function useDevChecksImpl(props: LegendListDevProps) {
         useWindowScroll,
     } = props;
     const hasAnchoredEndSpace = !!anchoredEndSpace;
+    const dataChangeEpoch = ctx.state.dataChangeEpoch;
+    const shouldWarnAboutIndexKeys =
+        !keyExtractor && !ctx.state.props.dataSource && !ctx.state.isFirst && ctx.state.didDataChange && !childrenMode;
 
     useEffect(() => {
         if (hasAnchoredEndSpace && (numColumns ?? 1) > 1) {
@@ -53,13 +56,13 @@ function useDevChecksImpl(props: LegendListDevProps) {
     }, [renderScrollComponent, scrollElement, useWindowScroll]);
 
     useEffect(() => {
-        if (!keyExtractor && !ctx.state.isFirst && ctx.state.didDataChange && !childrenMode) {
+        if (shouldWarnAboutIndexKeys) {
             warnDevOnce(
                 "keyExtractor",
-                "Changing data without a keyExtractor can cause slow performance and resetting scroll. If your list data can change you should use a keyExtractor with a unique id for best performance and behavior.",
+                "Without a keyExtractor, measured sizes stay with their index. Appends keep layout, but inserts, removals, and reorders move content to rows with the wrong size. Pass a keyExtractor that returns a stable unique id.",
             );
         }
-    }, [childrenMode, ctx, keyExtractor]);
+    }, [dataChangeEpoch, shouldWarnAboutIndexKeys]);
 
     useEffect(() => {
         const state = ctx.state;

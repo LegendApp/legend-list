@@ -1,12 +1,16 @@
 // Runs in a fresh process so ListComponent mocks cannot leak into other mounted suites.
-import { expect, mock, test } from "bun:test";
+import { expect, mock, spyOn, test } from "bun:test";
 import "../setup";
 import React from "react";
 
+import { materializeLayoutStoreRange } from "../../src/core/layoutStoreLifecycle";
 import { measureContainersInLayoutEffect } from "../../src/core/measureContainersInLayoutEffect.native";
 import { getContainerLayoutEffectScope } from "../../src/core/scheduleContainerLayout";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
-import { useStateContext } from "../../src/state/state";
+import { processContainerLayout } from "../../src/hooks/useContainerMeasurement";
+import { peek$, type StateContext, useStateContext } from "../../src/state/state";
+import type { LegendListRef } from "../../src/types.base";
+import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { act, render } from "../helpers/testingLibrary";
 
 for (const mode of ["invalidate", "reset", "replace", "revision-gap"])
@@ -205,4 +209,166 @@ for (const mode of ["reset", "revision-gap", "changed-key"] as const) {
             });
         }
     }
+}
+
+for (const hideItemsUntilMeasured of [false, true]) {
+    test(`keeps measured index layout and scroll after append (hide until measured: ${hideItemsUntilMeasured})`, async () => {
+        let ctx!: StateContext;
+        let listProps: any;
+        mock.module("@/components/ListComponent", () => ({
+            ListComponent: (componentProps: any) => {
+                ctx = useStateContext();
+                listProps = componentProps;
+                return null;
+            },
+        }));
+        const { LegendList } = await import(`../../src/components/LegendList?index-append-${hideItemsUntilMeasured}`);
+        const data = Array.from({ length: 200 }, (_, index) => ({ height: index % 2 ? 160 : 40 }));
+        const ref = React.createRef<LegendListRef>();
+        const props = {
+            data,
+            estimatedItemSize: 100,
+            estimatedListSize: { height: 300, width: 320 },
+            experimental_hideItemsUntilMeasured: hideItemsUntilMeasured,
+            ref,
+            renderItem: () => null,
+        };
+        const screen = render(<LegendList {...props} />);
+        await act(async () => {
+            listProps.onLayout({ nativeEvent: { layout: { height: 300, width: 320, x: 0, y: 0 } } });
+            materializeLayoutStoreRange(ctx, 0, data.length - 1);
+            updateItemSizesBatch(
+                ctx,
+                data.map((item, index) => ({
+                    itemKey: String(index),
+                    size: { height: item.height, width: 320 },
+                })),
+            );
+            listProps.onScroll({
+                nativeEvent: {
+                    contentOffset: { x: 0, y: 15000 },
+                    contentSize: { height: 20000, width: 320 },
+                    layoutMeasurement: { height: 300, width: 320 },
+                },
+            });
+        });
+        await act(async () => {
+            for (const [key, containerId] of ctx.state.containerItemKeys) {
+                ctx.viewRefs.set(containerId, {
+                    current: { measure: (callback: any) => callback(0, 0, 320, data[Number(key)].height) },
+                } as any);
+            }
+            measureContainersInLayoutEffect(ctx);
+        });
+        const previousAverage = { ...ctx.state.averageSizes[""] };
+        expect(previousAverage.avg).toBeCloseTo(100);
+        expect(previousAverage.num).toBe(200);
+        const before = ref.current!.getState();
+        expect(before.start).toBe(150);
+        expect(before.scroll).toBe(15000);
+        const previousOffset = before.positionAtIndex(150);
+        expect(previousOffset).toBe(15000);
+        const store = ctx.state.layoutStoreRuntime!.store;
+        expect(store.getMeasuredCount()).toBe(200);
+        const anchorContainerId = ctx.state.containerItemKeys.get("150")!;
+        if (hideItemsUntilMeasured) expect(peek$(ctx, `containerLayoutReady${anchorContainerId}`)).toBe(true);
+        await act(async () => {
+            screen.rerender(<LegendList {...props} data={[...data, ...data.slice(0, 20)]} />);
+        });
+        const after = ref.current!.getState();
+        expect(after.start).toBe(before.start);
+        expect(after.scroll).toBe(before.scroll);
+        expect(after.positionAtIndex(150)).toBe(previousOffset);
+        expect(store.getMeasuredCount()).toBe(200);
+        expect(ctx.state.sizes.size).toBe(0);
+        expect(ctx.state.averageSizes[""]).toEqual(previousAverage);
+        if (hideItemsUntilMeasured) expect(peek$(ctx, `containerLayoutReady${anchorContainerId}`)).toBe(true);
+        screen.unmount();
+    });
+}
+
+test("replaces content at the same index and corrects subsequent offsets on layout", async () => {
+    let ctx!: StateContext;
+    let listProps: any;
+    mock.module("@/components/ListComponent", () => ({
+        ListComponent: (componentProps: any) => {
+            ctx = useStateContext();
+            listProps = componentProps;
+            return null;
+        },
+    }));
+    const { LegendList } = await import("../../src/components/LegendList?index-replacement");
+    const data = Array.from({ length: 10 }, () => ({ height: 40 }));
+    const props = {
+        data,
+        estimatedItemSize: 40,
+        estimatedListSize: { height: 300, width: 320 },
+        renderItem: () => null,
+    };
+    const screen = render(<LegendList {...props} />);
+    await act(async () => {
+        listProps.onLayout({ nativeEvent: { layout: { height: 300, width: 320, x: 0, y: 0 } } });
+        materializeLayoutStoreRange(ctx, 0, 9);
+        updateItemSizesBatch(
+            ctx,
+            data.map((item, index) => ({ itemKey: String(index), size: { height: item.height, width: 320 } })),
+        );
+    });
+    const store = ctx.state.layoutStoreRuntime!.store;
+    expect(store.getOffset(4)).toBe(160);
+    const replacement = data.map((item, index) => (index === 3 ? { height: 160 } : item));
+    await act(async () => screen.rerender(<LegendList {...props} data={replacement} />));
+    expect(store.getSize(3)).toBe(40);
+    const containerId = ctx.state.containerItemKeys.get("3")!;
+    expect(peek$(ctx, `containerItemData${containerId}`)).toBe(replacement[3]);
+    await act(async () =>
+        processContainerLayout({
+            containerId,
+            ctx,
+            rectangle: { height: 160, width: 320, x: 0, y: 0 },
+            ref: { current: null },
+            state: { didLayout: true, horizontal: false, itemKey: "3", lastSize: { height: 40, width: 320 } },
+        }),
+    );
+    expect(store.getSize(3)).toBe(160);
+    expect(store.getOffset(4)).toBe(280);
+    expect(ctx.state.sizesKnown.get("3")).toBe(160);
+    screen.unmount();
+});
+
+for (const keyed of [false, true]) {
+    test(`warns once on index-keyed data changes (keyExtractor: ${keyed})`, async () => {
+        clearWarnDevOnceForTests();
+        const warn = spyOn(console, "warn").mockImplementation(() => {});
+        const warnings = () => warn.mock.calls.filter(([message]) => String(message).startsWith("[legend-list]"));
+        mock.module("@/components/ListComponent", () => ({ ListComponent: () => null }));
+        const { LegendList } = await import(`../../src/components/LegendList?index-warning-${keyed}`);
+        const props = {
+            data: [{ id: "a" }],
+            estimatedItemSize: 40,
+            estimatedListSize: { height: 300, width: 320 },
+            keyExtractor: keyed ? (item: { id: string }) => item.id : undefined,
+            recycleItems: false,
+            renderItem: () => null,
+        };
+        const screen = render(<LegendList {...props} />);
+        try {
+            expect(warnings()).toEqual([]);
+            await act(async () => screen.rerender(<LegendList {...props} data={[...props.data, { id: "b" }]} />));
+            expect(warnings()).toHaveLength(keyed ? 0 : 1);
+            await act(async () =>
+                screen.rerender(<LegendList {...props} data={[...props.data, { id: "b" }, { id: "c" }]} />),
+            );
+            if (keyed) expect(warnings()).toEqual([]);
+            else {
+                expect(warnings()).toHaveLength(1);
+                expect(warnings()[0][0]).toBe(
+                    "[legend-list] Without a keyExtractor, measured sizes stay with their index. Appends keep layout, but inserts, removals, and reorders move content to rows with the wrong size. Pass a keyExtractor that returns a stable unique id.",
+                );
+            }
+        } finally {
+            screen.unmount();
+            warn.mockRestore();
+        }
+    });
 }
