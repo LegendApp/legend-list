@@ -15,13 +15,13 @@ export function getFixedItemLayoutSize(ctx: StateContext, index: number, data: a
     const { getFixedItemSize, getItemType } = state.props;
     let size: number | undefined;
 
-    if (getFixedItemSize) {
+    if (getFixedItemSize && data !== undefined) {
         const itemType = resolved?.itemType ?? (getItemType ? (getItemType(data, index) ?? "") : "");
         const fixedSize = resolved?.didResolveFixedItemSize
             ? resolved.fixedItemSize
             : getFixedItemSize(data, index, itemType);
         if (fixedSize !== undefined) {
-            size = normalizeLayoutSize(fixedSize + ctx.scrollAxisGap);
+            size = normalizeLayoutSize(normalizeLayoutSize(fixedSize) + ctx.scrollAxisGap);
         }
     }
 

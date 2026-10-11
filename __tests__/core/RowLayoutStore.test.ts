@@ -23,6 +23,32 @@ function nextRandom(seed: number) {
 }
 
 describe("RowLayoutStore", () => {
+    it("hops unresolved rows without scanning measured grid prefixes", () => {
+        const store = new RowLayoutStore({ estimatedSize: 100, length: 10_000, numColumns: 2 });
+        store.replaceKnownSizeEntries(
+            Array.from({ length: 9001 }, (_, index) => ({
+                index,
+                size: 140,
+                type: "measured" as const,
+            })).filter(({ index }) => index !== 0 && index !== 37),
+        );
+        // Partial rows exceed the estimate but are still unresolved.
+        const knownSizes = (store as unknown as { knownSizes: Map<number, unknown> }).knownSizes;
+        const get = spyOn(knownSizes, "get");
+        try {
+            for (let pass = 0; pass < 10; pass++) {
+                expect(store.findFirstUnmeasuredIndex()).toBe(0);
+                expect(store.findFirstUnmeasuredIndex(1)).toBe(37);
+                expect(store.findFirstUnmeasuredIndex(38)).toBe(9001);
+            }
+            expect(get.mock.calls.length).toBeLessThanOrEqual(60);
+        } finally {
+            get.mockRestore();
+        }
+        store.invalidateRange(500, 1);
+        expect(store.findFirstUnmeasuredIndex(38)).toBe(500);
+    });
+
     it("packs fixed-column rows with estimated sizes", () => {
         const store = new RowLayoutStore({ estimatedSize: 100, length: 5, numColumns: 2 });
 

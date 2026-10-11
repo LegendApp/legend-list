@@ -60,8 +60,8 @@ class TestLayoutStore {
         return undefined;
     }
 
-    findFirstUnmeasuredIndex() {
-        for (let index = 0; index < this.length; index++) {
+    findFirstUnmeasuredIndex(fromIndex = 0) {
+        for (let index = fromIndex; index < this.length; index++) {
             if (this.sizes[index] === undefined) return index;
         }
         return undefined;
