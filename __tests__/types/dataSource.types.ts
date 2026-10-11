@@ -1,12 +1,16 @@
-import type { AnimatedLegendListProps } from "../../src/integrations/reanimated";
+import type { AnimatedLegendListDataSourceProps, AnimatedLegendListProps } from "../../src/integrations/reanimated";
 import type { SectionListProps } from "../../src/section-list/SectionList";
-import type { LegendListProps as NativeLegendListProps } from "../../src/types.react-native";
+import type {
+    LegendListDataSourceProps as NativeLegendListDataSourceProps,
+    LegendListProps as NativeLegendListProps,
+} from "../../src/types.react-native";
 import type {
     DataSourceMutationBatch,
     LegendListArrayDataModeProps,
     LegendListDataMode,
     LegendListDataSource,
     LegendListDataSourceModeProps,
+    LegendListDataSourceProps,
     LegendListProps,
 } from "../../src/types.web";
 
@@ -31,7 +35,7 @@ const dataSourceMode: LegendListDataSourceModeProps<Item, undefined> = {
     renderItem: ({ dataSource, index, item }) => item?.label ?? `Loading ${dataSource.getKey(index)}`,
 };
 
-const dataSourceListProps: LegendListProps<Item, undefined> = dataSourceMode;
+const dataSourceListProps: LegendListDataSourceProps<Item, undefined> = dataSourceMode;
 
 const mutationBatch: DataSourceMutationBatch = {
     length: 11,
@@ -64,7 +68,7 @@ void mutationBatch;
 void dataSourceListProps;
 
 // Event callbacks must expose unloaded items without weakening array-mode callbacks.
-const sourceCallbacks: LegendListProps<Item> = {
+const sourceCallbacks: LegendListDataSourceProps<Item> = {
     dataSource: source,
     getFixedItemSize: (item) => item.label.length,
     getItemType: (item) => item.id,
@@ -157,10 +161,10 @@ void sectionCallbacks;
 type FirstVisibleItem<Props extends { onFirstVisibleItemChanged?: (info: any) => void }> = Parameters<
     NonNullable<Props["onFirstVisibleItemChanged"]>
 >[0]["item"];
-type NativeSourceProps = Extract<NativeLegendListProps<Item>, { dataSource: LegendListDataSource<Item> }>;
-type NativeArrayProps = Extract<NativeLegendListProps<Item>, { data: readonly Item[] }>;
-type AnimatedSourceProps = Extract<AnimatedLegendListProps<Item>, { dataSource: LegendListDataSource<Item> }>;
-type AnimatedArrayProps = Extract<AnimatedLegendListProps<Item>, { data: readonly Item[] }>;
+type NativeSourceProps = NativeLegendListDataSourceProps<Item>;
+type NativeArrayProps = NativeLegendListProps<Item>;
+type AnimatedSourceProps = AnimatedLegendListDataSourceProps<Item>;
+type AnimatedArrayProps = AnimatedLegendListProps<Item>;
 type _NativeSourceEventsAllowUnloaded = Expect<IsAssignable<undefined, FirstVisibleItem<NativeSourceProps>>>;
 type _NativeArrayEventsRequireLoaded = Expect<Not<IsAssignable<undefined, FirstVisibleItem<NativeArrayProps>>>>;
 type _AnimatedSourceEventsAllowUnloaded = Expect<IsAssignable<undefined, FirstVisibleItem<AnimatedSourceProps>>>;

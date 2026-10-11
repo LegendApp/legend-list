@@ -4,12 +4,13 @@ import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import type { LooseLayoutChangeEvent, LooseScrollViewProps } from "@/platform/scrollview-types";
 import type {
     AnchoredEndSpaceConfig,
+    LegendListDataSourcePropsBase,
+    LegendListPropsBase,
     LegendListRef as LegendListRefBase,
     LegendListState as LegendListStateBase,
     NativeScrollEvent,
     NativeSyntheticEvent,
 } from "@/types.base";
-import type { LegendListPropsBase } from "@/types.internal";
 
 export type {
     AdaptiveRender,
@@ -73,10 +74,8 @@ type ScrollViewPropsWeb = Omit<
         onLayout?: (event: LooseLayoutChangeEvent) => void;
     };
 
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-
-type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = DistributiveOmit<
-    LegendListPropsBase<ItemT, ScrollViewPropsWeb, TItemType>,
+type LegendListPropsOverrides<Props> = Omit<
+    Props,
     | "anchoredEndSpace"
     | "refScrollView"
     | "renderScrollComponent"
@@ -102,7 +101,12 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Dis
 export type LegendListProps<
     ItemT = any,
     TItemType extends string | undefined = string | undefined,
-> = LegendListPropsOverrides<ItemT, TItemType>;
+> = LegendListPropsOverrides<LegendListPropsBase<ItemT, ScrollViewPropsWeb, TItemType>>;
+
+export type LegendListDataSourceProps<
+    ItemT = any,
+    TItemType extends string | undefined = string | undefined,
+> = LegendListPropsOverrides<LegendListDataSourcePropsBase<ItemT, ScrollViewPropsWeb, TItemType>>;
 
 export type LegendListRef = Omit<
     LegendListRefBase,
@@ -118,11 +122,10 @@ export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
     elementAtIndex: (index: number) => HTMLElement | null | undefined;
 };
 
-// A source-specific overload provides contextual callback types before generic
-// inference. The union signature also accepts forwarded props from either mode.
-export type LegendListComponent = {
-    <ItemT = any>(
-        props: Extract<LegendListProps<ItemT>, { dataSource: unknown }> & RefAttributes<LegendListRef>,
-    ): ReactElement | null;
-    <ItemT = any>(props: LegendListProps<ItemT> & RefAttributes<LegendListRef>): ReactElement | null;
-};
+export type LegendListComponent = <ItemT = any>(
+    props: LegendListProps<ItemT> & RefAttributes<LegendListRef>,
+) => ReactElement | null;
+
+export type LegendListDataSourceComponent = <ItemT = any>(
+    props: LegendListDataSourceProps<ItemT> & RefAttributes<LegendListRef>,
+) => ReactElement | null;
