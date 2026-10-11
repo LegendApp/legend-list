@@ -59,37 +59,36 @@ async function runCase(sourceMode: boolean, horizontal: boolean, strict: boolean
     const config = { itemVisiblePercentThreshold: 50, minimumViewTime: scenario.startsWith("visibility") ? 150 : 0 };
     const footer = <div style={horizontal ? { height: 120, width: 600 } : { height: 600 }} />;
     const render = (extraData = 0) => {
-        const list = (
-            <LegendList
-                {...(sourceMode ? { dataSource: activeSource } : { data: items })}
-                estimatedItemSize={50}
-                extraData={extraData}
-                horizontal={horizontal}
-                keyExtractor={keyExtractor}
-                ListFooterComponent={footer}
-                maintainVisibleContentPosition={false}
-                onViewableItemsChanged={callback}
-                recycleItems
-                ref={ref}
-                renderItem={({ item }: { item: Item | undefined }) =>
-                    item ? (
-                        <div
-                            data-qa-key={item.id}
-                            style={{
-                                background: "#eef",
-                                boxSizing: "border-box",
-                                ...(horizontal
-                                    ? { height: 100, width: item.size }
-                                    : { height: item.size, width: "100%" }),
-                            }}
-                        >
-                            {item.id}
-                        </div>
-                    ) : null
-                }
-                style={{ height: 240, width: 320 }}
-                viewabilityConfig={config}
-            />
+        const props = {
+            estimatedItemSize: 50,
+            extraData,
+            horizontal,
+            keyExtractor,
+            ListFooterComponent: footer,
+            maintainVisibleContentPosition: false,
+            onViewableItemsChanged: callback,
+            recycleItems: true,
+            ref,
+            renderItem: ({ item }: { item: Item | undefined }) =>
+                item ? (
+                    <div
+                        data-qa-key={item.id}
+                        style={{
+                            background: "#eef",
+                            boxSizing: "border-box",
+                            ...(horizontal ? { height: 100, width: item.size } : { height: item.size, width: "100%" }),
+                        }}
+                    >
+                        {item.id}
+                    </div>
+                ) : null,
+            style: { height: 240, width: 320 },
+            viewabilityConfig: config,
+        };
+        const list = sourceMode ? (
+            <LegendList dataSource={activeSource} {...props} />
+        ) : (
+            <LegendList data={items} {...props} />
         );
         root.render(strict ? <React.StrictMode>{list}</React.StrictMode> : list);
     };
