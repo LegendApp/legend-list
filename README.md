@@ -125,6 +125,8 @@ For very large, sparse, or editor-style collections, pass a stable `dataSource` 
 />
 ```
 
+See [v4 sparse layout migration](docs/v4-migration.md) for the deliberate changes to distant offsets, estimates, and state queries.
+
 This path keeps ordinary mount, distant jumps, and precise edits proportional to visible, buffered, changed, or previously materialized state rather than total logical length. See the [data-source guide](docs/data-source.md) for the interface, mutation ordering rules, sparse-item behavior, migration examples, and performance boundaries.
 
 ---
