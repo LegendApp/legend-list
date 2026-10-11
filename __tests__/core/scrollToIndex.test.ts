@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import * as doScrollToModule from "@/core/doScrollTo";
+import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
 import { Platform } from "@/platform/Platform";
 import { scrollToIndex } from "../../src/core/scrollToIndex";
@@ -151,7 +152,51 @@ describe("scrollToIndex", () => {
             expect(mockScrollCalls[0].y).toBe(300);
         });
 
-        it("materializes only the destination viewport for a distant variable fixed-size jump", () => {
+        for (const initial of [true, false]) {
+            it(`lands exactly on the mixed fixed-size Initial Scroll Index fixture (initial: ${initial})`, () => {
+                const fixedSizeIndexes: number[] = [];
+                const ctx = createMockContext(
+                    { headerSize: 108, stylePaddingTop: 48 },
+                    {
+                        props: {
+                            data: Array.from({ length: 500 }, (_, index) => ({
+                                id: String(index),
+                                type: index % 3 === 0 ? "separator" : "item",
+                            })),
+                            drawDistance: 1000,
+                            estimatedItemSize: 200,
+                            getFixedItemSize: (item, index) => {
+                                fixedSizeIndexes.push(index);
+                                return item.type === "separator" ? 52 : 400;
+                            },
+                            keyExtractor: (item) => item.id,
+                            recycleItems: true,
+                        },
+                        refScroller: mockState.refScroller,
+                        scrollLength: 600,
+                    },
+                );
+                syncLayoutStoreStructure(ctx);
+                const target = { index: 50, kind: "index" as const, viewPosition: 0 };
+                if (initial) {
+                    expect(resolveInitialScrollOffset(ctx, target)).toBe(14_240);
+                    scrollToIndex(ctx, { ...target, animated: false, forceScroll: true, isInitialScroll: true });
+                } else {
+                    scrollToIndex(ctx, { ...target, animated: false });
+                }
+                expect(mockScrollCalls.at(-1).y).toBe(14_240);
+                expect(ctx.state.layoutStoreRuntime!.store.getOffset(50)).toBe(14_084);
+                expect(Math.max(...fixedSizeIndexes)).toBeLessThan(60);
+                // Bootstrap and subsequent requests reuse the resolved prefix without callbacks or keys.
+                const calls = fixedSizeIndexes.length;
+                expect(resolveInitialScrollOffset(ctx, target)).toBe(14_240);
+                expect(fixedSizeIndexes).toHaveLength(calls);
+                expect(ctx.state.idCache[0]).toBeUndefined();
+                ctx.state.scheduledWork.dispose();
+            });
+        }
+
+        it("resolves only the required prefix and destination viewport in a million-item list", () => {
             const fixedSizeIndexes: number[] = [];
             const ctx = createMockContext(
                 {},
@@ -170,15 +215,16 @@ describe("scrollToIndex", () => {
             );
             syncLayoutStoreStructure(ctx);
 
-            scrollToIndex(ctx, { animated: false, index: 900_000, viewPosition: 0 });
+            scrollToIndex(ctx, { animated: false, index: 9_000, viewPosition: 0 });
 
-            expect(ctx.state.scrollingTo?.offset).toBe(90_000_000);
-            expect(Math.min(...fixedSizeIndexes)).toBe(900_000);
-            expect(Math.max(...fixedSizeIndexes)).toBeLessThan(900_200);
-            expect(fixedSizeIndexes.length).toBeLessThan(200);
-            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBeLessThan(200);
-            expect(ctx.state.idCache[899_999]).toBeUndefined();
+            expect(ctx.state.scrollingTo?.offset).toBe(90_000);
+            expect(Math.min(...fixedSizeIndexes)).toBe(0);
+            expect(Math.max(...fixedSizeIndexes)).toBeLessThan(9_200);
+            expect(fixedSizeIndexes.length).toBeLessThan(9_200);
+            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBeLessThan(9_200);
+            expect(ctx.state.idCache[8_999]).toBeUndefined();
             expect(Object.keys(ctx.state.idCache)).toHaveLength(1);
+            ctx.state.scheduledWork.dispose();
         });
     });
 

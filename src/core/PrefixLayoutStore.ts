@@ -110,6 +110,28 @@ export class SparseSequenceLayoutStore implements MutableLayoutStore {
         return range;
     }
 
+    findFirstUnmeasuredIndex(): number | undefined {
+        let node = this.root;
+        let index = 0;
+        while (node && getMeasuredCount(node) < getLogicalCount(node)) {
+            if (getMeasuredCount(node.left) < getLogicalCount(node.left)) {
+                node = node.left;
+            } else {
+                index += getLogicalCount(node.left);
+                const piece = node.piece;
+                if (piece.type === PIECE_UNKNOWN) return index;
+                if (piece.measuredCount < piece.count) {
+                    for (let offset = 0; offset < piece.count; offset++) {
+                        if (piece.kinds[offset] !== SIZE_MEASURED) return index + offset;
+                    }
+                }
+                index += piece.count;
+                node = node.right;
+            }
+        }
+        return undefined;
+    }
+
     clearKnownSizes() {
         this.root = createUnknownNode(this.length);
     }

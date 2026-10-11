@@ -124,6 +124,15 @@ export class RowLayoutStore implements MutableLayoutStore {
         return this.positiveMeasuredCount > 0 ? this.measuredSizeTotal / this.positiveMeasuredCount : undefined;
     }
 
+    findFirstUnmeasuredIndex(): number | undefined {
+        if (this.measuredCount < this.length) {
+            for (let index = 0; index < this.length; index++) {
+                if (this.knownSizes.get(index)?.kind !== SIZE_MEASURED) return index;
+            }
+        }
+        return undefined;
+    }
+
     getMeasuredCount() {
         return this.measuredCount;
     }

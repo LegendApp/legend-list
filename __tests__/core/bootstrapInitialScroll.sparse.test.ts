@@ -82,6 +82,6 @@ describe("sparse bootstrap viewport", () => {
         const ctx = createContext(new PrefixLayoutStore(100, 50), 10);
         ctx.state.props.getFixedItemSize = () => 10;
         expect(visible(ctx)).toEqual(Array.from({ length: 10 }, (_, i) => i + 10));
-        expect(ctx.state.layoutStoreRuntime!.store.getOffset(20)).toBe(600);
+        expect(ctx.state.layoutStoreRuntime!.store.getOffset(20)).toBe(200);
     });
 });

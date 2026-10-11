@@ -27,6 +27,18 @@ export function materializeFixedLayoutStoreRange(ctx: StateContext, startIndex: 
     return didChange;
 }
 
+// Index navigation needs an exact prefix; ordinary viewport preparation remains sparse.
+export function materializeFixedLayoutStorePrefix(ctx: StateContext, index: number | undefined) {
+    const store = ctx.state.layoutStoreRuntime?.store;
+    if (ctx.state.props.getFixedItemSize && store?.hasIndex(index)) {
+        const start = store.findFirstUnmeasuredIndex();
+        if (start !== undefined && start <= index) {
+            return materializeFixedLayoutStoreRange(ctx, start, index);
+        }
+    }
+    return false;
+}
+
 export function materializeFixedLayoutStoreIndex(ctx: StateContext, index: number | undefined) {
     let didChange = false;
     if (index !== undefined && Number.isInteger(index)) {
