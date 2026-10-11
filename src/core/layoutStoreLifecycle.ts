@@ -508,6 +508,7 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
     let measuredCount = 0;
     let measuredTotalSize = 0;
     const dataLengthDelta = previousData ? dataLength - previousData.length : 0;
+    let retainedIndicesByKey: Map<string, number> | undefined;
 
     const materializedIndices =
         options.mode === "reconcile" ? options.previousIdCache?.keys() : getSparseIdCacheSnapshot(state).keys();
@@ -547,6 +548,29 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
                     }
                 }
             }
+            if (previousData && (key !== previousKey || !shouldSeedKey)) {
+                if (!retainedIndicesByKey) {
+                    // Compound edits need one key scan, retaining only materialized identities.
+                    const retainedKeys = new Set(options.previousIdCache!.values());
+                    retainedIndicesByKey = new Map();
+                    const indexedData = getIndexedData(state);
+                    for (let nextIndex = 0; nextIndex < dataLength; nextIndex++) {
+                        const nextKey = indexedData.getKey(nextIndex);
+                        if (retainedKeys.has(nextKey)) {
+                            if (retainedIndicesByKey.has(nextKey)) {
+                                return { estimatedSize: fallbackSize, hasDuplicateKey: true, sizeEntries };
+                            }
+                            retainedIndicesByKey.set(nextKey, nextIndex);
+                        }
+                    }
+                }
+                const retainedIndex = retainedIndicesByKey.get(previousKey);
+                if (retainedIndex !== undefined) {
+                    shouldSeedKey = true;
+                    targetIndex = retainedIndex;
+                    key = previousKey;
+                }
+            }
         }
 
         if (!shouldSeedKey || key === undefined) {
@@ -555,6 +579,9 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
 
         if (options.mode === "reconcile") {
             state.idCache[targetIndex] = key;
+            if (state.indexByKey.get(key) === targetIndex) {
+                continue;
+            }
             if (state.indexByKey.has(key)) {
                 hasDuplicateKey = true;
                 break;

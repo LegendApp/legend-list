@@ -372,12 +372,15 @@ export function updateOneItemSize(
         state.fixedItemSizeKeys.add(itemKey);
     }
     const prevSizeKnown = sizesKnown.get(itemKey);
-    if (Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown)) {
+    const isKnownNativeNoise =
+        Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown);
+    if (isKnownNativeNoise && prevSize === prevSizeKnown) {
+        setLayoutStoreMeasuredSize(ctx, index, prevSizeKnown, notifyTotalSize);
         return 0;
     }
 
     // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
-    const size = Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
+    const size = isKnownNativeNoise ? prevSizeKnown : Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
     sizesKnown.set(itemKey, size);
 
     // Update averages per item type

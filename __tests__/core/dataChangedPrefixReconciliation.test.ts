@@ -267,6 +267,51 @@ describe("dataChanged prefix reconciliation", () => {
     });
 
     describe("current keyed data-change behavior", () => {
+        for (const shape of ["prepend and append", "two inserts", "insert and delete"] as const) {
+            for (const numColumns of [1, 2]) {
+                it(`retains measured keys and the MVCP anchor after ${shape} with ${numColumns} columns`, () => {
+                    const previousData = Array.from({ length: 200 }, (_, index) => ({ id: `item-${index}` }));
+                    const nextData = [...previousData];
+                    nextData.splice(0, 0, { id: "new-start" });
+                    if (shape === "prepend and append") nextData.push({ id: "new-end" });
+                    else if (shape === "two inserts") nextData.splice(80, 0, { id: "new-middle" });
+                    else nextData.splice(80, 1);
+                    const ctx = createDataChangeContext(nextData, { estimatedItemSize: 50, numColumns });
+                    seedPreviousPrefixLayout(
+                        ctx,
+                        previousData,
+                        Object.fromEntries(
+                            previousData.map(({ id }, index) => [
+                                id,
+                                index === 40 ? 80 : index === 50 ? 160 : index === 100 ? 60 : 100,
+                            ]),
+                        ),
+                    );
+                    ctx.state.idCache = [];
+                    for (const index of [40, 50, 100]) ctx.state.idCache[index] = previousData[index].id;
+                    ctx.state.previousData = previousData;
+                    ctx.state.scroll = numColumns === 1 ? 5000 : 2500;
+                    ctx.state.idsInView = ["item-50"];
+                    ctx.state.props.horizontal = numColumns === 1;
+                    ctx.state.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                    const adjust = spyOn(requestAdjustModule, "requestAdjust");
+                    try {
+                        calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                        const store = ctx.state.layoutStoreRuntime!.store;
+                        expect(ctx.state.indexByKey.get("item-50")).toBe(51);
+                        expect(store.getSize(51)).toBe(160);
+                        expect(store.getMeasuredCount()).toBe(3);
+                        expect(store.getEstimatedSize()).toBe(100);
+                        if (numColumns === 1) expect(adjust).toHaveBeenCalledWith(ctx, 100, "data");
+                        else expect(store.getOffset(51)).toBe(2500);
+                    } finally {
+                        adjust.mockRestore();
+                        ctx.state.scheduledWork.dispose();
+                    }
+                });
+            }
+        }
+
         it("adjusts MVCP from the old keyed anchor position to the rebuilt keyed position", () => {
             const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
             const nextData = [{ id: "x" }, { id: "a" }, { id: "b" }, { id: "c" }];
