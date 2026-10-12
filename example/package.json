@@ -15,7 +15,6 @@
         "web": "EXPO_PUBLIC_LEGEND_LIST_MODE=examples expo start --web",
         "web:fixtures": "EXPO_PUBLIC_LEGEND_LIST_MODE=fixtures expo start --web",
         "test": "jest --watchAll",
-        "lint": "expo lint",
         "prebuild:clean": "rm -rf ios android && npx expo prebuild --clean && npx expo prebuild"
     },
     "jest": {
