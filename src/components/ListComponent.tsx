@@ -224,8 +224,9 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     : undefined
             }
             horizontal={horizontal}
+            // iOS must capture ScrollAdjust on every commit, including while JS restoration is disabled.
             maintainVisibleContentPosition={
-                maintainVisibleContentPosition.size || maintainVisibleContentPosition.data
+                Platform.OS === "ios" || maintainVisibleContentPosition.size || maintainVisibleContentPosition.data
                     ? { minIndexForVisible: 0 }
                     : undefined
             }
