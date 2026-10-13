@@ -7,6 +7,7 @@ import type { ScrollAdjustmentSource } from "@/types.internal";
 export function requestAdjust(ctx: StateContext, positionDiff: number, source?: ScrollAdjustmentSource) {
     const state = ctx.state;
     if (Math.abs(positionDiff) > 0.1) {
+        state.layoutAdjustmentEpoch = (state.layoutAdjustmentEpoch ?? 0) + 1;
         const dataChanged = source === "data";
         const needsScrollWorkaround =
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;

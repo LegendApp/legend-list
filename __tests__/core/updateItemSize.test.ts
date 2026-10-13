@@ -320,6 +320,7 @@ describe("item size update functions", () => {
             });
 
             it("does not pull back to the end when a first measurement arrives after scrolling away", () => {
+                mockState.scroll = 0;
                 mockState.isWithinMaintainScrollAtEndThreshold = false;
 
                 updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
@@ -346,11 +347,11 @@ describe("item size update functions", () => {
                     expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                     expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
 
-                    // A later measurement can follow normally after drag end, without momentum events.
+                    // A history request interrupts intent; later measurements must not rearm it after drag end.
                     mockState.isDragging = false;
                     updateItemAndFlush(mockCtx, "item_0", { height: 200, width: 400 });
                     rafCallback?.(0);
-                    expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(1);
+                    expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
                 },
             );
 

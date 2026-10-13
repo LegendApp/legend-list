@@ -1,11 +1,13 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { scrollElementIntoView } from "@/core/scrollElementIntoView";
 import { setSize } from "@/core/setSize";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { getItemSize, type ResolvedItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 import { isNativeLayoutNoise } from "@/utils/layoutMeasurement";
@@ -78,6 +80,7 @@ export function batchItemSizeUpdates(runUpdates: () => void) {
 
 interface ItemSizeUpdateResult {
     didChange?: boolean;
+    didMeasurePendingEnd?: boolean;
     didMeasureUserScrollAnchorResetItem?: boolean;
     needsRecalculate?: boolean;
     shouldMaintainScrollAtEnd?: boolean;
@@ -85,6 +88,7 @@ interface ItemSizeUpdateResult {
 
 function mergeItemSizeUpdateResult(result: ItemSizeUpdateResult, next: ItemSizeUpdateResult) {
     result.didChange ||= next.didChange;
+    result.didMeasurePendingEnd ||= next.didMeasurePendingEnd;
     result.didMeasureUserScrollAnchorResetItem ||= next.didMeasureUserScrollAnchorResetItem;
     result.needsRecalculate ||= next.needsRecalculate;
     result.shouldMaintainScrollAtEnd ||= next.shouldMaintainScrollAtEnd;
@@ -100,8 +104,11 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     }
     if (result.didChange) {
         maybeUpdateAnchoredEndSpace(ctx);
+        if (state.scrollElementTarget)
+            state.scheduledWork.microtask(() => scrollElementIntoView(ctx, false), "scrollElementTarget");
+        checkThresholds(ctx);
     }
-    if (result.didChange && result.shouldMaintainScrollAtEnd) {
+    if ((result.didChange || result.didMeasurePendingEnd) && result.shouldMaintainScrollAtEnd) {
         doMaintainScrollAtEnd(ctx);
     }
 }
@@ -159,6 +166,7 @@ function applyItemSize(
     resolvedMeasurementItem?: ResolvedItemSize,
 ) {
     const state = ctx.state;
+    const wasPendingEndMeasurement = !!state.pendingEndMeasurements?.delete(itemKey);
     const userScrollAnchorReset = state.userScrollAnchorReset;
     const didMeasureUserScrollAnchorResetItem = !!userScrollAnchorReset?.keys.delete(itemKey);
     const {
@@ -198,6 +206,7 @@ function applyItemSize(
     let positionRecalculationStartIndex: number | undefined;
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
+    const didMeasurePendingEnd = prevSizeKnown === undefined && !!state.pendingMaintainScrollAtEnd;
 
     const diff = updateOneItemSize(ctx, itemKey, sizeObj, resolvedMeasurementItem, false);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
@@ -216,7 +225,7 @@ function applyItemSize(
         // Check if we should maintain scroll at end. A first measurement counts too: rows
         // inserted by a prepend have no previously known size, so requiring one left their
         // growth unfollowed and parked the list short of its end.
-        if (prevSizeKnown === undefined || Math.abs(prevSizeKnown - size) > 5) {
+        if (prevSizeKnown === undefined || prevSizeKnown !== size) {
             shouldMaintainScrollAtEnd = true;
         }
 
@@ -241,9 +250,12 @@ function applyItemSize(
     updateOtherAxisSizeIfNeeded(ctx, sizeObj, horizontal);
 
     if (didContainersLayout || checkAllSizesKnown(state, state.startBuffered, state.endBuffered)) {
-        const canMaintainScrollAtEnd = shouldMaintainScrollAtEnd && !!maintainScrollAtEnd?.onItemLayout;
+        const canMaintainScrollAtEnd =
+            (shouldMaintainScrollAtEnd || didMeasurePendingEnd) &&
+            (!!maintainScrollAtEnd?.onItemLayout || wasPendingEndMeasurement || !!state.pendingMaintainScrollAtEnd);
         return {
             didChange: diff !== 0,
+            didMeasurePendingEnd,
             didMeasureUserScrollAnchorResetItem,
             needsRecalculate,
             shouldMaintainScrollAtEnd: canMaintainScrollAtEnd,

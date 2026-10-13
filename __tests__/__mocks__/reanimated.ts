@@ -24,9 +24,11 @@ const createSharedValue = <T>(initial: T) => {
 };
 
 const defaults = {
+    cancelAnimation: () => {},
     createAnimatedComponent: <T extends ComponentType<any>>(component: T): T => component,
     isWorkletFunction: () => false,
     runOnJS: (callback: (...args: any[]) => any) => callback,
+    runOnUI: (callback: (...args: any[]) => any) => callback,
     ScrollView: () => null,
     useAnimatedProps: (updater: () => unknown) => updater,
     useAnimatedRef: () => ({ current: null }),

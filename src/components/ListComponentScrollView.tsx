@@ -13,7 +13,7 @@ import {
     useRef,
 } from "react";
 
-import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { interruptUserScroll } from "@/core/cancelScroll";
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useArr$, useStateContext } from "@/state/state";
@@ -37,6 +37,7 @@ import {
     getScrollContentSize,
     getScrollPosition,
     isWindowTarget,
+    ownsScrollInput,
     resolveExternalScrollOffset,
     resolveScrollableNode,
     resolveScrollEventTarget,
@@ -77,6 +78,7 @@ export interface ListComponentScrollViewProps {
         };
     }) => void;
     onInternalScrollEnd?: () => void;
+    onMomentumScrollBegin?: (event: unknown) => void;
     onMomentumScrollEnd?: (event: {
         nativeEvent: {
             contentOffset: { x: number; y: number };
@@ -159,6 +161,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         maintainVisibleContentPosition,
         onScroll,
         onInternalScrollEnd,
+        onMomentumScrollBegin: _onMomentumScrollBegin,
         onMomentumScrollEnd: _onMomentumScrollEnd,
         showsHorizontalScrollIndicator = true,
         showsVerticalScrollIndicator = true,
@@ -349,6 +352,16 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             }
 
             const state = ctx.state;
+            const observed = getCurrentScrollOffset();
+            const clampedPrevious = clampOffset(state.scroll, getMaxScrollOffset());
+            if (
+                (state.maintainingScrollAtEnd ||
+                    state.pendingMaintainScrollAtEnd ||
+                    state.scrollingTo?.isScrollToEnd) &&
+                observed < clampedPrevious - 1
+            ) {
+                interruptUserScroll(ctx);
+            }
             const shouldFlushImmediately =
                 !!state?.scrollingTo ||
                 (!!state?.initialScrollSession && !state.didFinishInitialScroll) ||
@@ -368,7 +381,15 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 scrollEndFallbackRef.current = setTimeout(emitScrollEnd, SCROLL_END_FALLBACK_MS);
             }
         },
-        [ctx.state, emitScrollEnd, onInternalScrollEnd, onScroll, scrollEventCoalescer],
+        [
+            ctx,
+            emitScrollEnd,
+            getCurrentScrollOffset,
+            getMaxScrollOffset,
+            onInternalScrollEnd,
+            onScroll,
+            scrollEventCoalescer,
+        ],
     );
 
     useLayoutEffect(() => {
@@ -395,26 +416,78 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     useEffect(() => {
         const target = getScrollTarget();
         if (!target) return;
+        const interrupt = (event: Event) => {
+            const node = resolveScrollableNode(scrollRef.current, externalTarget);
+            if (
+                node &&
+                getMaxScrollOffset() > 1 &&
+                getCurrentScrollOffset() > 1 &&
+                isScrollInRange() &&
+                ownsScrollInput(event.target, node, horizontal)
+            ) {
+                interruptUserScroll(ctx);
+            }
+        };
         const onWheel = (nativeEvent: Event) => {
             const event = nativeEvent as WheelEvent;
             const delta = horizontal ? event.deltaX || (event.shiftKey ? event.deltaY : 0) : event.deltaY;
+            if (delta < 0 && !event.ctrlKey && !event.defaultPrevented) interrupt(event);
+        };
+        let lastTouch: number | undefined;
+        const onTouchStart = (nativeEvent: Event) => {
+            const touch = (nativeEvent as TouchEvent).touches[0];
+            lastTouch = touch ? (horizontal ? touch.clientX : touch.clientY) : undefined;
+        };
+        const onTouchMove = (nativeEvent: Event) => {
+            const touch = (nativeEvent as TouchEvent).touches[0];
+            if (!touch) return;
+            const position = horizontal ? touch.clientX : touch.clientY;
+            if (lastTouch !== undefined && position > lastTouch) interrupt(nativeEvent);
+            lastTouch = position;
+        };
+        const onKeyDown = (nativeEvent: Event) => {
+            const event = nativeEvent as KeyboardEvent;
+            const element = event.target as HTMLElement | null;
             if (
-                delta < 0 &&
-                !event.ctrlKey &&
-                !event.defaultPrevented &&
-                (ctx.state.maintainingScrollAtEnd || ctx.state.pendingMaintainScrollAtEnd)
-            ) {
-                const offset = getCurrentScrollOffset();
-                // A wheel gesture away from the end supersedes queued following.
-                // Stop the browser animation too, without consuming the gesture.
-                if (interruptMaintainScrollAtEnd(ctx) && isScrollInRange()) {
-                    scrollToLocalOffset(offset, false);
-                }
-            }
+                event.defaultPrevented ||
+                element?.closest?.(
+                    "input, textarea, select, button, a, summary, [contenteditable=true], [role=button], [role=checkbox], [role=radio], [role=menu], [role=menuitem], [role=listbox], [role=combobox], [role=slider], [role=tab], [role=tree]",
+                )
+            )
+                return;
+            if (
+                event.key === "ArrowUp" ||
+                event.key === "PageUp" ||
+                event.key === "Home" ||
+                (event.key === " " && event.shiftKey)
+            )
+                interrupt(event);
+        };
+        const onPointerDown = (nativeEvent: Event) => {
+            const event = nativeEvent as PointerEvent;
+            const element = resolveScrollableNode(scrollRef.current, externalTarget);
+            if (event.target !== element || !element) return;
+            const rect = element.getBoundingClientRect();
+            if (
+                horizontal
+                    ? event.clientY >= rect.top + element.clientHeight
+                    : event.clientX >= rect.left + element.clientWidth
+            )
+                interrupt(event);
         };
         target.addEventListener("wheel", onWheel, { passive: true });
-        return () => target.removeEventListener("wheel", onWheel);
-    }, [ctx, getCurrentScrollOffset, getScrollTarget, horizontal, isScrollInRange, scrollToLocalOffset]);
+        target.addEventListener("touchstart", onTouchStart, { passive: true });
+        target.addEventListener("touchmove", onTouchMove, { passive: true });
+        target.addEventListener("keydown", onKeyDown);
+        target.addEventListener("pointerdown", onPointerDown);
+        return () => {
+            target.removeEventListener("wheel", onWheel);
+            target.removeEventListener("touchstart", onTouchStart);
+            target.removeEventListener("touchmove", onTouchMove);
+            target.removeEventListener("keydown", onKeyDown);
+            target.removeEventListener("pointerdown", onPointerDown);
+        };
+    }, [ctx, externalTarget, getCurrentScrollOffset, getMaxScrollOffset, getScrollTarget, horizontal, isScrollInRange]);
 
     // Set initial scroll offset
     useEffect(() => {

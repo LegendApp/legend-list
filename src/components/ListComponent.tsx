@@ -69,7 +69,13 @@ interface ListComponentProps<ItemT>
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizontal }: { horizontal: boolean }) {
+    const ctx = useStateContext();
+    const SizeComponent = ctx.state.props.sizeComponentInternal;
     const [alignItemsAtEndPadding = 0] = useArr$(["alignItemsAtEndPadding"]);
+
+    if (SizeComponent) {
+        return <SizeComponent horizontal={horizontal} signalName="alignItemsAtEndPadding" style={{ flexShrink: 0 }} />;
+    }
 
     if (alignItemsAtEndPadding <= 0) {
         return null;

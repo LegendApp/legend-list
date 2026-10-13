@@ -32,6 +32,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     horizontal,
 }: ContainersLayerProps) {
     const ctx = useStateContext();
+    const SizeComponent = ctx.state.props.sizeComponentInternal;
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const animSize = useValue$("totalSize");
     const [readyToRender, numColumns, otherAxisSize = 0] = useArr$(["readyToRender", "numColumns", "otherAxisSize"]);
@@ -45,6 +46,11 @@ const ContainersLayer = typedMemo(function ContainersLayer({
               width: animSize,
           }
         : { height: animSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0 };
+
+    if (SizeComponent) {
+        if (horizontal) delete style.width;
+        else delete style.height;
+    }
 
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
@@ -69,9 +75,23 @@ const ContainersLayer = typedMemo(function ContainersLayer({
         }
     }
 
+    const content = <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>;
+    if (SizeComponent) {
+        return (
+            <SizeComponent
+                horizontal={horizontal}
+                pointerEvents={isVisible ? undefined : "none"}
+                signalName="totalSize"
+                style={style}
+            >
+                {content}
+            </SizeComponent>
+        );
+    }
+
     return (
         <Animated.View pointerEvents={isVisible ? undefined : "none"} style={style}>
-            <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>
+            {content}
         </Animated.View>
     );
 });

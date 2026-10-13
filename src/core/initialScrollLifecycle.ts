@@ -8,7 +8,7 @@ import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 import { resetInitialRenderState, setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function retargetActiveInitialScrollAtEnd(ctx: StateContext) {
@@ -134,6 +134,11 @@ export function handleInitialScrollDataChange(
     if (didStartFreshData) {
         // The previous dataset's scroll must not block or finish the new bootstrap.
         cancelImperativeScroll(state);
+        state.endFollowInterrupted = false;
+        state.visibleContentAnchor = undefined;
+        state.pendingEndMeasurements = undefined;
+        state.scrollElementTarget = undefined;
+        set$(ctx, "isFollowingEnd", false);
         state.maintainingScrollAtEnd = undefined;
         state.pendingMaintainScrollAtEnd = false;
     }

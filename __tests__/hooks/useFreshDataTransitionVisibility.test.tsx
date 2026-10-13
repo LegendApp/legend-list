@@ -1,9 +1,15 @@
 import { Text } from "react-native";
 
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import { useFreshDataTransitionVisibility } from "../../src/hooks/useFreshDataTransitionVisibility";
+import { Platform } from "../../src/platform/Platform";
 import TestRenderer, { act } from "../helpers/testRenderer";
 import "../setup";
+
+const originalPlatform = Platform.OS;
+afterEach(() => {
+    Platform.OS = originalPlatform;
+});
 
 function VisibilityProbe({ readyToRender, transitionEpoch }: { readyToRender: boolean; transitionEpoch: number }) {
     const isVisible = useFreshDataTransitionVisibility(readyToRender, transitionEpoch);
@@ -16,6 +22,7 @@ function visibility(renderer: TestRenderer.ReactTestRenderer) {
 
 describe("useFreshDataTransitionVisibility", () => {
     it("hides a fresh dataset until the readiness reset has been observed", () => {
+        Platform.OS = "ios";
         let renderer!: TestRenderer.ReactTestRenderer;
 
         act(() => {
@@ -77,6 +84,34 @@ describe("useFreshDataTransitionVisibility", () => {
         });
         expect(visibility(renderer)).toBe("hidden");
 
+        act(() => {
+            renderer.unmount();
+        });
+    });
+
+    it("keeps a previously presented web layer painted while replacement placement is pending", () => {
+        Platform.OS = "web";
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(<VisibilityProbe readyToRender={false} transitionEpoch={0} />);
+        });
+        expect(visibility(renderer)).toBe("hidden");
+        act(() => {
+            renderer.update(<VisibilityProbe readyToRender transitionEpoch={0} />);
+        });
+        expect(visibility(renderer)).toBe("visible");
+        act(() => {
+            renderer.update(<VisibilityProbe readyToRender={false} transitionEpoch={1} />);
+        });
+        expect(visibility(renderer)).toBe("visible");
+        act(() => {
+            renderer.update(<VisibilityProbe readyToRender={false} transitionEpoch={2} />);
+        });
+        expect(visibility(renderer)).toBe("visible");
+        act(() => {
+            renderer.update(<VisibilityProbe readyToRender transitionEpoch={2} />);
+        });
+        expect(visibility(renderer)).toBe("visible");
         act(() => {
             renderer.unmount();
         });

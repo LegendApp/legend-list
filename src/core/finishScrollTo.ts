@@ -4,7 +4,7 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
@@ -25,6 +25,7 @@ export function finishScrollTo(ctx: StateContext) {
         state.scrollHistory.length = 0;
         state.scrollingTo = undefined;
         state.scrollTargetPinnedRange = undefined;
+        set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling || !!state.pendingScrollResolve);
 
         if (state.pendingTotalSize !== undefined) {
             addTotalSize(ctx, null, state.pendingTotalSize);

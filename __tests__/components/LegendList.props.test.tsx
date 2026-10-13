@@ -8,6 +8,9 @@ let lastListProps: any;
 let requestAdjustCalls: number[] = [];
 let scrollToCalls: any[] = [];
 
+import { spyOn } from "bun:test";
+import * as calculateModule from "../../src/core/calculateItemsInView";
+import * as followModule from "../../src/core/doMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
@@ -203,7 +206,7 @@ describe("LegendList props behavior", () => {
         });
     }
 
-    it("does not cancel another imperative scroll while end maintenance is only pending", async () => {
+    it("cancels an imperative target when native user dragging begins", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
         const resolveScroll = mock(() => {});
@@ -228,8 +231,8 @@ describe("LegendList props behavior", () => {
             lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
         });
 
-        expect(resolveScroll).not.toHaveBeenCalled();
-        expect(state.scrollingTo).toBe(scrollingTo);
+        expect(resolveScroll).toHaveBeenCalledTimes(1);
+        expect(state.scrollingTo).toBeUndefined();
         expect(state.maintainingScrollAtEnd).toBeUndefined();
         rendered.unmount();
     });
@@ -1854,6 +1857,111 @@ describe("LegendList props behavior", () => {
         });
         expect(peek$(ctx, "anchoredEndSpaceSize")).toBe(0);
 
+        rendered.unmount();
+    });
+
+    it("preserves end intent while maintenance is paused and resumes beyond the threshold", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?follow-pause-resume");
+        const data = ["row"];
+        const renderItem = () => null;
+        const list = (maintainScrollAtEnd: boolean) => (
+            <LegendList data={data} maintainScrollAtEnd={maintainScrollAtEnd} renderItem={renderItem} />
+        );
+        const rendered = render(list(true));
+        const state = await getStateFromRender();
+        const ctx = (handlerInstances.at(-1) as any).context as StateContext;
+        state.didContainersLayout = true;
+        state.didFinishInitialScroll = true;
+        set$(ctx, "isFollowingEnd", true);
+        await act(async () => {
+            rendered.rerender(list(false));
+        });
+        expect(peek$(ctx, "isFollowingEnd")).toBe(true);
+        set$(ctx, "isWithinMaintainScrollAtEndThreshold", false);
+        const maintain = spyOn(followModule, "doMaintainScrollAtEnd").mockReturnValue(true);
+        await act(async () => {
+            rendered.rerender(list(true));
+        });
+        expect(maintain).toHaveBeenCalledTimes(1);
+        rendered.unmount();
+    });
+
+    it("does not reallocate unchanged pins when the default key callback is recreated", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?semantic-pins");
+        const data = ["row"];
+        const renderItem = () => null;
+        const list = () => <LegendList data={data} renderItem={renderItem} />;
+        const rendered = render(list());
+        const calculate = spyOn(calculateModule, "calculateItemsInView").mockImplementation(() => {});
+        await act(async () => {
+            rendered.rerender(list());
+        });
+        expect(calculate).not.toHaveBeenCalled();
+        rendered.unmount();
+    });
+
+    it("emits current geometry when the metrics subscriber changes without a layout change", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?metrics-subscriber-replacement");
+        const data = ["row"];
+        const renderItem = () => null;
+        const first = mock(() => {});
+        const next = mock(() => {});
+        const list = (onMetricsChange: typeof first) => (
+            <LegendList data={data} onMetricsChange={onMetricsChange} renderItem={renderItem} />
+        );
+        const rendered = render(list(first));
+        expect(first).toHaveBeenCalled();
+        await act(async () => {
+            rendered.rerender(list(next));
+        });
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(next).toHaveBeenCalledWith(
+            expect.objectContaining({ contentLength: expect.any(Number), distanceFromEnd: expect.any(Number) }),
+        );
+        rendered.unmount();
+    });
+
+    it("owns native momentum state through begin and end callbacks", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?momentum-state");
+        const rendered = render(<LegendList data={["row"]} renderItem={() => null} />);
+        const state = await getStateFromRender();
+        act(() => {
+            lastListProps.onMomentumScrollBegin({ nativeEvent: {} });
+        });
+        expect(state.isMomentumScrolling).toBe(true);
+        act(() => {
+            lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
+        });
+        expect(state.isMomentumScrolling).toBe(false);
+        rendered.unmount();
+    });
+
+    it("allocates an alwaysRender pin without changing data or extraData", async () => {
+        const data = Array.from({ length: 100 }, (_, index) => ({ id: `item-${index}` }));
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = () => null;
+        const { LegendList } = await import("../../src/components/LegendList?always-render-pin-update");
+        const list = (keys?: string[]) => (
+            <LegendList
+                alwaysRender={{ keys }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+        const rendered = render(list());
+        const state = await getStateFromRender();
+        act(() => {
+            lastListProps.onLayout(layoutEvent);
+        });
+        expect(state.containerItemKeys.has("item-99")).toBe(false);
+        await act(async () => {
+            rendered.rerender(list(["item-99"]));
+        });
+        expect(state.containerItemKeys.has("item-99")).toBe(true);
+        expect(state.props.data).toBe(data);
         rendered.unmount();
     });
 

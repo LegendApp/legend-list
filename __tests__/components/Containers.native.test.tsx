@@ -44,6 +44,7 @@ const Setup = ({
     children,
 }: SetupProps) => {
     const ctx = useStateContext();
+    ctx.state ??= createMockState();
     onContext?.(ctx);
     ctx.columnWrapperStyle = columnWrapperStyle;
     ctx.values.set("numColumns", numColumns);

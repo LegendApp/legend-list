@@ -143,7 +143,7 @@ describe("end following while an imperative request waits for layout", () => {
         expect(follow).toHaveBeenCalledTimes(1);
     });
 
-    it("allows automatic following again after a waiting request is canceled", async () => {
+    it("keeps following interrupted after a canceled history request", async () => {
         ctx.state.didDataChange = true;
         const request = createImperativeHandle(ctx).scrollToOffset({ animated: false, offset: 100 });
         doMaintainScrollAtEnd(ctx);
@@ -153,6 +153,6 @@ describe("end following while an imperative request waits for layout", () => {
         ctx.state.didDataChange = false;
         doMaintainScrollAtEnd(ctx);
         await flushFrame();
-        expect(follow).toHaveBeenCalledTimes(1);
+        expect(follow).not.toHaveBeenCalled();
     });
 });

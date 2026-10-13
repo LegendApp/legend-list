@@ -9,6 +9,7 @@ export type ScheduledWorkKey =
     | "imperativeScrollReady"
     | "mvcpRecalculate"
     | "platformScrollCompletion"
+    | "scrollElementTarget"
     | "preservedInitialScroll"
     | "renderRangeProjection";
 

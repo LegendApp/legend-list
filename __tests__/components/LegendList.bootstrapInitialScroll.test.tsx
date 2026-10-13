@@ -368,7 +368,7 @@ describe("LegendList bootstrap initial scroll", () => {
         }
     });
 
-    it("hides stale web rows throughout a fresh dataKey layout reset", async () => {
+    it("keeps the web layer painted but noninteractive during a fresh dataKey layout reset", async () => {
         const previousPlatform = Platform.OS;
         Platform.OS = "web";
         WebContainers = (await import("../../src/components/Containers?fresh-data-web-containers")).Containers;
@@ -410,8 +410,9 @@ describe("LegendList bootstrap initial scroll", () => {
             await flushAsync();
 
             expect(ctx.values.get("readyToRender")).toBe(false);
+            expect(ctx.state.props.data).toBe(nextData);
             expect(findFirstStyleByType(rendered.toJSON(), "div")).toMatchObject({
-                opacity: 0,
+                opacity: 1,
                 pointerEvents: "none",
             });
 

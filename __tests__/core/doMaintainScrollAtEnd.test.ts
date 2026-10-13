@@ -94,6 +94,7 @@ describe("doMaintainScrollAtEnd", () => {
                     getCurrentScrollOffset: () => 83,
                     getMaxScrollOffset: () => 83,
                     getScrollableNode: () => null,
+                    scrollTo: () => {},
                 },
             } as any;
 
@@ -112,6 +113,7 @@ describe("doMaintainScrollAtEnd", () => {
                     getCurrentScrollOffset: () => 50,
                     getMaxScrollOffset: () => 83,
                     getScrollableNode: () => null,
+                    scrollTo: () => {},
                 },
             } as any;
 

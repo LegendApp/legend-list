@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
-import * as maintainModule from "../../src/core/doMaintainScrollAtEnd";
+import * as cancellationModule from "../../src/core/cancelScroll";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
@@ -20,6 +20,7 @@ const cancel = mock(() => {});
 let supportsScrollEnd = false;
 let listPosition = 0;
 let ownerScroll = 0;
+let maxOffset = 0;
 let emitScroll: () => void;
 const mockCtx = {
     state: {
@@ -63,12 +64,17 @@ function registerWebScrollMocks() {
         getElementScrollPosition: () => ({ left: listPosition, top: listPosition }),
         getLayoutMeasurement: () => ({ height: 0, width: 0 }),
         getLayoutRectangle: () => ({ height: 0, width: 0, x: 0, y: 0 }),
-        getMaxOffset: () => 0,
+        getMaxOffset: () => maxOffset,
         getScrollContentSize: () => ({ height: 0, width: 0 }),
         getScrollPosition: () => ({ x: ownerScroll, y: ownerScroll }),
         isWindowTarget: (target: unknown) => target === window,
+        ownsScrollInput: () => true,
         resolveExternalScrollOffset: () => ({ left: 0, top: 0 }),
-        resolveScrollableNode: () => null,
+        resolveScrollableNode: () => ({
+            clientHeight: 200,
+            clientWidth: 200,
+            getBoundingClientRect: () => ({ left: 0, top: 0 }),
+        }),
         resolveScrollEventTarget: (_element: unknown, externalTarget: unknown) => {
             if (externalTarget !== undefined && externalTarget !== window) return externalTarget;
             const target = {
@@ -98,6 +104,7 @@ function resetMocks() {
     supportsScrollEnd = false;
     listPosition = 0;
     ownerScroll = 0;
+    maxOffset = 0;
     mockCtx.state.lastLayout = undefined;
     mockCtx.state.anchoredEndSpaceSize = undefined;
     mockCtx.state.dataChangeNeedsScrollUpdate = false;
@@ -169,7 +176,7 @@ describe("ListComponentScrollView (web)", () => {
 
     it("interrupts end following only for a wheel gesture away from the end and cleans up the listener", async () => {
         resetMocks();
-        const interrupt = spyOn(maintainModule, "interruptMaintainScrollAtEnd").mockReturnValue(true);
+        const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
         const { ListComponentScrollView } = await import(
             "../../src/components/ListComponentScrollView?web-wheel-cancel"
         );
@@ -177,7 +184,7 @@ describe("ListComponentScrollView (web)", () => {
         try {
             act(() => {
                 renderer = TestRenderer.create(
-                    <ListComponentScrollView onLayout={() => {}} style={{}}>
+                    <ListComponentScrollView onLayout={() => {}} style={{}} useWindowScroll>
                         <div />
                     </ListComponentScrollView>,
                 );
@@ -188,12 +195,21 @@ describe("ListComponentScrollView (web)", () => {
             const event = { ctrlKey: false, defaultPrevented: false, deltaX: 0, deltaY: -40 };
             wheel?.(event as WheelEvent);
             expect(interrupt).not.toHaveBeenCalled();
+            maxOffset = 1000;
+            ownerScroll = 800;
             mockCtx.state.maintainingScrollAtEnd = "pending-animated";
             wheel?.({ ...event, deltaY: 40 } as WheelEvent);
             wheel?.({ ...event, ctrlKey: true } as WheelEvent);
             wheel?.({ ...event, defaultPrevented: true } as WheelEvent);
             expect(interrupt).not.toHaveBeenCalled();
             wheel?.(event as WheelEvent);
+            expect(interrupt).toHaveBeenCalledTimes(1);
+            scrollListeners.get("keydown")?.({ key: "ArrowUp", target: { closest: () => ({}) } } as any);
+            expect(interrupt).toHaveBeenCalledTimes(1);
+            ownerScroll = 0;
+            wheel?.(event as WheelEvent);
+            scrollListeners.get("touchstart")?.({ touches: [{ clientY: 0 }] } as any);
+            scrollListeners.get("touchmove")?.({ touches: [{ clientY: 40 }] } as any);
             expect(interrupt).toHaveBeenCalledTimes(1);
         } finally {
             act(() => renderer?.unmount());

@@ -55,7 +55,7 @@ const ContainersInner = typedMemo(function ContainersInner({
           }
         : { height: totalSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0, position: "relative" };
 
-    if (!isVisible) {
+    if (!readyToRender) {
         style.pointerEvents = "none";
     }
 

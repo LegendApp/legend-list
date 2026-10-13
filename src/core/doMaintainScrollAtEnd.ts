@@ -6,11 +6,14 @@ import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
+import { areKnownOrFixedItemSizesAvailable } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 export function interruptMaintainScrollAtEnd(ctx: StateContext) {
     const { state } = ctx;
     const maintaining = state.maintainingScrollAtEnd;
+    state.endFollowInterrupted = true;
+    set$(ctx, "isFollowingEnd", false);
     const cancelActiveScroll = !!(
         maintaining === "animated" ||
         maintaining === "instant" ||
@@ -18,6 +21,7 @@ export function interruptMaintainScrollAtEnd(ctx: StateContext) {
     );
     if (cancelActiveScroll) {
         cancelImperativeScroll(state);
+        set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling);
     }
     if (maintaining || state.pendingMaintainScrollAtEnd) {
         finishMaintainScrollAtEnd(ctx);
@@ -64,10 +68,18 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
         const shouldMaintainScrollAtEnd = !!(
             !ctx.scrollRequestTracker?.isWaitingToRun() &&
             (!state.scrollingTo || state.scrollingTo.isScrollToEnd) &&
-            (isWithinMaintainScrollAtEndThreshold || isReplayingPendingMaintain || state.scrollingTo?.isScrollToEnd) &&
+            !state.endFollowInterrupted &&
+            (peek$(ctx, "isFollowingEnd") ||
+                isWithinMaintainScrollAtEndThreshold ||
+                isReplayingPendingMaintain ||
+                state.scrollingTo?.isScrollToEnd) &&
             maintainScrollAtEnd &&
             didFinishInitialScroll
         );
+
+        if (shouldMaintainScrollAtEnd) {
+            set$(ctx, "isFollowingEnd", true);
+        }
 
         if (shouldMaintainScrollAtEnd && !state.scrollingTo) {
             const scroller = state.refScroller.current;
@@ -88,7 +100,15 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
             }
         }
 
-        if (shouldMaintainScrollAtEnd && !didContainersLayout) {
+        const anchorIndex = state.props.anchoredEndSpace?.anchorIndex;
+        const isWaitingForTailMeasurements =
+            anchorIndex !== undefined &&
+            anchorIndex >= 0 &&
+            anchorIndex < state.props.data.length &&
+            !areKnownOrFixedItemSizesAvailable(ctx, anchorIndex, state.props.data.length - 1);
+        if (shouldMaintainScrollAtEnd && (state.activeSizeAnimations?.size || isWaitingForTailMeasurements)) {
+            state.pendingMaintainScrollAtEnd = true;
+        } else if (shouldMaintainScrollAtEnd && !didContainersLayout) {
             state.pendingMaintainScrollAtEnd = true;
         } else if (pendingNativeMVCPAdjust) {
             // Native MVCP can still be finishing its own clamp after data changes. Defer the end-anchor scroll
@@ -123,7 +143,10 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                 state.maintainingScrollAtEnd = pendingState;
                 const run = () => {
                     if (state.maintainingScrollAtEnd === pendingState) {
-                        if (state.isDragging || state.refScroller.current?.isScrollInRange?.() === false) {
+                        if (state.activeSizeAnimations?.size) {
+                            state.pendingMaintainScrollAtEnd = true;
+                            state.maintainingScrollAtEnd = undefined;
+                        } else if (state.isDragging || state.refScroller.current?.isScrollInRange?.() === false) {
                             finishMaintainScrollAtEnd(ctx);
                         } else {
                             const isStillWithinThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");

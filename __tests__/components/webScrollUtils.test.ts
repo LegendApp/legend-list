@@ -8,6 +8,7 @@ import {
     getLayoutRectangle,
     getScrollContentSize,
     getScrollPosition,
+    ownsScrollInput,
     resolveExternalScrollOffset,
     resolveScrollableNode,
     resolveScrollEventTarget,
@@ -161,5 +162,35 @@ describe("external scroll geometry", () => {
         expect(resolveScrollEventTarget(first, undefined)).toBe(first);
         expect(resolveScrollEventTarget(first, parent)).toBe(parent);
         expect(resolveScrollEventTarget(first, window)).toBe(window);
+    });
+});
+
+describe("scroll input ownership", () => {
+    const originalGetComputedStyle = globalThis.getComputedStyle;
+    afterEach(() => {
+        globalThis.getComputedStyle = originalGetComputedStyle;
+    });
+    for (const contained of [false, true]) {
+        it(`leaves a nested ${contained ? "short contained" : "overflowing"} viewport in control`, () => {
+            const scroller = { nodeType: 1, parentElement: null } as any;
+            const nested = {
+                clientHeight: 100,
+                nodeType: 1,
+                parentElement: scroller,
+                scrollHeight: contained ? 100 : 400,
+            } as any;
+            const child = { clientHeight: 20, nodeType: 1, parentElement: nested, scrollHeight: 20 } as any;
+            globalThis.getComputedStyle = ((element: unknown) =>
+                element === nested
+                    ? { overflowY: "auto", overscrollBehaviorY: contained ? "contain" : "auto" }
+                    : { overflowY: "visible" }) as any;
+            expect(ownsScrollInput(child, scroller, false)).toBe(false);
+        });
+    }
+    it("allows an ordinary row's gesture to reach its viewport", () => {
+        const scroller = { nodeType: 1, parentElement: null } as any;
+        const child = { clientHeight: 20, nodeType: 1, parentElement: scroller, scrollHeight: 20 } as any;
+        globalThis.getComputedStyle = (() => ({ overflowY: "visible" })) as any;
+        expect(ownsScrollInput(child, scroller, false)).toBe(true);
     });
 });

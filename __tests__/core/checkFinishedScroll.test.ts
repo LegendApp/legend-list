@@ -47,6 +47,34 @@ describe("checkFinishedScrollFallback", () => {
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     });
 
+    for (const hasRecentProgress of [false, true]) {
+        it(`keeps an animated native end request smooth (recent progress: ${hasRecentProgress})`, () => {
+            Platform.OS = "ios";
+            const scrollTo = mock(() => {});
+            const ctx = createMockContext(
+                { totalSize: 1000 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    hasScrolled: true,
+                    lastNativeScrollTime: hasRecentProgress ? Date.now() : 0,
+                    positions: [0],
+                    props: { data: ["row"], getFixedItemSize: () => 1000 },
+                    refScroller: { current: { scrollTo } } as any,
+                    scroll: 400,
+                    scrollingTo: { animated: true, index: 0, offset: 0, targetOffset: 800, viewPosition: 1 },
+                    scrollLength: 200,
+                    scrollPending: 400,
+                },
+            );
+            checkFinishedScrollFallback(ctx);
+            flushTimers(1);
+            if (hasRecentProgress) expect(scrollTo).not.toHaveBeenCalled();
+            else expect(scrollTo).toHaveBeenCalledWith({ animated: true, x: 0, y: 800 });
+            expect(ctx.state.scrollingTo).toBeDefined();
+        });
+    }
+
     it("waits longer on native initial non-zero scroll when no native scroll event is observed on Android", () => {
         Platform.OS = "android";
         const ctx = createMockContext(
@@ -258,7 +286,7 @@ describe("checkFinishedScrollFallback", () => {
             checkFinishedScrollFallback(ctx);
 
             flushTimers(1);
-            expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 393999 }]);
+            expect(scrollToCalls).toEqual([{ animated: true, x: 0, y: 393999 }]);
             expect(ctx.state.scrollingTo).toBeDefined();
 
             ctx.state.scroll = 393999;
@@ -291,7 +319,7 @@ describe("checkFinishedScrollFallback", () => {
 
         checkFinishedScrollFallback(ctx);
         flushTimers(1);
-        expect(scrollToNative).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 1550500 });
+        expect(scrollToNative).toHaveBeenLastCalledWith({ animated: true, x: 0, y: 1550500 });
         expect(resolveScroll).not.toHaveBeenCalled();
 
         // More rows measure after that correction, moving the actual end again.
@@ -300,7 +328,7 @@ describe("checkFinishedScrollFallback", () => {
         ctx.state.scroll = 1550500;
         ctx.state.scrollPending = 1550500;
         flushTimers(1);
-        expect(scrollToNative).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 1550608 });
+        expect(scrollToNative).toHaveBeenLastCalledWith({ animated: true, x: 0, y: 1550608 });
         expect(resolveScroll).not.toHaveBeenCalled();
 
         ctx.state.scroll = 1550608;

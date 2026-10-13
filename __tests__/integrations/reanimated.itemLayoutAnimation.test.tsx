@@ -67,7 +67,7 @@ const createReanimatedOverrides = () => {
         useAnimatedRef: () => ({ current: null }),
         useAnimatedStyle: (updater: () => unknown) => updater(),
         useScrollViewOffset: () => {},
-        useSharedValue: <T,>(value: T) => ({ value }),
+        useSharedValue: <T,>(value: T) => React.useRef({ value }).current,
         View: ReanimatedViewMock,
     };
 
@@ -112,6 +112,7 @@ function PositionComponentHarness({
 }) {
     const ctx = useStateContext();
     const refView = React.useRef<any>(null);
+    if (!ctx.state) ctx.state = createMockState() as any;
 
     React.useLayoutEffect(() => {
         set$(ctx, `containerItemKey${containerId}` as any, itemKey as any);
@@ -418,7 +419,7 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
     });
 
-    it("does not skip layout transitions on key changes when recycling is disabled", async () => {
+    it("skips layout transitions on item reassignment even when recycling is disabled", async () => {
         const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-no-recycle");
         const transition = { duration: 280, type: "linear" } as any;
 
@@ -464,7 +465,7 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
                 </StateProvider>,
             );
         });
-        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+        expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
     });
 
     it("uses the reanimated scroll bridge on old architecture so animated contentContainerStyle reaches Reanimated.ScrollView", async () => {
@@ -587,5 +588,136 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         const style = reanimatedViewRenders.at(-1)?.style;
         const flattenedStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
         expect(flattenedStyle?.transform).toEqual([{ translateY: 100 }]);
+    });
+});
+
+describe("AnimatedLegendList content size transitions", () => {
+    it("retargets animated bounds and resumes pending end intent only after every size signal settles", async () => {
+        registerLegendListModuleMock();
+        registerReanimatedModuleMock(createReanimatedOverrides());
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?size-transition-follow");
+        const completions: Array<(finished: boolean) => void> = [];
+        const transitionInstance = {
+            getAnimationAndConfig: () => [
+                (target: number, _config: unknown, complete: (finished: boolean) => void) => {
+                    completions.push(complete);
+                    return target;
+                },
+                {},
+            ],
+        } as any;
+        class Transition {
+            static createInstance() {
+                return new Transition();
+            }
+            getAnimationAndConfig() {
+                return transitionInstance.getAnimationAndConfig();
+            }
+        }
+        const transition = Transition as any;
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList data={["a"]} itemLayoutAnimation={transition} renderItem={() => null} />,
+            );
+        });
+        const SizeComponent = legendListPropsRenders.at(-1).sizeComponentInternal;
+        let context: ReturnType<typeof useStateContext>;
+        const resume = mock(() => {
+            context.state.pendingMaintainScrollAtEnd = false;
+        });
+        function Harness({ size, padding }: { size: number; padding: number }) {
+            const ctx = useStateContext();
+            context = ctx;
+            ctx.state ??= createMockState({ didContainersLayout: true, didFinishInitialScroll: true });
+            ctx.state.resumeMaintainScrollAtEnd = resume;
+            React.useLayoutEffect(() => {
+                set$(ctx, "totalSize", size);
+                set$(ctx, "alignItemsAtEndPadding", padding);
+                set$(ctx, "readyToRender", true);
+            }, [ctx, padding, size]);
+            return (
+                <>
+                    <SizeComponent horizontal={false} signalName="totalSize" style={{}} />
+                    <SizeComponent horizontal={false} signalName="alignItemsAtEndPadding" style={{}} />
+                </>
+            );
+        }
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(
+                <StateProvider>
+                    <Harness padding={50} size={100} />
+                </StateProvider>,
+            );
+        });
+        completions.length = 0;
+        act(() => {
+            renderer.update(
+                <StateProvider>
+                    <Harness padding={25} size={200} />
+                </StateProvider>,
+            );
+        });
+        context!.state.pendingMaintainScrollAtEnd = true;
+        expect(context!.state.activeSizeAnimations?.size).toBe(2);
+        const obsolete = completions[0];
+        act(() => {
+            renderer.update(
+                <StateProvider>
+                    <Harness padding={25} size={400} />
+                </StateProvider>,
+            );
+        });
+        obsolete?.(true);
+        expect(context!.state.activeSizeAnimations?.size).toBe(2);
+        completions.at(-1)?.(true);
+        expect(resume).not.toHaveBeenCalled();
+        completions[1]?.(true);
+        expect(resume).toHaveBeenCalledTimes(1);
+        expect(context!.state.activeSizeAnimations?.size).toBe(0);
+        act(() => {
+            renderer.update(
+                <StateProvider>
+                    <Harness padding={25} size={800} />
+                </StateProvider>,
+            );
+        });
+        expect(context!.state.activeSizeAnimations?.size).toBe(1);
+        act(() => {
+            set$(context!, "isScrollActive", true);
+        });
+        expect(context!.state.activeSizeAnimations?.size).toBe(0);
+        act(() => {
+            set$(context!, "isScrollActive", false);
+        });
+        act(() => {
+            renderer.update(
+                <StateProvider>
+                    <Harness padding={25} size={850} />
+                </StateProvider>,
+            );
+        });
+        expect(context!.state.activeSizeAnimations?.size).toBe(1);
+        context!.state.pendingMaintainScrollAtEnd = true;
+        act(() => {
+            set$(context!, "isFollowingEnd", true);
+        });
+        expect(context!.state.activeSizeAnimations?.size).toBe(0);
+        expect(resume).toHaveBeenCalledTimes(2);
+        const previousCompletions = completions.length;
+        act(() => {
+            renderer.update(
+                <StateProvider>
+                    <Harness padding={25} size={900} />
+                </StateProvider>,
+            );
+        });
+        expect(completions.length).toBe(previousCompletions);
+        context!.state.pendingMaintainScrollAtEnd = true;
+        act(() => {
+            renderer.unmount();
+        });
+        completions.at(-1)?.(true);
+        expect(resume).toHaveBeenCalledTimes(2);
     });
 });
