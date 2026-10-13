@@ -21,6 +21,7 @@ let supportsScrollEnd = false;
 let listPosition = 0;
 let ownerScroll = 0;
 let maxOffset = 0;
+let ownsInput = true;
 let emitScroll: () => void;
 const mockCtx = {
     state: {
@@ -68,7 +69,7 @@ function registerWebScrollMocks() {
         getScrollContentSize: () => ({ height: 0, width: 0 }),
         getScrollPosition: () => ({ x: ownerScroll, y: ownerScroll }),
         isWindowTarget: (target: unknown) => target === window,
-        ownsScrollInput: () => true,
+        ownsScrollInput: () => ownsInput,
         resolveExternalScrollOffset: () => ({ left: 0, top: 0 }),
         resolveScrollableNode: () => ({
             clientHeight: 200,
@@ -105,6 +106,7 @@ function resetMocks() {
     listPosition = 0;
     ownerScroll = 0;
     maxOffset = 0;
+    ownsInput = true;
     mockCtx.state.lastLayout = undefined;
     mockCtx.state.anchoredEndSpaceSize = undefined;
     mockCtx.state.dataChangeNeedsScrollUpdate = false;
@@ -117,6 +119,8 @@ function resetMocks() {
     mockCtx.state.scrollingTo = undefined;
     mockCtx.state.maintainingScrollAtEnd = undefined;
     mockCtx.state.pendingMaintainScrollAtEnd = false;
+    mockCtx.state.pendingScrollResolve = undefined;
+    mockCtx.state.endFollowInterrupted = false;
 }
 
 describe("ListComponentScrollView (web)", () => {
@@ -216,6 +220,85 @@ describe("ListComponentScrollView (web)", () => {
             interrupt.mockRestore();
         }
         expect(scrollListeners.has("wheel")).toBe(false);
+    });
+
+    for (const queued of [false, true]) {
+        for (const gesture of ["wheel", "touch"] as const) {
+            it(`interrupts a ${queued ? "queued" : "active"} history target on downward ${gesture} navigation`, async () => {
+                resetMocks();
+                maxOffset = 1000;
+                ownerScroll = 800;
+                mockCtx.state.endFollowInterrupted = true;
+                if (queued) mockCtx.state.pendingScrollResolve = mock(() => {});
+                else mockCtx.state.scrollingTo = { animated: true, index: 5 };
+                const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
+                const { ListComponentScrollView } = await import(
+                    "../../src/components/ListComponentScrollView?web-explicit-downward-input"
+                );
+                let renderer: TestRenderer.ReactTestRenderer | undefined;
+                try {
+                    act(() => {
+                        renderer = TestRenderer.create(
+                            <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}}>
+                                <div />
+                            </ListComponentScrollView>,
+                        );
+                    });
+                    const navigate = () => {
+                        if (gesture === "wheel") {
+                            scrollListeners.get("wheel")?.({ deltaY: 40 } as WheelEvent);
+                        } else {
+                            scrollListeners.get("touchstart")?.({ touches: [{ clientY: 40 }] } as any);
+                            scrollListeners.get("touchmove")?.({ touches: [{ clientY: 0 }] } as any);
+                        }
+                    };
+                    ownsInput = false;
+                    navigate();
+                    expect(interrupt).not.toHaveBeenCalled();
+                    ownsInput = true;
+                    maxOffset = 0;
+                    navigate();
+                    expect(interrupt).not.toHaveBeenCalled();
+                    maxOffset = 1000;
+                    ownerScroll = 0;
+                    navigate();
+                    expect(interrupt).toHaveBeenCalledTimes(1);
+                    ownerScroll = 800;
+                    navigate();
+                    expect(interrupt).toHaveBeenCalledTimes(2);
+                } finally {
+                    act(() => renderer?.unmount());
+                    interrupt.mockRestore();
+                }
+            });
+        }
+    }
+
+    it("keeps downward touch navigation from interrupting end-follow targets", async () => {
+        resetMocks();
+        maxOffset = 1000;
+        ownerScroll = 800;
+        mockCtx.state.scrollingTo = { animated: true, isScrollToEnd: true };
+        const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-end-downward-touch"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}}>
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+            scrollListeners.get("touchstart")?.({ touches: [{ clientY: 40 }] } as any);
+            scrollListeners.get("touchmove")?.({ touches: [{ clientY: 0 }] } as any);
+            expect(interrupt).not.toHaveBeenCalled();
+        } finally {
+            act(() => renderer?.unmount());
+            interrupt.mockRestore();
+        }
     });
 
     it("keeps RAF coalescing during steady-state user scrolling", async () => {

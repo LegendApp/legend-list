@@ -5,8 +5,11 @@ import { checkResetContainers } from "../../src/core/checkResetContainers";
 import * as follow from "../../src/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "../../src/core/finishInitialScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { handleInitialScrollDataChange } from "../../src/core/initialScrollLifecycle";
+import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import * as scrollModule from "../../src/core/scrollTo";
 import { setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
+import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizes } from "../../src/core/updateItemSizes";
 import { updateScroll } from "../../src/core/updateScroll";
 import { Platform } from "../../src/platform/Platform";
@@ -15,9 +18,11 @@ import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 const originalRAF = globalThis.requestAnimationFrame;
+const originalCancelRAF = globalThis.cancelAnimationFrame;
 const originalPlatform = Platform.OS;
 afterEach(() => {
     globalThis.requestAnimationFrame = originalRAF;
+    globalThis.cancelAnimationFrame = originalCancelRAF;
     Platform.OS = originalPlatform;
     mock.restore();
 });
@@ -383,5 +388,98 @@ describe("reading snapshots during dataset placement", () => {
         expect(handle.getScrollAnchor()).toBeUndefined();
         ctx.state.handledFreshDataTransitionEpoch = 1;
         expect(handle.getScrollAnchor()).toEqual({ key: "item_0", offset: 0 });
+    });
+});
+
+describe("keyed navigation through layout changes", () => {
+    function setupQueuedKeyTarget() {
+        Platform.OS = "web";
+        const frames: FrameRequestCallback[] = [];
+        globalThis.requestAnimationFrame = (callback) => {
+            frames.push(callback);
+            return frames.length;
+        };
+        globalThis.cancelAnimationFrame = () => {};
+        let observed = 0;
+        const scrollTo = mock(({ y }: { y: number }) => {
+            observed = y;
+        });
+        const ctx = createMockContext(
+            {},
+            {
+                didContainersLayout: true,
+                didDataChange: true,
+                didFinishInitialScroll: true,
+                freshDataTransitionEpoch: 0,
+                props: {
+                    data: ["a", "target", "c"],
+                    dataKey: "first",
+                    getFixedItemSize: () => 100,
+                    keyExtractor: (item) => item,
+                },
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => observed,
+                        getScrollableNode: () => ({}),
+                        scrollTo,
+                    },
+                } as any,
+                scrollLength: 100,
+            },
+        );
+        updateItemPositions(ctx, true);
+        const promise = createImperativeHandle(ctx).scrollToKey({
+            animated: false,
+            key: "target",
+            viewOffset: 32,
+            viewPosition: 0,
+        });
+        return { ctx, frames, promise, scrollTo };
+    }
+
+    it("lands a queued key target at its new position after a prepend", async () => {
+        const { ctx, frames, promise, scrollTo } = setupQueuedKeyTarget();
+        try {
+            expect(scrollTo).not.toHaveBeenCalled();
+            ctx.state.props.data = ["p", "q", "a", "target", "c"];
+            resetLayoutCachesForDataChange(ctx.state);
+            updateItemPositions(ctx, true);
+            ctx.state.didDataChange = false;
+            frames.shift()?.(0);
+            frames.shift()?.(16);
+            expect(ctx.state.scrollingTo).toMatchObject({ index: 3, key: "target", targetOffset: 268 });
+            expect(scrollTo).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 268 });
+            finishScrollTo(ctx);
+            await promise;
+            expect(createImperativeHandle(ctx).getState().scroll).toBe(268);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    it("settles an old dataset's queued key request without dispatching it into replacement data", async () => {
+        const { ctx, frames, promise, scrollTo } = setupQueuedKeyTarget();
+        try {
+            ctx.state.props.dataKey = "second";
+            ctx.state.freshDataTransitionEpoch++;
+            handleInitialScrollDataChange(ctx, {
+                dataLength: ctx.state.props.data.length,
+                didDataChange: true,
+                didStartFreshData: true,
+                initialScrollAtEnd: false,
+                latestInitialScroll: undefined,
+                latestInitialScrollSessionKind: "bootstrap",
+                stylePaddingEnd: 0,
+                useBootstrapInitialScroll: false,
+            });
+            await promise;
+            expect(ctx.state.pendingScrollResolve).toBeUndefined();
+            expect(ctx.state.scheduledWork.has("imperativeScrollReady")).toBe(false);
+            frames.shift()?.(0);
+            expect(scrollTo).not.toHaveBeenCalled();
+            expect(ctx.state.scrollingTo).toBeUndefined();
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
     });
 });
