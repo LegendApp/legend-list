@@ -169,6 +169,62 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 
+    it("keeps a coalesced animated end follow owned while native is moving and animates a stalled retarget", () => {
+        Platform.OS = "ios";
+        const scrollTo = mock(() => {});
+        const resolve = mock(() => {});
+        const ctx = createMockContext(
+            { alignItemsAtEndPadding: 250, totalSize: 250 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                maintainingScrollAtEnd: "animated",
+                pendingScrollResolve: resolve,
+                positions: [0, 150, 200],
+                props: {
+                    alignItemsAtEndPaddingEnabled: true,
+                    data: [1, 2, 3],
+                    maintainScrollAtEnd: { animated: true },
+                },
+                refScroller: { current: { scrollTo } } as any,
+                scroll: 50,
+                scrollingTo: {
+                    animated: true,
+                    index: 2,
+                    isScrollToEnd: true,
+                    offset: 200,
+                    targetOffset: 100,
+                    viewPosition: 1,
+                },
+                scrollLength: 400,
+                scrollPending: 50,
+                sizesKnown: new Map([["item_2", 50]]),
+            },
+        );
+
+        // The previous animation's momentum end arrives after the next follow starts.
+        checkFinishedScrollFallback(ctx);
+        for (const offset of [70, 80, 85, 90, 92, 95]) {
+            ctx.state.scroll = offset;
+            ctx.state.scrollPending = offset;
+            flushTimers(1);
+            expect(scrollTo).not.toHaveBeenCalled();
+            expect(resolve).not.toHaveBeenCalled();
+            expect(ctx.values.get("alignItemsAtEndPadding")).toBe(250);
+        }
+
+        // A measurement moves the end after native stops at the old target.
+        flushTimers(1);
+        expect(scrollTo).toHaveBeenCalledWith({ animated: true, x: 0, y: 100 });
+        expect(resolve).not.toHaveBeenCalled();
+
+        ctx.state.scroll = 100;
+        ctx.state.scrollPending = 100;
+        flushTimers(1);
+        expect(resolve).toHaveBeenCalledTimes(1);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
     it("preserves the retry budget when momentum completion re-enters the fallback", () => {
         Platform.OS = "ios";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
