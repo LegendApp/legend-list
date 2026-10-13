@@ -124,7 +124,6 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                 didMaintain = true;
             } else {
                 state.pendingMaintainScrollAtEnd = true;
-                state.maintainingScrollAtEnd ??= maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
             }
         } else if (shouldMaintainScrollAtEnd && didContainersLayout) {
             // Run this only if scroll is at the bottom and after initial layout
@@ -157,6 +156,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                             if (isReplayingPendingMaintain || isStillWithinThreshold || !didScrollSinceRequest) {
                                 if (state.scrollingTo || state.pendingScrollResolve) {
                                     state.pendingMaintainScrollAtEnd = true;
+                                    state.maintainingScrollAtEnd = undefined;
                                 } else {
                                     state.maintainingScrollAtEnd = activeState;
                                     const scrollPromise = getScrollRequestTracker(ctx).runNowIfIdle(() =>

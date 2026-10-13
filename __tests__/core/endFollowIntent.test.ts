@@ -7,7 +7,9 @@ import { finishInitialScroll } from "../../src/core/finishInitialScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { handleInitialScrollDataChange } from "../../src/core/initialScrollLifecycle";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import * as scrollModule from "../../src/core/scrollTo";
+import { scrollToEnd } from "../../src/core/scrollToEnd";
 import { setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizes } from "../../src/core/updateItemSizes";
@@ -478,6 +480,110 @@ describe("keyed navigation through layout changes", () => {
             frames.shift()?.(0);
             expect(scrollTo).not.toHaveBeenCalled();
             expect(ctx.state.scrollingTo).toBeUndefined();
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+});
+
+describe("end maintenance request ownership", () => {
+    function setupMeasuredEnd() {
+        Platform.OS = "web";
+        const frames: FrameRequestCallback[] = [];
+        globalThis.requestAnimationFrame = (callback) => {
+            frames.push(callback);
+            return frames.length;
+        };
+        globalThis.cancelAnimationFrame = () => {};
+        let observed = 200;
+        const ctx = createMockContext(
+            {},
+            {
+                didContainersLayout: true,
+                initialScroll: { index: 2, preserveForBottomPadding: true, viewPosition: 1 },
+                props: {
+                    data: ["a", "b", "tail"],
+                    estimatedItemSize: 100,
+                    keyExtractor: (item) => item,
+                    maintainScrollAtEnd: true,
+                },
+                queuedInitialLayout: true,
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => observed,
+                        getScrollableNode: () => ({}),
+                        scrollTo: ({ y }: { y: number }) => {
+                            observed = y;
+                        },
+                    },
+                } as any,
+                scroll: 200,
+                scrollLength: 100,
+                sizes: new Map([
+                    ["a", 100],
+                    ["b", 100],
+                    ["tail", 100],
+                ]),
+                sizesKnown: new Map([
+                    ["a", 100],
+                    ["b", 100],
+                    ["tail", 100],
+                ]),
+                totalSize: 300,
+            },
+        );
+        updateItemPositions(ctx, true);
+        ctx.scrollToEnd = (options) => scrollToEnd(ctx, options);
+        ctx.state.triggerCalculateItemsInView = () => updateItemPositions(ctx, false);
+        finishInitialScroll(ctx, { preserveTarget: true });
+        return { ctx, frames, observed: () => observed };
+    }
+
+    it("replays measured-size intent after an end request completes with a preserved initial target", async () => {
+        const { ctx, frames, observed } = setupMeasuredEnd();
+        const data = ctx.state.props.data;
+        try {
+            const earlierRequest = getScrollRequestTracker(ctx).runNowIfIdle(() =>
+                scrollToEnd(ctx, { animated: false }),
+            );
+            updateItemSizes(ctx, { itemKey: "tail", size: { height: 104, width: 200 } });
+            expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
+            finishScrollTo(ctx);
+            await earlierRequest;
+            for (let count = 0; frames.length && count < 10; count++) frames.shift()?.(count * 16);
+            expect(observed()).toBe(204);
+            finishScrollTo(ctx);
+            await Promise.resolve();
+            updateItemSizes(ctx, { itemKey: "tail", size: { height: 4104, width: 200 } });
+            for (let count = 0; frames.length && count < 10; count++) frames.shift()?.(count * 16);
+            expect(ctx.state.props.data).toBe(data);
+            expect(observed()).toBe(4204);
+            expect(createImperativeHandle(ctx).getState().distanceFromEnd).toBe(0);
+            finishScrollTo(ctx);
+            await Promise.resolve();
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    it("relinquishes a queued maintenance frame when another end request owns its dispatch", async () => {
+        const { ctx, frames, observed } = setupMeasuredEnd();
+        try {
+            ctx.state.initialScroll = undefined;
+            updateItemSizes(ctx, { itemKey: "tail", size: { height: 104, width: 200 } });
+            expect(ctx.state.maintainingScrollAtEnd).toBe("pending-instant");
+            const earlierRequest = getScrollRequestTracker(ctx).runNowIfIdle(() =>
+                scrollToEnd(ctx, { animated: false }),
+            );
+            for (let count = 0; frames.length && count < 10; count++) frames.shift()?.(count * 16);
+            expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
+            expect(ctx.state.maintainingScrollAtEnd).toBeUndefined();
+            finishScrollTo(ctx);
+            await earlierRequest;
+            for (let count = 0; frames.length && count < 10; count++) frames.shift()?.(count * 16);
+            expect(observed()).toBe(204);
+            finishScrollTo(ctx);
+            await Promise.resolve();
         } finally {
             ctx.state.scheduledWork.dispose();
         }
