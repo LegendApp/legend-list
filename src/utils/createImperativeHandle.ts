@@ -182,7 +182,22 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
     const clearCaches = (options?: Parameters<LegendListRef["clearCaches"]>[0]) => {
         const mode = options?.mode ?? "sizes";
 
-        state.sizes.clear();
+        if (
+            mode === "sizes" &&
+            state.didContainersLayout &&
+            !peek$(ctx, "isFollowingEnd") &&
+            !state.scrollingTo &&
+            !scrollRequestTracker.isWaitingToRun()
+        ) {
+            const index = findPositionIndexAtOrBeforeOffset(ctx, state.scroll - getStartOffsetAdjustment(ctx));
+            if (index !== undefined && state.positions[index] !== undefined) {
+                state.visibleContentAnchor = {
+                    key: getId(state, index),
+                    offset: state.scroll - state.positions[index]!,
+                };
+            }
+        }
+        // Keep rendered sizes as estimates so native content cannot collapse before remeasurement.
         state.sizesKnown.clear();
         invalidateContainerFixedItemSizes(state);
         for (const key in state.averageSizes) {
@@ -192,10 +207,12 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         state.scrollForNextCalculateItemsInView = undefined;
 
         state.pendingTotalSize = undefined;
-        state.totalSize = 0;
-        set$(ctx, "totalSize", 0);
 
         if (mode === "full") {
+            state.visibleContentAnchor = undefined;
+            state.sizes.clear();
+            state.totalSize = 0;
+            set$(ctx, "totalSize", 0);
             state.indexByKey.clear();
             state.idCache.length = 0;
             state.positions.length = 0;
@@ -204,7 +221,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         }
 
         triggerMountedContainerLayouts(ctx);
-        state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        state.triggerCalculateItemsInView?.({ doMVCP: mode === "sizes", forceFullItemPositions: true });
     };
 
     return {

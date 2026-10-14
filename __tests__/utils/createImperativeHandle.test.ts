@@ -321,7 +321,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(state.positionByKey("b")).toBe(40);
     });
 
-    it("clearCaches clears size caches and recalculates positions", () => {
+    it("clearCaches invalidates known sizes while retaining provisional extent", () => {
         const calls: string[] = [];
         const triggerCalculateItemsInView = mock(() => {
             calls.push("calculate");
@@ -359,19 +359,22 @@ describe("createImperativeHandle.scrollToEnd", () => {
         const handle = createImperativeHandle(ctx);
         handle.clearCaches();
 
-        expect(ctx.state.sizes.size).toBe(0);
+        expect(Array.from(ctx.state.sizes)).toEqual([
+            ["a", 42],
+            ["b", 63],
+        ]);
         expect(ctx.state.sizesKnown.size).toBe(0);
         expect(Object.keys(ctx.state.averageSizes)).toEqual([]);
         expect(ctx.state.positionRecalculationStartIndex).toBe(0);
         expect(ctx.state.scrollForNextCalculateItemsInView).toBeUndefined();
-        expect(ctx.state.totalSize).toBe(0);
+        expect(ctx.state.totalSize).toBe(420);
         expect(ctx.state.pendingTotalSize).toBeUndefined();
-        expect(ctx.values.get("totalSize")).toBe(0);
+        expect(ctx.values.get("totalSize")).toBe(420);
         expect(triggerFirstLayout).toHaveBeenCalledTimes(0);
         expect(triggerSecondLayout).toHaveBeenCalledTimes(0);
         expect(ctx.values.get("containerLayoutEpoch")).toBe(1);
         expect(calls).toEqual(["calculate"]);
-        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ doMVCP: true, forceFullItemPositions: true });
     });
 
     it("clearCaches invalidates fixed sizes without discarding container types", () => {

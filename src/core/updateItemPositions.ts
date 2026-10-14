@@ -88,6 +88,7 @@ export function updateItemPositions(
 
     const useAverageSize = true;
     const preferCachedSize =
+        !!state.visibleContentAnchor ||
         !doMVCP ||
         dataChanged ||
         state.scrollAdjustHandler.getAdjust() !== 0 ||
