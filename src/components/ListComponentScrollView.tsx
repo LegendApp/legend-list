@@ -417,14 +417,20 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     }, [ctx, getCurrentScrollOffset, getScrollTarget, horizontal, isScrollInRange, scrollToLocalOffset]);
 
     // Set initial scroll offset
+    const appliedContentOffsetRef = useRef<number | undefined>(undefined);
     useEffect(() => {
-        const doScroll = () => {
-            if (contentOffset) {
-                scrollToLocalOffset(horizontal ? contentOffset.x || 0 : contentOffset.y || 0, false);
-            }
-        };
-        doScroll();
-        const frame = requestAnimationFrame(doScroll);
+        if (!contentOffset) return;
+        const offset = horizontal ? contentOffset.x || 0 : contentOffset.y || 0;
+        // Apply each initial offset once. <Activity> re-runs effects when it reveals a
+        // hidden list, and scrolling back to the mount offset would discard the user's
+        // scroll position.
+        if (offset === appliedContentOffsetRef.current) return;
+        scrollToLocalOffset(offset, false);
+        const frame = requestAnimationFrame(() => {
+            // Recorded only once the frame runs, so a re-run that cancels it applies again.
+            appliedContentOffsetRef.current = offset;
+            scrollToLocalOffset(offset, false);
+        });
         return () => cancelAnimationFrame(frame);
     }, [contentOffset?.x, contentOffset?.y, horizontal, scrollToLocalOffset]);
 

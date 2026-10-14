@@ -67,7 +67,8 @@ function registerWebScrollMocks() {
         getScrollContentSize: () => ({ height: 0, width: 0 }),
         getScrollPosition: () => ({ x: ownerScroll, y: ownerScroll }),
         isWindowTarget: (target: unknown) => target === window,
-        resolveExternalScrollOffset: () => ({ left: 0, top: 0 }),
+        resolveExternalScrollOffset: ({ clampedOffset, horizontal }: { clampedOffset: number; horizontal: boolean }) =>
+            horizontal ? { left: clampedOffset, top: 0 } : { left: 0, top: clampedOffset },
         resolveScrollableNode: () => null,
         resolveScrollEventTarget: (_element: unknown, externalTarget: unknown) => {
             if (externalTarget !== undefined && externalTarget !== window) return externalTarget;
@@ -1037,4 +1038,76 @@ it("moves listeners to a replacement external owner and detaches while the owner
     expect(second.removeEventListener).toHaveBeenCalledWith("scroll", expect.any(Function));
     expect(addEventListener).not.toHaveBeenCalled();
     act(() => renderer!.unmount());
+});
+
+describe("ListComponentScrollView (web) initial contentOffset", () => {
+    const createOwner = () =>
+        ({
+            addEventListener: mock(),
+            removeEventListener: mock(),
+            scrollTo: mock(),
+        }) as unknown as HTMLElement & { scrollTo: ReturnType<typeof mock> };
+    const render = (
+        ListComponentScrollView: React.ComponentType<any>,
+        scrollElement: HTMLElement,
+        contentOffset: { x: number; y: number },
+    ) => (
+        <ListComponentScrollView
+            contentOffset={contentOffset}
+            onLayout={() => {}}
+            onScroll={() => {}}
+            scrollElement={scrollElement}
+            style={{}}
+        >
+            <div />
+        </ListComponentScrollView>
+    );
+    const flushFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+
+    it("does not re-apply an applied initial offset when its effect runs again", async () => {
+        registerWebScrollMocks();
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?initial-offset-once"
+        );
+        const first = createOwner();
+        const second = createOwner();
+        let renderer: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(render(ListComponentScrollView, first, { x: 0, y: 300 }));
+        });
+        await act(flushFrame);
+        expect(first.scrollTo).toHaveBeenCalledWith({ behavior: "auto", left: 0, top: 300 });
+
+        // An <Activity> reveal re-runs the effect after the user may have scrolled away.
+        // A replacement scroll owner re-runs it the same way, through the effect's deps.
+        act(() => renderer!.update(render(ListComponentScrollView, second, { x: 0, y: 300 })));
+        await act(flushFrame);
+        expect(second.scrollTo).not.toHaveBeenCalled();
+
+        act(() => renderer!.update(render(ListComponentScrollView, second, { x: 0, y: 500 })));
+        expect(second.scrollTo).toHaveBeenCalledWith({ behavior: "auto", left: 0, top: 500 });
+        act(() => renderer!.unmount());
+    });
+
+    it("re-applies the initial offset when a re-run cancels the frame before it fires", async () => {
+        registerWebScrollMocks();
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?initial-offset-cancelled-frame"
+        );
+        const first = createOwner();
+        const second = createOwner();
+        let renderer: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(render(ListComponentScrollView, first, { x: 0, y: 300 }));
+        });
+        expect(first.scrollTo).toHaveBeenCalledTimes(1);
+        // Re-run before the follow-up frame fires: its cleanup cancels that frame.
+        act(() => renderer!.update(render(ListComponentScrollView, second, { x: 0, y: 300 })));
+        expect(second.scrollTo).toHaveBeenCalledWith({ behavior: "auto", left: 0, top: 300 });
+        await act(flushFrame);
+        expect(second.scrollTo).toHaveBeenCalledTimes(2);
+        act(() => renderer!.unmount());
+    });
 });
