@@ -109,7 +109,7 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
         checkThresholds(ctx);
     }
     if ((result.didChange || result.didMeasurePendingEnd) && result.shouldMaintainScrollAtEnd) {
-        doMaintainScrollAtEnd(ctx);
+        doMaintainScrollAtEnd(ctx, { immediate: true });
     }
 }
 

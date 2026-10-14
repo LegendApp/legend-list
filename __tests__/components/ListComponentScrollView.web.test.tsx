@@ -521,6 +521,46 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    for (const hasActiveTarget of [false, true]) {
+        it(`keeps an initial-placement DOM clamp owned while real input can interrupt (${hasActiveTarget})`, async () => {
+            resetMocks();
+            mockCtx.state.didFinishInitialScroll = false;
+            mockCtx.state.initialScroll = { index: 2, preserveForBottomPadding: true, viewPosition: 1 };
+            mockCtx.state.initialScrollSession = { kind: "bootstrap" };
+            mockCtx.state.scroll = 800;
+            mockCtx.state.pendingMaintainScrollAtEnd = true;
+            mockCtx.state.scrollingTo = hasActiveTarget ? { isInitialScroll: true } : undefined;
+            ownerScroll = 778;
+            maxOffset = 1000;
+            const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
+            const { ListComponentScrollView } = await import(
+                "../../src/components/ListComponentScrollView?web-scroll-owned-initial-clamp"
+            );
+            let renderer: TestRenderer.ReactTestRenderer | undefined;
+            try {
+                act(() => {
+                    renderer = TestRenderer.create(
+                        <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}} useWindowScroll>
+                            <div />
+                        </ListComponentScrollView>,
+                    );
+                });
+                scrollListeners.get("scroll")?.({} as Event);
+                expect(interrupt).not.toHaveBeenCalled();
+                expect(flush).toHaveBeenCalledTimes(1);
+                scrollListeners.get("wheel")?.({ ctrlKey: false, defaultPrevented: false, deltaY: -40 } as WheelEvent);
+                expect(interrupt).toHaveBeenCalledTimes(1);
+                mockCtx.state.didFinishInitialScroll = true;
+                mockCtx.state.scrollingTo = undefined;
+                scrollListeners.get("scroll")?.({} as Event);
+                expect(interrupt).toHaveBeenCalledTimes(2);
+            } finally {
+                act(() => renderer?.unmount());
+                interrupt.mockRestore();
+            }
+        });
+    }
+
     it("flushes immediately while MVCP is active", async () => {
         resetMocks();
         mockCtx.state.dataChangeNeedsScrollUpdate = true;

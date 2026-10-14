@@ -1,5 +1,6 @@
 import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { getAlignItemsAtEndPadding } from "@/core/updateContentMetricsState";
 import { updateScroll } from "@/core/updateScroll";
@@ -58,8 +59,26 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
             pendingNativeMVCPAdjust,
             props: { maintainScrollAtEnd },
         } = state;
+        if (
+            Platform.OS === "web" &&
+            options?.immediate &&
+            !didFinishInitialScroll &&
+            maintainScrollAtEnd &&
+            !state.endFollowInterrupted &&
+            !ctx.scrollRequestTracker?.isWaitingToRun() &&
+            (!state.scrollingTo || state.scrollingTo.isInitialScroll) &&
+            (state.scrollingTo?.isInitialScroll ||
+                (didContainersLayout &&
+                    state.initialScrollSession?.kind === "bootstrap" &&
+                    !state.initialScrollSession.bootstrap &&
+                    state.initialScrollSession.completion)) &&
+            isEndOfContentTarget(state.initialScroll, state.props.data.length)
+        ) {
+            state.pendingMaintainScrollAtEnd = true;
+            return false;
+        }
         // ResizeObserver runs after DOM layout and before paint. Instant web
-        // viewport following can commit now; data/item changes still wait for RAF.
+        // layout following can commit now; data changes still wait for RAF.
         const immediate = options?.immediate && Platform.OS === "web" && !maintainScrollAtEnd?.animated;
         const isWithinMaintainScrollAtEndThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
         const isReplayingPendingMaintain = !!state.pendingMaintainScrollAtEnd;
@@ -135,7 +154,11 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                 state.scroll = 0;
             }
 
-            if (!state.maintainingScrollAtEnd || (immediate && state.maintainingScrollAtEnd === "pending-instant")) {
+            if (
+                !state.maintainingScrollAtEnd ||
+                (immediate &&
+                    (state.maintainingScrollAtEnd === "pending-instant" || state.maintainingScrollAtEnd === "instant"))
+            ) {
                 const pendingState = maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
                 const activeState = maintainScrollAtEnd.animated ? "animated" : "instant";
                 const scrollAtRequest = state.scroll;
@@ -164,7 +187,11 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                                     );
 
                                     void scrollPromise.then(() => {
-                                        if (state.maintainingScrollAtEnd === activeState) {
+                                        if (
+                                            state.maintainingScrollAtEnd === activeState &&
+                                            !state.scrollingTo &&
+                                            !state.pendingScrollResolve
+                                        ) {
                                             if (state.pendingMaintainScrollAtEnd) {
                                                 state.maintainingScrollAtEnd = undefined;
                                                 doMaintainScrollAtEnd(ctx);

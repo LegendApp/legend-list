@@ -18,6 +18,7 @@ import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useArr$, useStateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { warnDevOnce } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { useRafCoalescer } from "@/utils/useRafCoalescer";
@@ -355,6 +356,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             const observed = getCurrentScrollOffset();
             const clampedPrevious = clampOffset(state.scroll, getMaxScrollOffset());
             if (
+                !hasActiveInitialScroll(state) &&
                 (state.maintainingScrollAtEnd ||
                     state.pendingMaintainScrollAtEnd ||
                     state.scrollingTo?.isScrollToEnd) &&

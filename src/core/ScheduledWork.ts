@@ -1,6 +1,7 @@
 export type ScheduledWorkKey =
     | "adaptiveRender"
     | "alignItemsAtEndPaddingFallback"
+    | "bootstrapMeasuredLayout"
     | "checkFinishedScrollFallback"
     | "checkFinishedScrollFrame"
     | "checkFinishedScrollRetryFrame"

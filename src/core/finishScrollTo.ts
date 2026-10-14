@@ -39,7 +39,7 @@ export function finishScrollTo(ctx: StateContext) {
             resolvePendingScroll?.();
             if (state.pendingMaintainScrollAtEnd) {
                 state.maintainingScrollAtEnd = undefined;
-                doMaintainScrollAtEnd(ctx);
+                doMaintainScrollAtEnd(ctx, { immediate: !!scrollingTo.isInitialScroll });
             }
         };
 

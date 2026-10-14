@@ -11,6 +11,7 @@ import { beginReachedEdgeUserScroll } from "@/utils/edgeReachedGate";
 import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
 import { scheduleFullDrawDistancePrewarm } from "@/utils/getEffectiveDrawDistance";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function updateScroll(
@@ -79,7 +80,8 @@ export function updateScroll(
     const isUserScrollEvent =
         !!options?.fromNativeScrollEvent &&
         scrollDelta > 0.1 &&
-        (Platform.OS !== "web" || Math.abs(newScroll - previousComparableScroll) > 0.1) &&
+        (Platform.OS !== "web" ||
+            (!hasActiveInitialScroll(state) && Math.abs(newScroll - previousComparableScroll) > 0.1)) &&
         !adjustChanged &&
         scrollingTo === undefined &&
         !state.pendingNativeMVCPAdjust;

@@ -5,6 +5,7 @@ import { checkResetContainers } from "../../src/core/checkResetContainers";
 import * as follow from "../../src/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "../../src/core/finishInitialScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { dispatchInitialScroll } from "../../src/core/initialScroll";
 import { handleInitialScrollDataChange } from "../../src/core/initialScrollLifecycle";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
@@ -12,7 +13,7 @@ import * as scrollModule from "../../src/core/scrollTo";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
 import { setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
-import { updateItemSizes } from "../../src/core/updateItemSizes";
+import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import { updateScroll } from "../../src/core/updateScroll";
 import { Platform } from "../../src/platform/Platform";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
@@ -539,15 +540,137 @@ describe("end maintenance request ownership", () => {
         return { ctx, frames, observed: () => observed };
     }
 
-    it("replays measured-size intent after an end request completes with a preserved initial target", async () => {
+    for (const interruption of ["none", "reader", "dataset"] as const) {
+        it(`retains size growth through deferred initial completion (${interruption})`, () => {
+            const { ctx, frames, observed } = setupMeasuredEnd();
+            while (frames.length) frames.shift()?.(0);
+            ctx.state.didFinishInitialScroll = false;
+            ctx.values.set("readyToRender", false);
+            ctx.values.set("isFollowingEnd", false);
+            ctx.state.initialScrollSession = { kind: "bootstrap", previousDataLength: 3 };
+
+            try {
+                dispatchInitialScroll(ctx, {
+                    forceScroll: true,
+                    resolvedOffset: 200,
+                    target: ctx.state.initialScroll!,
+                    waitForCompletionFrame: true,
+                });
+                finishScrollTo(ctx);
+                follow.doMaintainScrollAtEnd(ctx);
+                expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+                updateItemSizes(ctx, { itemKey: "tail", size: { height: 122, width: 200 } });
+                expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
+                expect(ctx.state.didFinishInitialScroll).toBe(false);
+                expect(observed()).toBe(200);
+                updateScroll(ctx, 180, true, { fromNativeScrollEvent: true });
+                expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
+                expect(ctx.state.endFollowInterrupted).not.toBe(true);
+
+                if (interruption === "reader") {
+                    follow.interruptMaintainScrollAtEnd(ctx);
+                } else if (interruption === "dataset") {
+                    ctx.state.freshDataTransitionEpoch++;
+                    ctx.state.props.data = ["new"];
+                    handleInitialScrollDataChange(ctx, {
+                        dataLength: 1,
+                        didDataChange: true,
+                        didStartFreshData: true,
+                        initialScrollAtEnd: false,
+                        latestInitialScroll: { contentOffset: 0, index: 0 },
+                        latestInitialScrollSessionKind: "offset",
+                        stylePaddingEnd: 0,
+                        useBootstrapInitialScroll: false,
+                    });
+                }
+
+                frames.shift()?.(16);
+                expect(observed()).toBe(interruption === "none" ? 222 : 200);
+                expect(ctx.values.get("isFollowingEnd")).toBe(interruption === "none");
+                if (interruption === "dataset") {
+                    expect(ctx.state.didFinishInitialScroll).toBe(false);
+                    expect(ctx.state.initialScroll?.contentOffset).toBe(0);
+                }
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+    }
+
+    for (const target of [
+        { contentOffset: 0, index: 0 },
+        { index: 1, preserveForBottomPadding: true, viewPosition: 1 },
+        { index: 2, viewOffset: 20, viewPosition: 1 },
+    ]) {
+        it(`does not queue initial end follow for an item or offset target (${JSON.stringify(target)})`, () => {
+            const { ctx } = setupMeasuredEnd();
+            ctx.state.didFinishInitialScroll = false;
+            ctx.state.initialScroll = target;
+            ctx.values.set("isFollowingEnd", false);
+            try {
+                follow.doMaintainScrollAtEnd(ctx, { immediate: true });
+                expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+                expect(ctx.values.get("isFollowingEnd")).toBe(false);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+    }
+
+    for (const platform of ["ios", "android"] as const) {
+        it(`retains the existing initial-layout end maintenance gate on ${platform}`, () => {
+            const { ctx } = setupMeasuredEnd();
+            Platform.OS = platform;
+            ctx.state.didFinishInitialScroll = false;
+            ctx.state.initialScrollSession = { completion: {}, kind: "bootstrap", previousDataLength: 3 };
+            ctx.values.set("isFollowingEnd", false);
+            try {
+                follow.doMaintainScrollAtEnd(ctx, { immediate: true });
+                expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+                expect(ctx.state.didFinishInitialScroll).toBe(false);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+    }
+
+    it("keeps a DOM clamp during bootstrap convergence from becoming interrupted end follow", () => {
+        const { ctx } = setupMeasuredEnd();
+        ctx.state.didContainersLayout = false;
+        ctx.state.didFinishInitialScroll = false;
+        ctx.state.endFollowInterrupted = false;
+        ctx.values.set("isFollowingEnd", false);
+        ctx.state.initialScrollSession = {
+            bootstrap: { mountFrameCount: 0, passCount: 0, scroll: 200, seedContentOffset: 200 },
+            kind: "bootstrap",
+            previousDataLength: 3,
+        };
+        try {
+            updateItemSizes(ctx, { itemKey: "tail", size: { height: 122, width: 200 } });
+            expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+            updateScroll(ctx, 180, true, { fromNativeScrollEvent: true });
+            expect(
+                ctx.state.initialScrollSession?.kind === "bootstrap" && ctx.state.initialScrollSession.bootstrap,
+            ).toBeDefined();
+            expect(ctx.state.endFollowInterrupted).toBe(false);
+            expect(ctx.state.didFinishInitialScroll).toBe(false);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    it("retargets measured-size intent before an end request completes with a preserved initial target", async () => {
         const { ctx, frames, observed } = setupMeasuredEnd();
         const data = ctx.state.props.data;
         try {
             const earlierRequest = getScrollRequestTracker(ctx).runNowIfIdle(() =>
                 scrollToEnd(ctx, { animated: false }),
             );
+            const earlierResolve = ctx.state.pendingScrollResolve;
             updateItemSizes(ctx, { itemKey: "tail", size: { height: 104, width: 200 } });
-            expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
+            expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+            expect(ctx.state.pendingScrollResolve).toBe(earlierResolve);
+            expect(observed()).toBe(204);
             finishScrollTo(ctx);
             await earlierRequest;
             for (let count = 0; frames.length && count < 10; count++) frames.shift()?.(count * 16);
@@ -570,7 +693,8 @@ describe("end maintenance request ownership", () => {
         const { ctx, frames, observed } = setupMeasuredEnd();
         try {
             ctx.state.initialScroll = undefined;
-            updateItemSizes(ctx, { itemKey: "tail", size: { height: 104, width: 200 } });
+            updateOneItemSize(ctx, "tail", { height: 104, width: 200 });
+            follow.doMaintainScrollAtEnd(ctx);
             expect(ctx.state.maintainingScrollAtEnd).toBe("pending-instant");
             const earlierRequest = getScrollRequestTracker(ctx).runNowIfIdle(() =>
                 scrollToEnd(ctx, { animated: false }),

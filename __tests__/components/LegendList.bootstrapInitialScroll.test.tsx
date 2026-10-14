@@ -174,6 +174,52 @@ afterEach(() => {
 });
 
 describe("LegendList bootstrap initial scroll", () => {
+    it("seeds a cached dataKey return from incoming positions instead of the outgoing dataset", async () => {
+        Platform.OS = "web";
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-cached-data-key-return");
+        const firstData = Array.from({ length: 5 }, (_, index) => ({ id: `first-${index}` }));
+        const secondData = Array.from({ length: 3 }, (_, index) => ({ id: `second-${index}` }));
+        const list = (data: typeof firstData, dataKey: string) => (
+            <LegendList
+                data={data}
+                dataKey={dataKey}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={() => <Text>Row</Text>}
+            />
+        );
+        const rendered = render(list(firstData, "first"));
+        const ctx = await getContextFromRender();
+        seedMeasuredLayout(ctx.state, firstData.length, 100);
+        ctx.state.totalSize = 500;
+        ctx.values.set("totalSize", 500);
+        rendered.rerender(list(secondData, "second"));
+        await flushAsync();
+        seedMeasuredLayout(ctx.state, secondData.length, 50);
+        ctx.state.totalSize = 150;
+        ctx.values.set("totalSize", 150);
+        ctx.state.initialScrollSession = undefined;
+        ctx.state.initialScroll = undefined;
+        ctx.state.didFinishInitialScroll = true;
+        const tracker = trackAssignedStateValue(ctx.state, "initialScrollSession");
+
+        try {
+            rendered.rerender(list(firstData, "first"));
+            await flushAsync();
+            const firstBootstrap = tracker.assignedValues.find(
+                (session) => session?.kind === "bootstrap" && session.bootstrap,
+            );
+            expect(firstBootstrap?.kind === "bootstrap" && firstBootstrap.bootstrap?.seedContentOffset).toBe(300);
+            expect(ctx.state.sizesKnown.get("first-4")).toBe(100);
+            expect(ctx.state.positions).toEqual([0, 100, 200, 300, 400]);
+        } finally {
+            tracker.restore();
+            rendered.unmount();
+        }
+    });
+
     for (const platform of ["web", "ios", "android"] as const) {
         it(`retains oversized alignment through initial props and dataKey changes on ${platform}`, async () => {
             Platform.OS = platform;

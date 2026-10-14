@@ -8,6 +8,8 @@ import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
+import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
+import { updateItemPositions } from "@/core/updateItemPositions";
 import { type StateContext, set$ } from "@/state/state";
 import { resetInitialRenderState, setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -165,6 +167,10 @@ export function handleInitialScrollDataChange(
     setInitialScrollSession(state);
 
     if (useBootstrapInitialScroll) {
+        if (didStartFreshData && !state.didColumnsChange) {
+            resetLayoutCachesForDataChange(state);
+            updateItemPositions(ctx, true);
+        }
         handleBootstrapInitialScrollDataChange(ctx, {
             dataLength,
             didDataChange,

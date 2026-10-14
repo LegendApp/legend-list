@@ -250,7 +250,7 @@ describe("item size update functions", () => {
 
             updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { immediate: true });
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
@@ -268,7 +268,7 @@ describe("item size update functions", () => {
 
             updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { immediate: true });
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
@@ -288,7 +288,7 @@ describe("item size update functions", () => {
 
             updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { immediate: true });
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
@@ -363,19 +363,21 @@ describe("item size update functions", () => {
 
                     updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-                    expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
-                    expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+                    const isWeb = platform === "web";
+                    expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(isWeb ? 0 : 1);
+                    expect(mockState.maintainingScrollAtEnd).toBe(isWeb ? "instant" : "pending-instant");
+                    expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(isWeb ? 1 : 0);
 
-                    if (platform !== "web") {
-                        doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
-                    }
+                    doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
                     mockState.scroll = 250;
                     mockState.isWithinMaintainScrollAtEndThreshold = false;
+                    updateItemAndFlush(mockCtx, "item_0", { height: 180, width: 400 });
                     rafCallback?.(0);
 
-                    expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
+                    expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(isWeb ? 1 : 0);
                     expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                     expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+                    expect(mockState.scroll).toBe(250);
                 },
             );
 
