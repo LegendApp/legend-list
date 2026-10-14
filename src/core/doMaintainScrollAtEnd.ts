@@ -36,7 +36,10 @@ export function finishMaintainScrollAtEnd(ctx: StateContext) {
         state.scrollForNextCalculateItemsInView = undefined;
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         const nextScroll = clampScrollOffset(ctx, state.scroll + nextPadding - currentPadding);
-        requestAdjust(ctx, nextScroll - state.scroll);
+        // iOS clamps the native offset when the padding shrinks, before MVCP applies this adjustment.
+        const nativeScroll = Platform.OS === "ios" ? clampScrollOffset(ctx, state.scroll) : state.scroll;
+        state.scroll = nativeScroll;
+        requestAdjust(ctx, nextScroll - nativeScroll);
     }
 }
 

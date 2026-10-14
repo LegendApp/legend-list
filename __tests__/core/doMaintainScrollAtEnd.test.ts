@@ -814,6 +814,49 @@ describe("doMaintainScrollAtEnd", () => {
             expect(requestAdjust).toHaveBeenCalledWith(-250);
         });
 
+        it.each([
+            [200, 50, 0],
+            [450, 300, 50],
+            [450, 20, 0],
+        ])("releases iOS runway for content %i at scroll %i to offset %i", async (size, scroll, expectedScroll) => {
+            Platform.OS = "ios";
+            let nativeScroll = 0;
+            const requestAdjust = mock((delta: number) => {
+                nativeScroll += delta;
+            });
+            mockState.props.alignItemsAtEnd = true;
+            mockState.props.alignItemsAtEndPaddingEnabled = true;
+            mockState.props.data = [1];
+            mockState.props.maintainScrollAtEnd = { animated: true };
+            mockState.scrollAdjustHandler.requestAdjust = requestAdjust;
+            mockState.scrollLength = 400;
+            mockCtx.values.set("totalSize", 150);
+            updateContentMetricsState(mockCtx);
+
+            mockCtx.values.set("totalSize", size);
+            updateContentMetricsState(mockCtx);
+            doMaintainScrollAtEnd(mockCtx);
+            rafCallback?.();
+            await Promise.resolve();
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(250);
+            expect(mockState.maintainingScrollAtEnd).toBe("animated");
+
+            // iOS clamps into the smaller range before native MVCP applies ScrollAdjust.
+            mockState.scroll = scroll;
+            nativeScroll = Math.min(scroll, Math.max(0, size - 400));
+            const clampedScroll = nativeScroll;
+            await finishNextImperativeScroll();
+
+            expect(mockCtx.values.get("alignItemsAtEndPadding")).toBe(Math.max(0, 400 - size));
+            expect(nativeScroll).toBe(expectedScroll);
+            expect(mockState.scroll).toBe(expectedScroll);
+            if (clampedScroll === expectedScroll) {
+                expect(requestAdjust).not.toHaveBeenCalled();
+            } else {
+                expect(requestAdjust).toHaveBeenCalledWith(expectedScroll - clampedScroll);
+            }
+        });
+
         it("retains the runway across coalesced content growth", async () => {
             mockState.props.alignItemsAtEnd = true;
             mockState.props.alignItemsAtEndPaddingEnabled = true;

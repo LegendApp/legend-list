@@ -149,9 +149,9 @@ function checkFinishedScrollFrame(ctx: StateContext) {
     }
 }
 
-function scrollToFallbackOffset(ctx: StateContext, offset: number) {
+function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
     ctx.state.refScroller.current?.scrollTo({
-        animated: false,
+        animated,
         x: ctx.state.props.horizontal ? offset : 0,
         y: ctx.state.props.horizontal ? 0 : offset,
     });
@@ -183,6 +183,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 : 100;
 
     let numChecks = 0;
+    let previousScroll = state.scrollPending;
     const scheduleFallbackCheck = (delay: number) => {
         state.scheduledWork.timeout(checkHasScrolled, delay, "checkFinishedScrollFallback");
     };
@@ -221,7 +222,19 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 isEndAlignedLastItemTarget(ctx, isStillScrollingTo) &&
                 !completionState.isAtResolvedTarget &&
                 numChecks <= maxChecks;
-            if (shouldRetrySilentInitialNativeScroll) {
+            const isAnimatedMaintain = !!(
+                isStillScrollingTo.animated &&
+                isStillScrollingTo.isScrollToEnd &&
+                state.maintainingScrollAtEnd === "animated"
+            );
+            const didMaintainProgress = isAnimatedMaintain && Math.abs(state.scrollPending - previousScroll) > 0.1;
+            previousScroll = state.scrollPending;
+            if (didMaintainProgress && !completionState.isAtResolvedTarget) {
+                // A previous momentum-end event can schedule this check during the next coalesced animation.
+                // Keep its runway until native stops moving, rather than snapping to the latest measured end.
+                numChecks = 0;
+                scheduleFallbackCheck(100);
+            } else if (shouldRetrySilentInitialNativeScroll) {
                 const targetOffset =
                     getInitialScrollWatchdogTargetOffset(state) ?? isStillScrollingTo.targetOffset ?? 0;
                 const jiggleOffset =
@@ -236,7 +249,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 );
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
             } else if (shouldRetryUnalignedEndScroll) {
-                scrollToFallbackOffset(ctx, completionState.clampedTargetOffset);
+                scrollToFallbackOffset(ctx, completionState.clampedTargetOffset, isAnimatedMaintain);
                 scheduleFallbackCheck(100);
             } else if (
                 shouldFinishZeroTarget ||
