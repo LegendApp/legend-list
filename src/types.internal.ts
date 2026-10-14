@@ -179,6 +179,8 @@ export interface InternalState {
     deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
+    /** Data changed before any container was allocated, so the first allocation must recompute positions. */
+    didDataChangeBeforeAllocation?: boolean;
     didFinishInitialScroll?: boolean;
     didLoad?: boolean;
     didMeasureHeader?: boolean;
