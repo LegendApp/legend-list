@@ -365,6 +365,20 @@ describe("animated web scrolls resolve only once landed", () => {
     });
 
     describe("data changes during the scroll", () => {
+        it("retries against the clamped index and preserves alignment after data shrinks", async () => {
+            const h = setup();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50, viewOffset: 600 }));
+
+            h.browser.step(1000);
+            h.setData(40);
+
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(3300);
+            expect(h.scrollToCalls.at(-1)?.y).toBe(3300);
+        });
+
         it("clamps to the new last row when data shrinks below the target index", async () => {
             const h = setup();
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));

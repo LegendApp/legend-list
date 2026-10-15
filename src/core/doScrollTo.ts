@@ -4,6 +4,7 @@ import { getCurrentTargetOffset } from "@/core/checkFinishedScroll";
 import type { DoScrollToParams } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { scrollTo } from "@/core/scrollTo";
+import { clampScrollIndex } from "@/core/scrollToIndex";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { getItemSizeAtIndex } from "@/utils/getItemSize";
@@ -85,7 +86,7 @@ function retryLanding(
     // Bound retries: once exhausted or stalled, land with one instant scroll, which finishes on its own timer.
     const isLastRetry = retries >= SCROLL_LANDING_MAX_RETRIES || !madeProgress;
     const { averageSizeSnapshot: _averageSizeSnapshot, targetOffset: _targetOffset, ...target } = scrollingTo;
-    const index = target.index;
+    const index = target.index === undefined ? undefined : clampScrollIndex(target.index, ctx.state.props.data.length);
 
     scrollTo(ctx, {
         ...target,
@@ -94,6 +95,7 @@ function retryLanding(
         landingRetryFrom: currentOffset,
         ...(index !== undefined
             ? {
+                  index,
                   itemSize: getItemSizeAtIndex(ctx, index),
                   offset: calculateOffsetForIndex(ctx, index),
                   precomputedWithViewOffset: false,
