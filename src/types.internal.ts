@@ -340,6 +340,7 @@ export interface InternalState {
         onMomentumScrollBegin: LegendListPropsInternal["onMomentumScrollBegin"];
         onMomentumScrollEnd: LegendListPropsInternal["onMomentumScrollEnd"];
         onMetricsChange: LegendListPropsInternal["onMetricsChange"];
+        trackScrollMetrics: LegendListPropsInternal["trackScrollMetrics"];
         onUserScroll: LegendListPropsInternal["onUserScroll"];
         onScroll: LegendListPropsInternal["onScroll"];
         onScrollBeginDrag: LegendListPropsInternal["onScrollBeginDrag"];

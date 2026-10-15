@@ -151,7 +151,7 @@ describe("canonical scroll geometry", () => {
                 { totalSize: 1000 },
                 {
                     lastNativeScroll: 100,
-                    props: { data: ["row"], onMetricsChange: metrics },
+                    props: { data: ["row"], onMetricsChange: metrics, trackScrollMetrics: true },
                     queuedInitialLayout: true,
                     refScroller: {
                         current: hasSynchronousGetter ? { getCurrentScrollOffset: () => 300 } : null,
@@ -176,6 +176,7 @@ describe("canonical scroll geometry", () => {
                     contentInset: { bottom: 100, left: 0, right: 0, top: 0 },
                     data: ["a"],
                     onMetricsChange: metrics,
+                    trackScrollMetrics: true,
                 },
                 queuedInitialLayout: true,
                 scroll: 0,
@@ -324,6 +325,7 @@ describe("scroll ownership boundaries", () => {
                     data: ["a"],
                     keyExtractor: (item) => item,
                     onMetricsChange: metrics,
+                    trackScrollMetrics: true,
                 },
                 queuedInitialLayout: true,
                 scrollLength: 200,
@@ -338,6 +340,37 @@ describe("scroll ownership boundaries", () => {
         expect(metrics).toHaveBeenLastCalledWith(expect.objectContaining({ contentLength: 150, footerSize: 30 }));
         updateItemSizes(ctx, { itemKey: "a", size: { height: 170, width: 200 } });
         expect(metrics).toHaveBeenLastCalledWith(expect.objectContaining({ contentLength: 220 }));
+    });
+
+    it("reports only header and footer changes unless scroll metrics are tracked", () => {
+        for (const trackScrollMetrics of [false, true]) {
+            const metrics = mock(() => {});
+            const ctx = createMockContext(
+                { totalSize: 1000 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    endBuffered: 2,
+                    indexByKey: new Map([["a", 0]]),
+                    positions: [0],
+                    props: { data: ["a"], keyExtractor: (item) => item, onMetricsChange: metrics, trackScrollMetrics },
+                    queuedInitialLayout: true,
+                    scroll: 0,
+                    scrollLength: 200,
+                    sizes: new Map([["a", 100]]),
+                    sizesKnown: new Map([["a", 100]]),
+                    startBuffered: 2,
+                },
+            );
+            setHeaderSize(ctx, 20);
+            expect(metrics).toHaveBeenCalledTimes(1);
+            for (const offset of [10, 50, 100]) updateScroll(ctx, offset, true, { fromNativeScrollEvent: true });
+            updateItemSizes(ctx, { itemKey: "a", size: { height: 170, width: 200 } });
+            expect(metrics).toHaveBeenCalledTimes(trackScrollMetrics ? 5 : 1);
+            setFooterSize(ctx, 30);
+            expect(metrics).toHaveBeenCalledTimes(trackScrollMetrics ? 6 : 2);
+            expect(metrics).toHaveBeenLastCalledWith(expect.objectContaining({ footerSize: 30, headerSize: 20 }));
+        }
     });
 
     it("keeps following across an observed browser shrink clamp and interrupts real navigation below that clamp", () => {

@@ -177,6 +177,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onEndReachedThreshold = 0.5,
         onItemSizeChanged,
         onMetricsChange,
+        trackScrollMetrics,
         onUserScroll,
         onLayout: onLayoutProp,
         onLoad,
@@ -565,6 +566,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingLeft: stylePaddingLeftState,
         stylePaddingRight: stylePaddingRightState,
         stylePaddingTop: stylePaddingTopState,
+        trackScrollMetrics,
         useWindowScroll: useWindowScrollResolved,
     };
 
@@ -838,7 +840,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         state.lastMetrics = undefined;
         emitMetrics(ctx);
-    }, [ctx, onMetricsChange]);
+    }, [ctx, onMetricsChange, trackScrollMetrics]);
 
     useEffect(() => {
         const viewability = setupViewability({

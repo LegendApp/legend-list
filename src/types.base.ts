@@ -330,9 +330,17 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     onReady?: () => void;
 
     /**
-     * Called when list layout metrics change.
+     * Called when the header or footer size changes. Set `trackScrollMetrics` to also call it when any other
+     * metric changes, including on scroll.
      */
     onMetricsChange?: (metrics: LegendListMetrics) => void;
+
+    /**
+     * Calls `onMetricsChange` whenever any metric changes, including `scroll`, `distanceFromEnd`, `contentLength`,
+     * `scrollLength`, `isAtEnd` and `isFollowingEnd`. These can change on every scroll frame.
+     * @default false
+     */
+    trackScrollMetrics?: boolean;
 
     /**
      * Called when the first visible item changes. This is emitted from the core range calculation and is cheaper than

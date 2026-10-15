@@ -13,19 +13,23 @@ export function getDistanceFromEnd(ctx: StateContext) {
 
 export function emitMetrics(ctx: StateContext) {
     const { state } = ctx;
-    if (!state.props.onMetricsChange) return;
-    const contentLength = getContentSize(ctx);
+    const { onMetricsChange, trackScrollMetrics } = state.props;
+    if (!onMetricsChange) return;
+    const footerSize = peek$(ctx, "footerSize") || 0;
+    const headerSize = peek$(ctx, "headerSize") || 0;
+    const previous = state.lastMetrics;
+    // Other metrics can change every scroll frame, so only consumers that opt in are notified of them.
+    if (!trackScrollMetrics && previous?.footerSize === footerSize && previous.headerSize === headerSize) return;
     const metrics: LegendListMetrics = {
-        contentLength,
+        contentLength: getContentSize(ctx),
         distanceFromEnd: getDistanceFromEnd(ctx),
-        footerSize: peek$(ctx, "footerSize") || 0,
-        headerSize: peek$(ctx, "headerSize") || 0,
+        footerSize,
+        headerSize,
         isAtEnd: !!peek$(ctx, "isAtEnd"),
         isFollowingEnd: !!peek$(ctx, "isFollowingEnd"),
         scroll: getObservedScrollOffset(ctx),
         scrollLength: state.scrollLength,
     };
-    const previous = state.lastMetrics;
     let didChange = !previous;
     if (previous) {
         for (const key in metrics) {
@@ -37,6 +41,6 @@ export function emitMetrics(ctx: StateContext) {
     }
     if (didChange) {
         state.lastMetrics = metrics;
-        state.props.onMetricsChange(metrics);
+        onMetricsChange(metrics);
     }
 }
