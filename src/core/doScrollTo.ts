@@ -90,7 +90,7 @@ function retryLanding(
     scrollTo(ctx, {
         ...target,
         animated: !isLastRetry && Math.abs(landingOffset - currentOffset) > SCROLL_LANDING_SNAP_DISTANCE,
-        landingRetries: isLastRetry ? SCROLL_LANDING_MAX_RETRIES : retries,
+        landingRetries: retries,
         landingRetryFrom: currentOffset,
         ...(index !== undefined
             ? {
@@ -131,7 +131,7 @@ function listenForScrollEnd(
     const cleanup = () => {
         target.removeEventListener("scroll", onScroll);
         for (const type of USER_SCROLL_INPUT_EVENTS) {
-            target.removeEventListener(type, onUserInput);
+            target.removeEventListener(type, interrupt);
         }
 
         if (supportsScrollEnd) {
@@ -162,7 +162,6 @@ function listenForScrollEnd(
 
     const interrupt = () => {
         if (isCurrent()) {
-            scheduledWork.cancel("platformScrollCompletion");
             finishScrollTo(ctx, { reason: "interrupted" });
         }
     };
@@ -211,11 +210,10 @@ function listenForScrollEnd(
     };
 
     const onScrollEnd = () => finish("scrollend");
-    const onUserInput = () => interrupt();
 
     target.addEventListener("scroll", onScroll);
     for (const type of USER_SCROLL_INPUT_EVENTS) {
-        target.addEventListener(type, onUserInput);
+        target.addEventListener(type, interrupt);
     }
 
     if (supportsScrollEnd) {
