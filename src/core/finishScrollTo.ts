@@ -6,6 +6,7 @@ import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { LegendListScrollResult } from "@/types.base";
+import type { LegendListScrollResult } from "@/types.base";
 
 export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResult) {
     const state = ctx.state;

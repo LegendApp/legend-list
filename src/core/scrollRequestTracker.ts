@@ -3,6 +3,8 @@ import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { type StateContext, set$ } from "@/state/state";
 import type { LegendListScrollResult } from "@/types.base";
 import type { ScrollResolve } from "@/types.internal";
+import type { LegendListScrollResult } from "@/types.base";
+import type { ScrollResolve } from "@/types.internal";
 
 export interface ScrollRequestTracker {
     cancel(): void;

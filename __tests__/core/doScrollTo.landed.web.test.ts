@@ -173,6 +173,33 @@ describe("animated web scrolls resolve only once landed", () => {
             expect(h.scrollToCalls.at(-1)).toEqual({ animated: false, y: 5030 });
         });
 
+        it("settles a verified instant landing before later measurement can stale its target", async () => {
+            const h = setup();
+            let landed: { offset: number; target: number } | undefined;
+            const scroll = trackScroll(
+                h.ref.scrollToIndex({ animated: true, index: 50 }).then((result) => {
+                    landed = { offset: h.browser.offset, target: h.targetOffsetForIndex(50) };
+                    return result;
+                }),
+            );
+
+            h.browser.step(1000);
+            h.measure({ 30: 130 });
+            h.browser.settle();
+            await flushMicrotasks();
+
+            expect(h.scrollToCalls.at(-1)).toEqual({ animated: false, y: 5030 });
+            // Measurement after a completed instant landing belongs to the next layout.
+            h.measure({ 30: 330 });
+            h.clock.advance(100);
+            await flushMicrotasks();
+
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(landed?.offset).toBe(landed?.target);
+            expect(h.state.scrollingTo).toBeUndefined();
+        });
+
         it("tracks a variable-height target that measures late with viewPosition 1", async () => {
             const h = setup({ itemSize: (index) => 50 + (index % 5) * 30 });
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 40, viewPosition: 1 }));

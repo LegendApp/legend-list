@@ -77,6 +77,16 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         return;
     } else {
         state.scroll = offset;
+        // A landing retry has already moved the DOM synchronously. Settle while its measured
+        // target is still current before another frame can change layout or receive input.
+        if (
+            state.scrollingTo?.landingRetries &&
+            Math.abs((scroller.getCurrentScrollOffset?.() ?? Number.NaN) - offset) <= EDGE_POSITION_EPSILON
+        ) {
+            finishScrollTo(ctx);
+            return;
+        }
+
     }
 
     // Instant DOM scrolling is synchronous. Release ownership on the next
