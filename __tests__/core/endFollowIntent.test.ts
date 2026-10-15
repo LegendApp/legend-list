@@ -659,6 +659,29 @@ describe("end maintenance request ownership", () => {
         }
     });
 
+    it.each(["end", "index"])("retargets an explicit %s request after an unfinished reader jump", async (target) => {
+        const { ctx, frames } = setupMeasuredEnd();
+        ctx.state.props.maintainScrollAtEnd = false;
+        ctx.state.endBuffered = 2;
+        ctx.values.set("numContainers", 3);
+        ctx.values.set("numColumns", 1);
+        ctx.state.userScrollAnchorReset = { keys: new Set(["unmeasured-reader"]) };
+        const ref = createImperativeHandle(ctx);
+        const request =
+            target === "end"
+                ? ref.scrollToEnd({ animated: false })
+                : ref.scrollToIndex({ animated: false, index: 2, viewPosition: 1 });
+        try {
+            updateItemSizes(ctx, { itemKey: "tail", size: { height: 122, width: 200 } });
+            for (let count = 0; frames.length && count < 10; count++) frames.shift()?.(count * 16);
+            expect(ref.getState().scroll).toBe(222);
+            finishScrollTo(ctx);
+            await request;
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
     it("retargets measured-size intent before an end request completes with a preserved initial target", async () => {
         const { ctx, frames, observed } = setupMeasuredEnd();
         const data = ctx.state.props.data;

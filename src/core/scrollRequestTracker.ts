@@ -23,6 +23,7 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
                 state.pendingEndMeasurements = undefined;
                 state.visibleContentAnchor = undefined;
                 state.scrollElementTarget = undefined;
+                state.userScrollAnchorReset = undefined;
                 interruptMaintainScrollAtEnd(ctx);
             }
             state.scheduledWork.cancel("imperativeScrollReady");
