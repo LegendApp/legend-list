@@ -237,7 +237,8 @@ describe("Containers native", () => {
         );
 
         const props = (toJSON() as any)?.props;
-        expect(props?.style?.opacity).toBe(0);
+        expect(props?.style?.opacity).toBeUndefined();
+        expect(props?.style?.transform).toEqual([{ translateX: -100000 }]);
         expect(props?.pointerEvents).toBe("none");
         unmount();
     });
