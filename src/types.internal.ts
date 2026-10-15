@@ -105,6 +105,10 @@ type BootstrapInitialScrollSession = {
 
 type InternalScrollTarget = ScrollTarget & {
     isScrollToEnd?: boolean;
+    /** Web retries reissued after an animated scroll settled short of its recomputed target. */
+    landingRetries?: number;
+    /** Offset the latest landing retry started from, used to stop when the scroll makes no progress. */
+    landingRetryFrom?: number;
     waitForInitialScrollCompletionFrame?: boolean;
 };
 

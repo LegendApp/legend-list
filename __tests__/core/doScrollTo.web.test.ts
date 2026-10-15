@@ -149,6 +149,7 @@ describe("doScrollTo (web)", () => {
                 scrollTo: scrollerScrollTo,
             },
         } as any;
+        ctx.state.scrollingTo = { animated: true, offset: 80 };
 
         doScrollTo(ctx, { animated: true, horizontal: false, offset: 80 });
 

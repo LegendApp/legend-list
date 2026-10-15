@@ -33,7 +33,11 @@ export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResul
         }
 
         if (PlatformAdjustBreaksScroll) {
-            state.scrollAdjustHandler.commitPendingAdjust(scrollingTo);
+            // After user input, keep the deferred adjustment relative to where the user is instead of
+            // retargeting the abandoned index.
+            state.scrollAdjustHandler.commitPendingAdjust(
+                result?.reason === "interrupted" ? { ...scrollingTo, index: undefined } : scrollingTo,
+            );
         }
 
         const complete = () => {

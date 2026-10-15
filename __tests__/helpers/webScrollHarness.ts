@@ -155,6 +155,9 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
     const scrollToCalls: Array<{ animated: boolean; y: number }> = [];
     let offset = 0;
     let destination: number | undefined;
+    const hooks: { ignoreAnimatedScrolls: boolean; onScrollEvent?: (offset: number) => void } = {
+        ignoreAnimatedScrolls: false,
+    };
     const getMaxOffset = () => Math.max(0, getContentSize(ctx) - state.scrollLength);
     const clamp = (value: number) => Math.max(0, Math.min(value, getMaxOffset()));
 
@@ -167,6 +170,7 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
             },
         } as any);
         dispatch("scroll");
+        hooks.onScrollEvent?.(offset);
     };
 
     const scroller = {
@@ -178,7 +182,7 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
             scrollToCalls.push({ animated: !!animated, y });
             const next = clamp(y);
             if (animated) {
-                destination = next;
+                if (!hooks.ignoreAnimatedScrolls) destination = next;
             } else {
                 destination = undefined;
                 offset = next;
@@ -234,12 +238,14 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
         /** Advances the smooth scroll by one animation frame of `px` pixels. */
         step(px: number) {
             if (destination === undefined) return;
+            // Browsers clamp a smooth scroll to the current content size as it shrinks.
+            destination = clamp(destination);
             const remaining = destination - offset;
             if (Math.abs(remaining) <= px) {
                 browser.settle();
                 return;
             }
-            offset += Math.sign(remaining) * px;
+            offset = clamp(offset + Math.sign(remaining) * px);
             emitScroll();
         },
     };
@@ -248,6 +254,8 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
         browser,
         clock,
         ctx,
+        /** Test controls: a browser that ignores smooth scrolls, and a callback after each scroll event. */
+        hooks,
         /** Changes measured sizes, recomputing positions as late measurement would. */
         measure(changes: Record<number, number>) {
             for (const index in changes) {
