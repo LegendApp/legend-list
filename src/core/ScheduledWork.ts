@@ -10,6 +10,7 @@ export type ScheduledWorkKey =
     | "mvcpRecalculate"
     | "platformScrollCompletion"
     | "preservedInitialScroll"
+    | "reachedEdgeScrollIdle"
     | "renderRangeProjection";
 
 interface Work {

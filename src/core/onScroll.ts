@@ -7,6 +7,7 @@ import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
+import { prepareReachedEdgeWhenScrollIdle } from "@/utils/edgeReachedGate";
 import { toLogicalHorizontalOffset } from "@/utils/rtl";
 
 function trackInitialScrollNativeProgress(state: StateContext["state"], newScroll: number) {
@@ -108,6 +109,9 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     state.scrollPending = newScroll;
 
     updateScroll(ctx, newScroll, insetChanged, { fromNativeScrollEvent: true });
+    if (Platform.OS !== "web") {
+        prepareReachedEdgeWhenScrollIdle(ctx);
+    }
     trackInitialScrollNativeProgress(state, newScroll);
     clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx);
 

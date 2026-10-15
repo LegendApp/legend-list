@@ -1,3 +1,4 @@
+import { SCROLL_END_FALLBACK_MS } from "@/constants";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -52,6 +53,23 @@ export function prepareReachedEdgeForNextUserScroll(ctx: StateContext) {
     if (ctx.state.edgeReachedGate) {
         ctx.state.edgeReachedGate = "prepared";
     }
+}
+
+export function prepareReachedEdgeWhenScrollIdle(ctx: StateContext) {
+    const state = ctx.state;
+    if (state.edgeReachedGate !== "closed") {
+        return;
+    }
+
+    state.scheduledWork.timeout(
+        () => {
+            if (!state.isDragging) {
+                prepareReachedEdgeForNextUserScroll(ctx);
+            }
+        },
+        SCROLL_END_FALLBACK_MS,
+        "reachedEdgeScrollIdle",
+    );
 }
 
 export function beginReachedEdgeUserScroll(ctx: StateContext, scrollDelta: number): ReachedEdge | undefined {
