@@ -301,6 +301,33 @@ describe("animated web scrolls resolve only once landed", () => {
             expect(h.scrollToCalls).toHaveLength(1);
         });
 
+        it("does not treat the previous animation's last frame after a reversing retry as user input", async () => {
+            const h = setup();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+
+            // A slow scroll down is still short of 5000 when rows above shrink and the max timeout retries upward.
+            while (h.clock.now < 1400) {
+                h.browser.step(130);
+                h.clock.advance(48);
+            }
+            h.measure(Object.fromEntries(Array.from({ length: 30 }, (_, i) => [i, 50])));
+            while (h.scrollToCalls.length < 2) {
+                h.browser.step(130);
+                h.clock.advance(48);
+            }
+            const reversedFrom = h.browser.offset;
+            expect(h.scrollToCalls.at(-1)?.y).toBeLessThan(reversedFrom);
+
+            // Chrome can carry the old downward velocity into the first frame of the reissued scroll.
+            h.browser.moveTo(reversedFrom + 30);
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(false);
+
+            await runUntilResolved(h, scroll);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(h.targetOffsetForIndex(50));
+        });
+
         it("resolves interrupted when user input arrives during a landing retry", async () => {
             const h = setup();
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));

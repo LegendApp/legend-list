@@ -123,6 +123,8 @@ function listenForScrollEnd(
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     let settled = false;
     let lastOffset = readOffset();
+    // A reissued smooth scroll can keep the previous animation's direction for a frame or two.
+    let hasApproached = false;
     // Fallback in case scrollend fires late or never fires in this browser.
     const maxTimeout = setTimeout(() => finish("max"), SCROLL_END_MAX_MS);
 
@@ -188,11 +190,15 @@ function listenForScrollEnd(
 
     const onScroll = () => {
         const offset = readOffset();
-        // Smooth scrolls only move toward their destination. Moving away means scrollbar or keyboard
-        // input took over, unless the browser clamped to a shrinking end of content.
+        const distance = Math.abs(offset - targetOffset);
+        const lastDistance = Math.abs(lastOffset - targetOffset);
+        // Once moving toward the destination, smooth scrolls do not turn back. Moving away then means
+        // scrollbar or keyboard input took over, unless the browser clamped to a shrinking end of content.
         const movedAway =
-            Math.abs(offset - targetOffset) > Math.abs(lastOffset - targetOffset) + EDGE_POSITION_EPSILON &&
+            hasApproached &&
+            distance > lastDistance + EDGE_POSITION_EPSILON &&
             offset < readMaxOffset() - EDGE_POSITION_EPSILON;
+        hasApproached ||= distance < lastDistance;
         lastOffset = offset;
         if (movedAway) {
             interrupt();
