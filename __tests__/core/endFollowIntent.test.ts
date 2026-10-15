@@ -77,6 +77,7 @@ describe("end follow intent", () => {
         handle.reportContentInset({ bottom: 180 });
         handle.reportContentInset({ bottom: 0 });
         expect(maintain).toHaveBeenCalledTimes(2);
+        ctx.state.scroll = 400;
         follow.interruptMaintainScrollAtEnd(ctx);
         handle.reportContentInset({ bottom: 200 });
         expect(handle.getState().isFollowingEnd).toBe(false);
@@ -820,6 +821,22 @@ describe("end follow rearm after settling", () => {
             const ctx = setupAtEnd(platform);
             settleExplicitScroll(ctx, 400);
             expect(follow.doMaintainScrollAtEnd(ctx)).toBe(false);
+        });
+
+        it(`keeps rearmed intent when the next measurement moves the end outside the threshold on ${platform}`, () => {
+            const ctx = setupAtEnd(platform);
+            Object.assign(ctx.state, {
+                endBuffered: 2,
+                indexByKey: new Map([["row", 0]]),
+                positions: [0],
+                sizes: new Map([["row", 1000]]),
+                sizesKnown: new Map([["row", 1000]]),
+                startBuffered: 2,
+            });
+            settleExplicitScroll(ctx, 790);
+            updateItemSizes(ctx, { itemKey: "row", size: { height: 1200, width: 200 } });
+            expect(ctx.values.get("isFollowingEnd")).toBe(true);
+            expect(ctx.state.maintainingScrollAtEnd).toBe(platform === "web" ? "instant" : "pending-instant");
         });
     }
 

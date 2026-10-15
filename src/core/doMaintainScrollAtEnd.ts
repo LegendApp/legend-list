@@ -44,6 +44,8 @@ export function rearmEndFollowIfSettled(ctx: StateContext) {
         peek$(ctx, "isWithinMaintainScrollAtEndThreshold")
     ) {
         state.endFollowInterrupted = false;
+        // Retain settled intent if the next content measurement moves the end beyond the threshold.
+        if (state.props.maintainScrollAtEnd) set$(ctx, "isFollowingEnd", true);
     }
 }
 
