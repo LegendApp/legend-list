@@ -6,7 +6,7 @@ import { ContainerLayoutCoordinator } from "@/components/ContainerLayoutCoordina
 import { ContainerSlot } from "@/components/ContainerSlot";
 import { useFreshDataTransitionVisibility } from "@/hooks/useFreshDataTransitionVisibility";
 import { useValue$ } from "@/hooks/useValue$";
-import { useArr$, useStateContext } from "@/state/state";
+import { peek$, useArr$, useStateContext } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 
@@ -85,7 +85,10 @@ export const Containers = typedMemo(function Containers<ItemT>({
     stickyHeaderConfig,
     getRenderedItem,
 }: ContainersProps<ItemT>) {
-    const [numContainersPooled] = useArr$(["numContainersPooled"]);
+    const ctx = useStateContext();
+    // `lastPositionUpdate` is subscribed to purely to re-render when container assignments
+    // change — the same signal the web DOM reordering in `useDOMOrder` listens to.
+    const [numContainersPooled] = useArr$(["numContainersPooled", "lastPositionUpdate"]);
 
     const containers: React.ReactNode[] = [];
     for (let i = 0; i < numContainersPooled; i++) {
@@ -104,9 +107,26 @@ export const Containers = typedMemo(function Containers<ItemT>({
         );
     }
 
+    // Render the children in the order of the items they hold. Containers are a recycled
+    // pool, so their creation order stops matching the screen as soon as items reorder.
+    // Position on screen comes from each container's own absolute offset, so this moves
+    // nothing visually — but the native view order, and therefore the ACCESSIBILITY order,
+    // is taken from child order, and a screen reader would otherwise walk a reordered list
+    // in the wrong sequence. Web solves the same problem by sorting the DOM in `useDOMOrder`.
+    //
+    // Children are keyed by container id, so React reorders the existing elements rather
+    // than remounting them, leaving recycling untouched.
+    const containersInItemOrder = containers
+        .map((container, i) => ({
+            container,
+            index: peek$(ctx, `containerItemIndex${i}`) ?? Number.MAX_SAFE_INTEGER,
+        }))
+        .sort((a, b) => a.index - b.index)
+        .map(({ container }) => container);
+
     return (
         <ContainersLayer freshDataTransitionEpoch={freshDataTransitionEpoch} horizontal={horizontal}>
-            {containers}
+            {containersInItemOrder}
         </ContainersLayer>
     );
 });
