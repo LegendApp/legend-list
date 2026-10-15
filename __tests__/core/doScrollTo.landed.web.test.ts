@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
+import { scrollToEnd } from "@/core/scrollToEnd";
 import { Platform } from "@/platform/Platform";
 import {
     createWebScrollHarness,
@@ -343,6 +344,27 @@ describe("animated web scrolls resolve only once landed", () => {
     });
 
     describe("interruption and supersession", () => {
+        it("clears queued end-follow work when touch input interrupts an active end scroll", async () => {
+            const h = setup();
+            h.ctx.scrollToEnd = (options) => scrollToEnd(h.ctx, options);
+            h.state.props.maintainScrollAtEnd = { animated: true } as any;
+            h.state.didFinishInitialScroll = true;
+            h.state.didContainersLayout = true;
+            const scroll = trackScroll(h.ref.scrollToEnd({ animated: true }));
+            h.browser.step(1000);
+            h.state.pendingMaintainScrollAtEnd = true;
+            h.state.maintainingScrollAtEnd = "animated";
+
+            h.browser.interruptByUser("touchstart");
+            await flushMicrotasks();
+            expect(scroll.value).toEqual({ reason: "interrupted" });
+            expect(h.state.pendingMaintainScrollAtEnd).toBe(false);
+            expect(h.state.maintainingScrollAtEnd).toBeUndefined();
+
+            h.clock.advance(3000);
+            expect(h.scrollToCalls).toHaveLength(1);
+        });
+
         for (const input of ["wheel", "touchstart"]) {
             it(`resolves interrupted without retrying when ${input} input stops the scroll`, async () => {
                 const h = setup();

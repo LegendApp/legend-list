@@ -1,6 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
-import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { doMaintainScrollAtEnd, finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
@@ -23,6 +23,10 @@ export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResul
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
+
+        if (result?.reason === "interrupted" && (state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd)) {
+            finishMaintainScrollAtEnd(ctx);
+        }
 
         state.scrollHistory.length = 0;
         state.scrollingTo = undefined;
