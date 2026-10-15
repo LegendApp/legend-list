@@ -5,8 +5,9 @@ import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
+import type { LegendListScrollResult } from "@/types.base";
 
-export function finishScrollTo(ctx: StateContext) {
+export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResult) {
     const state = ctx.state;
     if (state?.scrollingTo) {
         cancelScrollCompletionChecks(state);
@@ -36,7 +37,7 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         const complete = () => {
-            resolvePendingScroll?.();
+            resolvePendingScroll?.(result);
             if (state.pendingMaintainScrollAtEnd) {
                 state.maintainingScrollAtEnd = undefined;
                 doMaintainScrollAtEnd(ctx, { immediate: !!scrollingTo.isInitialScroll });

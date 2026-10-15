@@ -27,7 +27,8 @@ import {
     type StateContext,
     set$,
 } from "@/state/state";
-import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
+import type { LegendListAverageItemSize, LegendListRef, LegendListScrollResult } from "@/types.base";
+import type { ScrollResolve } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { areKnownOrFixedItemSizesAvailable, getItemSizeAtIndex } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -119,7 +120,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         state.scheduledWork.frame(check, "imperativeScrollReady");
     };
 
-    const runScrollRequest = (token: number, resolve: () => void, run: () => boolean, isReady = () => true) => {
+    const runScrollRequest = (token: number, resolve: ScrollResolve, run: () => boolean, isReady = () => true) => {
         const runNow = () => scrollRequestTracker.runNow(token, resolve, run);
 
         if (isSettlingAfterDataChange() || !isReady()) {
@@ -129,7 +130,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         }
     };
     const runScrollWithPromise = (run: () => boolean, isReady = () => true) =>
-        new Promise<void>((resolve) => {
+        new Promise<LegendListScrollResult>((resolve) => {
             const token = scrollRequestTracker.start(resolve);
 
             supersedeInitialScroll(ctx);
@@ -321,7 +322,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
                 return false;
             }),
         scrollToEnd: (options) =>
-            new Promise<void>((resolve) => {
+            new Promise<LegendListScrollResult>((resolve) => {
                 const token = scrollRequestTracker.start(resolve);
                 state.endFollowInterrupted = false;
                 if (state.props.maintainScrollAtEnd) set$(ctx, "isFollowingEnd", true);

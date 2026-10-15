@@ -11,6 +11,7 @@ import type {
     LegendListMetrics,
     LegendListPropsBase,
     LegendListRenderItemProps,
+    LegendListScrollResult,
     NativeScrollEvent,
     NativeSyntheticEvent,
     ScrollIndexWithOffsetAndContentOffset,
@@ -72,6 +73,8 @@ export interface ThresholdSnapshot {
 }
 
 export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";
+
+export type ScrollResolve = (result?: LegendListScrollResult) => void;
 
 export interface ScrollTarget {
     averageSizeSnapshot?: Record<string, number>;
@@ -252,11 +255,11 @@ export interface InternalState {
     pendingDataComparison?: PendingDataComparison;
     pendingScrollToEnd?: {
         options?: ScrollToEndOptions;
-        resolve: () => void;
+        resolve: ScrollResolve;
         token: number;
     };
     pendingTotalSize?: number;
-    pendingScrollResolve?: (() => void) | undefined;
+    pendingScrollResolve?: ScrollResolve | undefined;
     runPendingScrollToEnd?: () => void;
     positions: Array<number | undefined>;
     positionsAreCurrent?: boolean;

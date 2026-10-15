@@ -21,7 +21,7 @@ export function interruptMaintainScrollAtEnd(ctx: StateContext) {
         (maintaining && state.scrollingTo?.isScrollToEnd)
     );
     if (cancelActiveScroll) {
-        cancelImperativeScroll(state);
+        cancelImperativeScroll(state, "interrupted");
         set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling);
     }
     if (maintaining || state.pendingMaintainScrollAtEnd) {
