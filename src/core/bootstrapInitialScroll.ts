@@ -1,3 +1,4 @@
+import { doScrollTo } from "@/core/doScrollTo";
 import { getEndAlignedViewOffset, isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
@@ -466,8 +467,16 @@ function schedulePreservedEndAnchorCorrectionFrame(
             // observed position, not from an already advanced cached target.
             if (Platform.OS === "web") {
                 state.scroll = getObservedBootstrapInitialScrollOffset(state);
+                requestAdjust(ctx, offsetDiff);
+            } else {
+                // Native may already have clamped the resized viewport before its scroll event.
+                // An absolute target avoids applying the same movement again through MVCP.
+                doScrollTo(ctx, {
+                    animated: false,
+                    horizontal: state.props.horizontal,
+                    offset: resolveInitialScrollOffset(ctx, state.initialScroll!),
+                });
             }
-            requestAdjust(ctx, offsetDiff);
         }
 
         schedulePreservedEndAnchorCorrectionFrame(ctx, correction);
