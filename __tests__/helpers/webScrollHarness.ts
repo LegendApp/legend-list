@@ -146,9 +146,9 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
     if (supportsScrollEnd) {
         eventTarget.onscrollend = null;
     }
-    const dispatch = (type: string) => {
+    const dispatch = (type: string, event: Record<string, unknown> = {}) => {
         for (const listener of [...(listeners.get(type) ?? [])]) {
-            listener({ type });
+            listener({ ...event, type });
         }
     };
 
@@ -204,6 +204,9 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
         interruptByUser(type = "wheel") {
             dispatch(type);
             destination = undefined;
+        },
+        keyDown(key: string, event: Record<string, unknown> = {}) {
+            dispatch("keydown", { ...event, key });
         },
         /** Moves the scroll position without a smooth scroll in progress, e.g. a user drag. */
         moveTo(next: number) {

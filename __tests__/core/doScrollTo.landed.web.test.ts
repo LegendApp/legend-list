@@ -344,6 +344,35 @@ describe("animated web scrolls resolve only once landed", () => {
     });
 
     describe("interruption and supersession", () => {
+        it("detects keyboard scrolling toward the target before any animation progress", async () => {
+            const h = setup();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+
+            h.browser.keyDown("PageDown");
+            h.browser.interruptByUser("none");
+            h.browser.moveTo(500);
+            h.clock.advance(3000);
+            await flushMicrotasks();
+
+            expect(scroll.value).toEqual({ reason: "interrupted" });
+            expect(h.scrollToCalls).toHaveLength(1);
+        });
+
+        it("ignores typing and prevented keyboard scrolling", async () => {
+            const h = setup();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+
+            h.browser.keyDown("a");
+            h.browser.keyDown("PageDown", { defaultPrevented: true });
+            h.browser.keyDown("ArrowDown", { target: { closest: () => ({}) } });
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(false);
+
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+        });
+
         it("clears queued end-follow work when touch input interrupts an active end scroll", async () => {
             const h = setup();
             h.ctx.scrollToEnd = (options) => scrollToEnd(h.ctx, options);

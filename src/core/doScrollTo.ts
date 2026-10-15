@@ -18,6 +18,7 @@ const SCROLL_LANDING_MAX_RETRIES = 3;
 // Remaining distances at or below this land with an instant scroll instead of another animation.
 const SCROLL_LANDING_SNAP_DISTANCE = 50;
 const USER_SCROLL_INPUT_EVENTS = ["wheel", "touchstart"];
+const USER_SCROLL_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End", " "];
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 type ScrollEventTarget = {
     addEventListener(type: string, listener: (...args: any[]) => void): void;
@@ -107,7 +108,7 @@ function retryLanding(
     const madeProgress =
         scrollingTo.landingRetryFrom === undefined ||
         Math.abs(currentOffset - scrollingTo.landingRetryFrom) > EDGE_POSITION_EPSILON;
-    // Bound retries: once exhausted or stalled, land with one instant scroll, which finishes on its own timer.
+    // Bound retries: once exhausted or stalled, land with one instant scroll.
     const isLastRetry = retries >= SCROLL_LANDING_MAX_RETRIES || !madeProgress;
     const { averageSizeSnapshot: _averageSizeSnapshot, targetOffset: _targetOffset, ...target } = scrollingTo;
     const index = target.index === undefined ? undefined : clampScrollIndex(target.index, ctx.state.props.data.length);
@@ -159,6 +160,7 @@ function listenForScrollEnd(
         for (const type of USER_SCROLL_INPUT_EVENTS) {
             target.removeEventListener(type, interrupt);
         }
+        target.removeEventListener("keydown", onKeyDown);
 
         if (supportsScrollEnd) {
             target.removeEventListener("scrollend", onScrollEnd);
@@ -189,6 +191,18 @@ function listenForScrollEnd(
     const interrupt = () => {
         if (isCurrent()) {
             finishScrollTo(ctx, { reason: "interrupted" });
+        }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+        if (
+            !event.defaultPrevented &&
+            USER_SCROLL_KEYS.includes(event.key) &&
+            !(event.target as Element | null)?.closest?.(
+                "input, textarea, select, [contenteditable]:not([contenteditable='false'])",
+            )
+        ) {
+            interrupt();
         }
     };
 
@@ -245,6 +259,7 @@ function listenForScrollEnd(
     for (const type of USER_SCROLL_INPUT_EVENTS) {
         target.addEventListener(type, interrupt);
     }
+    target.addEventListener("keydown", onKeyDown);
 
     if (supportsScrollEnd) {
         target.addEventListener("scrollend", onScrollEnd);
