@@ -5,6 +5,7 @@ export type ScheduledWorkKey =
     | "checkFinishedScrollFallback"
     | "checkFinishedScrollFrame"
     | "checkFinishedScrollRetryFrame"
+    | "endFollowRearm"
     | "fullDrawDistancePrewarm"
     | "ignoreScrollFromMVCP"
     | "imperativeScrollReady"

@@ -38,6 +38,7 @@ export function rearmEndFollowIfSettled(ctx: StateContext) {
         state.endFollowInterrupted &&
         !state.isDragging &&
         !state.isMomentumScrolling &&
+        !state.scheduledWork.has("endFollowRearm") &&
         !state.scrollingTo &&
         !state.pendingScrollResolve &&
         !ctx.scrollRequestTracker?.isWaitingToRun() &&

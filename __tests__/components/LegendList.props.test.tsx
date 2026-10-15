@@ -13,6 +13,8 @@ import * as calculateModule from "../../src/core/calculateItemsInView";
 import * as followModule from "../../src/core/doMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { updateScroll } from "../../src/core/updateScroll";
+import { Platform } from "../../src/platform/Platform";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
@@ -1935,6 +1937,53 @@ describe("LegendList props behavior", () => {
         expect(state.isMomentumScrolling).toBe(false);
         rendered.unmount();
     });
+
+    it.each(["ios", "android"] as const)(
+        "waits for the drag-to-momentum handoff before rearming on %s",
+        async (platform) => {
+            Platform.OS = platform;
+            const { LegendList } = await import("../../src/components/LegendList?end-follow-momentum-handoff");
+            const rendered = render(<LegendList data={["row"]} maintainScrollAtEnd renderItem={() => null} />);
+            const ctx = await getContextFromRender();
+            Object.assign(ctx.state, {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                queuedInitialLayout: true,
+                scroll: 800,
+                scrollLength: 200,
+                totalSize: 1000,
+                triggerCalculateItemsInView: () => {},
+            });
+            set$(ctx, "totalSize", 1000);
+            const frames: FrameRequestCallback[] = [];
+            globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+            const flushFrames = () => frames.splice(0).forEach((callback) => callback(0));
+
+            act(() => {
+                lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+                updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
+                lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
+                // Layout checks can run between drag-end and momentum-begin.
+                updateScroll(ctx, 790, true);
+                expect(ctx.state.endFollowInterrupted).toBe(true);
+                lastListProps.onMomentumScrollBegin({ nativeEvent: {} });
+                flushFrames();
+                expect(followModule.doMaintainScrollAtEnd(ctx)).toBe(false);
+                updateScroll(ctx, 600, true, { fromNativeScrollEvent: true });
+                lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
+                expect(followModule.doMaintainScrollAtEnd(ctx)).toBe(false);
+
+                // A release without momentum must still rearm once the handoff frame passes.
+                lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+                updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
+                lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
+                flushFrames();
+                expect(ctx.state.endFollowInterrupted).toBe(false);
+                expect(peek$(ctx, "isFollowingEnd")).toBe(true);
+            });
+            rendered.unmount();
+        },
+    );
 
     it("allocates an alwaysRender pin without changing data or extraData", async () => {
         const data = Array.from({ length: 100 }, (_, index) => ({ id: `item-${index}` }));

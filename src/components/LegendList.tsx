@@ -922,7 +922,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     "isScrollActive",
                     !!state.isMomentumScrolling || !!state.scrollingTo || !!state.pendingScrollResolve,
                 );
-                rearmEndFollowIfSettled(ctx);
+                // Momentum-begin follows drag-end. Keep the interruption through that handoff.
+                state.scheduledWork.frame(() => rearmEndFollowIfSettled(ctx), "endFollowRearm");
                 state.props.onScrollEndDrag?.(event as any);
             },
         }),
