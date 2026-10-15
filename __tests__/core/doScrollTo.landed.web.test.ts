@@ -58,6 +58,55 @@ afterEach(() => {
 
 describe("animated web scrolls resolve only once landed", () => {
     describe("late measurement", () => {
+        it("does not resolve while passing a recomputed target on the way to the issued destination", async () => {
+            const h = setup();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+
+            h.browser.step(1000);
+            h.measure({ 20: 0, 21: 0, 22: 0, 23: 0, 24: 0 });
+            h.browser.step(3500);
+            h.clock.tick();
+            await flushMicrotasks();
+            expect(h.browser.offset).toBe(4500);
+            expect(h.browser.destination).toBe(5000);
+            expect(scroll.resolved).toBe(false);
+
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(4500);
+            expect(h.browser.destination).toBeUndefined();
+        });
+
+        it("rechecks an already aligned request when measurement moves its target before the next frame", async () => {
+            const h = setup();
+            h.browser.moveTo(5000);
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+            h.measure({ 20: 600 });
+
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(5500);
+        });
+
+        it("stops the old animation when idle fires while it is passing the recomputed target", async () => {
+            const h = setup();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+
+            h.browser.step(1000);
+            h.measure({ 20: 0, 21: 0, 22: 0, 23: 0, 24: 0 });
+            h.browser.step(3500);
+            h.clock.advance(200);
+            await flushMicrotasks();
+
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(4500);
+            expect(h.browser.destination).toBeUndefined();
+            expect(h.scrollToCalls.at(-1)).toEqual({ animated: false, y: 4500 });
+        });
+
         it("retargets when rows above the target measure taller mid-scroll", async () => {
             const h = setup();
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));

@@ -144,7 +144,14 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 
     const { state } = ctx;
     const completionState = getResolvedScrollCompletionState(ctx, scrollingTo);
+    // Passing a newly measured target does not stop the browser's animation toward the issued offset.
+    const isPassingWebTarget =
+        Platform.OS === "web" &&
+        scrollingTo.animated &&
+        !scrollingTo.isInitialScroll &&
+        Math.abs(completionState.clampedTargetOffset - (scrollingTo.targetOffset ?? scrollingTo.offset)) > 1;
     if (
+        !isPassingWebTarget &&
         completionState.isAtResolvedTarget &&
         hasScrollCompletionOwnership(state, {
             clampedTargetOffset: completionState.clampedTargetOffset,

@@ -49,7 +49,21 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         if (Math.abs((scroller.getCurrentScrollOffset?.() ?? Number.NaN) - targetOffset) <= EDGE_POSITION_EPSILON) {
             const targetToken = state.scrollingTo;
             state.scheduledWork.frame(() => {
-                if (targetToken === state.scrollingTo) finishScrollTo(ctx);
+                if (targetToken && targetToken === state.scrollingTo) {
+                    const currentOffset = scroller.getCurrentScrollOffset!();
+                    const landingOffset = Math.min(
+                        getCurrentTargetOffset(ctx, targetToken),
+                        scroller.getMaxScrollOffset?.() ?? Number.POSITIVE_INFINITY,
+                    );
+                    if (
+                        targetToken.isInitialScroll ||
+                        Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON
+                    ) {
+                        finishScrollTo(ctx);
+                    } else {
+                        retryLanding(ctx, targetToken, currentOffset, landingOffset);
+                    }
+                }
             }, "platformScrollCompletion");
             return;
         }
@@ -173,15 +187,19 @@ function listenForScrollEnd(
         const currentOffset = readOffset();
         // Rows that measure during the scroll move an index target, so compare against where it is now.
         const landingOffset = Math.min(getCurrentTargetOffset(ctx, targetToken), readMaxOffset());
+        const isNearTarget = Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON;
         // Initial scrolls keep their own completion path; scrollTo does not dispatch them on web.
-        if (Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON || targetToken.isInitialScroll) {
+        if (
+            (isNearTarget && Math.abs(targetOffset - landingOffset) <= EDGE_POSITION_EPSILON) ||
+            targetToken.isInitialScroll
+        ) {
             scheduledWork.cancel("platformScrollCompletion");
             finishScrollTo(ctx);
             return;
         }
         // Some browsers emit scrollend before smooth scrolling actually settles.
         // Ignore early scrollend and rely on subsequent scroll/idle events.
-        if (reason === "scrollend" && Math.abs(currentOffset - targetOffset) > EDGE_POSITION_EPSILON) {
+        if (reason === "scrollend" && !isNearTarget && Math.abs(currentOffset - targetOffset) > EDGE_POSITION_EPSILON) {
             return;
         }
 
