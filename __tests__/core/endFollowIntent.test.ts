@@ -558,7 +558,7 @@ describe("end maintenance request ownership", () => {
                 });
                 finishScrollTo(ctx);
                 follow.doMaintainScrollAtEnd(ctx);
-                expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+                expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
                 updateItemSizes(ctx, { itemKey: "tail", size: { height: 122, width: 200 } });
                 expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
                 expect(ctx.state.didFinishInitialScroll).toBe(false);

@@ -61,8 +61,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
         } = state;
         if (
             Platform.OS === "web" &&
-            options?.immediate &&
-            !didFinishInitialScroll &&
+            (!didFinishInitialScroll || state.scrollingTo?.isInitialScroll) &&
             maintainScrollAtEnd &&
             !state.endFollowInterrupted &&
             !ctx.scrollRequestTracker?.isWaitingToRun() &&

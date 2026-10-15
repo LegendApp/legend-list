@@ -280,6 +280,31 @@ describe("doMaintainScrollAtEnd", () => {
             expect(mockRunTrackedScrollToEnd).not.toHaveBeenCalled();
         });
 
+        it.each([false, true])("replays footer growth through initial end correction (finished: %s)", (finished) => {
+            mockState.props.data = [{ id: "tail" }];
+            mockState.didFinishInitialScroll = finished;
+            mockState.initialScroll = {
+                index: 0,
+                preserveForBottomPadding: true,
+                viewOffset: -188,
+                viewPosition: 1,
+            };
+            mockState.scrollingTo = { animated: false, isInitialScroll: true, offset: 700 };
+            mockCtx.values.set("footerSize", 212);
+
+            // Footer layout uses the deferred path while the initial target
+            // still includes the previous dataset's footer height.
+            expect(doMaintainScrollAtEnd(mockCtx)).toBe(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+
+            finishScrollTo(mockCtx);
+
+            expect(mockState.didFinishInitialScroll).toBe(true);
+            expect(scrollToEndSpy).toHaveBeenCalledTimes(1);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+        });
+
         it("should handle didContainersLayout being undefined", () => {
             mockState.didContainersLayout = mockState.didFinishInitialScroll = undefined;
             mockCtx.values.set("readyToRender", undefined);
