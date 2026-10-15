@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { checkResetContainers } from "../../src/core/checkResetContainers";
 import * as follow from "../../src/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "../../src/core/finishInitialScroll";
@@ -319,7 +320,11 @@ describe("scroll ownership boundaries", () => {
                 endBuffered: 2,
                 indexByKey: new Map([["a", 0]]),
                 positions: [0],
-                props: { data: ["a"], keyExtractor: (item) => item, onMetricsChange: metrics },
+                props: {
+                    data: ["a"],
+                    keyExtractor: (item) => item,
+                    onMetricsChange: metrics,
+                },
                 queuedInitialLayout: true,
                 scrollLength: 200,
                 sizes: new Map([["a", 100]]),
@@ -735,4 +740,83 @@ describe("end maintenance request ownership", () => {
             ctx.state.scheduledWork.dispose();
         }
     });
+});
+
+describe("end follow rearm after settling", () => {
+    function setupAtEnd(platform: "web" | "ios" | "android") {
+        Platform.OS = platform;
+        globalThis.requestAnimationFrame = () => 1;
+        const ctx = createMockContext(
+            { isWithinMaintainScrollAtEndThreshold: true, totalSize: 1000 },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                props: { data: ["row"], maintainScrollAtEnd: true, maintainScrollAtEndThreshold: 0.1 },
+                queuedInitialLayout: true,
+                scroll: 800,
+                scrollLength: 200,
+            },
+        );
+        ctx.scrollToEnd = mock(() => true);
+        return ctx;
+    }
+
+    function settleExplicitScroll(ctx: ReturnType<typeof setupAtEnd>, offset: number) {
+        const tracker = getScrollRequestTracker(ctx);
+        const resolve = mock(() => {});
+        const token = tracker.start(resolve);
+        tracker.runNow(token, resolve, () => {
+            ctx.state.scrollingTo = { animated: false, offset };
+            return true;
+        });
+        updateScroll(ctx, offset, true);
+        finishScrollTo(ctx);
+        expect(resolve).toHaveBeenCalled();
+    }
+
+    for (const platform of ["web", "ios", "android"] as const) {
+        for (const offset of [800, 790]) {
+            it(`follows after an explicit scroll settles at ${offset} on ${platform}`, () => {
+                const ctx = setupAtEnd(platform);
+                settleExplicitScroll(ctx, offset);
+                expect(follow.doMaintainScrollAtEnd(ctx)).toBe(true);
+            });
+        }
+
+        it(`does not follow after an explicit scroll settles outside the threshold on ${platform}`, () => {
+            const ctx = setupAtEnd(platform);
+            settleExplicitScroll(ctx, 400);
+            expect(follow.doMaintainScrollAtEnd(ctx)).toBe(false);
+        });
+    }
+
+    for (const platform of ["ios", "android"] as const) {
+        for (const [offset, follows] of [
+            [780, true],
+            [600, false],
+        ] as const) {
+            it(`${follows ? "rearms" : "stays interrupted"} when a drag is released at ${offset} on ${platform}`, () => {
+                const ctx = setupAtEnd(platform);
+                ctx.state.isDragging = true;
+                interruptUserScroll(ctx);
+                updateScroll(ctx, offset, true, { fromNativeScrollEvent: true });
+                expect(follow.doMaintainScrollAtEnd(ctx)).toBe(false);
+                ctx.state.isDragging = false;
+                follow.rearmEndFollowIfSettled(ctx);
+                expect(follow.doMaintainScrollAtEnd(ctx)).toBe(follows);
+            });
+        }
+    }
+
+    for (const [offset, follows] of [
+        [780, true],
+        [600, false],
+    ] as const) {
+        it(`${follows ? "rearms" : "stays interrupted"} after a web wheel scroll to ${offset}`, () => {
+            const ctx = setupAtEnd("web");
+            interruptUserScroll(ctx);
+            updateScroll(ctx, offset, true, { fromNativeScrollEvent: true });
+            expect(follow.doMaintainScrollAtEnd(ctx)).toBe(follows);
+        });
+    }
 });

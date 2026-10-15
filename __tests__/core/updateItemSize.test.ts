@@ -347,11 +347,31 @@ describe("item size update functions", () => {
                     expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                     expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
 
-                    // A history request interrupts intent; later measurements must not rearm it after drag end.
+                    // A drag released outside the threshold keeps intent interrupted for later measurements.
+                    mockState.scroll = 100;
+                    mockState.isWithinMaintainScrollAtEndThreshold = false;
                     mockState.isDragging = false;
                     updateItemAndFlush(mockCtx, "item_0", { height: 200, width: 400 });
                     rafCallback?.(0);
                     expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
+                },
+            );
+
+            it.each(["web", "ios", "android"] as const)(
+                "rearms end following when a drag is released within the threshold on %s",
+                (platform) => {
+                    Platform.OS = platform;
+                    mockState.isWithinMaintainScrollAtEndThreshold = true;
+                    mockState.isDragging = true;
+                    doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
+                    mockState.scroll = 380;
+                    mockState.isDragging = false;
+
+                    updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+                    rafCallback?.(0);
+
+                    expect(mockState.endFollowInterrupted).toBe(false);
+                    expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(1);
                 },
             );
 
@@ -369,7 +389,7 @@ describe("item size update functions", () => {
                     expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(isWeb ? 1 : 0);
 
                     doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
-                    mockState.scroll = 250;
+                    mockState.scroll = 100;
                     mockState.isWithinMaintainScrollAtEndThreshold = false;
                     updateItemAndFlush(mockCtx, "item_0", { height: 180, width: 400 });
                     rafCallback?.(0);
@@ -377,7 +397,7 @@ describe("item size update functions", () => {
                     expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(isWeb ? 1 : 0);
                     expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                     expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
-                    expect(mockState.scroll).toBe(250);
+                    expect(mockState.scroll).toBe(100);
                 },
             );
 

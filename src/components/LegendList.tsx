@@ -27,7 +27,11 @@ import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { resetContainerLayoutReady } from "@/core/containerLayoutReady";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
-import { doMaintainScrollAtEnd, finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import {
+    doMaintainScrollAtEnd,
+    finishMaintainScrollAtEnd,
+    rearmEndFollowIfSettled,
+} from "@/core/doMaintainScrollAtEnd";
 import { emitMetrics } from "@/core/emitMetrics";
 import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
@@ -889,6 +893,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             onMomentumScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
                 state.isMomentumScrolling = false;
                 set$(ctx, "isScrollActive", !!state.isDragging || !!state.scrollingTo || !!state.pendingScrollResolve);
+                rearmEndFollowIfSettled(ctx);
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
@@ -915,6 +920,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     "isScrollActive",
                     !!state.isMomentumScrolling || !!state.scrollingTo || !!state.pendingScrollResolve,
                 );
+                rearmEndFollowIfSettled(ctx);
                 state.props.onScrollEndDrag?.(event as any);
             },
         }),

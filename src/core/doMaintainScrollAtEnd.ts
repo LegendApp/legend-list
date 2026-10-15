@@ -30,6 +30,23 @@ export function interruptMaintainScrollAtEnd(ctx: StateContext) {
     return cancelActiveScroll;
 }
 
+// Once nothing owns the scroll, settling at the end or within the threshold re-arms following.
+// Only a settled position outside the threshold keeps an interruption.
+export function rearmEndFollowIfSettled(ctx: StateContext) {
+    const { state } = ctx;
+    if (
+        state.endFollowInterrupted &&
+        !state.isDragging &&
+        !state.isMomentumScrolling &&
+        !state.scrollingTo &&
+        !state.pendingScrollResolve &&
+        !ctx.scrollRequestTracker?.isWaitingToRun() &&
+        peek$(ctx, "isWithinMaintainScrollAtEndThreshold")
+    ) {
+        state.endFollowInterrupted = false;
+    }
+}
+
 export function finishMaintainScrollAtEnd(ctx: StateContext) {
     const { state } = ctx;
     const currentPadding = peek$(ctx, "alignItemsAtEndPadding") || 0;
