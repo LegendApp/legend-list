@@ -2,6 +2,7 @@
 import * as React from "react";
 import { type ForwardedRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { LayoutChangeEvent, ScrollViewProps, View } from "react-native";
+import { Platform } from "react-native";
 import {
     KeyboardChatScrollView,
     type KeyboardChatScrollViewProps,
@@ -169,6 +170,10 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
 
     const refLegendList = useRef<KeyboardViewabilityListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
+    // The forwarded static contentInset, read at report time. Keep it flowing
+    // through rest as well.
+    const staticContentInsetRef = useRef(rest.contentInset);
+    staticContentInsetRef.current = rest.contentInset;
     const blankSpace = useSharedValue<number>(0);
     const initialKeyboardHeight = KeyboardController.state().height;
     const keyboard = useSharedValue({ height: initialKeyboardHeight, progress: initialKeyboardHeight > 0 ? 1 : 0 });
@@ -219,7 +224,19 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     }, [anchoredEndSpace, blankSpace]);
 
     const onContentInsetChange = useCallback((insets: KeyboardChatScrollViewContentInsets) => {
-        refLegendList.current?.reportContentInset(insets);
+        // Android applies only the dynamic padding; the controller's report
+        // also includes the iOS-only static prop, which must not enter its range.
+        const staticInset = staticContentInsetRef.current;
+        if (Platform.OS === "ios" || !staticInset) {
+            refLegendList.current?.reportContentInset(insets);
+            return;
+        }
+        refLegendList.current?.reportContentInset({
+            bottom: Math.max(0, (insets.bottom ?? 0) - (staticInset.bottom ?? 0)),
+            left: Math.max(0, (insets.left ?? 0) - (staticInset.left ?? 0)),
+            right: Math.max(0, (insets.right ?? 0) - (staticInset.right ?? 0)),
+            top: Math.max(0, (insets.top ?? 0) - (staticInset.top ?? 0)),
+        });
     }, []);
 
     const memoList = useCallback(

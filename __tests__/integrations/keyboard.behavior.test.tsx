@@ -219,6 +219,48 @@ describe("KeyboardAwareLegendList", () => {
         expect(lastAnimatedLegendListProps.onContentInsetChange).toBeUndefined();
     });
 
+    it("keeps the static contentInset out of the reported inset on android", async () => {
+        // The controller reports effective = keyboard padding + the static
+        // contentInset prop. iOS applies that whole value; Android applies only
+        // the keyboard padding, so the static part must not be inherited twice.
+        const { Platform } = await import("react-native");
+        const previousOS = (Platform as any).OS;
+        (Platform as any).OS = "android";
+
+        try {
+            await renderKeyboardAwareLegendList({ contentInset: { bottom: 100, left: 0, right: 0, top: 0 } });
+
+            const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({});
+            scrollElement.props.onContentInsetChange({ bottom: 150, left: 0, right: 0, top: 0 });
+
+            expect(reportContentInsetMock).toHaveBeenLastCalledWith({
+                bottom: 50,
+                left: 0,
+                right: 0,
+                top: 0,
+            });
+        } finally {
+            (Platform as any).OS = previousOS;
+        }
+    });
+
+    it("applies the static contentInset on ios without subtracting it", async () => {
+        const { Platform } = await import("react-native");
+        const previousOS = (Platform as any).OS;
+        (Platform as any).OS = "ios";
+
+        try {
+            await renderKeyboardAwareLegendList({ contentInset: { bottom: 100, left: 0, right: 0, top: 0 } });
+
+            const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({});
+            scrollElement.props.onContentInsetChange({ bottom: 150, left: 0, right: 0, top: 0 });
+
+            expect(reportContentInsetMock).toHaveBeenLastCalledWith({ bottom: 150, left: 0, right: 0, top: 0 });
+        } finally {
+            (Platform as any).OS = previousOS;
+        }
+    });
+
     it("updates composer padding without overwriting the controller-reported content inset", async () => {
         const { useKeyboardChatComposerInset } = await import("../../src/integrations/keyboard?composer-inset-test");
         let hookResult: ReturnType<typeof useKeyboardChatComposerInset> | undefined;
