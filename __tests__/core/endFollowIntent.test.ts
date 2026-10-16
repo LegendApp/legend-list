@@ -975,6 +975,69 @@ describe("end follow rearm after settling", () => {
         }
     }
 
+    for (const maintainScrollAtEnd of [true, false]) {
+        it(`rearms synchronously when scrollToEnd starts (maintainScrollAtEnd: ${maintainScrollAtEnd})`, () => {
+            const ctx = setupAtEnd("ios");
+            if (!maintainScrollAtEnd) ctx.state.props.maintainScrollAtEnd = false;
+            ctx.state.refScroller = { current: { getScrollableNode: () => null, scrollTo: () => {} } } as any;
+            ctx.state.scroll = 400;
+            follow.interruptMaintainScrollAtEnd(ctx);
+            void createImperativeHandle(ctx).scrollToEnd({ animated: false });
+            expect(ctx.state.scrollingTo?.isScrollToEnd).toBe(true);
+            expect(ctx.state.endFollowInterrupted).toBe(false);
+            expect(ctx.values.get("isFollowingEnd")).toBe(maintainScrollAtEnd);
+        });
+    }
+
+    for (const [offset, rearms] of [
+        [800, true],
+        [780, false],
+    ] as const) {
+        it(`${rearms ? "rearms" : "stays interrupted"} mid-drag when a native drag reaches ${offset}`, () => {
+            const ctx = setupAtEnd("ios");
+            ctx.state.scroll = 600;
+            ctx.state.isDragging = true;
+            interruptUserScroll(ctx);
+            updateScroll(ctx, offset, true, { fromNativeScrollEvent: true });
+            expect(ctx.state.isDragging).toBe(true);
+            expect(ctx.state.endFollowInterrupted).toBe(!rearms);
+        });
+    }
+
+    for (const method of ["scrollToIndex", "scrollToOffset"] as const) {
+        it(`keeps following an append after an explicit ${method} settles within the threshold`, async () => {
+            const ctx = setupAtEnd("ios");
+            const frames: FrameRequestCallback[] = [];
+            globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+            Object.assign(ctx.state, {
+                indexByKey: new Map([["row", 0]]),
+                positions: [0],
+                props: { ...ctx.state.props, keyExtractor: (item: string) => item },
+                refScroller: { current: { getScrollableNode: () => null, scrollTo: () => {} } },
+                sizes: new Map([["row", 1000]]),
+                sizesKnown: new Map([["row", 1000]]),
+            });
+            const handle = createImperativeHandle(ctx);
+            const request =
+                method === "scrollToIndex"
+                    ? handle.scrollToIndex({ animated: false, index: 0, viewOffset: 10, viewPosition: 1 })
+                    : handle.scrollToOffset({ animated: false, offset: 790 });
+            expect(ctx.state.endFollowInterrupted).toBe(true);
+            expect(ctx.state.scrollingTo?.targetOffset).toBe(790);
+            updateScroll(ctx, 790, true);
+            finishScrollTo(ctx);
+            await request;
+            ctx.state.previousData = ["row"];
+            ctx.state.props.data = ["row", "next"];
+            ctx.values.set("totalSize", 1400);
+            checkResetContainers(ctx, ctx.state.props.data);
+            expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+            while (frames.length) frames.shift()?.(0);
+            expect(ctx.scrollToEnd).toHaveBeenCalledTimes(1);
+            expect(handle.getState().isFollowingEnd).toBe(true);
+        });
+    }
+
     for (const [offset, follows] of [
         [780, true],
         [600, false],
