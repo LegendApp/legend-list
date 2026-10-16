@@ -139,14 +139,17 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
         }
 
         const anchorIndex = state.props.anchoredEndSpace?.anchorIndex;
-        const isWaitingForTailMeasurements =
-            anchorIndex !== undefined &&
-            anchorIndex >= 0 &&
-            anchorIndex < state.props.data.length &&
-            !areKnownOrFixedItemSizesAvailable(ctx, anchorIndex, state.props.data.length - 1);
-        if (shouldMaintainScrollAtEnd && (state.activeSizeAnimations?.size || isWaitingForTailMeasurements)) {
-            state.pendingMaintainScrollAtEnd = true;
-        } else if (shouldMaintainScrollAtEnd && !didContainersLayout) {
+        const dataLength = state.props.data.length;
+        if (
+            shouldMaintainScrollAtEnd &&
+            (!didContainersLayout ||
+                state.activeSizeAnimations?.size ||
+                // Wait for the anchored tail to be measured.
+                (anchorIndex !== undefined &&
+                    anchorIndex >= 0 &&
+                    anchorIndex < dataLength &&
+                    !areKnownOrFixedItemSizesAvailable(ctx, anchorIndex, dataLength - 1)))
+        ) {
             state.pendingMaintainScrollAtEnd = true;
         } else if (pendingNativeMVCPAdjust) {
             // Native MVCP can still be finishing its own clamp after data changes. Defer the end-anchor scroll
