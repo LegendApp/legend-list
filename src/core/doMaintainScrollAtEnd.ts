@@ -30,12 +30,12 @@ export function interruptMaintainScrollAtEnd(ctx: StateContext) {
     return cancelActiveScroll;
 }
 
-// Once nothing owns the scroll, settling at the end or within the threshold re-arms following.
-// Only a settled position outside the threshold keeps an interruption.
+// Once no reader anchor or scroll owns the position, settling within the threshold re-arms following.
 export function rearmEndFollowIfSettled(ctx: StateContext) {
     const { state } = ctx;
     if (
         state.endFollowInterrupted &&
+        !state.visibleContentAnchor &&
         !state.isDragging &&
         !state.isMomentumScrolling &&
         !state.scheduledWork.has("endFollowRearm") &&

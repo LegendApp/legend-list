@@ -3,6 +3,7 @@ import "../setup";
 
 import { cancelImperativeScroll } from "../../src/core/cancelImperativeScroll";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
+import { rearmEndFollowIfSettled } from "../../src/core/doMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
@@ -1241,5 +1242,44 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(resolveCount).toBe(1);
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.pendingScrollResolve).toBeUndefined();
+    });
+});
+
+describe("createImperativeHandle.anchorVisibleContent", () => {
+    const followingList = (isAtEnd: boolean) => {
+        const ctx = createMockContext(
+            { isAtEnd, isFollowingEnd: true, isWithinMaintainScrollAtEndThreshold: true, totalSize: 1000 },
+            {
+                didFinishInitialScroll: true,
+                props: { data: ["reader"], keyExtractor: (item: string) => item, maintainScrollAtEnd: true },
+                queuedInitialLayout: true,
+                scroll: isAtEnd ? 500 : 450,
+                scrollLength: 500,
+            },
+        );
+        ctx.state.indexByKey.set("reader", 0);
+        ctx.state.positions[0] = 0;
+        return ctx;
+    };
+
+    it("keeps an explicit reader anchor near the end until the reader releases it", () => {
+        const ctx = followingList(false);
+        createImperativeHandle(ctx).anchorVisibleContent("reader");
+
+        expect(ctx.state.visibleContentAnchor).toEqual({ key: "reader", offset: 450 });
+        expect(ctx.values.get("isFollowingEnd")).toBe(false);
+        rearmEndFollowIfSettled(ctx);
+        expect(ctx.values.get("isFollowingEnd")).toBe(false);
+
+        ctx.state.visibleContentAnchor = undefined;
+        rearmEndFollowIfSettled(ctx);
+        expect(ctx.values.get("isFollowingEnd")).toBe(true);
+    });
+
+    it("keeps following when disclosure begins at the actual end", () => {
+        const ctx = followingList(true);
+        createImperativeHandle(ctx).anchorVisibleContent("reader");
+        expect(ctx.state.visibleContentAnchor).toBeUndefined();
+        expect(ctx.values.get("isFollowingEnd")).toBe(true);
     });
 });

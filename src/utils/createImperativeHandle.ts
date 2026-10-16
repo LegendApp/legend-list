@@ -2,7 +2,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { cancelScroll } from "@/core/cancelScroll";
 import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
-import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { doMaintainScrollAtEnd, interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { getDistanceFromEnd, getObservedScrollOffset } from "@/core/emitMetrics";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
@@ -226,11 +226,12 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
 
     return {
         anchorVisibleContent: (key) => {
-            if (peek$(ctx, "isFollowingEnd")) return;
+            if (peek$(ctx, "isFollowingEnd") && peek$(ctx, "isAtEnd")) return;
             const observed = getObservedScrollOffset(ctx);
             updateScroll(ctx, observed, true, { markHasScrolled: false });
             const index = state.indexByKey.get(key);
             if (index !== undefined && state.positions[index] !== undefined) {
+                interruptMaintainScrollAtEnd(ctx);
                 state.visibleContentAnchor = { key, offset: state.scroll - state.positions[index]! };
             }
         },
