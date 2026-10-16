@@ -244,7 +244,8 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 options.left = left;
                 options.top = top;
             } else if (horizontal) {
-                options.left = clampedOffset;
+                // RTL scrollers with the negative scrollLeft convention take offsets in [-max, 0].
+                options.left = offset < 0 ? -clampOffset(-offset, maxOffset) : clampedOffset;
             } else {
                 options.top = clampedOffset;
             }

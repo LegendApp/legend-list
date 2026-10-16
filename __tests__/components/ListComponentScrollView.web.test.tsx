@@ -170,6 +170,33 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    it("keeps negative RTL offsets when scrolling a horizontal element", async () => {
+        resetMocks();
+        maxOffset = 1000;
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-negative-rtl-scroll"
+        );
+        const ref = { current: null as any };
+        const scrollTo = mock();
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView horizontal onLayout={() => {}} onScroll={() => {}} ref={ref} style={{}}>
+                        <div />
+                    </ListComponentScrollView>,
+                    { createNodeMock: () => ({ addEventListener, removeEventListener, scrollTo }) },
+                );
+            });
+            ref.current.scrollTo({ animated: false, x: -350 });
+            expect(scrollTo).toHaveBeenLastCalledWith({ behavior: "instant", left: -350 });
+            ref.current.scrollTo({ animated: false, x: -1500 });
+            expect(scrollTo).toHaveBeenLastCalledWith({ behavior: "instant", left: -1000 });
+        } finally {
+            act(() => renderer?.unmount());
+        }
+    });
+
     for (const useWindowScroll of [false, true]) {
         for (const horizontal of [false, true]) {
             it(`preserves the real external viewport offset (window=${useWindowScroll}, horizontal=${horizontal})`, async () => {
