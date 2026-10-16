@@ -424,7 +424,8 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             const isExplicitNavigation =
                 (state.scrollingTo &&
                     !state.scrollingTo.isInitialScroll &&
-                    (!state.scrollingTo.isScrollToEnd || state.pendingScrollResolve)) ||
+                    (!state.scrollingTo.isScrollToEnd ||
+                        (state.pendingScrollResolve && !state.maintainingScrollAtEnd))) ||
                 (state.endFollowInterrupted && state.pendingScrollResolve);
             if (direction > 0 && !isExplicitNavigation) return;
             const node = resolveScrollableNode(scrollRef.current, externalTarget);
@@ -450,7 +451,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         const onTouchStart = (nativeEvent: Event) => {
             const touch = (nativeEvent as TouchEvent).touches[0];
             lastTouch = touch ? (horizontal ? touch.clientX : touch.clientY) : undefined;
-            if (ctx.state.scrollingTo && ctx.state.pendingScrollResolve) interrupt(nativeEvent, 0);
+            if (ctx.state.scrollingTo && ctx.state.pendingScrollResolve && !ctx.state.maintainingScrollAtEnd) {
+                interrupt(nativeEvent, 0);
+            }
         };
         const onTouchMove = (nativeEvent: Event) => {
             const touch = (nativeEvent as TouchEvent).touches[0];

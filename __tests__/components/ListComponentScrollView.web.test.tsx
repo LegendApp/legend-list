@@ -446,11 +446,13 @@ describe("ListComponentScrollView (web)", () => {
         }
     }
 
-    it("keeps downward touch navigation from interrupting end-follow targets", async () => {
+    it("preserves automatic end following with a pending promise on input toward the end", async () => {
         resetMocks();
         maxOffset = 1000;
         ownerScroll = 800;
         mockCtx.state.scrollingTo = { animated: true, isScrollToEnd: true };
+        mockCtx.state.pendingScrollResolve = mock(() => {});
+        mockCtx.state.maintainingScrollAtEnd = "animated";
         const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
         const { ListComponentScrollView } = await import(
             "../../src/components/ListComponentScrollView?web-end-downward-touch"
@@ -459,14 +461,23 @@ describe("ListComponentScrollView (web)", () => {
         try {
             act(() => {
                 renderer = TestRenderer.create(
-                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}}>
+                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}} useWindowScroll>
                         <div />
                     </ListComponentScrollView>,
                 );
             });
+            scrollListeners.get("wheel")?.({ deltaY: 40 } as any);
+            scrollListeners.get("keydown")?.({ key: "PageDown", target: { closest: () => null } } as any);
             scrollListeners.get("touchstart")?.({ touches: [{ clientY: 40 }] } as any);
             scrollListeners.get("touchmove")?.({ touches: [{ clientY: 0 }] } as any);
             expect(interrupt).not.toHaveBeenCalled();
+            // The same end target is explicit when it is not owned by automatic maintenance.
+            mockCtx.state.maintainingScrollAtEnd = undefined;
+            scrollListeners.get("wheel")?.({ deltaY: 40 } as any);
+            expect(interrupt).toHaveBeenCalledTimes(1);
+            mockCtx.state.maintainingScrollAtEnd = "animated";
+            scrollListeners.get("wheel")?.({ deltaY: -40 } as any);
+            expect(interrupt).toHaveBeenCalledTimes(2);
         } finally {
             act(() => renderer?.unmount());
             interrupt.mockRestore();
