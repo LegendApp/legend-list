@@ -17,7 +17,9 @@ function createScrollingContext(scrollingTo: Record<string, unknown> | undefined
         { totalSize: 1000 },
         {
             props,
-            refScroller: { current: { getCurrentScrollOffset: () => 100, scrollTo } } as any,
+            refScroller: {
+                current: { getCurrentScrollOffset: () => 100, getMaxScrollOffset: () => 700, scrollTo },
+            } as any,
             scroll: 900,
             scrollingTo,
             scrollLength: 300,

@@ -134,6 +134,25 @@ export function toNativeHorizontalOffset(
     return clampedLogicalOffset;
 }
 
+/** Converts an observed DOM offset using the known RTL convention, without re-detecting it. */
+export function peekLogicalHorizontalOffset(
+    state: Pick<InternalState, "props" | "horizontalRTLScrollType">,
+    rawOffset: number,
+    maxOffset: number | undefined,
+): number {
+    if (!isHorizontalRTL(state)) {
+        return rawOffset;
+    }
+    const mode = rawOffset < 0 ? "negative" : getNativeHorizontalRTLScrollType(state);
+    if (mode === "negative") {
+        return clampHorizontalOffset(-rawOffset, maxOffset);
+    }
+    if (mode === "inverted" && maxOffset !== undefined) {
+        return clampHorizontalOffset(maxOffset - rawOffset, maxOffset);
+    }
+    return clampHorizontalOffset(rawOffset, maxOffset);
+}
+
 export function toLogicalHorizontalOffset(
     state: InternalState,
     rawOffset: number,

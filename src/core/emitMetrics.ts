@@ -1,14 +1,17 @@
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
 import type { LegendListMetrics } from "@/types.base";
-import { toLogicalHorizontalOffset } from "@/utils/rtl";
+import { peekLogicalHorizontalOffset } from "@/utils/rtl";
 
 export function getObservedScrollOffset(ctx: StateContext) {
     const { state } = ctx;
-    const observed = state.refScroller.current?.getCurrentScrollOffset?.();
+    const scroller = state.refScroller.current;
+    const observed = scroller?.getCurrentScrollOffset?.();
     if (observed === undefined) return state.lastNativeScroll ?? state.scroll;
     // The DOM reports raw RTL offsets; match the logical offsets onScroll records.
-    return state.props.horizontal ? toLogicalHorizontalOffset(state, observed, getContentSize(ctx)) : observed;
+    return state.props.horizontal
+        ? peekLogicalHorizontalOffset(state, observed, scroller!.getMaxScrollOffset?.())
+        : observed;
 }
 
 export function getDistanceFromEnd(ctx: StateContext) {
