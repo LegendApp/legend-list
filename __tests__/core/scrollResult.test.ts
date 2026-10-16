@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
 import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
+import { interruptUserScroll } from "@/core/cancelScroll";
 import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { Platform } from "@/platform/Platform";
 import {
@@ -77,6 +78,70 @@ describe("imperative scroll results", () => {
         expect(interruptMaintainScrollAtEnd(h.ctx)).toBe(true);
         await flushMicrotasks();
         expect(scroll.value).toEqual({ reason: "interrupted" });
+    });
+
+    it("supersedes active end following when a newer explicit request takes ownership", async () => {
+        const h = harness!;
+        const first = trackScroll(h.ref.scrollToEnd({ animated: true }));
+        h.clock.tick();
+        h.state.maintainingScrollAtEnd = "animated";
+        h.browser.step(400);
+
+        const second = trackScroll(h.ref.scrollToOffset({ animated: true, offset: 300 }));
+        await flushMicrotasks();
+        expect(first.value).toEqual({ reason: "superseded" });
+        expect(second.resolved).toBe(false);
+
+        h.browser.runToEnd();
+        h.clock.advance(100);
+        await flushMicrotasks();
+        expect(second.resolved).toBe(true);
+        expect(second.value).toBeUndefined();
+        expect(h.browser.offset).toBe(300);
+    });
+
+    for (const maintaining of [false, true]) {
+        it(`resolves user cancellation as interrupted (end following: ${maintaining})`, async () => {
+            const h = harness!;
+            const scroll = trackScroll(h.ref.scrollToEnd({ animated: true }));
+            h.clock.tick();
+            if (maintaining) h.state.maintainingScrollAtEnd = "animated";
+            h.browser.step(400);
+
+            interruptUserScroll(h.ctx);
+            await flushMicrotasks();
+            expect(scroll.value).toEqual({ reason: "interrupted" });
+            expect(h.browser.destination).toBeUndefined();
+            expect(h.state.scrollingTo).toBeUndefined();
+        });
+
+        it(`resolves programmatic cancellation as superseded (end following: ${maintaining})`, async () => {
+            const h = harness!;
+            const scroll = trackScroll(h.ref.scrollToEnd({ animated: true }));
+            h.clock.tick();
+            if (maintaining) h.state.maintainingScrollAtEnd = "animated";
+            h.browser.step(400);
+
+            h.ref.cancelScroll();
+            await flushMicrotasks();
+            expect(scroll.value).toEqual({ reason: "superseded" });
+            expect(h.browser.destination).toBeUndefined();
+            expect(h.state.scrollingTo).toBeUndefined();
+        });
+    }
+
+    it("resolves a queued request as interrupted when user input cancels it", async () => {
+        const h = harness!;
+        h.state.didDataChange = true;
+        const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 20 }));
+        expect(h.state.scrollingTo).toBeUndefined();
+
+        interruptUserScroll(h.ctx);
+        h.state.didDataChange = false;
+        h.clock.advance(2000);
+        await flushMicrotasks();
+        expect(scroll.value).toEqual({ reason: "interrupted" });
+        expect(h.scrollToCalls).toHaveLength(0);
     });
 
     it("resolves an active scroll as superseded when the list cancels it on unmount", async () => {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { scrollToEnd } from "@/core/scrollToEnd";
 import { Platform } from "@/platform/Platform";
 import {
@@ -389,7 +390,11 @@ describe("animated web scrolls resolve only once landed", () => {
             expect(scroll.value).toEqual({ reason: "interrupted" });
             expect(h.state.pendingMaintainScrollAtEnd).toBe(false);
             expect(h.state.maintainingScrollAtEnd).toBeUndefined();
+            expect(h.state.endFollowInterrupted).toBe(true);
+            expect(h.ctx.values.get("isFollowingEnd")).toBe(false);
 
+            h.measure({ 30: 300 });
+            doMaintainScrollAtEnd(h.ctx);
             h.clock.advance(3000);
             expect(h.scrollToCalls).toHaveLength(1);
         });

@@ -6,7 +6,6 @@ import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { LegendListScrollResult } from "@/types.base";
-import type { LegendListScrollResult } from "@/types.base";
 
 export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResult) {
     const state = ctx.state;
@@ -24,8 +23,12 @@ export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResul
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
 
-        if (result?.reason === "interrupted" && (state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd)) {
-            finishMaintainScrollAtEnd(ctx);
+        if (result?.reason === "interrupted") {
+            state.endFollowInterrupted = true;
+            set$(ctx, "isFollowingEnd", false);
+            if (state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd) {
+                finishMaintainScrollAtEnd(ctx);
+            }
         }
 
         state.scrollHistory.length = 0;

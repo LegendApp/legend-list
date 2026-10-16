@@ -643,7 +643,12 @@ export type LegendListRef = {
     /** Cancels queued and active scrolling, settles its promise, and stops at the observed offset. */
     cancelScroll(): void;
     /** Scrolls by stable item identity, retaining that target through prepends. */
-    scrollToKey(params: { key: string; animated?: boolean; viewOffset?: number; viewPosition?: number }): Promise<LegendListScrollResult>;
+    scrollToKey(params: {
+        key: string;
+        animated?: boolean;
+        viewOffset?: number;
+        viewPosition?: number;
+    }): Promise<LegendListScrollResult>;
     /** Reveals a measured DOM element or text range inside a row. */
     scrollElementIntoView(params: {
         element: Element | Range;

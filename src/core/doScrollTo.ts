@@ -87,7 +87,6 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
             finishScrollTo(ctx);
             return;
         }
-
     }
 
     // Instant DOM scrolling is synchronous. Release ownership on the next

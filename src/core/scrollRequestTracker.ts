@@ -3,8 +3,6 @@ import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { type StateContext, set$ } from "@/state/state";
 import type { LegendListScrollResult } from "@/types.base";
 import type { ScrollResolve } from "@/types.internal";
-import type { LegendListScrollResult } from "@/types.base";
-import type { ScrollResolve } from "@/types.internal";
 
 export interface ScrollRequestTracker {
     cancel(): void;
@@ -28,7 +26,7 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
                 state.visibleContentAnchor = undefined;
                 state.scrollElementTarget = undefined;
                 state.userScrollAnchorReset = undefined;
-                interruptMaintainScrollAtEnd(ctx);
+                interruptMaintainScrollAtEnd(ctx, "superseded");
             }
             state.scheduledWork.cancel("imperativeScrollReady");
             const token = ++currentToken;
