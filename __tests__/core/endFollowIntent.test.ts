@@ -9,6 +9,7 @@ import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { dispatchInitialScroll } from "../../src/core/initialScroll";
 import { handleInitialScrollDataChange } from "../../src/core/initialScrollLifecycle";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
+import { scrollElementIntoView } from "../../src/core/scrollElementIntoView";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import * as scrollModule from "../../src/core/scrollTo";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
@@ -280,6 +281,64 @@ describe("measured DOM navigation", () => {
             viewPosition: 0,
             viewportMargin: { top: 40 },
         });
+        expect(scroll).toHaveBeenCalledWith(ctx, { animated: false, offset: 160 });
+    });
+
+    function setupElementTarget(rect: { bottom: number; height: number; top: number }, isConnected = true) {
+        const node = { getBoundingClientRect: () => ({ bottom: 200, top: 0 }) };
+        const ctx = createMockContext(
+            { totalSize: 100 },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                indexByKey: new Map([["a", 0]]),
+                positions: [0],
+                previousData: ["a"],
+                props: { data: ["a"], keyExtractor: (item) => item },
+                refScroller: { current: { getCurrentScrollOffset: () => 40, getScrollableNode: () => node } } as any,
+                scrollLength: 200,
+                sizes: new Map([["a", 100]]),
+                sizesKnown: new Map([["a", 100]]),
+            },
+        );
+        const element = { getBoundingClientRect: () => rect, isConnected };
+        ctx.state.scrollElementTarget = { element: element as any };
+        const scroll = spyOn(scrollModule, "scrollTo").mockImplementation(() => {});
+        return { ctx, element, scroll };
+    }
+
+    it("realigns the DOM target after a row measurement and after a data reset", async () => {
+        const { ctx, scroll } = setupElementTarget({ bottom: 320, height: 20, top: 300 });
+        updateItemSizes(ctx, { itemKey: "a", size: { height: 140, width: 200 } });
+        expect(scroll).not.toHaveBeenCalled();
+        await Promise.resolve();
+        expect(scroll).toHaveBeenCalledWith(ctx, { animated: false, offset: 160 });
+        checkResetContainers(ctx, ctx.state.props.data);
+        await Promise.resolve();
+        expect(scroll).toHaveBeenCalledTimes(2);
+    });
+
+    it("releases a disconnected DOM target and ignores subpixel deltas", () => {
+        const disconnected = setupElementTarget({ bottom: 320, height: 20, top: 300 }, false);
+        expect(scrollElementIntoView(disconnected.ctx)).toBe(false);
+        expect(disconnected.ctx.state.scrollElementTarget).toBeUndefined();
+        expect(disconnected.scroll).not.toHaveBeenCalled();
+        mock.restore();
+
+        const aligned = setupElementTarget({ bottom: 200.5, height: 20, top: 180.5 });
+        expect(scrollElementIntoView(aligned.ctx)).toBe(false);
+        expect(aligned.scroll).not.toHaveBeenCalled();
+    });
+
+    it("scrolls a connected Range target into view", () => {
+        const { ctx, scroll } = setupElementTarget({ bottom: 320, height: 20, top: 300 });
+        ctx.state.scrollElementTarget = {
+            element: {
+                commonAncestorContainer: { isConnected: true },
+                getBoundingClientRect: () => ({ bottom: 320, height: 20, top: 300 }),
+            } as any,
+        };
+        expect(scrollElementIntoView(ctx)).toBe(true);
         expect(scroll).toHaveBeenCalledWith(ctx, { animated: false, offset: 160 });
     });
 });
