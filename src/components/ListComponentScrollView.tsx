@@ -353,14 +353,12 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             }
 
             const state = ctx.state;
-            const observed = getCurrentScrollOffset();
-            const clampedPrevious = clampOffset(state.scroll, getMaxScrollOffset());
             if (
                 !hasActiveInitialScroll(state) &&
                 (state.maintainingScrollAtEnd ||
                     state.pendingMaintainScrollAtEnd ||
                     state.scrollingTo?.isScrollToEnd) &&
-                observed < clampedPrevious - 1
+                getCurrentScrollOffset() < clampOffset(state.scroll, getMaxScrollOffset()) - 1
             ) {
                 interruptUserScroll(ctx);
             }
