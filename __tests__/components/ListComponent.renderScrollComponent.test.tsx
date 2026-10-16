@@ -170,6 +170,40 @@ describe("ListComponent renderScrollComponent", () => {
         }
     });
 
+    it("gates native MVCP on the restoration configuration outside iOS", async () => {
+        const { Platform } = await import("../../src/platform/Platform");
+        const { ListComponent } = await import("../../src/components/ListComponent?android-mvcp-gate");
+        const originalPlatform = Platform.OS;
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        try {
+            Platform.OS = "android";
+            for (const [config, expected] of [
+                [{ data: false, size: false }, undefined],
+                [{ data: false, size: true }, { minIndexForVisible: 0 }],
+            ] as const) {
+                const tree = (
+                    <StateProvider>
+                        <ListComponentHarness
+                            events={[]}
+                            ListComponent={ListComponent}
+                            label="native"
+                            maintainVisibleContentPosition={config}
+                        />
+                    </StateProvider>
+                );
+                act(() => {
+                    if (renderer) renderer.update(tree);
+                    else renderer = TestRenderer.create(tree);
+                });
+                expect(renderer.root.findAllByType(View)[0]?.props.maintainVisibleContentPosition).toEqual(expected);
+            }
+        } finally {
+            Platform.OS = originalPlatform;
+            act(() => renderer?.unmount());
+        }
+    });
+
     it("renders the size component for the end spacer even with zero padding", async () => {
         const { ListComponent } = await import("../../src/components/ListComponent?size-component-spacer");
         const sizeRenders: any[] = [];
