@@ -309,12 +309,14 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 positions: [10, 40],
                 props: {
                     data: [{ id: "a" }, { id: "b" }],
+                    dataKey: "thread-1",
                 },
             },
         );
 
         const state = createImperativeHandle(ctx).getState();
 
+        expect(state.dataKey).toBe("thread-1");
         expect((state as Record<string, unknown>).positions).toBeUndefined();
         expect(state.indexByKey("b")).toBe(1);
         expect(state.indexByKey("missing")).toBeUndefined();
@@ -462,6 +464,70 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(countLayoutValues(ctx.state.positions)).toBe(0);
         expect(countLayoutValues(ctx.state.columns)).toBe(0);
         expect(countLayoutValues(ctx.state.columnSpans)).toBe(0);
+    });
+
+    it("clearCaches full mode discards sizes and the reader anchor without MVCP", () => {
+        const triggerCalculateItemsInView = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 100 },
+            {
+                didContainersLayout: true,
+                positions: [0, 50],
+                props: { data: [{ id: "a" }, { id: "b" }] },
+                scroll: 60,
+                sizes: new Map([
+                    ["item_0", 50],
+                    ["item_1", 50],
+                ]),
+                triggerCalculateItemsInView,
+                visibleContentAnchor: { key: "item_1", offset: 10 },
+            },
+        );
+
+        createImperativeHandle(ctx).clearCaches({ mode: "full" });
+
+        expect(ctx.state.sizes.size).toBe(0);
+        expect(ctx.state.totalSize).toBe(0);
+        expect(ctx.values.get("totalSize")).toBe(0);
+        expect(ctx.state.visibleContentAnchor).toBeUndefined();
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ doMVCP: false, forceFullItemPositions: true });
+    });
+
+    for (const owner of ["following", "scrollingTo"] as const) {
+        it(`clearCaches does not capture a reader anchor while ${owner} owns the position`, () => {
+            const ctx = createMockContext(
+                { isFollowingEnd: owner === "following" },
+                {
+                    didContainersLayout: true,
+                    idCache: ["item_0", "item_1"],
+                    positions: [0, 50],
+                    props: { data: [{ id: "a" }, { id: "b" }] },
+                    scroll: 60,
+                    scrollingTo: owner === "scrollingTo" ? { offset: 50 } : undefined,
+                },
+            );
+
+            createImperativeHandle(ctx).clearCaches();
+
+            expect(ctx.state.visibleContentAnchor).toBeUndefined();
+        });
+    }
+
+    it("clearCaches captures the reader anchor when nothing owns the position", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                didContainersLayout: true,
+                idCache: ["item_0", "item_1"],
+                positions: [0, 50],
+                props: { data: [{ id: "a" }, { id: "b" }] },
+                scroll: 60,
+            },
+        );
+
+        createImperativeHandle(ctx).clearCaches();
+
+        expect(ctx.state.visibleContentAnchor).toEqual({ key: "item_1", offset: 10 });
     });
 
     it("returns a promise that resolves when finishScrollTo runs", async () => {
@@ -1283,3 +1349,4 @@ describe("createImperativeHandle.anchorVisibleContent", () => {
         expect(ctx.values.get("isFollowingEnd")).toBe(true);
     });
 });
+
