@@ -23,6 +23,11 @@ let ownerScroll = 0;
 let maxOffset = 0;
 let ownsInput = true;
 let emitScroll: () => void;
+const scrollableNode = {
+    clientHeight: 200,
+    clientWidth: 200,
+    getBoundingClientRect: () => ({ left: 0, top: 0 }),
+};
 const mockCtx = {
     state: {
         anchoredEndSpaceSize: undefined as number | undefined,
@@ -71,11 +76,7 @@ function registerWebScrollMocks() {
         isWindowTarget: (target: unknown) => target === window,
         ownsScrollInput: () => ownsInput,
         resolveExternalScrollOffset: () => ({ left: 0, top: 0 }),
-        resolveScrollableNode: () => ({
-            clientHeight: 200,
-            clientWidth: 200,
-            getBoundingClientRect: () => ({ left: 0, top: 0 }),
-        }),
+        resolveScrollableNode: () => scrollableNode,
         resolveScrollEventTarget: (_element: unknown, externalTarget: unknown) => {
             if (externalTarget !== undefined && externalTarget !== window) return externalTarget;
             if (_element && "scrollTo" in (_element as object)) return _element;
@@ -261,6 +262,55 @@ describe("ListComponentScrollView (web)", () => {
             interrupt.mockRestore();
         }
         expect(scrollListeners.has("wheel")).toBe(false);
+    });
+
+    it("interrupts end following for upward keys and scrollbar presses while the list is in range", async () => {
+        resetMocks();
+        maxOffset = 1000;
+        ownerScroll = 800;
+        const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-key-pointer-interrupts"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView onLayout={() => {}} style={{}} useWindowScroll>
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+            const press = (key: string, shiftKey = false) =>
+                scrollListeners.get("keydown")?.({ key, shiftKey, target: { closest: () => null } } as any);
+            const pointer = (clientX: number, target: unknown = scrollableNode) =>
+                scrollListeners.get("pointerdown")?.({ clientX, clientY: 0, target } as any);
+
+            for (const key of ["ArrowDown", "PageDown", "End", " "]) press(key);
+            pointer(100);
+            pointer(200, {});
+            expect(interrupt).not.toHaveBeenCalled();
+
+            press("ArrowUp");
+            press("PageUp");
+            press("Home");
+            press(" ", true);
+            pointer(200);
+            expect(interrupt).toHaveBeenCalledTimes(5);
+
+            mockCtx.state.endFollowInterrupted = true;
+            mockCtx.state.scrollingTo = { animated: true, index: 5 };
+            press("PageDown");
+            expect(interrupt).toHaveBeenCalledTimes(6);
+
+            ownerScroll = 1200;
+            press("ArrowUp");
+            pointer(200);
+            expect(interrupt).toHaveBeenCalledTimes(6);
+        } finally {
+            act(() => renderer?.unmount());
+            interrupt.mockRestore();
+        }
     });
 
     for (const queued of [false, true]) {
