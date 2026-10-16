@@ -19,6 +19,7 @@ import ExternalScrollExample from "./ExternalScrollExample";
 import ExtraDataExample from "./ExtraDataExample";
 import FixedSizeItemsExample from "./FixedSizeItemsExample";
 import HeaderMvcpExample from "./HeaderMvcpExample";
+import InitialScrollAnchoredEndSpaceExample from "./InitialScrollAnchoredEndSpaceExample";
 import InitialScrollAtEndExample from "./InitialScrollAtEndExample";
 import InitialScrollIndexExample from "./InitialScrollIndexExample";
 import LazyListExample from "./LazyListExample";
@@ -109,6 +110,14 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "bidirectional-infinite-list",
         title: "Bidirectional Infinite List",
+    },
+    {
+        description:
+            "Starts a short list at initialScrollIndex with anchoredEndSpace and checks the selected item reaches the top.",
+        element: () => <InitialScrollAnchoredEndSpaceExample />,
+        group: "Scroll & Position",
+        path: "initial-scroll-anchored-end-space",
+        title: "Initial Scroll Anchored End Space",
     },
     {
         description: "Checks multi-column measurement and placement behavior.",
