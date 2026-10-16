@@ -65,6 +65,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         state.scroll = offset;
     }
 
+    const offsetAfterInstantScroll = isAnimated ? undefined : readOffset();
     // Verify aligned requests and instant retries after queued layout measurements.
     const targetToken = state.scrollingTo;
     state.scheduledWork.frame(() => {
@@ -85,7 +86,8 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
                 // Mandatory snapping can reject even an instant correction. Cancel an unchanged,
                 // unreachable target rather than retrying forever or claiming it landed.
                 if (
-                    !isAnimated &&
+                    offsetAfterInstantScroll !== undefined &&
+                    Math.abs(offsetAfterInstantScroll - landingOffset) > EDGE_POSITION_EPSILON &&
                     Math.abs(currentOffset - (targetToken.landingRetryFrom ?? currentOffset)) <=
                         EDGE_POSITION_EPSILON &&
                     Math.abs(landingOffset - (targetToken.targetOffset ?? offset)) <= EDGE_POSITION_EPSILON

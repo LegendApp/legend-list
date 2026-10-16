@@ -741,6 +741,24 @@ for (const mode of ["vertical LTR", "horizontal LTR", "negative RTL", "inverted 
             expect(h.browser.offset).toBe(h.targetOffsetForIndex(50));
         });
 
+        it("keeps ownership when layout reverses a successful instant correction without moving its target", async () => {
+            const h = setupMode();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+            h.browser.step(1000);
+            h.measure({ 20: 130 });
+            h.browser.settle();
+            expect(h.browser.offset).toBe(5030);
+            // A content-width/MVCP adjustment can move the DOM back after the instant scroll succeeded.
+            h.browser.moveTo(5000);
+            h.clock.tick();
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(false);
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(5030);
+        });
+
         it("cancels an unreachable snapped offset instead of retrying forever or reporting landed", async () => {
             const h = setupMode();
             const scroller = h.state.refScroller.current!;
