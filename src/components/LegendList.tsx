@@ -910,7 +910,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 state.isMomentumScrolling = false;
                 state.isDragging = true;
                 interruptUserScroll(ctx);
-                set$(ctx, "isScrollActive", true);
                 prepareReachedEdgeForNextUserScroll(ctx);
                 state.props.onScrollBeginDrag?.(event as any);
             },
