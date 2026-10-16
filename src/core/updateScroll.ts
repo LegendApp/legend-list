@@ -72,10 +72,11 @@ export function updateScroll(
     state.scroll = newScroll;
     state.scrollTime = currentTime;
 
-    const previousComparableScroll = Math.min(
-        prevScroll,
-        state.refScroller.current?.getMaxScrollOffset?.() ?? prevScroll,
-    );
+    // Only web scroll events compare against the clamped previous offset.
+    const previousComparableScroll =
+        Platform.OS === "web" && options?.fromNativeScrollEvent
+            ? Math.min(prevScroll, state.refScroller.current?.getMaxScrollOffset?.() ?? prevScroll)
+            : prevScroll;
     const scrollDelta = Math.abs(newScroll - prevScroll);
     const isUserScrollEvent =
         !!options?.fromNativeScrollEvent &&
