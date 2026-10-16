@@ -47,11 +47,6 @@ const ContainersLayer = typedMemo(function ContainersLayer({
           }
         : { height: animSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0 };
 
-    if (SizeComponent) {
-        if (horizontal) delete style.width;
-        else delete style.height;
-    }
-
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
         const { columnGap, rowGap, gap } = columnWrapperStyle;
@@ -77,6 +72,9 @@ const ContainersLayer = typedMemo(function ContainersLayer({
 
     const content = <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>;
     if (SizeComponent) {
+        // SizeComponent owns the scroll-axis size.
+        if (horizontal) delete style.width;
+        else delete style.height;
         return (
             <SizeComponent
                 horizontal={horizontal}
