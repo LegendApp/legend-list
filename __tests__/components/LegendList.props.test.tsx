@@ -1875,16 +1875,60 @@ describe("LegendList props behavior", () => {
         state.didContainersLayout = true;
         state.didFinishInitialScroll = true;
         set$(ctx, "isFollowingEnd", true);
+        state.pendingMaintainScrollAtEnd = true;
+        state.maintainingScrollAtEnd = "pending-instant";
         await act(async () => {
             rendered.rerender(list(false));
         });
         expect(peek$(ctx, "isFollowingEnd")).toBe(true);
+        expect(state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(state.maintainingScrollAtEnd).toBeUndefined();
         set$(ctx, "isWithinMaintainScrollAtEndThreshold", false);
         const maintain = spyOn(followModule, "doMaintainScrollAtEnd").mockReturnValue(true);
         await act(async () => {
             rendered.rerender(list(true));
         });
         expect(maintain).toHaveBeenCalledTimes(1);
+        rendered.unmount();
+    });
+
+    it("replays pending end maintenance when the size component is removed", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?size-component-removal");
+        const data = ["row"];
+        const renderItem = () => null;
+        const SizeComponent = () => null;
+        const list = (sizeComponentInternal?: typeof SizeComponent) => (
+            <LegendList
+                data={data}
+                maintainScrollAtEnd
+                renderItem={renderItem}
+                {...({ sizeComponentInternal } as any)}
+            />
+        );
+        const rendered = render(list(SizeComponent));
+        const state = await getStateFromRender();
+        state.pendingMaintainScrollAtEnd = true;
+        const maintain = spyOn(followModule, "doMaintainScrollAtEnd").mockReturnValue(true);
+        await act(async () => {
+            rendered.rerender(list(SizeComponent));
+        });
+        expect(maintain).not.toHaveBeenCalled();
+        await act(async () => {
+            rendered.rerender(list());
+        });
+        expect(maintain).toHaveBeenCalledTimes(1);
+        maintain.mockRestore();
+        rendered.unmount();
+    });
+
+    it("resumes end maintenance through the state callback", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?resume-maintain");
+        const rendered = render(<LegendList data={["row"]} maintainScrollAtEnd renderItem={() => null} />);
+        const state = await getStateFromRender();
+        const maintain = spyOn(followModule, "doMaintainScrollAtEnd").mockReturnValue(true);
+        state.resumeMaintainScrollAtEnd();
+        expect(maintain).toHaveBeenCalledTimes(1);
+        maintain.mockRestore();
         rendered.unmount();
     });
 
@@ -1920,6 +1964,28 @@ describe("LegendList props behavior", () => {
         expect(next).toHaveBeenCalledWith(
             expect.objectContaining({ contentLength: expect.any(Number), distanceFromEnd: expect.any(Number) }),
         );
+        rendered.unmount();
+    });
+
+    it("re-emits current geometry when trackScrollMetrics changes", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?metrics-tracking-toggle");
+        const data = ["row"];
+        const renderItem = () => null;
+        const onMetricsChange = mock(() => {});
+        const list = (trackScrollMetrics: boolean) => (
+            <LegendList
+                data={data}
+                onMetricsChange={onMetricsChange}
+                renderItem={renderItem}
+                trackScrollMetrics={trackScrollMetrics}
+            />
+        );
+        const rendered = render(list(false));
+        const callsBefore = onMetricsChange.mock.calls.length;
+        await act(async () => {
+            rendered.rerender(list(true));
+        });
+        expect(onMetricsChange).toHaveBeenCalledTimes(callsBefore + 1);
         rendered.unmount();
     });
 
