@@ -49,7 +49,9 @@ describe("cancelScroll", () => {
         );
         ctx.state.horizontalRTLScrollType = "inverted";
         cancelScroll(ctx);
-        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 600, y: 0 });
+        // The raw inverted DOM offset 100 is logical 600; stopping keeps the native position.
+        expect(ctx.state.scroll).toBe(600);
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 100, y: 0 });
     });
 
     it("commits adjustments deferred by the cancelled animation", () => {
