@@ -5,6 +5,7 @@ import { useCallback, useLayoutEffect } from "react";
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import { getContainerLayoutBaseline } from "@/core/containerLayoutBaseline";
 import { createResizeObserver } from "@/hooks/createResizeObserver";
+import { useLatestRef } from "@/hooks/useLatestRef";
 import type { LayoutChangeEvent, LayoutRectangle, LooseView } from "@/platform/scrollview-types";
 
 export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLElement>(
@@ -25,6 +26,7 @@ export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLEl
     },
     deps?: any[],
 ): { onLayout?: (event: LayoutChangeEvent) => void } {
+    const callbacks = useLatestRef({ onLayoutChange, onLayoutProp, webLayoutResync });
     const onExternalLayout = useCallback(
         (event: LayoutChangeEvent) => {
             onLayoutChange(event.nativeEvent.layout, false);
@@ -49,8 +51,8 @@ export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLEl
                 return;
             }
 
-            onLayoutChange(layout, fromLayoutEffect);
-            onLayoutProp?.({ nativeEvent: { layout } } as LayoutChangeEvent);
+            callbacks.current.onLayoutChange(layout, fromLayoutEffect);
+            callbacks.current.onLayoutProp?.({ nativeEvent: { layout } } as LayoutChangeEvent);
         };
 
         let prevRect: Pick<DOMRectReadOnly, "height" | "width"> | undefined;
@@ -80,12 +82,12 @@ export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLEl
                 rectObserved.height !== previousRect.height;
             prevRect = rectObserved;
             // MVCP on web can require a fresh onLayout pass even when the observer size is unchanged.
-            const shouldResyncLayout = !!webLayoutResync?.();
+            const shouldResyncLayout = !!callbacks.current.webLayoutResync?.();
             if (didSizeChange || shouldResyncLayout) {
                 emit(toLayout(rectObserved), false);
             }
         });
-    }, [measureInLayoutEffect, webExternalScroll, ...(deps || [])]);
+    }, [callbacks, measureInLayoutEffect, webExternalScroll, ...(deps || [])]);
 
     return webExternalScroll ? { onLayout: onExternalLayout } : {};
 }
