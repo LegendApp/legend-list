@@ -155,6 +155,8 @@ describe("doScrollTo (web)", () => {
 
         expect(scrollerScrollTo).toHaveBeenCalledWith({ animated: true, x: 0, y: 80 });
         expect(addEventListener).toHaveBeenCalledWith("scroll", expect.any(Function));
+        // Input belongs to ListComponentScrollView, which applies ownership and control filters.
+        expect(addEventListener.mock.calls.every(([type]) => type === "scroll")).toBe(true);
     });
 
     it("does not let an old non-animated frame finish a newer scroll", async () => {

@@ -17,8 +17,6 @@ const SMOOTH_SCROLL_DURATION_MS = 320;
 const SCROLL_LANDING_MAX_RETRIES = 3;
 // Remaining distances at or below this land with an instant scroll instead of another animation.
 const SCROLL_LANDING_SNAP_DISTANCE = 50;
-const USER_SCROLL_INPUT_EVENTS = ["wheel", "touchstart"];
-const USER_SCROLL_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End", " "];
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 type ScrollEventTarget = {
     addEventListener(type: string, listener: (...args: any[]) => void): void;
@@ -52,50 +50,42 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         // The DOM clamps the request to its current content size. An already
         // aligned request emits no scroll/scrollend events.
         const targetOffset = Math.max(0, Math.min(offset, scroller.getMaxScrollOffset?.() ?? offset));
-        if (Math.abs(readOffset() - targetOffset) <= EDGE_POSITION_EPSILON) {
-            const targetToken = state.scrollingTo;
-            state.scheduledWork.frame(() => {
-                if (targetToken && targetToken === state.scrollingTo) {
-                    const currentOffset = readOffset();
-                    const landingOffset = Math.min(
-                        getCurrentTargetOffset(ctx, targetToken),
-                        scroller.getMaxScrollOffset?.() ?? Number.POSITIVE_INFINITY,
-                    );
-                    if (
-                        targetToken.isInitialScroll ||
-                        Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON
-                    ) {
-                        finishScrollTo(ctx);
-                    } else {
-                        retryLanding(ctx, targetToken, currentOffset, landingOffset);
-                    }
-                }
-            }, "platformScrollCompletion");
+        if (!(Math.abs(readOffset() - targetOffset) <= EDGE_POSITION_EPSILON)) {
+            const target = scroller.getScrollEventTarget?.() ?? null;
+            listenForScrollEnd(ctx, {
+                readMaxOffset: () => scroller.getMaxScrollOffset?.() ?? Number.POSITIVE_INFINITY,
+                readOffset,
+                target,
+                targetOffset,
+            });
             return;
         }
-        const target = scroller.getScrollEventTarget?.() ?? null;
-        listenForScrollEnd(ctx, {
-            readMaxOffset: () => scroller.getMaxScrollOffset?.() ?? Number.POSITIVE_INFINITY,
-            readOffset,
-            target,
-            targetOffset,
-        });
-        return;
     } else {
         state.scroll = offset;
-        // A landing retry has already moved the DOM synchronously. Settle while its measured
-        // target is still current before another frame can change layout or receive input.
-        if (state.scrollingTo?.landingRetries && Math.abs(readOffset() - offset) <= EDGE_POSITION_EPSILON) {
-            finishScrollTo(ctx);
-            return;
-        }
     }
 
-    // Instant DOM scrolling is synchronous. Release ownership on the next
-    // frame so later layout growth can follow without waiting for a timer.
+    // Verify aligned requests and instant retries after queued layout measurements.
     const targetToken = state.scrollingTo;
     state.scheduledWork.frame(() => {
-        if (targetToken === state.scrollingTo) finishScrollTo(ctx);
+        if (targetToken === state.scrollingTo) {
+            const currentOffset = readOffset();
+            const landingOffset = targetToken
+                ? Math.min(
+                      getCurrentTargetOffset(ctx, targetToken),
+                      scroller.getMaxScrollOffset?.() ?? Number.POSITIVE_INFINITY,
+                  )
+                : offset;
+            if (
+                targetToken &&
+                !targetToken.isInitialScroll &&
+                (isAnimated || targetToken.landingRetries) &&
+                Math.abs(currentOffset - landingOffset) > EDGE_POSITION_EPSILON
+            ) {
+                retryLanding(ctx, targetToken, currentOffset, landingOffset);
+            } else {
+                finishScrollTo(ctx);
+            }
+        }
     }, "platformScrollCompletion");
 }
 
@@ -109,7 +99,7 @@ function retryLanding(
     const madeProgress =
         scrollingTo.landingRetryFrom === undefined ||
         Math.abs(currentOffset - scrollingTo.landingRetryFrom) > EDGE_POSITION_EPSILON;
-    // Bound retries: once exhausted or stalled, land with one instant scroll.
+    // Bound animated retries; instant corrections still verify the current target next frame.
     const isLastRetry = retries >= SCROLL_LANDING_MAX_RETRIES || !madeProgress;
     const { averageSizeSnapshot: _averageSizeSnapshot, targetOffset: _targetOffset, ...target } = scrollingTo;
     const index = target.index === undefined ? undefined : clampScrollIndex(target.index, ctx.state.props.data.length);
@@ -150,18 +140,11 @@ function listenForScrollEnd(
     const supportsScrollEnd = "onscrollend" in target;
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     let settled = false;
-    let lastOffset = readOffset();
-    // A reissued smooth scroll can keep the previous animation's direction for a frame or two.
-    let hasApproached = false;
     // Fallback in case scrollend fires late or never fires in this browser.
     const maxTimeout = setTimeout(() => finish("max"), SCROLL_END_MAX_MS);
 
     const cleanup = () => {
         target.removeEventListener("scroll", onScroll);
-        for (const type of USER_SCROLL_INPUT_EVENTS) {
-            target.removeEventListener(type, interrupt);
-        }
-        target.removeEventListener("keydown", onKeyDown);
 
         if (supportsScrollEnd) {
             target.removeEventListener("scrollend", onScrollEnd);
@@ -187,24 +170,6 @@ function listenForScrollEnd(
             return false;
         }
         return true;
-    };
-
-    const interrupt = () => {
-        if (isCurrent()) {
-            finishScrollTo(ctx, { reason: "interrupted" });
-        }
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-        if (
-            !event.defaultPrevented &&
-            USER_SCROLL_KEYS.includes(event.key) &&
-            !(event.target as Element | null)?.closest?.(
-                "input, textarea, select, [contenteditable]:not([contenteditable='false'])",
-            )
-        ) {
-            interrupt();
-        }
     };
 
     const finish = (reason: "scrollend" | "idle" | "max") => {
@@ -233,21 +198,6 @@ function listenForScrollEnd(
     };
 
     const onScroll = () => {
-        const offset = readOffset();
-        const distance = Math.abs(offset - targetOffset);
-        const lastDistance = Math.abs(lastOffset - targetOffset);
-        // Once moving toward the destination, smooth scrolls do not turn back. Moving away then means
-        // scrollbar or keyboard input took over, unless the browser clamped to a shrinking end of content.
-        const movedAway =
-            hasApproached &&
-            distance > lastDistance + EDGE_POSITION_EPSILON &&
-            offset < readMaxOffset() - EDGE_POSITION_EPSILON;
-        hasApproached ||= distance < lastDistance;
-        lastOffset = offset;
-        if (movedAway) {
-            interrupt();
-            return;
-        }
         if (idleTimeout !== undefined) {
             clearTimeout(idleTimeout);
         }
@@ -257,10 +207,6 @@ function listenForScrollEnd(
     const onScrollEnd = () => finish("scrollend");
 
     target.addEventListener("scroll", onScroll);
-    for (const type of USER_SCROLL_INPUT_EVENTS) {
-        target.addEventListener(type, interrupt);
-    }
-    target.addEventListener("keydown", onKeyDown);
 
     if (supportsScrollEnd) {
         target.addEventListener("scrollend", onScrollEnd);

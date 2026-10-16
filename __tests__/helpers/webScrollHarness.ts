@@ -1,3 +1,4 @@
+import { interruptUserScroll } from "@/core/cancelScroll";
 import { onScroll } from "../../src/core/onScroll";
 import { getContentSize } from "../../src/state/getContentSize";
 import type { StateContext } from "../../src/state/state";
@@ -223,13 +224,10 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
         get destination() {
             return destination;
         },
-        /** User wheel/touch input: stops the smooth scroll where it is. */
+        /** Accepted input after the scroll view filters it; "none" only stops browser motion. */
         interruptByUser(type = "wheel") {
-            dispatch(type);
+            if (type !== "none") interruptUserScroll(ctx);
             destination = undefined;
-        },
-        keyDown(key: string, event: Record<string, unknown> = {}) {
-            dispatch("keydown", { ...event, key });
         },
         /** Moves the scroll position without a smooth scroll in progress, e.g. a user drag. */
         moveTo(next: number) {

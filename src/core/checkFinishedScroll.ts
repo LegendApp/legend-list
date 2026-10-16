@@ -107,7 +107,10 @@ export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScr
         scrollingTo.index === undefined ? undefined : clampScrollIndex(scrollingTo.index, ctx.state.props.data.length);
     // Web animated scrolls retarget until they land, so their completion follows rows that measure
     // mid-scroll and content that grows enough to reach an offset clamped when the scroll started.
-    const isRetargetingWebScroll = Platform.OS === "web" && !!scrollingTo.animated && !scrollingTo.isInitialScroll;
+    const isRetargetingWebScroll =
+        Platform.OS === "web" &&
+        (!!scrollingTo.animated || !!scrollingTo.landingRetries) &&
+        !scrollingTo.isInitialScroll;
     const requestedTargetOffset =
         index !== undefined && (isRetargetingWebScroll || isEndAlignedLastItemTarget(ctx, scrollingTo))
             ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), { ...scrollingTo, index })

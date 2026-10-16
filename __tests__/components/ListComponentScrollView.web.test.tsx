@@ -291,6 +291,60 @@ describe("ListComponentScrollView (web)", () => {
         expect(scrollListeners.has("wheel")).toBe(false);
     });
 
+    for (const horizontal of [false, true]) {
+        it(`filters input before interrupting an active ${horizontal ? "horizontal" : "vertical"} request on an external owner`, async () => {
+            resetMocks();
+            maxOffset = 1000;
+            ownerScroll = 800;
+            mockCtx.state.scrollingTo = { animated: true, index: 50 };
+            mockCtx.state.pendingScrollResolve = mock(() => {});
+            const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
+            const { ListComponentScrollView } = await import(
+                "../../src/components/ListComponentScrollView?web-active-input-filters"
+            );
+            let renderer: TestRenderer.ReactTestRenderer | undefined;
+            try {
+                act(() => {
+                    renderer = TestRenderer.create(
+                        <ListComponentScrollView horizontal={horizontal} onLayout={() => {}} style={{}} useWindowScroll>
+                            <div />
+                        </ListComponentScrollView>,
+                    );
+                });
+                const send = (type: string, event: Record<string, unknown>) =>
+                    scrollListeners.get(type)?.(event as any);
+                const delta = horizontal ? { deltaX: 40, deltaY: 0 } : { deltaX: 0, deltaY: 40 };
+                send("wheel", { ...delta, defaultPrevented: true });
+                send("wheel", { ...delta, ctrlKey: true });
+                send("wheel", horizontal ? { deltaX: 0, deltaY: 40 } : { deltaX: 40, deltaY: 0 });
+                send("keydown", { defaultPrevented: true, key: "PageDown" });
+                send("keydown", { key: "a" });
+                send("keydown", { key: horizontal ? "ArrowDown" : "ArrowRight" });
+                send("keydown", {
+                    key: " ",
+                    target: { closest: (selector: string) => (selector.includes("button") ? {} : null) },
+                });
+                const touch = { touches: [{ clientX: 40, clientY: 40 }] };
+                send("touchstart", { ...touch, defaultPrevented: true });
+                // Other controls and nested scroll owners share the external event target.
+                ownsInput = false;
+                send("wheel", delta);
+                send("keydown", { key: "PageDown" });
+                send("touchstart", touch);
+                expect(interrupt).not.toHaveBeenCalled();
+
+                ownsInput = true;
+                send("wheel", delta);
+                send("keydown", { key: horizontal ? "ArrowLeft" : "ArrowDown" });
+                send("touchstart", touch);
+                expect(interrupt).toHaveBeenCalledTimes(3);
+            } finally {
+                act(() => renderer?.unmount());
+                interrupt.mockRestore();
+            }
+        });
+    }
+
     it("interrupts end following for upward keys and scrollbar presses while the list is in range", async () => {
         resetMocks();
         maxOffset = 1000;

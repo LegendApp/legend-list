@@ -419,18 +419,22 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         if (!target) return;
         const interrupt = (event: Event, direction = -1) => {
             const state = ctx.state;
-            // Explicit history targets interrupt end following when they take ownership.
-            // Unlike an end request, they must yield to navigation in either direction.
+            // Imperative navigation yields to accepted input in either direction.
+            // Automatic end following still ignores input toward the end.
             const isExplicitNavigation =
-                state.endFollowInterrupted && (state.scrollingTo || state.pendingScrollResolve);
+                (state.scrollingTo &&
+                    !state.scrollingTo.isInitialScroll &&
+                    (!state.scrollingTo.isScrollToEnd || state.pendingScrollResolve)) ||
+                (state.endFollowInterrupted && state.pendingScrollResolve);
             if (direction > 0 && !isExplicitNavigation) return;
             const node = resolveScrollableNode(scrollRef.current, externalTarget);
             const maxOffset = getMaxScrollOffset();
             const offset = getCurrentScrollOffset();
             if (
+                !event.defaultPrevented &&
                 node &&
                 maxOffset > 1 &&
-                (direction > 0 ? offset < maxOffset - 1 : offset > 1) &&
+                (isExplicitNavigation || (direction > 0 ? offset < maxOffset - 1 : offset > 1)) &&
                 isScrollInRange() &&
                 ownsScrollInput(event.target, node, horizontal)
             ) {
@@ -446,6 +450,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         const onTouchStart = (nativeEvent: Event) => {
             const touch = (nativeEvent as TouchEvent).touches[0];
             lastTouch = touch ? (horizontal ? touch.clientX : touch.clientY) : undefined;
+            if (ctx.state.scrollingTo && ctx.state.pendingScrollResolve) interrupt(nativeEvent, 0);
         };
         const onTouchMove = (nativeEvent: Event) => {
             const touch = (nativeEvent as TouchEvent).touches[0];
@@ -465,13 +470,18 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             )
                 return;
             if (
-                event.key === "ArrowUp" ||
+                (horizontal ? event.key === "ArrowLeft" : event.key === "ArrowUp") ||
                 event.key === "PageUp" ||
                 event.key === "Home" ||
                 (event.key === " " && event.shiftKey)
             )
                 interrupt(event);
-            else if (event.key === "ArrowDown" || event.key === "PageDown" || event.key === "End" || event.key === " ")
+            else if (
+                (horizontal ? event.key === "ArrowRight" : event.key === "ArrowDown") ||
+                event.key === "PageDown" ||
+                event.key === "End" ||
+                event.key === " "
+            )
                 interrupt(event, 1);
         };
         const onPointerDown = (nativeEvent: Event) => {

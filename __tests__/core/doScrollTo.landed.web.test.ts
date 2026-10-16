@@ -175,7 +175,7 @@ describe("animated web scrolls resolve only once landed", () => {
             expect(h.scrollToCalls.at(-1)).toEqual({ animated: false, y: 5030 });
         });
 
-        it("settles a verified instant landing before later measurement can stale its target", async () => {
+        it("rechecks an instant landing when measurement changes before its completion frame", async () => {
             const h = setup();
             let landed: { offset: number; target: number } | undefined;
             const scroll = trackScroll(
@@ -191,9 +191,9 @@ describe("animated web scrolls resolve only once landed", () => {
             await flushMicrotasks();
 
             expect(h.scrollToCalls.at(-1)).toEqual({ animated: false, y: 5030 });
-            // Measurement after a completed instant landing belongs to the next layout.
+            expect(scroll.resolved).toBe(false);
             h.measure({ 30: 330 });
-            h.clock.advance(100);
+            await runUntilResolved(h, scroll);
             await flushMicrotasks();
 
             expect(scroll.resolved).toBe(true);
@@ -349,29 +349,14 @@ describe("animated web scrolls resolve only once landed", () => {
             const h = setup();
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
 
-            h.browser.keyDown("PageDown");
+            h.browser.interruptByUser("keyboard");
             h.browser.interruptByUser("none");
             h.browser.moveTo(500);
             h.clock.advance(3000);
             await flushMicrotasks();
 
             expect(scroll.value).toEqual({ reason: "interrupted" });
-            expect(h.scrollToCalls).toHaveLength(1);
-        });
-
-        it("ignores typing and prevented keyboard scrolling", async () => {
-            const h = setup();
-            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
-
-            h.browser.keyDown("a");
-            h.browser.keyDown("PageDown", { defaultPrevented: true });
-            h.browser.keyDown("ArrowDown", { target: { closest: () => ({}) } });
-            await flushMicrotasks();
-            expect(scroll.resolved).toBe(false);
-
-            await runUntilResolved(h, scroll);
-            expect(scroll.resolved).toBe(true);
-            expect(scroll.value).toBeUndefined();
+            expect(h.scrollToCalls).toHaveLength(2);
         });
 
         it("clears queued end-follow work when touch input interrupts an active end scroll", async () => {
@@ -396,7 +381,7 @@ describe("animated web scrolls resolve only once landed", () => {
             h.measure({ 30: 300 });
             doMaintainScrollAtEnd(h.ctx);
             h.clock.advance(3000);
-            expect(h.scrollToCalls).toHaveLength(1);
+            expect(h.scrollToCalls).toHaveLength(2);
         });
 
         for (const input of ["wheel", "touchstart"]) {
@@ -412,26 +397,10 @@ describe("animated web scrolls resolve only once landed", () => {
                 expect(h.state.scrollingTo).toBeUndefined();
 
                 h.clock.advance(3000);
-                expect(h.scrollToCalls).toHaveLength(1);
+                expect(h.scrollToCalls).toHaveLength(2);
                 expect(h.browser.offset).toBe(1000);
             });
         }
-
-        it("treats scrolling away from the destination as user input", async () => {
-            const h = setup();
-            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
-
-            h.browser.step(1000);
-            h.browser.step(1000);
-            // Scrollbar drag or keyboard scrolling moves back toward the start.
-            h.browser.interruptByUser("none");
-            h.browser.moveTo(1500);
-            await flushMicrotasks();
-            expect(scroll.value).toEqual({ reason: "interrupted" });
-
-            h.clock.advance(3000);
-            expect(h.scrollToCalls).toHaveLength(1);
-        });
 
         it("does not treat the previous animation's last frame after a reversing retry as user input", async () => {
             const h = setup();
@@ -474,7 +443,7 @@ describe("animated web scrolls resolve only once landed", () => {
             await flushMicrotasks();
             expect(scroll.value).toEqual({ reason: "interrupted" });
             h.clock.advance(3000);
-            expect(h.scrollToCalls).toHaveLength(2);
+            expect(h.scrollToCalls).toHaveLength(3);
         });
 
         it("resolves superseded when a newer scroll replaces one that is retrying", async () => {
@@ -596,9 +565,11 @@ describe("animated web scrolls resolve only once landed", () => {
             const h = setup();
             let growth = 100;
             h.hooks.onScrollEvent = () => {
-                // Every frame mounts another row above the target that measures taller.
-                growth += 50;
-                h.measure({ 10: growth });
+                // Measurements keep moving the target throughout the smooth retries.
+                if (h.scrollToCalls.at(-1)?.animated) {
+                    growth += 50;
+                    h.measure({ 10: growth });
+                }
             };
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
 
@@ -607,6 +578,7 @@ describe("animated web scrolls resolve only once landed", () => {
             expect(scroll.rejected).toBe(false);
             expect(h.scrollToCalls.length).toBeLessThanOrEqual(4);
             expect(h.scrollToCalls.at(-1)?.animated).toBe(false);
+            expect(h.browser.offset).toBe(h.targetOffsetForIndex(50));
 
             const calls = h.scrollToCalls.length;
             h.hooks.onScrollEvent = undefined;
@@ -692,12 +664,13 @@ for (const mode of ["vertical LTR", "horizontal LTR", "negative RTL", "inverted 
             expect(h.scrollToCalls).toHaveLength(2);
         });
 
-        it("verifies an instant correction before the next frame", async () => {
+        it("verifies an instant correction on the next frame", async () => {
             const h = setupMode();
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
             h.browser.step(1000);
             h.measure({ 20: 130 });
             h.browser.settle();
+            h.clock.tick();
             await flushMicrotasks();
             expect(scroll.resolved).toBe(true);
             expect(scroll.value).toBeUndefined();
@@ -705,18 +678,43 @@ for (const mode of ["vertical LTR", "horizontal LTR", "negative RTL", "inverted 
             expect(h.scrollToCalls.at(-1)?.animated).toBe(false);
         });
 
-        it("detects movement away after approaching in logical coordinates", async () => {
+        for (const request of ["index", "offset"] as const) {
+            it(`keeps ${request} ownership through layout reversals without user input`, async () => {
+                const h = setupMode();
+                const scroll = trackScroll(
+                    request === "index"
+                        ? h.ref.scrollToIndex({ animated: true, index: 50 })
+                        : h.ref.scrollToOffset({ animated: true, offset: 5000 }),
+                );
+                h.browser.step(1000);
+                h.browser.step(1000);
+                h.measure({ 20: 300 });
+                h.browser.moveTo(1500);
+                await flushMicrotasks();
+                expect(scroll.resolved).toBe(false);
+                await runUntilResolved(h, scroll);
+                expect(scroll.resolved).toBe(true);
+                expect(scroll.value).toBeUndefined();
+                expect(h.browser.offset).toBe(request === "index" ? h.targetOffsetForIndex(50) : 5000);
+            });
+        }
+
+        it("recomputes the index target when instant retry layout moves it by 103px", async () => {
             const h = setupMode();
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
             h.browser.step(1000);
-            h.browser.step(1000);
-            h.browser.moveTo(1500);
+            h.measure({ 20: 130 });
+            h.browser.settle();
+            // ResizeObserver can deliver the new width after scrollTo returns, before the next frame.
+            h.measure({ 20: 233 });
             await flushMicrotasks();
+            expect(h.browser.offset).toBe(5030);
+            expect(h.targetOffsetForIndex(50)).toBe(5133);
+            expect(scroll.resolved).toBe(false);
+            await runUntilResolved(h, scroll);
             expect(scroll.resolved).toBe(true);
-            expect(scroll.value).toEqual({ reason: "interrupted" });
-            expect(h.browser.offset).toBe(1500);
-            h.clock.advance(2000);
-            expect(h.browser.offset).toBe(1500);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(h.targetOffsetForIndex(50));
         });
 
         for (const input of ["wheel", "touchstart", "keyboard"]) {
@@ -724,8 +722,7 @@ for (const mode of ["vertical LTR", "horizontal LTR", "negative RTL", "inverted 
                 const h = setupMode();
                 const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
                 h.browser.step(1000);
-                if (input === "keyboard") h.browser.keyDown("ArrowRight");
-                else h.browser.interruptByUser(input);
+                h.browser.interruptByUser(input);
                 await flushMicrotasks();
                 expect(scroll.resolved).toBe(true);
                 expect(scroll.value).toEqual({ reason: "interrupted" });
