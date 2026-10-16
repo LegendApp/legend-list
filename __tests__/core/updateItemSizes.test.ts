@@ -4,7 +4,6 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { interruptMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
-import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
 import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
@@ -70,10 +69,20 @@ describe("updateItemSizes", () => {
     it("follows every web size measurement before the next frame without replacing the end request", async () => {
         Platform.OS = "web";
         const originalRAF = globalThis.requestAnimationFrame;
-        const frames: FrameRequestCallback[] = [];
+        const originalCAF = globalThis.cancelAnimationFrame;
+        const frames = new Map<number, FrameRequestCallback>();
+        let nextFrame = 0;
         globalThis.requestAnimationFrame = (callback) => {
-            frames.push(callback);
-            return frames.length;
+            frames.set(++nextFrame, callback);
+            return nextFrame;
+        };
+        globalThis.cancelAnimationFrame = (handle) => {
+            frames.delete(handle);
+        };
+        const flushFrames = () => {
+            const pending = [...frames.values()];
+            frames.clear();
+            for (const callback of pending) callback(0);
         };
         let physicalScroll = 900;
         mockState.scroll = 900;
@@ -108,8 +117,12 @@ describe("updateItemSizes", () => {
                 expect(resolve).toBeDefined();
                 expect(mockState.pendingScrollResolve).toBe(resolve);
             }
-            expect(frames).toHaveLength(0);
-            finishScrollTo(mockCtx);
+            // Following never waits for a frame; only the latest instant scroll's
+            // completion frame stays queued, and it releases the end request.
+            expect(frames.size).toBe(1);
+            expect(mockState.scrollingTo?.isScrollToEnd).toBe(true);
+            flushFrames();
+            expect(mockState.scrollingTo).toBeUndefined();
             updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 520, width: 400 } });
             expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
             const nextResolve = mockState.pendingScrollResolve;
@@ -128,6 +141,7 @@ describe("updateItemSizes", () => {
         } finally {
             mockState.scheduledWork.dispose();
             globalThis.requestAnimationFrame = originalRAF;
+            globalThis.cancelAnimationFrame = originalCAF;
         }
     });
 
