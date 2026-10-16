@@ -28,7 +28,11 @@ function getKnownOrFixedSize(
         if (fixedSize !== undefined) {
             size = fixedSize + ctx.scrollAxisGap;
             state.positionsAreCurrent = false;
+            state.positionRecalculationStartIndex = Math.min(state.positionRecalculationStartIndex ?? index, index);
+            state.scrollForNextCalculateItemsInView = undefined;
             state.sizesKnown.set(key, size);
+            state.fixedItemSizeKeys ??= new Set();
+            state.fixedItemSizeKeys.add(key);
         }
     }
 

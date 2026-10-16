@@ -13,9 +13,11 @@ import * as calculateModule from "../../src/core/calculateItemsInView";
 import * as followModule from "../../src/core/doMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { updateScroll } from "../../src/core/updateScroll";
 import { Platform } from "../../src/platform/Platform";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
+import { getKnownOrFixedItemSize } from "../../src/utils/getItemSize";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
@@ -128,6 +130,126 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    for (const change of ["callback", "extraData"] as const) {
+        it(`refreshes offscreen fixed-size positions when ${change} changes without MVCP`, async () => {
+            const data = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            let fixedSize: number | undefined;
+            const getFixedItemSize = () => fixedSize;
+            const { LegendList } = await import("../../src/components/LegendList?props-test-fixed-size-positions");
+            const list = (version: number) => (
+                <LegendList
+                    data={data}
+                    drawDistance={0}
+                    estimatedItemSize={100}
+                    extraData={change === "extraData" ? version : undefined}
+                    getFixedItemSize={change === "callback" ? () => fixedSize : getFixedItemSize}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    maintainVisibleContentPosition={false}
+                    renderItem={() => null}
+                />
+            );
+            const rendered = render(list(0));
+            const ctx = await getContextFromRender();
+            act(() => {
+                lastListProps.onLayout({ nativeEvent: { layout: { height: 50, width: 320, x: 0, y: 0 } } });
+            });
+            await flushAsync();
+
+            expect(ctx.state.positions).toEqual([0, 100, 200]);
+            expect(ctx.state.positionsAreCurrent).toBe(true);
+            expect([...ctx.state.containerItemKeys.keys()]).not.toContain("c");
+            expect(ctx.state.sizesKnown.has("c")).toBe(false);
+
+            fixedSize = 150;
+            rendered.rerender(list(1));
+            expect(ctx.state.positions).toEqual([0, 150, 300]);
+            expect(ctx.state.totalSize).toBe(450);
+
+            fixedSize = 200;
+            rendered.rerender(list(2));
+            expect(ctx.state.positions).toEqual([0, 200, 400]);
+            expect(ctx.state.totalSize).toBe(600);
+            rendered.unmount();
+        });
+    }
+
+    it("preserves measured sizes when extraData refreshes fixed sizes", async () => {
+        const data = [{ id: "a" }, { id: "b" }, { id: "c" }];
+        let fixedSize = 100;
+        const getFixedItemSize = (item: { id: string }) => (item.id === "b" ? fixedSize : undefined);
+        const { LegendList } = await import("../../src/components/LegendList?props-test-preserve-measured-sizes");
+        const list = (extraData: number) => (
+            <LegendList
+                data={data}
+                drawDistance={0}
+                estimatedItemSize={100}
+                extraData={extraData}
+                getFixedItemSize={getFixedItemSize}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainVisibleContentPosition={false}
+                renderItem={() => null}
+            />
+        );
+        const rendered = render(list(0));
+        const ctx = await getContextFromRender();
+        act(() => {
+            lastListProps.onLayout({ nativeEvent: { layout: { height: 50, width: 320, x: 0, y: 0 } } });
+            updateItemSizesBatch(ctx, [
+                { itemKey: "a", size: { height: 125, width: 320 } },
+                { itemKey: "c", size: { height: 175, width: 320 } },
+            ]);
+        });
+        await flushAsync();
+        expect(ctx.state.positions).toEqual([0, 125, 225]);
+        expect(ctx.state.sizesKnown.get("a")).toBe(125);
+        expect(ctx.state.sizesKnown.get("c")).toBe(175);
+        expect([...ctx.state.containerItemKeys.keys()]).not.toContain("c");
+
+        fixedSize = 150;
+        rendered.rerender(list(1));
+        expect(ctx.state.sizesKnown.get("a")).toBe(125);
+        expect(ctx.state.sizesKnown.get("b")).toBe(150);
+        expect(ctx.state.sizesKnown.get("c")).toBe(175);
+        expect(ctx.state.positions).toEqual([0, 125, 275]);
+        expect(ctx.state.totalSize).toBe(450);
+        rendered.unmount();
+    });
+
+    it("recalculates from a newly resolved fixed size above the non-MVCP render window", async () => {
+        const data = [{ id: "a" }, { id: "b" }, { id: "c" }];
+        let fixedSize: number | undefined;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-fixed-size-resolution");
+        const rendered = render(
+            <LegendList
+                data={data}
+                drawDistance={0}
+                estimatedItemSize={100}
+                getFixedItemSize={(_item, index) => (index === 0 ? fixedSize : undefined)}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainVisibleContentPosition={false}
+                renderItem={() => null}
+            />,
+        );
+        const ctx = await getContextFromRender();
+        act(() => {
+            lastListProps.onLayout({ nativeEvent: { layout: { height: 50, width: 320, x: 0, y: 0 } } });
+            updateScroll(ctx, 200, true);
+        });
+        await flushAsync();
+        expect(ctx.state.startBuffered).toBeGreaterThan(0);
+        expect([...ctx.state.containerItemKeys.keys()]).not.toContain("a");
+        expect(ctx.state.positions).toEqual([0, 100, 200]);
+
+        act(() => {
+            fixedSize = 150;
+            expect(getKnownOrFixedItemSize(ctx, 0)).toBe(150);
+            ctx.state.triggerCalculateItemsInView!();
+        });
+        expect(ctx.state.positions).toEqual([0, 150, 250]);
+        expect(ctx.state.totalSize).toBe(350);
+        rendered.unmount();
+    });
+
     it("registers internal end scrolling without creating a public imperative handle", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;

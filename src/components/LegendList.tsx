@@ -25,6 +25,7 @@ import { interruptUserScroll } from "@/core/cancelScroll";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
+import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { resetContainerLayoutReady } from "@/core/containerLayoutReady";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import {
@@ -823,6 +824,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didDataChange = false;
         state.isFirst = false;
     }, [dataProp, dataKey, dataVersion, numColumnsProp, nextScrollAxisGap, alwaysRenderIndices]);
+
+    const previousGetFixedItemSize = useRef(getFixedItemSize);
+    useLayoutEffect(() => {
+        const hadFixedItemSize = !!previousGetFixedItemSize.current;
+        previousGetFixedItemSize.current = getFixedItemSize;
+        if (!isFirstLocal && (getFixedItemSize || hadFixedItemSize)) {
+            // Re-resolve fixed sizes while preserving measured sizes and rendered estimates.
+            invalidateFixedItemSizes(state);
+            state.positionsAreCurrent = false;
+            state.positionRecalculationStartIndex = 0;
+            state.scrollForNextCalculateItemsInView = undefined;
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        }
+    }, [getFixedItemSize, extraData]);
 
     useLayoutEffect(() => {
         set$(ctx, "extraData", extraData);

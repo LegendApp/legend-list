@@ -1,7 +1,7 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { cancelScroll } from "@/core/cancelScroll";
-import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
+import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd, interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { getDistanceFromEnd, getObservedScrollOffset } from "@/core/emitMetrics";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
@@ -199,7 +199,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         }
         // Keep rendered sizes as estimates so native content cannot collapse before remeasurement.
         state.sizesKnown.clear();
-        invalidateContainerFixedItemSizes(state);
+        invalidateFixedItemSizes(state);
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }
