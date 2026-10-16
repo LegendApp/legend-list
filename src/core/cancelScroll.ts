@@ -32,11 +32,7 @@ export function cancelScroll(ctx: StateContext, stopAnimation = true) {
     state.scrollAdjustHandler.commitPendingAdjust();
 }
 
-/**
- * @param reportedByScrollEvent The web scroll event that triggered this will report
- * onUserScroll from updateScroll, unless cancelScroll syncs the offset first.
- */
-export function interruptUserScroll(ctx: StateContext, reportedByScrollEvent = false) {
+export function interruptUserScroll(ctx: StateContext) {
     if (ctx.state.scrollingTo || (ctx.state.initialScroll && !ctx.state.didFinishInitialScroll)) {
         cancelScroll(ctx, Platform.OS === "web");
     } else {
@@ -47,7 +43,6 @@ export function interruptUserScroll(ctx: StateContext, reportedByScrollEvent = f
         ctx.state.visibleContentAnchor = undefined;
         ctx.state.scrollElementTarget = undefined;
         set$(ctx, "isScrollActive", !!ctx.state.isDragging || !!ctx.state.isMomentumScrolling);
-        if (reportedByScrollEvent) return;
     }
     ctx.state.props.onUserScroll?.();
 }
