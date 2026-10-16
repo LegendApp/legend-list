@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
+import { listen$ } from "../../src/state/state";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
@@ -300,5 +301,28 @@ describe("checkAtBottom", () => {
             contentSize: 1000,
             dataLength: 1,
         });
+    });
+
+    it("publishes the end distance as a listenable signal", () => {
+        const ctx = createMockContext({ totalSize: 1000 });
+        ctx.state = createMockState({ queuedInitialLayout: true, scroll: 300, scrollLength: 200 });
+        const distances: number[] = [];
+        listen$(ctx, "distanceFromEnd", (distance) => distances.push(distance));
+
+        checkAtBottom(ctx);
+
+        expect(ctx.values.get("distanceFromEnd")).toBe(500);
+        expect(distances).toEqual([500]);
+    });
+
+    it("keeps the maintain threshold active far from the end only while following", () => {
+        for (const isFollowingEnd of [true, false]) {
+            const ctx = createMockContext({ isFollowingEnd, totalSize: 1000 });
+            ctx.state = createMockState({ queuedInitialLayout: true, scroll: 0, scrollLength: 200 });
+
+            checkAtBottom(ctx);
+
+            expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(isFollowingEnd);
+        }
     });
 });
