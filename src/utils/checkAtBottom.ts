@@ -42,7 +42,9 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
             ctx,
             "isWithinMaintainScrollAtEndThreshold",
             isContentLess ||
-                distanceFromEnd <= maintainScrollAtEndThreshold! * scrollLength ||
+                // A zero threshold still includes fractional offsets considered
+                // at the end; otherwise following can stop after rounding/layout.
+                distanceFromEnd <= Math.max(EDGE_POSITION_EPSILON, maintainScrollAtEndThreshold! * scrollLength) ||
                 state.pendingMaintainScrollAtEnd ||
                 !!maintainingScrollAtEnd ||
                 !!peek$(ctx, "isFollowingEnd"),

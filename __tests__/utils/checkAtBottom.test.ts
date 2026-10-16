@@ -8,6 +8,21 @@ import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAtBottom", () => {
+    it.each([0, 0.5, 1, 1.01, 30])("uses the end-position epsilon for zero-threshold following at %ipx", (gap) => {
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                props: { data: [{ id: 1 }], maintainScrollAtEndThreshold: 0 },
+                queuedInitialLayout: true,
+                scroll: 700 - gap,
+                scrollLength: 300,
+            },
+        );
+        checkAtBottom(ctx);
+        expect(ctx.values.get("isAtEnd")).toBe(gap <= 1);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(gap <= 1);
+    });
+
     for (const inset of [
         { name: "vertical prop", props: { contentInset: { bottom: 100 } } },
         { name: "horizontal prop", props: { contentInset: { right: 100 }, horizontal: true } },
