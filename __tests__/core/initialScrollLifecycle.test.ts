@@ -39,8 +39,8 @@ describe("initialScrollLifecycle", () => {
     });
 
     for (const didStartFreshData of [false, true]) {
-        it(`only cancels previous scroll ownership for a fresh dataset (${didStartFreshData})`, () => {
-            const ctx = createMockContext();
+        it(`only cancels previous scroll ownership and end-follow state for a fresh dataset (${didStartFreshData})`, () => {
+            const ctx = createMockContext({ isFollowingEnd: true });
             const state = ctx.state;
             const resolve = mock(() => {});
             const cancelCompletion = mock(() => {});
@@ -52,6 +52,10 @@ describe("initialScrollLifecycle", () => {
             state.maintainingScrollAtEnd = "pending-instant";
             state.pendingMaintainScrollAtEnd = true;
             state.scheduledWork.register("platformScrollCompletion", cancelCompletion);
+            state.endFollowInterrupted = true;
+            state.visibleContentAnchor = { key: "reader", offset: 20 };
+            state.pendingEndMeasurements = new Set(["tail"]);
+            state.scrollElementTarget = { element: {} as Element };
 
             handleInitialScrollDataChange(ctx, {
                 dataLength: 25,
@@ -68,6 +72,11 @@ describe("initialScrollLifecycle", () => {
             expect(state.pendingMaintainScrollAtEnd).toBe(!didStartFreshData);
             expect(resolve).toHaveBeenCalledTimes(didStartFreshData ? 1 : 0);
             expect(cancelCompletion).toHaveBeenCalledTimes(didStartFreshData ? 1 : 0);
+            expect(state.endFollowInterrupted).toBe(!didStartFreshData);
+            expect(state.visibleContentAnchor).toEqual(didStartFreshData ? undefined : { key: "reader", offset: 20 });
+            expect(state.pendingEndMeasurements).toEqual(didStartFreshData ? undefined : new Set(["tail"]));
+            expect(state.scrollElementTarget).toEqual(didStartFreshData ? undefined : { element: {} });
+            expect(ctx.values.get("isFollowingEnd")).toBe(!didStartFreshData);
         });
     }
 
