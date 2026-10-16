@@ -243,12 +243,7 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
     const previousAdjustment = React.useRef(ctx.state.layoutAdjustmentEpoch);
     const wasAdjusted = previousAdjustment.current !== ctx.state.layoutAdjustmentEpoch;
     previousAdjustment.current = ctx.state.layoutAdjustmentEpoch;
-    const shouldSkipLayoutTransition =
-        wasAdjusted ||
-        isScrollActive ||
-        ctx.state.isDragging ||
-        ctx.state.isMomentumScrolling ||
-        !!ctx.state.scrollingTo;
+    const shouldSkipLayoutTransition = wasAdjusted || isScrollActive || !!ctx.state.scrollingTo;
 
     // Layout transitions require positional layout props instead of transform.
     // An unmeasured row stays laid out but invisible when hideItemsUntilMeasured is on,
@@ -322,15 +317,7 @@ const ReanimatedSizeView = typedMemo(function ReanimatedSizeViewComponent({
         const suppliedTransition = layoutTransition as SizeTransition | undefined;
         const transition = suppliedTransition?.createInstance?.() ?? suppliedTransition;
         const animationAndConfig = transition?.getAnimationAndConfig?.();
-        if (
-            !readyToRender ||
-            isFollowingEnd ||
-            isScrollActive ||
-            ctx.state.isDragging ||
-            ctx.state.isMomentumScrolling ||
-            !!ctx.state.scrollingTo ||
-            !animationAndConfig
-        ) {
+        if (!readyToRender || isFollowingEnd || isScrollActive || !!ctx.state.scrollingTo || !animationAndConfig) {
             previousSize.current = logicalSize;
             const run = ++runRef.current;
             cancelAnimation(visualSize);
