@@ -530,11 +530,18 @@ describe("end maintenance request ownership", () => {
     function setupMeasuredEnd() {
         Platform.OS = "web";
         const frames: FrameRequestCallback[] = [];
+        const handles = new Map<number, FrameRequestCallback>();
+        let nextHandle = 0;
         globalThis.requestAnimationFrame = (callback) => {
             frames.push(callback);
-            return frames.length;
+            handles.set(++nextHandle, callback);
+            return nextHandle;
         };
-        globalThis.cancelAnimationFrame = () => {};
+        globalThis.cancelAnimationFrame = (handle) => {
+            const index = frames.indexOf(handles.get(handle)!);
+            if (index >= 0) frames.splice(index, 1);
+            handles.delete(handle);
+        };
         let observed = 200;
         const ctx = createMockContext(
             {},
@@ -761,15 +768,18 @@ describe("end maintenance request ownership", () => {
             const earlierRequest = getScrollRequestTracker(ctx).runNowIfIdle(() =>
                 scrollToEnd(ctx, { animated: false }),
             );
-            for (let count = 0; frames.length && count < 10; count++) frames.shift()?.(count * 16);
+            // The queued maintenance frame yields to the explicit end request.
+            for (let count = 0; ctx.state.maintainingScrollAtEnd && count < 10; count++) frames.shift()?.(count * 16);
             expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
             expect(ctx.state.maintainingScrollAtEnd).toBeUndefined();
-            finishScrollTo(ctx);
-            await earlierRequest;
+            expect(ctx.state.scrollingTo?.isScrollToEnd).toBe(true);
+            // The instant request completes on its next frame, then maintenance replays.
             for (let count = 0; frames.length && count < 10; count++) frames.shift()?.(count * 16);
+            await earlierRequest;
+            expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+            expect(ctx.state.maintainingScrollAtEnd).toBeUndefined();
+            expect(ctx.state.scrollingTo).toBeUndefined();
             expect(observed()).toBe(204);
-            finishScrollTo(ctx);
-            await Promise.resolve();
         } finally {
             ctx.state.scheduledWork.dispose();
         }
