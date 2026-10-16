@@ -89,6 +89,9 @@ export function installFakeClock() {
 export type FakeClock = ReturnType<typeof installFakeClock>;
 
 export interface WebScrollHarnessOptions {
+    horizontal?: boolean;
+    rtl?: boolean;
+    horizontalRTLScrollType?: "negative" | "inverted";
     itemCount?: number;
     itemSize?: number | ((index: number) => number);
     scrollLength?: number;
@@ -101,13 +104,22 @@ export interface WebScrollHarnessOptions {
  * decide exactly when rows measure, when the main thread stalls, and when scrollend fires.
  */
 export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
-    const { itemCount = 100, itemSize = 100, scrollLength = 500, supportsScrollEnd = true } = options;
+    const {
+        horizontal = false,
+        rtl = false,
+        horizontalRTLScrollType,
+        itemCount = 100,
+        itemSize = 100,
+        scrollLength = 500,
+        supportsScrollEnd = true,
+    } = options;
     const clock = installFakeClock();
     const data = Array.from({ length: itemCount }, (_, index) => ({ id: index }));
     const ctx: StateContext = createMockContext(
         { headerSize: 0, stylePaddingTop: 0 },
         {
-            props: { data, estimatedItemSize: 100 } as any,
+            horizontalRTLScrollType,
+            props: { data, estimatedItemSize: 100, horizontal, rtl } as any,
             scrollLength,
         },
     );
@@ -152,7 +164,7 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
         }
     };
 
-    const scrollToCalls: Array<{ animated: boolean; y: number }> = [];
+    const scrollToCalls: Array<{ animated: boolean; y: number; x?: number }> = [];
     let offset = 0;
     let destination: number | undefined;
     const hooks: { ignoreAnimatedScrolls: boolean; onScrollEvent?: (offset: number) => void } = {
@@ -161,12 +173,23 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
     const getMaxOffset = () => Math.max(0, getContentSize(ctx) - state.scrollLength);
     const clamp = (value: number) => Math.max(0, Math.min(value, getMaxOffset()));
 
+    const toRaw = (logical: number) =>
+        !horizontal || !rtl ? logical : horizontalRTLScrollType === "negative" ? -logical : getMaxOffset() - logical;
+    const fromRaw = (raw: number) =>
+        !horizontal || !rtl ? raw : horizontalRTLScrollType === "negative" ? -raw : getMaxOffset() - raw;
+
     const emitScroll = () => {
         onScroll(ctx, {
             nativeEvent: {
-                contentOffset: { x: 0, y: offset },
-                contentSize: { height: getContentSize(ctx), width: 400 },
-                layoutMeasurement: { height: state.scrollLength, width: 400 },
+                contentOffset: { x: horizontal ? toRaw(offset) : 0, y: horizontal ? 0 : offset },
+                contentSize: {
+                    height: horizontal ? 400 : getContentSize(ctx),
+                    width: horizontal ? getContentSize(ctx) : 400,
+                },
+                layoutMeasurement: {
+                    height: horizontal ? 400 : state.scrollLength,
+                    width: horizontal ? state.scrollLength : 400,
+                },
             },
         } as any);
         dispatch("scroll");
@@ -174,13 +197,13 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
     };
 
     const scroller = {
-        getCurrentScrollOffset: () => offset,
+        getCurrentScrollOffset: () => toRaw(offset),
         getMaxScrollOffset: getMaxOffset,
         getScrollableNode: () => ({}),
         getScrollEventTarget: () => eventTarget,
-        scrollTo: ({ animated, y }: { animated?: boolean; x: number; y: number }) => {
-            scrollToCalls.push({ animated: !!animated, y });
-            const next = clamp(y);
+        scrollTo: ({ animated, x, y }: { animated?: boolean; x: number; y: number }) => {
+            scrollToCalls.push({ animated: !!animated, y, ...(horizontal ? { x } : {}) });
+            const next = clamp(horizontal ? fromRaw(x) : y);
             if (animated) {
                 if (!hooks.ignoreAnimatedScrolls) destination = next;
             } else {
@@ -215,6 +238,9 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
         },
         get offset() {
             return offset;
+        },
+        get rawOffset() {
+            return toRaw(offset);
         },
         /** Runs smooth scroll frames (with clock ticks) until the browser is idle. */
         runToEnd(px = 400) {

@@ -8,7 +8,7 @@ import { clampScrollIndex } from "@/core/scrollToIndex";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { getItemSizeAtIndex } from "@/utils/getItemSize";
-import { toNativeHorizontalOffset } from "@/utils/rtl";
+import { peekLogicalHorizontalOffset, toNativeHorizontalOffset } from "@/utils/rtl";
 
 const SCROLL_END_IDLE_MS = 80;
 const SCROLL_END_MAX_MS = 1500;
@@ -43,15 +43,20 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const top = isHorizontal ? 0 : offset;
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
+    const readOffset = () => {
+        const observed = scroller.getCurrentScrollOffset?.() ?? Number.NaN;
+        return isHorizontal ? peekLogicalHorizontalOffset(state, observed, scroller.getMaxScrollOffset?.()) : observed;
+    };
+
     if (isAnimated) {
         // The DOM clamps the request to its current content size. An already
         // aligned request emits no scroll/scrollend events.
         const targetOffset = Math.max(0, Math.min(offset, scroller.getMaxScrollOffset?.() ?? offset));
-        if (Math.abs((scroller.getCurrentScrollOffset?.() ?? Number.NaN) - targetOffset) <= EDGE_POSITION_EPSILON) {
+        if (Math.abs(readOffset() - targetOffset) <= EDGE_POSITION_EPSILON) {
             const targetToken = state.scrollingTo;
             state.scheduledWork.frame(() => {
                 if (targetToken && targetToken === state.scrollingTo) {
-                    const currentOffset = scroller.getCurrentScrollOffset!();
+                    const currentOffset = readOffset();
                     const landingOffset = Math.min(
                         getCurrentTargetOffset(ctx, targetToken),
                         scroller.getMaxScrollOffset?.() ?? Number.POSITIVE_INFINITY,
@@ -71,7 +76,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         const target = scroller.getScrollEventTarget?.() ?? null;
         listenForScrollEnd(ctx, {
             readMaxOffset: () => scroller.getMaxScrollOffset?.() ?? Number.POSITIVE_INFINITY,
-            readOffset: () => scroller.getCurrentScrollOffset!(),
+            readOffset,
             target,
             targetOffset,
         });
@@ -80,10 +85,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         state.scroll = offset;
         // A landing retry has already moved the DOM synchronously. Settle while its measured
         // target is still current before another frame can change layout or receive input.
-        if (
-            state.scrollingTo?.landingRetries &&
-            Math.abs((scroller.getCurrentScrollOffset?.() ?? Number.NaN) - offset) <= EDGE_POSITION_EPSILON
-        ) {
+        if (state.scrollingTo?.landingRetries && Math.abs(readOffset() - offset) <= EDGE_POSITION_EPSILON) {
             finishScrollTo(ctx);
             return;
         }

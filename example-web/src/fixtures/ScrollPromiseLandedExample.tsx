@@ -24,7 +24,17 @@ function busyWait(ms: number) {
 }
 
 // Rows render at the estimate, then grow once after first mounting, like late-loading images or embeds.
-function LateRow({ grownRows, index, stall }: { grownRows: Set<number>; index: number; stall: boolean }) {
+function LateRow({
+    grownRows,
+    index,
+    stall,
+    horizontal,
+}: {
+    grownRows: Set<number>;
+    index: number;
+    stall: boolean;
+    horizontal: boolean;
+}) {
     const [grown, setGrown] = React.useState(() => grownRows.has(index));
     if (stall) busyWait(4);
     React.useEffect(() => {
@@ -44,7 +54,10 @@ function LateRow({ grownRows, index, stall }: { grownRows: Set<number>; index: n
         <div
             className="box-border border-slate-200 border-b px-3 py-2 text-sm"
             data-index={index}
-            style={{ background: index === TARGET_INDEX ? "#fde68a" : index % 2 ? "#f8fafc" : "#fff", height }}
+            style={{
+                background: index === TARGET_INDEX ? "#fde68a" : index % 2 ? "#f8fafc" : "#fff",
+                ...(horizontal ? { height: "100%", width: height } : { height }),
+            }}
         >
             Row {index}
             {index === TARGET_INDEX ? " (target)" : ""}
@@ -53,6 +66,9 @@ function LateRow({ grownRows, index, stall }: { grownRows: Set<number>; index: n
 }
 
 export default function ScrollPromiseLandedExample() {
+    const query = new URLSearchParams(window.location.search);
+    const horizontal = query.get("horizontal") === "1";
+    const rtl = query.get("rtl") === "1";
     const ref = React.useRef<LegendListRef>(null);
     const data = React.useMemo(() => generateItems(1000), []);
     const [stall, setStall] = React.useState(true);
@@ -62,11 +78,19 @@ export default function ScrollPromiseLandedExample() {
     const grownRows = React.useMemo(() => new Set<number>(), [listKey]);
     const [report, setReport] = React.useState<Report | undefined>();
 
+    const observedOffset = () => {
+        const list = ref.current;
+        const scroller = list?.getScrollableNode() as HTMLElement | undefined;
+        if (!scroller) return Number.NaN;
+        // Native DOM RTL scrolling uses negative scrollLeft in current browsers.
+        return horizontal ? (rtl ? -scroller.scrollLeft : scroller.scrollLeft) : scroller.scrollTop;
+    };
+
     const measureOffset = () => {
         const list = ref.current;
         const scroller = list?.getScrollableNode() as HTMLElement | undefined;
         if (!list || !scroller) return Number.NaN;
-        return Math.round(scroller.scrollTop - list.getState().positionAtIndex(TARGET_INDEX));
+        return Math.round(observedOffset() - list.getState().positionAtIndex(TARGET_INDEX));
     };
 
     const run = (action: string, scroll: () => Promise<LegendListScrollResult> | undefined) => {
@@ -74,7 +98,7 @@ export default function ScrollPromiseLandedExample() {
         setReport(undefined);
         void scroll()?.then((result) => {
             const offsetFromTarget = measureOffset();
-            const scrollTop = (ref.current?.getScrollableNode() as HTMLElement | undefined)?.scrollTop ?? 0;
+            const scrollTop = observedOffset();
             const resolved: Report = {
                 action,
                 elapsedMs: Math.round(performance.now() - start),
@@ -85,7 +109,7 @@ export default function ScrollPromiseLandedExample() {
             // An early resolve shows up as movement after .then while still off target. Movement that
             // keeps the target in place is maintainVisibleContentPosition absorbing rows measured later.
             setTimeout(() => {
-                const laterTop = (ref.current?.getScrollableNode() as HTMLElement | undefined)?.scrollTop ?? 0;
+                const laterTop = observedOffset();
                 setReport({
                     ...resolved,
                     driftAfterResolve: Math.round(laterTop - scrollTop),
@@ -157,11 +181,16 @@ export default function ScrollPromiseLandedExample() {
                 className="min-h-0 flex-1 rounded-lg"
                 data={data}
                 estimatedItemSize={ESTIMATED_ITEM_SIZE}
+                horizontal={horizontal}
                 key={listKey}
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition={{ size: mvcpSize }}
                 ref={ref}
-                renderItem={({ index }) => <LateRow grownRows={grownRows} index={index} stall={stall} />}
+                renderItem={({ index }) => (
+                    <LateRow grownRows={grownRows} horizontal={horizontal} index={index} stall={stall} />
+                )}
+                rtl={rtl}
+                style={horizontal && rtl ? { direction: "rtl" } : undefined}
             />
         </div>
     );

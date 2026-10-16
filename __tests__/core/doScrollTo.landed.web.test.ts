@@ -631,3 +631,107 @@ describe("animated web scrolls resolve only once landed", () => {
         });
     });
 });
+
+for (const mode of ["vertical LTR", "horizontal LTR", "negative RTL", "inverted RTL"] as const) {
+    describe(`${mode} observed landing offsets`, () => {
+        const setupMode = () =>
+            setup({
+                horizontal: mode !== "vertical LTR",
+                horizontalRTLScrollType:
+                    mode === "negative RTL" ? "negative" : mode === "inverted RTL" ? "inverted" : undefined,
+                rtl: mode.endsWith("RTL"),
+            });
+
+        it("lands without treating movement toward the target as interruption", async () => {
+            const h = setupMode();
+            if (mode === "inverted RTL") expect(h.browser.rawOffset).toBe(9500);
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+            h.browser.step(1000);
+            h.browser.step(1000);
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(false);
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(5000);
+            if (mode === "inverted RTL") expect(h.browser.rawOffset).toBe(4500);
+            expect(h.scrollToCalls).toHaveLength(1);
+        });
+
+        it("finishes an aligned request on the next frame without retrying", async () => {
+            const h = setupMode();
+            h.browser.moveTo(5000);
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+            h.clock.tick();
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.scrollToCalls).toHaveLength(1);
+        });
+
+        it("rechecks the logical target after an aligned request measures late", async () => {
+            const h = setupMode();
+            h.browser.moveTo(5000);
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+            h.measure({ 20: 600 });
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(5500);
+        });
+
+        it("retargets after late measurement changes both the target and extent", async () => {
+            const h = setupMode();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+            h.browser.step(1000);
+            h.measure({ 20: 600 });
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(5500);
+            expect(h.scrollToCalls).toHaveLength(2);
+        });
+
+        it("verifies an instant correction before the next frame", async () => {
+            const h = setupMode();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+            h.browser.step(1000);
+            h.measure({ 20: 130 });
+            h.browser.settle();
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(5030);
+            expect(h.scrollToCalls.at(-1)?.animated).toBe(false);
+        });
+
+        it("detects movement away after approaching in logical coordinates", async () => {
+            const h = setupMode();
+            const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+            h.browser.step(1000);
+            h.browser.step(1000);
+            h.browser.moveTo(1500);
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toEqual({ reason: "interrupted" });
+            expect(h.browser.offset).toBe(1500);
+            h.clock.advance(2000);
+            expect(h.browser.offset).toBe(1500);
+        });
+
+        for (const input of ["wheel", "touchstart", "keyboard"]) {
+            it(`preserves ${input} interruption results`, async () => {
+                const h = setupMode();
+                const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
+                h.browser.step(1000);
+                if (input === "keyboard") h.browser.keyDown("ArrowRight");
+                else h.browser.interruptByUser(input);
+                await flushMicrotasks();
+                expect(scroll.resolved).toBe(true);
+                expect(scroll.value).toEqual({ reason: "interrupted" });
+                expect(h.browser.offset).toBe(1000);
+                expect(h.state.scrollingTo).toBeUndefined();
+            });
+        }
+    });
+}
