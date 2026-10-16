@@ -717,6 +717,33 @@ for (const mode of ["vertical LTR", "horizontal LTR", "negative RTL", "inverted 
             expect(h.browser.offset).toBe(h.targetOffsetForIndex(50));
         });
 
+        it("cancels an unreachable snapped offset instead of retrying forever or reporting landed", async () => {
+            const h = setupMode();
+            const scroller = h.state.refScroller.current!;
+            const originalScrollTo = scroller.scrollTo;
+            scroller.scrollTo = (options) => {
+                const requested = h.state.props.horizontal ? options.x! : options.y!;
+                const logical =
+                    mode === "negative RTL" ? -requested : mode === "inverted RTL" ? 9500 - requested : requested;
+                const snapped = Math.round(logical / 1000) * 1000;
+                originalScrollTo({
+                    ...options,
+                    ...(h.state.props.horizontal
+                        ? { x: mode === "negative RTL" ? -snapped : mode === "inverted RTL" ? 9500 - snapped : snapped }
+                        : { y: snapped }),
+                });
+            };
+            const scroll = trackScroll(h.ref.scrollToOffset({ animated: true, offset: 1250 }));
+            await runUntilResolved(h, scroll);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toEqual({ reason: "superseded" });
+            expect(h.browser.offset).toBe(1000);
+            expect(h.scrollToCalls).toHaveLength(3);
+            h.clock.advance(5000);
+            expect(h.scrollToCalls).toHaveLength(3);
+            expect(h.state.scrollingTo).toBeUndefined();
+        });
+
         for (const input of ["wheel", "touchstart", "keyboard"]) {
             it(`preserves ${input} interruption results`, async () => {
                 const h = setupMode();

@@ -1,5 +1,6 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { cancelScroll } from "@/core/cancelScroll";
 import { getCurrentTargetOffset } from "@/core/checkFinishedScroll";
 import type { DoScrollToParams } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
@@ -81,7 +82,18 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
                 (isAnimated || targetToken.landingRetries) &&
                 Math.abs(currentOffset - landingOffset) > EDGE_POSITION_EPSILON
             ) {
-                retryLanding(ctx, targetToken, currentOffset, landingOffset);
+                // Mandatory snapping can reject even an instant correction. Cancel an unchanged,
+                // unreachable target rather than retrying forever or claiming it landed.
+                if (
+                    !isAnimated &&
+                    Math.abs(currentOffset - (targetToken.landingRetryFrom ?? currentOffset)) <=
+                        EDGE_POSITION_EPSILON &&
+                    Math.abs(landingOffset - (targetToken.targetOffset ?? offset)) <= EDGE_POSITION_EPSILON
+                ) {
+                    cancelScroll(ctx, false);
+                } else {
+                    retryLanding(ctx, targetToken, currentOffset, landingOffset);
+                }
             } else {
                 finishScrollTo(ctx);
             }

@@ -507,7 +507,7 @@ export interface ScrollToEndOptions {
 
 /**
  * Resolved value of imperative scroll promises. Undefined means the list landed on the target;
- * a reason means it stopped first because the user scrolled or a newer scroll replaced it.
+ * a reason means it stopped first because the user scrolled or it was programmatically cancelled or replaced.
  * The void member keeps existing `Promise<void>` implementations assignable.
  */
 export type LegendListScrollResult = { reason: "interrupted" | "superseded" } | void;
