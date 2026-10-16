@@ -8,6 +8,7 @@ import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { Platform } from "../../src/platform/Platform";
 import { type StateContext, set$ } from "../../src/state/state";
+import type { InternalState } from "../../src/types.internal";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 import { act, render } from "../helpers/testingLibrary";
 
@@ -63,6 +64,18 @@ function registerLegendListBootstrapMocks() {
             },
         };
     });
+}
+
+// Native preserved end corrections dispatch an absolute target instead of a relative adjust.
+function installRecordingScroller(state: InternalState) {
+    const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+    state.refScroller.current = {
+        getScrollableNode: () => ({}),
+        scrollTo: (params: { animated: boolean; x: number; y: number }) => {
+            scrollToCalls.push(params);
+        },
+    } as any;
+    return scrollToCalls;
 }
 
 async function flushAsync() {
@@ -1285,6 +1298,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         expect(state.didFinishInitialScroll).toBe(true);
         expect(state.initialScroll?.viewPosition).toBe(1);
+        const scrollToCalls = installRecordingScroller(state);
 
         await act(async () => {
             lastListProps.onLayout?.({
@@ -1299,8 +1313,9 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.initialScroll?.viewPosition).toBe(1);
         expect(getBootstrapSession(state)).toBeUndefined();
         expect(state.scrollingTo).toBeUndefined();
-        expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([50]);
-        expect(state.scroll).toBe(50);
+        expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([]);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 150 }]);
+        expect(state.scroll).toBe(150);
         expect(ctx.values.get("readyToRender")).toBe(true);
     });
 
@@ -1356,6 +1371,7 @@ describe("LegendList bootstrap initial scroll", () => {
             expect(state.initialScroll?.viewPosition).toBe(1);
             expect(preservedTargetClearDelay).toBe(2000);
             expect(queuedPreservedTargetClear).toBeDefined();
+            const scrollToCalls = installRecordingScroller(state);
 
             await act(async () => {
                 lastListProps.onLayout?.({
@@ -1370,8 +1386,9 @@ describe("LegendList bootstrap initial scroll", () => {
             expect(state.initialScroll?.viewPosition).toBe(1);
             expect(getBootstrapSession(state)).toBeUndefined();
             expect(state.scrollingTo).toBeUndefined();
-            expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([50]);
-            expect(state.scroll).toBe(50);
+            expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([]);
+            expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 150 }]);
+            expect(state.scroll).toBe(150);
         } finally {
             globalThis.setTimeout = originalSetTimeout;
         }
