@@ -222,7 +222,7 @@ export default function PrependLargeItemsJumpExample() {
                 <div className="flex min-h-0 flex-1 rounded-2xl border border-[#1e293b] bg-[#0f172a] p-3">
                     <LegendList<DemoItem>
                         className="min-h-0 flex-1"
-                        contentContainerClassName="p-2"
+                        contentContainerStyle={{ padding: 8 }}
                         data={data}
                         initialScrollAtEnd
                         key={exampleVersion}

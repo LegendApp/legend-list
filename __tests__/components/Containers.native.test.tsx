@@ -44,6 +44,7 @@ const Setup = ({
     children,
 }: SetupProps) => {
     const ctx = useStateContext();
+    ctx.state ??= createMockState();
     onContext?.(ctx);
     ctx.columnWrapperStyle = columnWrapperStyle;
     ctx.values.set("numColumns", numColumns);
@@ -273,4 +274,51 @@ describe("Containers native", () => {
         expect((toJSON() as any)?.props?.style).toBe(styleBefore);
         unmount();
     });
+
+    for (const horizontal of [false, true]) {
+        it(`renders the size component in place of the native layer (horizontal: ${horizontal})`, async () => {
+            const { Containers } = await import("@/components/Containers");
+            const sizeRenders: any[] = [];
+            const SizeComponent = (sizeProps: any) => {
+                sizeRenders.push(sizeProps);
+                return <>{sizeProps.children}</>;
+            };
+            let ctx: StateContext | undefined;
+
+            const { unmount } = render(
+                <StateProvider>
+                    <Setup
+                        columnWrapperStyle={{}}
+                        numColumns={1}
+                        onContext={(value) => {
+                            ctx = value;
+                            value.state.props.sizeComponentInternal = SizeComponent;
+                        }}
+                        readyToRender={false}
+                    >
+                        <Containers
+                            freshDataTransitionEpoch={0}
+                            getRenderedItem={() => null}
+                            horizontal={horizontal}
+                            recycleItems={false}
+                        />
+                    </Setup>
+                </StateProvider>,
+            );
+
+            const props = sizeRenders.at(-1);
+            expect(props.signalName).toBe("totalSize");
+            expect(props.horizontal).toBe(horizontal);
+            expect(props.pointerEvents).toBe("none");
+            expect(props.style).not.toHaveProperty(horizontal ? "width" : "height");
+            expect(props.style.opacity).toBe(0);
+
+            // The containers subtree, including its layout coordinator, mounts inside the size component.
+            act(() => {
+                scheduleContainerLayout(ctx!);
+            });
+            expect(measureCalls).toHaveLength(1);
+            unmount();
+        });
+    }
 });

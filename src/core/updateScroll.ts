@@ -1,14 +1,17 @@
 import { updateAdaptiveRender } from "@/core/adaptiveRender";
-import { doMaintainScrollAtEnd, finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { interruptUserScroll } from "@/core/cancelScroll";
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
-import type { StateContext } from "@/state/state";
+import { getContentSize } from "@/state/getContentSize";
+import { peek$, type StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { beginReachedEdgeUserScroll } from "@/utils/edgeReachedGate";
 import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
 import { scheduleFullDrawDistancePrewarm } from "@/utils/getEffectiveDrawDistance";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function updateScroll(
@@ -69,10 +72,17 @@ export function updateScroll(
     state.scroll = newScroll;
     state.scrollTime = currentTime;
 
+    // Only web scroll events compare against the clamped previous offset.
+    const previousComparableScroll =
+        Platform.OS === "web" && options?.fromNativeScrollEvent
+            ? Math.min(prevScroll, state.refScroller.current?.getMaxScrollOffset?.() ?? prevScroll)
+            : prevScroll;
     const scrollDelta = Math.abs(newScroll - prevScroll);
     const isUserScrollEvent =
         !!options?.fromNativeScrollEvent &&
         scrollDelta > 0.1 &&
+        (Platform.OS !== "web" ||
+            (!hasActiveInitialScroll(state) && Math.abs(newScroll - previousComparableScroll) > 0.1)) &&
         !adjustChanged &&
         scrollingTo === undefined &&
         !state.pendingNativeMVCPAdjust;
@@ -85,10 +95,18 @@ export function updateScroll(
     const didCancelMaintainScrollAtEnd =
         Platform.OS === "web" &&
         isUserScrollEvent &&
-        newScroll < prevScroll &&
-        !!(state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd);
+        newScroll < previousComparableScroll - 1 &&
+        !!(state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd || peek$(ctx, "isFollowingEnd"));
     if (didCancelMaintainScrollAtEnd) {
-        finishMaintainScrollAtEnd(ctx);
+        interruptUserScroll(ctx);
+    }
+    if (isUserScrollEvent) {
+        if (Platform.OS === "web" && !didCancelMaintainScrollAtEnd) state.props.onUserScroll?.();
+        state.visibleContentAnchor = undefined;
+        state.scrollElementTarget = undefined;
+        if (newScroll > prevScroll && getContentSize(ctx) - newScroll - state.scrollLength <= 1) {
+            state.endFollowInterrupted = false;
+        }
     }
     const allowedEdge = isUserScrollEvent ? beginReachedEdgeUserScroll(ctx, newScroll - prevScroll) : undefined;
     const didResolvePendingNativeMVCPAdjust = resolvePendingNativeMVCPAdjust(ctx, newScroll);

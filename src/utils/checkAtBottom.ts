@@ -1,7 +1,8 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
+import { getDistanceFromEnd } from "@/core/emitMetrics";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
-import { type StateContext, set$ } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import {
     canDispatchReachedEdge,
@@ -25,6 +26,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
     } = state;
 
     const contentSize = getContentSize(ctx);
+    set$(ctx, "distanceFromEnd", getDistanceFromEnd(ctx));
     resetSharedEdgeGateIfOutsideHysteresis(ctx);
     if (state.props.data.length === 0 && scrollLength > 0 && contentSize <= scrollLength) {
         set$(ctx, "isAtEnd", true);
@@ -44,7 +46,8 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
             isContentLess ||
                 distanceFromEnd <= maintainScrollAtEndThreshold! * scrollLength ||
                 state.pendingMaintainScrollAtEnd ||
-                !!maintainingScrollAtEnd,
+                !!maintainingScrollAtEnd ||
+                !!peek$(ctx, "isFollowingEnd"),
         );
 
         const shouldSkipThresholdChecks = hasActiveInitialScroll(state) || maintainingScrollAtEnd;

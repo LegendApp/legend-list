@@ -8,6 +8,7 @@ import type {
     AnchoredEndSpaceConfig,
     Insets,
     LayoutRectangle,
+    LegendListMetrics,
     LegendListPropsBase,
     LegendListRenderItemProps,
     NativeScrollEvent,
@@ -59,7 +60,7 @@ export interface MaintainScrollAtEndNormalized {
     animated: boolean;
     onLayout: boolean;
     onItemLayout: boolean;
-    onDataChange: boolean;
+    onDataChange: boolean | "append";
     onFooterLayout: boolean;
 }
 
@@ -76,6 +77,7 @@ export interface ScrollTarget {
     averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
     index?: number;
+    key?: string;
     isInitialScroll?: boolean;
     itemSize?: number;
     offset: number;
@@ -214,6 +216,19 @@ export interface InternalState {
     lastScrollAdjustForHistory?: number;
     lastScrollDelta: number;
     loadStartTime: number;
+    pendingEndMeasurements?: Set<string>;
+    isMomentumScrolling?: boolean;
+    activeSizeAnimations?: Set<string>;
+    resumeMaintainScrollAtEnd?: () => void;
+    layoutAdjustmentEpoch?: number;
+    lastMetrics?: LegendListMetrics;
+    endFollowInterrupted?: boolean;
+    visibleContentAnchor?: { key: string; offset: number };
+    scrollElementTarget?: {
+        element: Element | Range;
+        viewportMargin?: { top?: number; bottom?: number };
+        viewPosition?: number;
+    };
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
     positionRecalculationStartIndex: number | undefined;
     mvcpAnchorLock?: {
@@ -322,7 +337,11 @@ export interface InternalState {
         onItemSizeChanged: LegendListPropsInternal["onItemSizeChanged"];
         onLoad: LegendListPropsInternal["onLoad"];
         onReady: LegendListPropsInternal["onReady"];
+        onMomentumScrollBegin: LegendListPropsInternal["onMomentumScrollBegin"];
         onMomentumScrollEnd: LegendListPropsInternal["onMomentumScrollEnd"];
+        onMetricsChange: LegendListPropsInternal["onMetricsChange"];
+        trackScrollMetrics: LegendListPropsInternal["trackScrollMetrics"];
+        onUserScroll: LegendListPropsInternal["onUserScroll"];
         onScroll: LegendListPropsInternal["onScroll"];
         onScrollBeginDrag: LegendListPropsInternal["onScrollBeginDrag"];
         onScrollEndDrag: LegendListPropsInternal["onScrollEndDrag"];
@@ -335,6 +354,7 @@ export interface InternalState {
         renderItem: LegendListPropsInternal["renderItem"];
         scrollBuffer?: number;
         snapToIndices: number[] | undefined;
+        sizeComponentInternal: React.ComponentType<any> | undefined;
         positionComponentInternal: React.ComponentType<any> | undefined;
         stickyPositionComponentInternal: React.ComponentType<any> | undefined;
         stickyHeaderIndicesArr: number[];

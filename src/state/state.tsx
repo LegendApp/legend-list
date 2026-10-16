@@ -40,6 +40,7 @@ export type ListenerType =
     | "numContainersPooled"
     | "otherAxisSize"
     | "readyToRender"
+    | "isScrollActive"
     | "scrollAdjust"
     | "scrollAdjustPending"
     | "scrollAdjustUserOffset"
@@ -47,6 +48,8 @@ export type ListenerType =
     | "snapToOffsets"
     | "stylePaddingTop"
     | "totalSize"
+    | "isFollowingEnd"
+    | "distanceFromEnd"
     | "isAtEnd"
     | "isAtStart"
     | "isNearEnd"
@@ -68,6 +71,8 @@ export type LegendListListenerType = Extract<
     | "anchoredEndSpaceSize"
     | "footerSize"
     | "headerSize"
+    | "isFollowingEnd"
+    | "distanceFromEnd"
     | "isAtEnd"
     | "isAtStart"
     | "isNearEnd"
@@ -95,6 +100,8 @@ export type ListenerTypeValueMap = {
     extraData: any;
     footerSize: number;
     headerSize: number;
+    isFollowingEnd: boolean;
+    distanceFromEnd: number;
     isAtEnd: boolean;
     isAtStart: boolean;
     isNearEnd: boolean;
@@ -108,6 +115,7 @@ export type ListenerTypeValueMap = {
     numContainersPooled: number;
     otherAxisSize: number;
     readyToRender: boolean;
+    isScrollActive: boolean;
     scrollAdjust: number;
     scrollAdjustPending: number;
     scrollAdjustUserOffset: number;

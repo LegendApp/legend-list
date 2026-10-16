@@ -55,7 +55,7 @@ function syncInitialScrollNativeWatchdog(
     }
 }
 
-function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
+export function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
     let low = 0;

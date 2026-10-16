@@ -1,8 +1,9 @@
 import { settlePendingImperativeScroll } from "@/core/cancelImperativeScroll";
-import { finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
-import type { StateContext } from "@/state/state";
+import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { type StateContext, set$ } from "@/state/state";
 
 export interface ScrollRequestTracker {
+    cancel(): void;
     isCurrent(token: number): boolean;
     isWaitingToRun(): boolean;
     runNow(token: number, resolve: () => void, run: () => boolean): void;
@@ -18,8 +19,12 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
         const start = (resolve: () => void, isInternal = false) => {
             const state = ctx.state;
             // A newer explicit target supersedes automatic end-follow intent.
-            if (!isInternal && (state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd)) {
-                finishMaintainScrollAtEnd(ctx);
+            if (!isInternal) {
+                state.pendingEndMeasurements = undefined;
+                state.visibleContentAnchor = undefined;
+                state.scrollElementTarget = undefined;
+                state.userScrollAnchorReset = undefined;
+                interruptMaintainScrollAtEnd(ctx);
             }
             state.scheduledWork.cancel("imperativeScrollReady");
             const token = ++currentToken;
@@ -27,6 +32,7 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
             settlePendingImperativeScroll(state);
             state.pendingScrollResolve = resolve;
             waitingToken = token;
+            set$(ctx, "isScrollActive", true);
 
             return token;
         };
@@ -43,11 +49,23 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
                 if (state.pendingScrollResolve === resolve) {
                     state.pendingScrollResolve = undefined;
                 }
+                set$(
+                    ctx,
+                    "isScrollActive",
+                    !!state.isDragging ||
+                        !!state.isMomentumScrolling ||
+                        !!state.scrollingTo ||
+                        !!state.pendingScrollResolve,
+                );
                 resolve();
             }
         };
 
         ctx.scrollRequestTracker = {
+            cancel: () => {
+                currentToken++;
+                waitingToken = undefined;
+            },
             isCurrent: (token) => token === currentToken,
             isWaitingToRun: () => waitingToken === currentToken && !!ctx.state.pendingScrollResolve,
             runNow,

@@ -54,6 +54,7 @@ type ScrollMessageToEndOptions = {
 
 type KeyboardScrollToEndListRef = {
     current: {
+        getState: LegendListRef["getState"];
         scrollToEnd(params?: { animated?: boolean }): Promise<void>;
     } | null;
 };
@@ -111,19 +112,30 @@ export function useKeyboardChatComposerInset(
 export function useKeyboardScrollToEnd({ freeze: freezeProp, listRef }: UseKeyboardScrollToEndOptions) {
     const internalFreeze = useSharedValue(false);
     const freeze = freezeProp ?? internalFreeze;
+    const latestRequest = useRef(0);
 
     const scrollMessageToEnd = useCallback(
         async ({ animated, closeKeyboard }: ScrollMessageToEndOptions) => {
-            const listRefCurrent = listRef.current;
-            if (listRefCurrent) {
-                freeze.set(true);
-
-                const dismissPromise = closeKeyboard && KeyboardController.dismiss();
-                const scrollPromise = listRefCurrent.scrollToEnd({ animated });
-
-                await Promise.all([scrollPromise, dismissPromise]);
-
+            const requestedList = listRef.current;
+            if (!requestedList) return;
+            const request = ++latestRequest.current;
+            const dataEpoch = requestedList.getState().dataEpoch;
+            if (closeKeyboard) {
                 freeze.set(false);
+                await KeyboardController.dismiss();
+            }
+            const currentList = listRef.current;
+            if (
+                request !== latestRequest.current ||
+                currentList !== requestedList ||
+                currentList.getState().dataEpoch !== dataEpoch
+            )
+                return;
+            freeze.set(true);
+            try {
+                await currentList.scrollToEnd({ animated });
+            } finally {
+                if (request === latestRequest.current) freeze.set(false);
             }
         },
         [freeze, listRef],

@@ -56,6 +56,56 @@ afterEach(() => {
 });
 
 describe("useOnLayoutSync web measurement baseline", () => {
+    it("uses current layout callbacks after data changes without resubscribing", async () => {
+        globalThis.HTMLElement = MockHTMLElement as unknown as typeof HTMLElement;
+        const { useOnLayoutSync } = await importWebUseOnLayoutSync();
+        const getBoundingClientRect = mock(() => createRect(320, 180));
+        const element = new MockHTMLElement(getBoundingClientRect) as unknown as HTMLElement;
+        const observedDataLengths: number[] = [];
+        const originalOnLayout = mock();
+        const currentOnLayout = mock();
+        const originalResync = mock(() => false);
+        const currentResync = mock(() => true);
+        function Probe({
+            dataLength,
+            onLayoutProp,
+            webLayoutResync,
+        }: {
+            dataLength: number;
+            onLayoutProp: typeof originalOnLayout;
+            webLayoutResync: () => boolean;
+        }) {
+            const ref = React.useRef(element);
+            const onLayoutChange = React.useCallback(() => observedDataLengths.push(dataLength), [dataLength]);
+            useOnLayoutSync({ measureInLayoutEffect: false, onLayoutChange, onLayoutProp, ref, webLayoutResync });
+            return null;
+        }
+        let renderer: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(
+                <Probe dataLength={0} onLayoutProp={originalOnLayout} webLayoutResync={originalResync} />,
+            );
+        });
+        const observer = resizeObserverCallback;
+        setContainerLayoutBaseline(element, createRect(320, 180));
+        act(() => {
+            renderer!.update(<Probe dataLength={33} onLayoutProp={currentOnLayout} webLayoutResync={currentResync} />);
+        });
+        expect(resizeObserverCallback).toBe(observer);
+        expect(getBoundingClientRect).not.toHaveBeenCalled();
+        expect(observedDataLengths).toEqual([]);
+        act(() => {
+            observer?.(createEntry(element, 212, 220));
+            observer?.(createEntry(element, 212, 220));
+        });
+        expect(observedDataLengths).toEqual([33, 33]);
+        expect(originalOnLayout).not.toHaveBeenCalled();
+        expect(originalResync).not.toHaveBeenCalled();
+        expect(currentOnLayout).toHaveBeenCalledTimes(2);
+        expect(currentResync).toHaveBeenCalledTimes(2);
+        act(() => renderer!.unmount());
+    });
+
     it("uses the parent measurement without another bounding rect read", async () => {
         globalThis.HTMLElement = MockHTMLElement as unknown as typeof HTMLElement;
         const { useOnLayoutSync } = await importWebUseOnLayoutSync();

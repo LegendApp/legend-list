@@ -227,6 +227,15 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
         expect(state.didFinishInitialScroll).toBe(true);
         expect(state.initialScroll?.viewPosition).toBe(1);
 
+        const adjustsBeforeLayout = lastListProps.scrollAdjustHandler.requestedAdjusts.length;
+        // Native preserved end corrections dispatch an absolute target instead of a relative adjust.
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        state.refScroller.current = {
+            getScrollableNode: () => ({}),
+            scrollTo: (params: { animated: boolean; x: number; y: number }) => {
+                scrollToCalls.push(params);
+            },
+        } as any;
         const layoutFinishTracker = trackAssignedStateValue(state, "didFinishInitialScroll");
         try {
             await act(async () => {
@@ -243,8 +252,9 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
             expect(state.initialScroll?.viewPosition).toBe(1);
             expect(getBootstrapSession(state)).toBeUndefined();
             expect(state.scrollingTo).toBeUndefined();
-            expect(lastListProps.scrollAdjustHandler.requestedAdjusts.at(-1)).toBe(50);
-            expect(state.scroll).toBe(50);
+            expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toHaveLength(adjustsBeforeLayout);
+            expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 190 }]);
+            expect(state.scroll).toBe(190);
         } finally {
             layoutFinishTracker.restore();
         }

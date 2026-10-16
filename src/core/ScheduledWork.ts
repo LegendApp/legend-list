@@ -1,14 +1,17 @@
 export type ScheduledWorkKey =
     | "adaptiveRender"
     | "alignItemsAtEndPaddingFallback"
+    | "bootstrapMeasuredLayout"
     | "checkFinishedScrollFallback"
     | "checkFinishedScrollFrame"
     | "checkFinishedScrollRetryFrame"
+    | "endFollowRearm"
     | "fullDrawDistancePrewarm"
     | "ignoreScrollFromMVCP"
     | "imperativeScrollReady"
     | "mvcpRecalculate"
     | "platformScrollCompletion"
+    | "scrollElementTarget"
     | "preservedInitialScroll"
     | "renderRangeProjection";
 

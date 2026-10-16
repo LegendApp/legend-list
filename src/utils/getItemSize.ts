@@ -74,17 +74,15 @@ export function getItemSize(
     let size: number | undefined;
     const renderedSize = sizes.get(key);
 
-    // Some callers need the last rendered measurement to win over any average-based fallback.
-    if (preferCachedSize) {
-        if (renderedSize !== undefined) {
-            return renderedSize;
-        }
-    }
-
     size = getKnownOrFixedSize(ctx, key, index, data, resolved);
     if (size !== undefined) {
         setSize(ctx, key, size, notifyTotalSize);
         return size;
+    }
+
+    // Some callers need the last rendered measurement to win over any average-based fallback.
+    if (preferCachedSize && renderedSize !== undefined) {
+        return renderedSize;
     }
 
     const itemType = resolved?.itemType ?? (getItemType ? (getItemType(data, index) ?? "") : "");

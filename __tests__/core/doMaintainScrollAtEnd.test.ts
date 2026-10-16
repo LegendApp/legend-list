@@ -94,6 +94,7 @@ describe("doMaintainScrollAtEnd", () => {
                     getCurrentScrollOffset: () => 83,
                     getMaxScrollOffset: () => 83,
                     getScrollableNode: () => null,
+                    scrollTo: () => {},
                 },
             } as any;
 
@@ -112,6 +113,7 @@ describe("doMaintainScrollAtEnd", () => {
                     getCurrentScrollOffset: () => 50,
                     getMaxScrollOffset: () => 83,
                     getScrollableNode: () => null,
+                    scrollTo: () => {},
                 },
             } as any;
 
@@ -132,6 +134,7 @@ describe("doMaintainScrollAtEnd", () => {
 
                 expect(doMaintainScrollAtEnd(mockCtx)).toBe(false);
                 expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+                expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                 expect(scrollToEndSpy).not.toHaveBeenCalled();
                 expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
 
@@ -278,6 +281,31 @@ describe("doMaintainScrollAtEnd", () => {
             expect(mockRunTrackedScrollToEnd).not.toHaveBeenCalled();
         });
 
+        it.each([false, true])("replays footer growth through initial end correction (finished: %s)", (finished) => {
+            mockState.props.data = [{ id: "tail" }];
+            mockState.didFinishInitialScroll = finished;
+            mockState.initialScroll = {
+                index: 0,
+                preserveForBottomPadding: true,
+                viewOffset: -188,
+                viewPosition: 1,
+            };
+            mockState.scrollingTo = { animated: false, isInitialScroll: true, offset: 700 };
+            mockCtx.values.set("footerSize", 212);
+
+            // Footer layout uses the deferred path while the initial target
+            // still includes the previous dataset's footer height.
+            expect(doMaintainScrollAtEnd(mockCtx)).toBe(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+
+            finishScrollTo(mockCtx);
+
+            expect(mockState.didFinishInitialScroll).toBe(true);
+            expect(scrollToEndSpy).toHaveBeenCalledTimes(1);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+        });
+
         it("should handle didContainersLayout being undefined", () => {
             mockState.didContainersLayout = mockState.didFinishInitialScroll = undefined;
             mockCtx.values.set("readyToRender", undefined);
@@ -301,6 +329,39 @@ describe("doMaintainScrollAtEnd", () => {
             expect(result).toBe(false);
             expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+        });
+
+        it("defers end maintenance while a size animation is active", () => {
+            mockState.activeSizeAnimations = new Set(["totalSize"]);
+
+            expect(doMaintainScrollAtEnd(mockCtx)).toBe(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+            expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+        });
+
+        it("re-pends a scheduled maintain frame when a size animation starts before it runs", () => {
+            expect(doMaintainScrollAtEnd(mockCtx)).toBe(true);
+            mockState.activeSizeAnimations = new Set(["totalSize"]);
+            rafCallback?.();
+
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+            expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+        });
+
+        it("waits for anchored end space tail rows to be measured before following", () => {
+            mockState.props.data = [{ id: 0 }, { id: 1 }, { id: 2 }];
+            mockState.props.anchoredEndSpace = { anchorIndex: 1 };
+            mockState.sizesKnown.set("item_1", 100);
+
+            expect(doMaintainScrollAtEnd(mockCtx)).toBe(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+            expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+
+            mockState.sizesKnown.set("item_2", 100);
+            expect(doMaintainScrollAtEnd(mockCtx)).toBe(true);
+            rafCallback?.();
+            expect(scrollToEndSpy).toHaveBeenCalledWith(mockCtx, { animated: false });
         });
 
         it("does not queue a replay when maintainScrollAtEnd conditions are not met", () => {

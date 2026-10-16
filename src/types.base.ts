@@ -330,9 +330,17 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     onReady?: () => void;
 
     /**
-     * Called when list layout metrics change.
+     * Called when the header or footer size changes. Set `trackScrollMetrics` to also call it when any other
+     * metric changes, including on scroll.
      */
     onMetricsChange?: (metrics: LegendListMetrics) => void;
+
+    /**
+     * Calls `onMetricsChange` whenever any metric changes, including `scroll`, `distanceFromEnd`, `contentLength`,
+     * `scrollLength`, `isAtEnd` and `isFollowingEnd`. These can change on every scroll frame.
+     * @default false
+     */
+    trackScrollMetrics?: boolean;
 
     /**
      * Called when the first visible item changes. This is emitted from the core range calculation and is cheaper than
@@ -366,8 +374,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     onRefresh?: () => void;
 
     /**
-     * Called when the list scrolls.
+     * Called when user navigation interrupts list-owned scrolling or moves the web viewport.
      */
+    onUserScroll?: () => void;
+
+    /** Called when the list scrolls. */
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 
     /**
@@ -530,7 +541,8 @@ export interface AlwaysRenderConfig {
 }
 
 export interface MaintainScrollAtEndOnOptions {
-    dataChange?: boolean;
+    /** "append" follows only additions that preserve every existing item key in order. */
+    dataChange?: boolean | "append";
     footerLayout?: boolean;
     itemLayout?: boolean;
     layout?: boolean;
@@ -556,6 +568,12 @@ export interface ColumnWrapperStyle {
 }
 
 export interface LegendListMetrics {
+    contentLength: number;
+    scrollLength: number;
+    scroll: number;
+    distanceFromEnd: number;
+    isAtEnd: boolean;
+    isFollowingEnd: boolean;
     headerSize: number;
     footerSize: number;
 }
@@ -580,9 +598,15 @@ export type LegendListState = {
     activeStickyIndex: number;
     contentLength: number;
     data: readonly any[];
+    dataKey?: Key;
+    /** Increments when a new dataset starts placement, including reuse of an earlier dataKey. */
+    dataEpoch: number;
     elementAtIndex: (index: number) => any;
     end: number;
     endBuffered: number;
+    /** Distance to the physical scroll edge, including the trailing inset. */
+    distanceFromEnd: number;
+    isFollowingEnd: boolean;
     isAtEnd: boolean;
     isAtStart: boolean;
     isNearEnd: boolean;
@@ -609,6 +633,21 @@ export type LegendListState = {
 };
 
 export type LegendListRef = {
+    /** Cancels queued and active scrolling, settles its promise, and stops at the observed offset. */
+    cancelScroll(): void;
+    /** Scrolls by stable item identity, retaining that target through prepends. */
+    scrollToKey(params: { key: string; animated?: boolean; viewOffset?: number; viewPosition?: number }): Promise<void>;
+    /** Reveals a measured DOM element or text range inside a row. */
+    scrollElementIntoView(params: {
+        element: Element | Range;
+        viewPosition?: number;
+        animated?: boolean;
+        viewportMargin?: { top?: number; bottom?: number };
+    }): Promise<void>;
+    /** Captures the first visible item and its viewport offset after initial placement is ready. */
+    getScrollAnchor(): { key: string; offset: number } | undefined;
+    /** Keeps a visible item at its current viewport position through subsequent layout changes. */
+    anchorVisibleContent(key: string): void;
     /**
      * Clears internal virtualization caches.
      * @param options - Cache clearing options.
@@ -658,7 +697,11 @@ export type LegendListRef = {
      * @param params.animated - If true, animates the scroll. Default: true.
      * @param params.index - The index to scroll to.
      */
-    scrollIndexIntoView(params: { animated?: boolean | undefined; index: number }): Promise<void>;
+    scrollIndexIntoView(params: {
+        animated?: boolean | undefined;
+        index: number;
+        viewportMargin?: { top?: number; bottom?: number };
+    }): Promise<void>;
 
     /**
      * Scrolls a specific index into view.

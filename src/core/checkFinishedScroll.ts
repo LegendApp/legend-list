@@ -249,7 +249,15 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 );
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
             } else if (shouldRetryUnalignedEndScroll) {
-                scrollToFallbackOffset(ctx, completionState.clampedTargetOffset, isAnimatedMaintain);
+                const isMakingNativeProgress =
+                    !!isStillScrollingTo.animated && Date.now() - (state.lastNativeScrollTime ?? 0) < 100;
+                if (!isMakingNativeProgress) {
+                    scrollToFallbackOffset(
+                        ctx,
+                        completionState.clampedTargetOffset,
+                        isAnimatedMaintain || !!isStillScrollingTo.animated,
+                    );
+                }
                 scheduleFallbackCheck(100);
             } else if (
                 shouldFinishZeroTarget ||

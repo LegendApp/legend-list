@@ -69,7 +69,13 @@ interface ListComponentProps<ItemT>
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizontal }: { horizontal: boolean }) {
+    const ctx = useStateContext();
+    const SizeComponent = ctx.state.props.sizeComponentInternal;
     const [alignItemsAtEndPadding = 0] = useArr$(["alignItemsAtEndPadding"]);
+
+    if (SizeComponent) {
+        return <SizeComponent horizontal={horizontal} signalName="alignItemsAtEndPadding" style={{ flexShrink: 0 }} />;
+    }
 
     if (alignItemsAtEndPadding <= 0) {
         return null;
@@ -218,8 +224,9 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     : undefined
             }
             horizontal={horizontal}
+            // iOS must capture ScrollAdjust on every commit, including while JS restoration is disabled.
             maintainVisibleContentPosition={
-                maintainVisibleContentPosition.size || maintainVisibleContentPosition.data
+                Platform.OS === "ios" || maintainVisibleContentPosition.size || maintainVisibleContentPosition.data
                     ? { minIndexForVisible: 0 }
                     : undefined
             }

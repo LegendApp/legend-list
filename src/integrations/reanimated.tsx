@@ -2,6 +2,9 @@ import * as React from "react";
 import { type ComponentProps, useCallback } from "react";
 import { type LayoutChangeEvent, type ScrollViewProps, type StyleProp, View, type ViewStyle } from "react-native";
 import Reanimated, {
+    cancelAnimation,
+    runOnJS,
+    runOnUI,
     type SharedValue,
     useAnimatedRef,
     useAnimatedStyle,
@@ -64,6 +67,8 @@ export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT
     sharedValues?: AnimatedLegendListSharedValues;
     /**
      * Reanimated layout transition applied to each item container position view.
+     * Builder instances/classes also animate content size while reading at rest.
+     * Custom layout functions retain row-position animation only.
      * Example: `LinearTransition.duration(280)`.
      */
     itemLayoutAnimation?: ReanimatedLayoutAnimation;
@@ -213,15 +218,16 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
 
 const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponent(props: ReanimatedPositionViewProps) {
     const ctx = useStateContext();
-    const { id, horizontal, style, refView, children, recycleItems, layoutTransition, ...rest } = props;
-    const [positionValue = POSITION_OUT_OF_VIEW, layoutReady = true] = useArr$([
+    const { id, horizontal, style, refView, children, recycleItems: _recycleItems, layoutTransition, ...rest } = props;
+    const [positionValue = POSITION_OUT_OF_VIEW, layoutReady = true, isScrollActive] = useArr$([
         `containerPosition${id}`,
         `containerLayoutReady${id}`,
+        "isScrollActive",
     ]);
     const prevItemKeyRef = React.useRef<string | undefined>(undefined);
     let shouldSkipTransitionForRecycleReuse = false;
 
-    if (recycleItems && layoutTransition) {
+    if (layoutTransition) {
         const itemKeySignal = `containerItemKey${id}` as `containerItemKey${number}`;
         const itemKey = peek$(ctx, itemKeySignal) as string | undefined;
 
@@ -234,6 +240,11 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
         prevItemKeyRef.current = undefined;
     }
 
+    const previousAdjustment = React.useRef(ctx.state.layoutAdjustmentEpoch);
+    const wasAdjusted = previousAdjustment.current !== ctx.state.layoutAdjustmentEpoch;
+    previousAdjustment.current = ctx.state.layoutAdjustmentEpoch;
+    const shouldSkipLayoutTransition = wasAdjusted || isScrollActive || !!ctx.state.scrollingTo;
+
     // Layout transitions require positional layout props instead of transform.
     // An unmeasured row stays laid out but invisible when hideItemsUntilMeasured is on,
     // matching PositionView on the new architecture.
@@ -244,7 +255,7 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
 
     return (
         <Reanimated.View
-            layout={shouldSkipTransitionForRecycleReuse ? undefined : layoutTransition}
+            layout={shouldSkipTransitionForRecycleReuse || shouldSkipLayoutTransition ? undefined : layoutTransition}
             ref={refView}
             style={viewStyle}
             {...rest}
@@ -253,6 +264,112 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
             {children}
         </Reanimated.View>
     );
+});
+
+interface ReanimatedSizeViewProps {
+    horizontal: boolean;
+    signalName: "totalSize" | "alignItemsAtEndPadding";
+    style: StyleProp<ViewStyle>;
+    children?: React.ReactNode;
+    pointerEvents?: ViewStyle["pointerEvents"];
+    layoutTransition?: ReanimatedLayoutAnimation;
+}
+
+const ReanimatedSizeView = typedMemo(function ReanimatedSizeViewComponent({
+    horizontal,
+    signalName,
+    style,
+    layoutTransition,
+    ...rest
+}: ReanimatedSizeViewProps) {
+    const ctx = useStateContext();
+    const [logicalSize = 0, readyToRender, isFollowingEnd, isScrollActive] = useArr$([
+        signalName,
+        "readyToRender",
+        "isFollowingEnd",
+        "isScrollActive",
+    ]);
+    const visualSize = useSharedValue(logicalSize);
+    const previousSize = React.useRef(logicalSize);
+    const runRef = React.useRef(0);
+    const complete = useCallback(
+        (run: number) => {
+            if (run !== runRef.current) return;
+            ctx.state.activeSizeAnimations?.delete(signalName);
+            if (!ctx.state.activeSizeAnimations?.size && ctx.state.pendingMaintainScrollAtEnd) {
+                ctx.state.resumeMaintainScrollAtEnd?.();
+            }
+        },
+        [ctx, signalName],
+    );
+    const animatedStyle = useAnimatedStyle(
+        () => (horizontal ? { width: Math.max(0, visualSize.value) } : { height: Math.max(0, visualSize.value) }),
+        [horizontal],
+    );
+
+    React.useLayoutEffect(() => {
+        type SizeTransition = {
+            createInstance?: () => SizeTransition;
+            getAnimationAndConfig?: () => [any, any];
+            getDelayFunction?: () => any;
+            getDelay?: () => number;
+        };
+        const suppliedTransition = layoutTransition as SizeTransition | undefined;
+        const transition = suppliedTransition?.createInstance?.() ?? suppliedTransition;
+        const animationAndConfig = transition?.getAnimationAndConfig?.();
+        if (!readyToRender || isFollowingEnd || isScrollActive || !!ctx.state.scrollingTo || !animationAndConfig) {
+            previousSize.current = logicalSize;
+            const run = ++runRef.current;
+            cancelAnimation(visualSize);
+            visualSize.value = logicalSize;
+            complete(run);
+            return;
+        }
+        if (logicalSize === previousSize.current) return;
+        previousSize.current = logicalSize;
+        const run = ++runRef.current;
+        const [animation, config] = animationAndConfig;
+        const delayFunction =
+            transition?.getDelayFunction?.() ??
+            ((_delay: number, value: unknown) => {
+                "worklet";
+                return value;
+            });
+        const delay = transition?.getDelay?.() ?? 0;
+        ctx.state.activeSizeAnimations ??= new Set();
+        ctx.state.activeSizeAnimations.add(signalName);
+        runOnUI((target: number) => {
+            "worklet";
+            visualSize.value = delayFunction(
+                delay,
+                animation(target, config, (finished: boolean) => {
+                    "worklet";
+                    if (finished) runOnJS(complete)(run);
+                }),
+            );
+        })(logicalSize);
+    }, [
+        complete,
+        ctx,
+        isFollowingEnd,
+        isScrollActive,
+        layoutTransition,
+        logicalSize,
+        readyToRender,
+        signalName,
+        visualSize,
+    ]);
+
+    React.useLayoutEffect(
+        () => () => {
+            runRef.current++;
+            cancelAnimation(visualSize);
+            ctx.state.activeSizeAnimations?.delete(signalName);
+        },
+        [ctx, signalName, visualSize],
+    );
+
+    return <Reanimated.View {...rest} style={[style, animatedStyle]} />;
 });
 
 interface PositionComponentInternalProps {
@@ -420,10 +537,18 @@ const LegendListForwardedRef = typedMemo(
             };
         }, [hasItemLayoutAnimation, recycleItems]);
 
+        const sizeComponentInternal = React.useMemo(() => {
+            if (!hasItemLayoutAnimation) return undefined;
+            return function SizeComponent(sizeProps: ReanimatedSizeViewProps) {
+                return <ReanimatedSizeView {...sizeProps} layoutTransition={itemLayoutAnimationRef.current} />;
+            };
+        }, [hasItemLayoutAnimation]);
+
         const legendListProps = {
             ...rest,
             positionComponentInternal,
             recycleItems,
+            sizeComponentInternal,
             ...(shouldUseReanimatedScrollView
                 ? {
                       renderScrollComponent: renderReanimatedScrollComponent,

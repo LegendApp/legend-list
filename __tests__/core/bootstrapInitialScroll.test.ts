@@ -988,6 +988,12 @@ describe("bootstrapInitialScroll", () => {
                     estimatedItemSize: 100,
                     keyExtractor: (item: { id: string }) => item.id,
                 },
+                refScroller: {
+                    current: {
+                        getScrollableNode: () => ({}),
+                        scrollTo: () => {},
+                    },
+                } as StateContext["state"]["refScroller"],
                 scroll: 500,
                 scrollLength: 200,
                 scrollPending: 500,
@@ -1033,7 +1039,67 @@ describe("bootstrapInitialScroll", () => {
             viewOffset: 0,
             viewPosition: 1,
         });
+        ctx.state.scheduledWork.dispose();
     });
+
+    it.each(["android", "ios"] as const)(
+        "does not apply a preserved end correction twice after a native viewport clamp (%s)",
+        (platform) => {
+            Platform.OS = platform;
+            const frames: FrameRequestCallback[] = [];
+            globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+            const data = Array.from({ length: 20 }, (_, index) => ({ id: `item-${index}` }));
+            const sizes = new Map(data.map((item, index) => [item.id, index === 19 ? 89 : 100]));
+            // The viewport grew from 280 to 420. Native already clamped to the new end,
+            // but its scroll event has not updated the cached 1709px offset yet.
+            let nativeOffset = 1569;
+            const ctx = createMockContext(
+                { readyToRender: true, totalSize: 1989 },
+                {
+                    didFinishInitialScroll: true,
+                    idCache: data.map((item) => item.id),
+                    initialScroll: { index: 19, viewPosition: 1 },
+                    initialScrollSession: undefined,
+                    lastNativeScroll: 1709,
+                    positions: data.map((_, index) => index * 100),
+                    props: { data, estimatedItemSize: 100, keyExtractor: (item) => item.id },
+                    refScroller: {
+                        current: {
+                            getScrollableNode: () => ({}),
+                            scrollTo: ({ y }: { y: number }) => {
+                                nativeOffset = y;
+                            },
+                        },
+                    } as StateContext["state"]["refScroller"],
+                    scroll: 1709,
+                    scrollLength: 420,
+                    scrollPending: 1709,
+                    sizes,
+                    sizesKnown: sizes,
+                },
+            );
+            // Native MVCP applies ScrollAdjust relative to the already-clamped position.
+            ctx.state.scrollAdjustHandler.requestAdjust = (delta) => {
+                nativeOffset += delta;
+            };
+
+            try {
+                handleBootstrapInitialScrollLayoutChange(ctx);
+                frames.shift()?.(0);
+
+                expect(nativeOffset).toBe(1569);
+                expect(ctx.state.scroll).toBe(1569);
+                ctx.state.lastNativeScroll = nativeOffset;
+                ctx.state.scrollPending = nativeOffset;
+                for (let frame = 0; frame < 4 && frames.length > 0; frame++) frames.shift()?.(0);
+                expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                expect(nativeOffset).toBe(1569);
+                expect(ctx.state.scroll).toBe(1569);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        },
+    );
 
     it("retargets an active initial scroll natively when a late viewport layout changes its offset", () => {
         const requestedAdjusts: number[] = [];

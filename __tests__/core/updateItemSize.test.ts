@@ -250,7 +250,7 @@ describe("item size update functions", () => {
 
             updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { immediate: true });
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
@@ -268,7 +268,7 @@ describe("item size update functions", () => {
 
             updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { immediate: true });
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
@@ -288,7 +288,7 @@ describe("item size update functions", () => {
 
             updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, { immediate: true });
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
@@ -320,6 +320,7 @@ describe("item size update functions", () => {
             });
 
             it("does not pull back to the end when a first measurement arrives after scrolling away", () => {
+                mockState.scroll = 0;
                 mockState.isWithinMaintainScrollAtEndThreshold = false;
 
                 updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
@@ -346,10 +347,30 @@ describe("item size update functions", () => {
                     expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                     expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
 
-                    // A later measurement can follow normally after drag end, without momentum events.
+                    // A drag released outside the threshold keeps intent interrupted for later measurements.
+                    mockState.scroll = 100;
+                    mockState.isWithinMaintainScrollAtEndThreshold = false;
                     mockState.isDragging = false;
                     updateItemAndFlush(mockCtx, "item_0", { height: 200, width: 400 });
                     rafCallback?.(0);
+                    expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
+                },
+            );
+
+            it.each(["web", "ios", "android"] as const)(
+                "rearms end following when a drag is released within the threshold on %s",
+                (platform) => {
+                    Platform.OS = platform;
+                    mockState.isWithinMaintainScrollAtEndThreshold = true;
+                    mockState.isDragging = true;
+                    doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
+                    mockState.scroll = 380;
+                    mockState.isDragging = false;
+
+                    updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+                    rafCallback?.(0);
+
+                    expect(mockState.endFollowInterrupted).toBe(false);
                     expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(1);
                 },
             );
@@ -362,19 +383,21 @@ describe("item size update functions", () => {
 
                     updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
-                    expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
-                    expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+                    const isWeb = platform === "web";
+                    expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(isWeb ? 0 : 1);
+                    expect(mockState.maintainingScrollAtEnd).toBe(isWeb ? "instant" : "pending-instant");
+                    expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(isWeb ? 1 : 0);
 
-                    if (platform !== "web") {
-                        doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
-                    }
-                    mockState.scroll = 250;
+                    doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
+                    mockState.scroll = 100;
                     mockState.isWithinMaintainScrollAtEndThreshold = false;
+                    updateItemAndFlush(mockCtx, "item_0", { height: 180, width: 400 });
                     rafCallback?.(0);
 
-                    expect(runTrackedScrollToEnd).not.toHaveBeenCalled();
+                    expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(isWeb ? 1 : 0);
                     expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                     expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+                    expect(mockState.scroll).toBe(100);
                 },
             );
 
