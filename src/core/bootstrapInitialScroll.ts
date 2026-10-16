@@ -1,7 +1,12 @@
 import { doScrollTo } from "@/core/doScrollTo";
 import { getEndAlignedViewOffset, isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
-import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
+import {
+    advanceCurrentInitialScrollSession,
+    dispatchInitialScroll,
+    resolveInitialScrollOffset,
+    setInitialScrollTarget,
+} from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
@@ -749,8 +754,10 @@ export function handleBootstrapInitialScrollFooterLayout(
         return;
     }
 
+    const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
+    const isFinalInitialScroll = !!state.scrollingTo?.isInitialScroll && !bootstrapInitialScroll;
     const shouldProcessFooterLayout =
-        !!getBootstrapInitialScrollSession(state) || shouldPreserveInitialScrollForFooterLayout(initialScroll);
+        isFinalInitialScroll || !!bootstrapInitialScroll || shouldPreserveInitialScrollForFooterLayout(initialScroll);
     /*
      * Ignore footer layout once bootstrap and footer preservation are both gone.
      */
@@ -791,7 +798,12 @@ export function handleBootstrapInitialScrollFooterLayout(
          * No footer-driven target change means the only remaining job is to
          * drop the footer-preservation marker and keep the plain end target.
          */
-        if (!didTargetChange) {
+        if (isFinalInitialScroll) {
+            // The final request may have been clamped before the footer committed.
+            // Retry without restarting bootstrap or revealing its optimistic offset.
+            setInitialScrollTarget(ctx, updatedInitialScroll);
+            advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
+        } else if (!didTargetChange) {
             clearPendingInitialScrollFooterLayout(ctx, {
                 dataLength,
                 stylePaddingEnd,
