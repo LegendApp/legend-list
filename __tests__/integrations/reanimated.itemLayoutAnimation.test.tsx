@@ -468,6 +468,74 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
     });
 
+    it("skips layout transitions while scrolling and for one render after a scroll adjustment", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-scroll-active");
+        const transition = { duration: 280, type: "linear" } as any;
+
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList
+                    data={[{ id: "a" }]}
+                    estimatedItemSize={10}
+                    itemLayoutAnimation={transition}
+                    renderItem={() => null}
+                />,
+            );
+        });
+
+        const PositionComponent = legendListPropsRenders.at(-1).positionComponentInternal as React.ComponentType<any>;
+        let context!: ReturnType<typeof useStateContext>;
+        const CaptureContext = () => {
+            context = useStateContext();
+            return null;
+        };
+
+        act(() => {
+            TestRenderer.create(
+                <StateProvider>
+                    <CaptureContext />
+                    <PositionComponentHarness
+                        containerId={9}
+                        itemKey="a"
+                        PositionComponent={PositionComponent}
+                        position={10}
+                    />
+                </StateProvider>,
+            );
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+
+        act(() => {
+            set$(context, "isScrollActive", true);
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
+        act(() => {
+            set$(context, "isScrollActive", false);
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+
+        context.state.layoutAdjustmentEpoch = (context.state.layoutAdjustmentEpoch ?? 0) + 1;
+        act(() => {
+            set$(context, "containerPosition9", 20);
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
+        act(() => {
+            set$(context, "containerPosition9", 30);
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+
+        context.state.scrollingTo = { animated: true, offset: 100 } as any;
+        act(() => {
+            set$(context, "containerPosition9", 40);
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
+        context.state.scrollingTo = undefined;
+        act(() => {
+            set$(context, "containerPosition9", 50);
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+    });
+
     it("uses the reanimated scroll bridge on old architecture so animated contentContainerStyle reaches Reanimated.ScrollView", async () => {
         registerLegendListModuleMock(false);
 
@@ -719,5 +787,96 @@ describe("AnimatedLegendList content size transitions", () => {
         });
         completions.at(-1)?.(true);
         expect(resume).toHaveBeenCalledTimes(2);
+    });
+
+    for (const [name, transition] of [
+        ["a plain transition object", { duration: 280 }],
+        ["a custom layout function", () => ({ animations: {}, initialValues: {} })],
+    ] as const) {
+        it(`snaps content size without tracking an animation for ${name}`, async () => {
+            registerLegendListModuleMock();
+            registerReanimatedModuleMock(createReanimatedOverrides());
+            const { AnimatedLegendList } = await import("../../src/integrations/reanimated?size-transition-snap");
+            act(() => {
+                TestRenderer.create(
+                    <AnimatedLegendList data={["a"]} itemLayoutAnimation={transition as any} renderItem={() => null} />,
+                );
+            });
+            const SizeComponent = legendListPropsRenders.at(-1).sizeComponentInternal;
+            let context!: ReturnType<typeof useStateContext>;
+            const resume = mock(() => {});
+            function Harness({ size }: { size: number }) {
+                const ctx = useStateContext();
+                context = ctx;
+                ctx.state ??= createMockState({ didContainersLayout: true, didFinishInitialScroll: true });
+                ctx.state.resumeMaintainScrollAtEnd = resume;
+                React.useLayoutEffect(() => {
+                    set$(ctx, "totalSize", size);
+                    set$(ctx, "readyToRender", true);
+                }, [ctx, size]);
+                return <SizeComponent horizontal={false} signalName="totalSize" style={{}} />;
+            }
+            let renderer!: TestRenderer.ReactTestRenderer;
+            act(() => {
+                renderer = TestRenderer.create(
+                    <StateProvider>
+                        <Harness size={100} />
+                    </StateProvider>,
+                );
+            });
+            context.state.pendingMaintainScrollAtEnd = true;
+            act(() => {
+                renderer.update(
+                    <StateProvider>
+                        <Harness size={200} />
+                    </StateProvider>,
+                );
+            });
+            expect(context.state.activeSizeAnimations?.size ?? 0).toBe(0);
+            expect(resume).toHaveBeenCalled();
+        });
+    }
+
+    it("passes the builder delay to its delay function", async () => {
+        registerLegendListModuleMock();
+        registerReanimatedModuleMock(createReanimatedOverrides());
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?size-transition-delay");
+        const delayFunction = mock((_delay: number, value: unknown) => value);
+        const transition = {
+            getAnimationAndConfig: () => [(target: number) => target, {}],
+            getDelay: () => 50,
+            getDelayFunction: () => delayFunction,
+        } as any;
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList data={["a"]} itemLayoutAnimation={transition} renderItem={() => null} />,
+            );
+        });
+        const SizeComponent = legendListPropsRenders.at(-1).sizeComponentInternal;
+        function Harness({ size }: { size: number }) {
+            const ctx = useStateContext();
+            ctx.state ??= createMockState({ didContainersLayout: true, didFinishInitialScroll: true });
+            React.useLayoutEffect(() => {
+                set$(ctx, "totalSize", size);
+                set$(ctx, "readyToRender", true);
+            }, [ctx, size]);
+            return <SizeComponent horizontal={false} signalName="totalSize" style={{}} />;
+        }
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(
+                <StateProvider>
+                    <Harness size={100} />
+                </StateProvider>,
+            );
+        });
+        act(() => {
+            renderer.update(
+                <StateProvider>
+                    <Harness size={200} />
+                </StateProvider>,
+            );
+        });
+        expect(delayFunction).toHaveBeenCalledWith(50, 200);
     });
 });
