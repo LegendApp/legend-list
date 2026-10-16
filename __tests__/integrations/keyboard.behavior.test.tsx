@@ -367,6 +367,51 @@ describe("useKeyboardScrollToEnd", () => {
         });
     }
 
+    for (const race of ["replaced list", "superseded request"] as const) {
+        it(`abandons a dismissal scroll after a ${race} during keyboard dismissal`, async () => {
+            const { KeyboardController } = await import("react-native-keyboard-controller");
+            const { useKeyboardScrollToEnd } = await import("../../src/integrations/keyboard?dismiss-owner-race");
+            let dismiss!: () => void;
+            const dismissSpy = spyOn(KeyboardController, "dismiss").mockImplementation(
+                () =>
+                    new Promise<void>((resolve) => {
+                        dismiss = resolve;
+                    }),
+            );
+            const createList = () => ({
+                getState: () => ({ dataEpoch: 0 }),
+                scrollToEnd: mock(() => Promise.resolve()),
+            });
+            const original = createList();
+            const replacement = createList();
+            const listRef = { current: original } as any;
+            const freeze = createSharedValue(false);
+            let scroll!: ReturnType<typeof useKeyboardScrollToEnd>["scrollMessageToEnd"];
+            function Probe() {
+                scroll = useKeyboardScrollToEnd({ freeze: freeze as any, listRef }).scrollMessageToEnd;
+                return null;
+            }
+            let renderer!: TestRenderer.ReactTestRenderer;
+            try {
+                act(() => {
+                    renderer = TestRenderer.create(<Probe />);
+                });
+                const request = scroll({ animated: false, closeKeyboard: true });
+                if (race === "replaced list") listRef.current = replacement;
+                else await scroll({ animated: false, closeKeyboard: false });
+                const callsBeforeDismiss = original.scrollToEnd.mock.calls.length;
+                dismiss();
+                await request;
+                expect(original.scrollToEnd).toHaveBeenCalledTimes(callsBeforeDismiss);
+                expect(replacement.scrollToEnd).not.toHaveBeenCalled();
+                expect(freeze.value).toBe(false);
+            } finally {
+                dismissSpy.mockRestore();
+                act(() => renderer.unmount());
+            }
+        });
+    }
+
     it("keeps the newer scroll frozen when an older superseded promise settles", async () => {
         const { useKeyboardScrollToEnd } = await import("../../src/integrations/keyboard?freeze-request-owner");
         const completions: Array<() => void> = [];
