@@ -1091,8 +1091,10 @@ describe("bootstrapInitialScroll", () => {
                 expect(ctx.state.scroll).toBe(1569);
                 ctx.state.lastNativeScroll = nativeOffset;
                 ctx.state.scrollPending = nativeOffset;
-                frames.shift()?.(0);
+                for (let frame = 0; frame < 4 && frames.length > 0; frame++) frames.shift()?.(0);
                 expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                expect(nativeOffset).toBe(1569);
+                expect(ctx.state.scroll).toBe(1569);
             } finally {
                 ctx.state.scheduledWork.dispose();
             }

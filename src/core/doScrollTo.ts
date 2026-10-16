@@ -33,35 +33,29 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
 
     if (isAnimated) {
         // The DOM clamps the request to its current content size. An already
-        // aligned request emits no scroll/scrollend events, so finish it on the
-        // next frame rather than keeping end-follow work blocked until timeout.
+        // aligned request emits no scroll/scrollend events.
         const targetOffset = Math.max(0, Math.min(offset, scroller.getMaxScrollOffset?.() ?? offset));
-        if (Math.abs((scroller.getCurrentScrollOffset?.() ?? Number.NaN) - targetOffset) <= SCROLL_END_TARGET_EPSILON) {
-            const targetToken = state.scrollingTo;
-            state.scheduledWork.frame(() => {
-                if (targetToken === state.scrollingTo) finishScrollTo(ctx);
-            }, "platformScrollCompletion");
+        const isAtTarget =
+            Math.abs((scroller.getCurrentScrollOffset?.() ?? Number.NaN) - targetOffset) <= SCROLL_END_TARGET_EPSILON;
+        if (!isAtTarget) {
+            const target = scroller.getScrollEventTarget?.() ?? null;
+            listenForScrollEnd(ctx, {
+                readOffset: () => scroller.getCurrentScrollOffset!(),
+                target,
+                targetOffset,
+            });
             return;
         }
-        const target = scroller.getScrollEventTarget?.() ?? null;
-        listenForScrollEnd(ctx, {
-            readOffset: () => scroller.getCurrentScrollOffset!(),
-            target,
-            targetOffset,
-        });
     } else {
         state.scroll = offset;
-        const targetToken = state.scrollingTo;
-        state.scheduledWork.timeout(
-            () => {
-                if (targetToken === state.scrollingTo) {
-                    finishScrollTo(ctx);
-                }
-            },
-            100,
-            "platformScrollCompletion",
-        );
     }
+
+    // Instant DOM scrolling is synchronous. Release ownership on the next
+    // frame so later layout growth can follow without waiting for a timer.
+    const targetToken = state.scrollingTo;
+    state.scheduledWork.frame(() => {
+        if (targetToken === state.scrollingTo) finishScrollTo(ctx);
+    }, "platformScrollCompletion");
 }
 
 function listenForScrollEnd(

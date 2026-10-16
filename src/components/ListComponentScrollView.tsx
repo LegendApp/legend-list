@@ -229,7 +229,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
             const maxOffset = getMaxScrollOffset();
             const clampedOffset = clampOffset(offset, maxOffset);
-            const behavior = animated ? "smooth" : "auto";
+            const behavior = animated ? "smooth" : "instant";
             const options: ScrollToOptions = { behavior };
 
             if (isExternalScroll) {

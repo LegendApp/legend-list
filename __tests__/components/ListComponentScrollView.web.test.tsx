@@ -78,6 +78,7 @@ function registerWebScrollMocks() {
         }),
         resolveScrollEventTarget: (_element: unknown, externalTarget: unknown) => {
             if (externalTarget !== undefined && externalTarget !== window) return externalTarget;
+            if (_element && "scrollTo" in (_element as object)) return _element;
             const target = {
                 addEventListener,
                 removeEventListener,
@@ -126,6 +127,46 @@ function resetMocks() {
 describe("ListComponentScrollView (web)", () => {
     beforeEach(() => {
         registerWebScrollMocks();
+    });
+
+    it("keeps non-animated scrolling instant when the owner enables smooth CSS scrolling", async () => {
+        resetMocks();
+        maxOffset = 1000;
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-instant-scroll"
+        );
+        const ref = { current: null as any };
+        const owner = {
+            addEventListener,
+            removeEventListener,
+            scrollTo: (options: ScrollToOptions) => {
+                // A smooth CSS owner does not synchronously apply auto/smooth requests.
+                if (options.behavior === "instant") owner.scrollTop = options.top ?? 0;
+            },
+            scrollTop: 0,
+        };
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        ref={ref}
+                        style={{ scrollBehavior: "smooth" }}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                    { createNodeMock: () => owner },
+                );
+            });
+            ref.current.scrollTo({ animated: true, y: 200 });
+            expect(ref.current.getCurrentScrollOffset()).toBe(0);
+            ref.current.scrollTo({ animated: false, y: 200 });
+            expect(ref.current.getCurrentScrollOffset()).toBe(200);
+        } finally {
+            act(() => renderer?.unmount());
+        }
     });
 
     for (const useWindowScroll of [false, true]) {
