@@ -51,4 +51,19 @@ describe("cancelScroll", () => {
         cancelScroll(ctx);
         expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 600, y: 0 });
     });
+
+    it("commits adjustments deferred by the cancelled animation", () => {
+        const { ctx } = createScrollingContext({ animated: true, offset: 900 });
+        const commitPendingAdjust = mock((target?: unknown) => {
+            // Runs after the cancelled target is released, so it cannot retarget it.
+            expect(target).toBeUndefined();
+            expect(ctx.state.scrollingTo).toBeUndefined();
+            expect(ctx.state.scroll).toBe(100);
+        });
+        ctx.state.scrollAdjustHandler.commitPendingAdjust = commitPendingAdjust;
+
+        cancelScroll(ctx);
+
+        expect(commitPendingAdjust).toHaveBeenCalledTimes(1);
+    });
 });

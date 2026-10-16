@@ -33,7 +33,7 @@ export class ScrollAdjustHandler {
     getAdjust() {
         return this.appliedAdjust;
     }
-    commitPendingAdjust(scrollTarget: ScrollTarget) {
+    commitPendingAdjust(scrollTarget?: ScrollTarget) {
         if (PlatformAdjustBreaksScroll) {
             // On web and Android, adjust during a scrollTo breaks the scrollTo,
             // so we need to set scrollAdjustPending while doing the scrollTo

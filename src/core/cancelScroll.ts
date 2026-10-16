@@ -27,6 +27,9 @@ export function cancelScroll(ctx: StateContext, stopAnimation = true) {
     const x = state.props.horizontal ? toNativeHorizontalOffset(state, observed, getContentSize(ctx)) : 0;
     if (wasAnimating && stopAnimation)
         scroller?.scrollTo({ animated: false, x, y: state.props.horizontal ? 0 : observed });
+    // Apply MVCP adjustments deferred during the cancelled animation now; otherwise
+    // the next request's finishScrollTo would apply them to its own target.
+    state.scrollAdjustHandler.commitPendingAdjust();
 }
 
 export function interruptUserScroll(ctx: StateContext) {
