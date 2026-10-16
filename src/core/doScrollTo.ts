@@ -90,7 +90,11 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
                         EDGE_POSITION_EPSILON &&
                     Math.abs(landingOffset - (targetToken.targetOffset ?? offset)) <= EDGE_POSITION_EPSILON
                 ) {
-                    cancelScroll(ctx, false);
+                    if (ctx.scrollRequestTracker?.isWaitingToRun()) {
+                        finishScrollTo(ctx);
+                    } else {
+                        cancelScroll(ctx, false);
+                    }
                 } else {
                     retryLanding(ctx, targetToken, currentOffset, landingOffset);
                 }

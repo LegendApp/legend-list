@@ -402,6 +402,30 @@ describe("animated web scrolls resolve only once landed", () => {
             });
         }
 
+        it("does not cancel a queued replacement when an older instant landing cannot reach its target", async () => {
+            const h = setup();
+            const scroller = h.state.refScroller.current!;
+            const originalScrollTo = scroller.scrollTo;
+            scroller.scrollTo = (options) => originalScrollTo({ ...options, y: Math.round(options.y! / 1000) * 1000 });
+            const first = trackScroll(h.ref.scrollToOffset({ animated: true, offset: 1250 }));
+            while (h.scrollToCalls.length < 3) {
+                h.browser.settle();
+                h.clock.tick();
+            }
+            expect(h.scrollToCalls).toHaveLength(3);
+            h.state.didDataChange = true;
+            const replacement = trackScroll(h.ref.scrollToOffset({ animated: true, offset: 2000 }));
+            h.clock.tick();
+            await flushMicrotasks();
+            expect(first.value).toEqual({ reason: "superseded" });
+            expect(replacement.resolved).toBe(false);
+            h.state.didDataChange = false;
+            await runUntilResolved(h, replacement);
+            expect(replacement.resolved).toBe(true);
+            expect(replacement.value).toBeUndefined();
+            expect(h.browser.offset).toBe(2000);
+        });
+
         it("does not treat the previous animation's last frame after a reversing retry as user input", async () => {
             const h = setup();
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
