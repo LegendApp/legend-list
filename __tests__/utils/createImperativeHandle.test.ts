@@ -836,6 +836,35 @@ describe("createImperativeHandle.scrollToEnd", () => {
         }
     });
 
+    it("waits for active size animations to finish before scrolling to an index", async () => {
+        const { flushRaf, restore } = installRafMock();
+
+        try {
+            const ctx = createMockContext({}, {
+                activeSizeAnimations: new Set(["totalSize"]),
+                props: { data: [1, 2, 3] },
+            } as any);
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 2 });
+
+            flushRaf();
+            flushRaf();
+            expect(ctx.scrollRequestTracker?.isWaitingToRun()).toBe(true);
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.activeSizeAnimations!.clear();
+            flushRaf();
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(ctx.scrollRequestTracker?.isWaitingToRun()).toBe(false);
+
+            await promise;
+        } finally {
+            restore();
+        }
+    });
+
     it("waits for anchored tail measurement before scrolling to the end", async () => {
         const { flushRaf, restore } = installRafMock();
 
