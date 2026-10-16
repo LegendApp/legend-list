@@ -1991,16 +1991,31 @@ describe("LegendList props behavior", () => {
 
     it("owns native momentum state through begin and end callbacks", async () => {
         const { LegendList } = await import("../../src/components/LegendList?momentum-state");
-        const rendered = render(<LegendList data={["row"]} renderItem={() => null} />);
-        const state = await getStateFromRender();
+        const onMomentumScrollBegin = mock(() => {});
+        const rendered = render(
+            <LegendList data={["row"]} onMomentumScrollBegin={onMomentumScrollBegin} renderItem={() => null} />,
+        );
+        const ctx = await getContextFromRender();
+        const state = ctx.state;
         act(() => {
             lastListProps.onMomentumScrollBegin({ nativeEvent: {} });
         });
         expect(state.isMomentumScrolling).toBe(true);
+        expect(peek$(ctx, "isScrollActive")).toBe(true);
+        expect(onMomentumScrollBegin).toHaveBeenCalledTimes(1);
         act(() => {
             lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
         });
         expect(state.isMomentumScrolling).toBe(false);
+        expect(peek$(ctx, "isScrollActive")).toBe(false);
+        act(() => {
+            lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+        });
+        expect(peek$(ctx, "isScrollActive")).toBe(true);
+        act(() => {
+            lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
+        });
+        expect(peek$(ctx, "isScrollActive")).toBe(false);
         rendered.unmount();
     });
 
@@ -2044,6 +2059,17 @@ describe("LegendList props behavior", () => {
                 updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
                 lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
                 flushFrames();
+                expect(ctx.state.endFollowInterrupted).toBe(false);
+                expect(peek$(ctx, "isFollowingEnd")).toBe(true);
+
+                // Momentum that ends inside the threshold rearms when it ends.
+                lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+                lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
+                lastListProps.onMomentumScrollBegin({ nativeEvent: {} });
+                flushFrames();
+                updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
+                expect(ctx.state.endFollowInterrupted).toBe(true);
+                lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
                 expect(ctx.state.endFollowInterrupted).toBe(false);
                 expect(peek$(ctx, "isFollowingEnd")).toBe(true);
             });
