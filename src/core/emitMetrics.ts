@@ -20,14 +20,16 @@ export function emitMetrics(ctx: StateContext) {
     const previous = state.lastMetrics;
     // Other metrics can change every scroll frame, so only consumers that opt in are notified of them.
     if (!trackScrollMetrics && previous?.footerSize === footerSize && previous.headerSize === headerSize) return;
+    const contentLength = getContentSize(ctx);
+    const scroll = getObservedScrollOffset(ctx);
     const metrics: LegendListMetrics = {
-        contentLength: getContentSize(ctx),
-        distanceFromEnd: getDistanceFromEnd(ctx),
+        contentLength,
+        distanceFromEnd: Math.max(0, contentLength - scroll - state.scrollLength),
         footerSize,
         headerSize,
         isAtEnd: !!peek$(ctx, "isAtEnd"),
         isFollowingEnd: !!peek$(ctx, "isFollowingEnd"),
-        scroll: getObservedScrollOffset(ctx),
+        scroll,
         scrollLength: state.scrollLength,
     };
     let didChange = !previous;
