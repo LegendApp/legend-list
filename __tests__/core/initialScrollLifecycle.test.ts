@@ -40,7 +40,7 @@ describe("initialScrollLifecycle", () => {
 
     for (const didStartFreshData of [false, true]) {
         it(`only cancels previous scroll ownership and end-follow state for a fresh dataset (${didStartFreshData})`, () => {
-            const ctx = createMockContext({ isFollowingEnd: true });
+            const ctx = createMockContext({ isFollowingEnd: true, isScrollActive: true });
             const state = ctx.state;
             const resolve = mock(() => {});
             const cancelCompletion = mock(() => {});
@@ -77,6 +77,8 @@ describe("initialScrollLifecycle", () => {
             expect(state.pendingEndMeasurements).toEqual(didStartFreshData ? undefined : new Set(["tail"]));
             expect(state.scrollElementTarget).toEqual(didStartFreshData ? undefined : { element: {} });
             expect(ctx.values.get("isFollowingEnd")).toBe(!didStartFreshData);
+            // Releasing the old request must not leave scroll-gated transitions disabled.
+            expect(ctx.values.get("isScrollActive")).toBe(!didStartFreshData);
         });
     }
 
