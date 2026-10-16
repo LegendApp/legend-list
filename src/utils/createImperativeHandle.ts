@@ -16,6 +16,7 @@ import { scrollToIndex } from "@/core/scrollToIndex";
 import { setContentInsetOverride } from "@/core/updateContentMetrics";
 import { updateItemSizes } from "@/core/updateItemSizes";
 import { updateScroll } from "@/core/updateScroll";
+import { updateViewableItems } from "@/core/viewability";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import {
@@ -28,6 +29,7 @@ import {
     set$,
 } from "@/state/state";
 import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
+import type { LegendListInternalRef } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { areKnownOrFixedItemSizesAvailable, getItemSizeAtIndex } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -61,7 +63,10 @@ function triggerMountedContainerLayouts(ctx: StateContext) {
     }
 }
 
-export function createImperativeHandle(ctx: StateContext, scheduleImperativeScrollCommit?: () => void): LegendListRef {
+export function createImperativeHandle(
+    ctx: StateContext,
+    scheduleImperativeScrollCommit?: () => void,
+): LegendListInternalRef {
     const state = ctx.state;
     const scrollRequestTracker = getScrollRequestTracker(ctx);
     const IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS = 800;
@@ -298,6 +303,27 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             if (didChange) {
                 const didRetargetInitial = retargetActiveInitialScrollAtEnd(ctx);
                 if (!didRetargetInitial) doMaintainScrollAtEnd(ctx);
+            }
+        },
+        reportViewabilityInsetEndInternal: (inset) => {
+            const next = Number.isFinite(inset) ? Math.max(0, inset) : 0;
+            if (next === (state.viewabilityInsetEnd ?? 0)) {
+                return;
+            }
+            state.viewabilityInsetEnd = next;
+            if (state.viewabilityConfigCallbackPairs) {
+                // A keyboard can cover stationary content without a scroll event.
+                // Refresh viewability only; occlusion must not initiate scrolling.
+                updateViewableItems(
+                    state,
+                    ctx,
+                    state.viewabilityConfigCallbackPairs,
+                    state.scrollLength,
+                    state.startNoBuffer ?? 0,
+                    state.endNoBuffer ?? -1,
+                    state.startBuffered,
+                    state.endBuffered,
+                );
             }
         },
         scrollElementIntoView: ({ element, viewportMargin, animated, viewPosition }) => {

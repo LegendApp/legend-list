@@ -6,8 +6,9 @@ import {
     KeyboardChatScrollView,
     type KeyboardChatScrollViewProps,
     KeyboardController,
+    useKeyboardHandler,
 } from "react-native-keyboard-controller";
-import { type SharedValue, useSharedValue } from "react-native-reanimated";
+import { runOnJS, type SharedValue, useAnimatedReaction, useSharedValue } from "react-native-reanimated";
 
 import type { AnchoredEndSpaceConfig } from "@legendapp/list/react";
 import type { LegendListRef } from "@legendapp/list/react-native";
@@ -46,6 +47,10 @@ type KeyboardAwareLegendListProps<ItemT> = Omit<
 type KeyboardChatScrollViewContentInsets = Parameters<
     NonNullable<KeyboardChatScrollViewProps["onContentInsetChange"]>
 >[0];
+
+type KeyboardViewabilityListRef = LegendListRef & {
+    reportViewabilityInsetEndInternal?: (inset: number) => void;
+};
 
 type ScrollMessageToEndOptions = {
     animated: boolean;
@@ -162,9 +167,36 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         ...rest
     } = props;
 
-    const refLegendList = useRef<LegendListRef | null>(null);
+    const refLegendList = useRef<KeyboardViewabilityListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
     const blankSpace = useSharedValue<number>(0);
+    const initialKeyboardHeight = KeyboardController.state().height;
+    const keyboard = useSharedValue({ height: initialKeyboardHeight, progress: initialKeyboardHeight > 0 ? 1 : 0 });
+    // Worklets deep-copy captured objects; keep only the primitive in the reaction scope.
+    const isHorizontal = !!rest.horizontal;
+    const reportViewabilityInset = useCallback((inset: number) => {
+        refLegendList.current?.reportViewabilityInsetEndInternal?.(inset);
+    }, []);
+    const onKeyboardMove = (event: { height: number; progress: number }) => {
+        "worklet";
+        keyboard.value = { height: event.height, progress: event.progress };
+    };
+    // onStart carries the target; movement events describe actual occlusion.
+    useKeyboardHandler({ onEnd: onKeyboardMove, onInteractive: onKeyboardMove, onMove: onKeyboardMove }, []);
+    useAnimatedReaction(
+        // Blank space extends the scroll range but does not obscure content.
+        () =>
+            isHorizontal
+                ? 0
+                : Math.max(0, keyboard.value.height - (keyboardOffset ?? 0) * keyboard.value.progress) +
+                  Math.max(0, contentInsetEndAdjustment?.value ?? 0),
+        (current, previous) => {
+            if (current !== previous) {
+                runOnJS(reportViewabilityInset)(current);
+            }
+        },
+        [contentInsetEndAdjustment, isHorizontal, keyboard, keyboardOffset, reportViewabilityInset],
+    );
 
     useEffect(() => {
         if (!anchoredEndSpace) {

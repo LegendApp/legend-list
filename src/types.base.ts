@@ -793,6 +793,10 @@ export interface ViewToken<ItemT = any> {
 export interface ViewAmountToken<ItemT = any> extends ViewToken<ItemT> {
     percentOfScroller: number;
     percentVisible: number;
+    /**
+     * Viewport size used for this measurement, with any integration-reported
+     * occlusion (for example a keyboard) already subtracted.
+     */
     scrollSize: number;
     size: number;
     sizeVisible: number;
