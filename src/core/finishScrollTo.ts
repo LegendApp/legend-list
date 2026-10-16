@@ -1,13 +1,12 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
-import { doMaintainScrollAtEnd, finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
-import type { LegendListScrollResult } from "@/types.base";
 
-export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResult) {
+export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
         cancelScrollCompletionChecks(state);
@@ -23,14 +22,6 @@ export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResul
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
 
-        if (result?.reason === "interrupted") {
-            state.endFollowInterrupted = true;
-            set$(ctx, "isFollowingEnd", false);
-            if (state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd) {
-                finishMaintainScrollAtEnd(ctx);
-            }
-        }
-
         state.scrollHistory.length = 0;
         state.scrollingTo = undefined;
         state.scrollTargetPinnedRange = undefined;
@@ -41,15 +32,11 @@ export function finishScrollTo(ctx: StateContext, result?: LegendListScrollResul
         }
 
         if (PlatformAdjustBreaksScroll) {
-            // After user input, keep the deferred adjustment relative to where the user is instead of
-            // retargeting the abandoned index.
-            state.scrollAdjustHandler.commitPendingAdjust(
-                result?.reason === "interrupted" ? { ...scrollingTo, index: undefined } : scrollingTo,
-            );
+            state.scrollAdjustHandler.commitPendingAdjust(scrollingTo);
         }
 
         const complete = () => {
-            resolvePendingScroll?.(result);
+            resolvePendingScroll?.();
             if (state.pendingMaintainScrollAtEnd) {
                 state.maintainingScrollAtEnd = undefined;
                 doMaintainScrollAtEnd(ctx, { immediate: !!scrollingTo.isInitialScroll });
