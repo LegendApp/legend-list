@@ -360,7 +360,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                     state.scrollingTo?.isScrollToEnd) &&
                 getCurrentScrollOffset() < clampOffset(state.scroll, getMaxScrollOffset()) - 1
             ) {
-                interruptUserScroll(ctx);
+                interruptUserScroll(ctx, true);
             }
             const shouldFlushImmediately =
                 !!state?.scrollingTo ||

@@ -715,6 +715,25 @@ describe("updateScroll user scroll ownership", () => {
         expect(native.onUserScroll).toHaveBeenCalledTimes(1);
     });
 
+    it("reports a web scroll event that interrupts end maintenance once", () => {
+        Platform.OS = "web";
+        // The scroll event handler interrupts pending maintenance before its coalesced update.
+        const pending = createUserScrollContext();
+        pending.ctx.state.pendingMaintainScrollAtEnd = true;
+        interruptUserScroll(pending.ctx, true);
+        expect(pending.ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+        updateScroll(pending.ctx, 400, true, { fromNativeScrollEvent: true });
+        expect(pending.onUserScroll).toHaveBeenCalledTimes(1);
+
+        // Cancelling an end request syncs the offset, so the coalesced update is not a user scroll.
+        const active = createUserScrollContext();
+        active.ctx.state.scrollingTo = { isScrollToEnd: true, offset: 500 };
+        active.ctx.state.refScroller.current = { getCurrentScrollOffset: () => 400 } as any;
+        interruptUserScroll(active.ctx, true);
+        updateScroll(active.ctx, 400, true, { fromNativeScrollEvent: true });
+        expect(active.onUserScroll).toHaveBeenCalledTimes(1);
+    });
+
     it("releases the reader anchor and DOM target only for user scroll events", () => {
         const { ctx } = createUserScrollContext();
         const anchor = { key: "reader", offset: 20 };
