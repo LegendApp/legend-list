@@ -70,6 +70,7 @@ import MoviesLFixture from "~/screens/fixtures/moviesL";
 import MoviesLRFixture from "~/screens/fixtures/moviesLR";
 import MutableCellsFixture from "~/screens/fixtures/mutable-cells";
 import MvcpTestFixture from "~/screens/fixtures/mvcp-test";
+import NativeContentShrinkFixture from "~/screens/fixtures/native-content-shrink";
 import ProductShelfFixture from "~/screens/fixtures/product-shelf";
 import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
 import ScrollRegressionQaFixture from "~/screens/fixtures/scroll-regression-qa";
@@ -162,6 +163,16 @@ const DEBUGGING_ROUTE: RouteDefinition = {
 };
 
 export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
+    {
+        component: NativeContentShrinkFixture,
+        description:
+            "Shrinks a mounted row above the viewport; compares Fabric layout and native clamping with raw RN.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "native-content-shrink",
+        title: "Native Content Shrink",
+    },
     {
         component: ScrollRegressionQaFixture,
         description: "Runs deterministic end-maintenance, MVCP, and initial-scroll regression scenarios.",
