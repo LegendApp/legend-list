@@ -14,7 +14,7 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
 
         const doit = () => {
             if (needsScrollWorkaround) {
-                doScrollTo(ctx, { horizontal: state.props.horizontal, offset: state.scroll });
+                doScrollTo(ctx, { horizontal: state.props.horizontal, isAdjustment: true, offset: state.scroll });
             } else {
                 state.scrollAdjustHandler.requestAdjust(positionDiff);
 
@@ -24,6 +24,10 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
             }
         };
         state.scroll += positionDiff;
+        // Growth already served by MVCP must not also count as end-follow credit.
+        if (positionDiff > 0 && state.momentumSuspendContentSize !== undefined) {
+            state.momentumSuspendCompensated = true;
+        }
         state.scrollForNextCalculateItemsInView = undefined;
 
         const readyToRender = peek$(ctx, "readyToRender");

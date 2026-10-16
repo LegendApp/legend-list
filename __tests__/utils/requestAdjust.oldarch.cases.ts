@@ -46,7 +46,7 @@ describe("requestAdjust old-architecture cases", () => {
             globalThis.setTimeout = originalSetTimeout;
         }
 
-        expect(doScrollTo).toHaveBeenCalledWith(ctx, { horizontal: false, offset: 250 });
+        expect(doScrollTo).toHaveBeenCalledWith(ctx, { horizontal: false, isAdjustment: true, offset: 250 });
         expect(ctx.state.ignoreScrollFromMVCP).toEqual({ lt: 175 });
         expect(scheduledDelay).toBe(250);
     });

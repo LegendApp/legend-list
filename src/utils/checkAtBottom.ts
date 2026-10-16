@@ -11,7 +11,12 @@ import {
 } from "@/utils/edgeReachedGate";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 
-export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allowGateCreatedInCurrentCheck?: boolean) {
+export function checkAtBottom(
+    ctx: StateContext,
+    allowedEdge?: ReachedEdge,
+    allowGateCreatedInCurrentCheck?: boolean,
+    options?: { maintainScrollAtEndGrowthCredit?: number },
+) {
     const state = ctx.state;
     if (!state) {
         return;
@@ -44,7 +49,8 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
             isContentLess ||
                 // A zero threshold still includes fractional offsets considered
                 // at the end; otherwise following can stop after rounding/layout.
-                distanceFromEnd <= Math.max(EDGE_POSITION_EPSILON, maintainScrollAtEndThreshold! * scrollLength) ||
+                distanceFromEnd - (options?.maintainScrollAtEndGrowthCredit ?? 0) <=
+                    Math.max(EDGE_POSITION_EPSILON, maintainScrollAtEndThreshold! * scrollLength) ||
                 state.pendingMaintainScrollAtEnd ||
                 !!maintainingScrollAtEnd ||
                 !!peek$(ctx, "isFollowingEnd"),

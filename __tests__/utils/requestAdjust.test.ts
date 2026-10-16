@@ -568,4 +568,33 @@ describe("requestAdjust", () => {
             expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
         });
     });
+
+    describe("growth compensation while end following is suspended", () => {
+        it("marks positive growth as compensated inside the suspended window", () => {
+            mockState.momentumSuspendContentSize = 1000;
+            mockState.momentumSuspendCompensated = false;
+
+            requestAdjust(mockCtx, 200);
+
+            expect(mockState.momentumSuspendCompensated).toBe(true);
+        });
+
+        it("ignores adjustments outside the suspended window", () => {
+            mockState.momentumSuspendContentSize = undefined;
+            mockState.momentumSuspendCompensated = false;
+
+            requestAdjust(mockCtx, 200);
+
+            expect(mockState.momentumSuspendCompensated).toBe(false);
+        });
+
+        it("does not treat shrink as compensation", () => {
+            mockState.momentumSuspendContentSize = 1000;
+            mockState.momentumSuspendCompensated = false;
+
+            requestAdjust(mockCtx, -200);
+
+            expect(mockState.momentumSuspendCompensated).toBe(false);
+        });
+    });
 });

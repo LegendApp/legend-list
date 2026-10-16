@@ -651,6 +651,21 @@ describe("doMaintainScrollAtEnd", () => {
     });
 
     for (const platform of ["ios", "android"] as const) {
+        it(`discards a queued follow frame if user momentum begins on ${platform}`, () => {
+            Platform.OS = platform;
+            doMaintainScrollAtEnd(mockCtx);
+            expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+
+            mockState.isMomentumScrolling = true;
+            mockState.releasedFromUserDrag = true;
+            rafCallback?.();
+
+            expect(scrollToEndSpy).not.toHaveBeenCalled();
+            expect(mockState.maintainingScrollAtEnd).toBeUndefined();
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+            expect(mockState.didDeferMaintainScrollAtEndForMomentum).toBe(true);
+        });
+
         it(`discards a queued follow frame when dragging on ${platform}`, () => {
             Platform.OS = platform;
             doMaintainScrollAtEnd(mockCtx);
