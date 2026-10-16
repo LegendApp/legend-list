@@ -371,6 +371,54 @@ describe("scroll ownership boundaries", () => {
         expect(createImperativeHandle(ctx).getState().isFollowingEnd).toBe(false);
     });
 
+    it("turns an end initial target into end intent unless the reader interrupted it", () => {
+        for (const endFollowInterrupted of [false, true]) {
+            const ctx = createMockContext(
+                {},
+                {
+                    didContainersLayout: true,
+                    endFollowInterrupted,
+                    initialScroll: { index: 99, preserveForBottomPadding: true, viewPosition: 1 },
+                    props: { data: Array.from({ length: 100 }, (_, i) => i), maintainScrollAtEnd: true },
+                },
+            );
+            finishInitialScroll(ctx);
+            expect(createImperativeHandle(ctx).getState().isFollowingEnd).toBe(!endFollowInterrupted);
+        }
+    });
+
+    it("releases pending end measurements and DOM targets only for explicit requests", async () => {
+        const ctx = createMockContext({}, { props: { data: ["a"] } });
+        const pendingEndMeasurements = new Set(["a"]);
+        const scrollElementTarget = { element: {} as Element };
+        Object.assign(ctx.state, { pendingEndMeasurements, scrollElementTarget });
+        const tracker = getScrollRequestTracker(ctx);
+        await tracker.runNowIfIdle(() => false);
+        expect(ctx.state.pendingEndMeasurements).toBe(pendingEndMeasurements);
+        expect(ctx.state.scrollElementTarget).toBe(scrollElementTarget);
+        tracker.start(() => {});
+        expect(ctx.state.pendingEndMeasurements).toBeUndefined();
+        expect(ctx.state.scrollElementTarget).toBeUndefined();
+    });
+
+    for (const isDragging of [false, true]) {
+        it(`marks scrolling active from request start until it settles (dragging: ${isDragging})`, () => {
+            const ctx = createMockContext({}, { isDragging, props: { data: ["a"] } });
+            const tracker = getScrollRequestTracker(ctx);
+            const resolve = mock(() => {});
+            const token = tracker.start(resolve);
+            expect(ctx.values.get("isScrollActive")).toBe(true);
+            tracker.runNow(token, resolve, () => {
+                ctx.state.scrollingTo = { animated: false, offset: 100 };
+                return true;
+            });
+            expect(ctx.values.get("isScrollActive")).toBe(true);
+            finishScrollTo(ctx);
+            expect(resolve).toHaveBeenCalled();
+            expect(ctx.values.get("isScrollActive")).toBe(isDragging);
+        });
+    }
+
     it("reports header, footer and out-of-range row size changes without scrolling", () => {
         const metrics = mock(() => {});
         const ctx = createMockContext(
