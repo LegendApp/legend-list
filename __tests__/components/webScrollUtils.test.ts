@@ -193,4 +193,12 @@ describe("scroll input ownership", () => {
         globalThis.getComputedStyle = (() => ({ overflowY: "visible" })) as any;
         expect(ownsScrollInput(child, scroller, false)).toBe(true);
     });
+    it("walks from a text node target to its parent element", () => {
+        const scroller = { nodeType: 1, parentElement: null } as any;
+        const textNode = { nodeType: 3, parentElement: scroller } as any;
+        globalThis.getComputedStyle = (() => {
+            throw new TypeError("getComputedStyle requires an Element");
+        }) as any;
+        expect(ownsScrollInput(textNode, scroller, false)).toBe(true);
+    });
 });
