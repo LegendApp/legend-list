@@ -5,7 +5,7 @@ import { clearPreservedInitialScrollTarget, supersedeInitialScroll } from "@/cor
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
-import { type StateContext, set$ } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 export function cancelScroll(ctx: StateContext, stopAnimation = true) {
@@ -23,7 +23,12 @@ export function cancelScroll(ctx: StateContext, stopAnimation = true) {
     state.scrollElementTarget = undefined;
     set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling);
     state.scrollPending = observed;
+    // Deferred adjustments are not applied natively yet, so the observed offset is current even
+    // inside their MVCP ignore window; dropping it would count them twice in the commit below.
+    const ignoreScrollFromMVCP = state.ignoreScrollFromMVCP;
+    if (peek$(ctx, "scrollAdjustPending")) state.ignoreScrollFromMVCP = undefined;
     updateScroll(ctx, observed, true, { markHasScrolled: false });
+    state.ignoreScrollFromMVCP = ignoreScrollFromMVCP;
     if (wasAnimating && stopAnimation) {
         // Stop at the scroller's own raw offset when it reports one, avoiding an RTL round trip.
         const x = state.props.horizontal

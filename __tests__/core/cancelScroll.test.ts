@@ -74,6 +74,26 @@ describe("cancelScroll", () => {
         expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: rawOffset, y: 0 });
     });
 
+    it("syncs the observed offset inside the MVCP ignore window before committing deferred adjustments", () => {
+        const { ctx } = createScrollingContext({ animated: true, offset: 900 });
+        ctx.state.refScroller.current = { scrollTo: mock(() => {}) } as any;
+        ctx.state.lastNativeScroll = 600;
+        // A +100 adjustment deferred during the animation raised the model scroll and opened an ignore window.
+        ctx.state.scroll = 700;
+        ctx.values.set("scrollAdjustPending", 100);
+        const ignoreWindow = { lt: 650 };
+        ctx.state.ignoreScrollFromMVCP = ignoreWindow;
+        ctx.state.scrollAdjustHandler.commitPendingAdjust = mock(() => {
+            // The deferred adjustment is not applied natively yet, so it must apply to the observed offset.
+            expect(ctx.state.scroll).toBe(600);
+        });
+
+        cancelScroll(ctx);
+
+        expect(ctx.state.scrollAdjustHandler.commitPendingAdjust).toHaveBeenCalledTimes(1);
+        expect(ctx.state.ignoreScrollFromMVCP).toBe(ignoreWindow);
+    });
+
     it("commits adjustments deferred by the cancelled animation", () => {
         const { ctx } = createScrollingContext({ animated: true, offset: 900 });
         const commitPendingAdjust = mock((target?: unknown) => {
