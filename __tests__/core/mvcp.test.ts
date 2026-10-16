@@ -46,6 +46,38 @@ describe("mvcp helpers", () => {
         }
     });
 
+    it("restores an explicit reader anchor even while both restoration modes are disabled", () => {
+        Platform.OS = "ios";
+        for (const dataChanged of [false, true]) {
+            const ctx = createMockContext(
+                { readyToRender: true, totalSize: 1000 },
+                {
+                    didContainersLayout: true,
+                    idCache: ["item-0", "item-1"],
+                    idsInView: ["item-1"],
+                    indexByKey: new Map([
+                        ["item-0", 0],
+                        ["item-1", 1],
+                    ]),
+                    positions: [0, 100],
+                    props: {
+                        data: [{ id: 0 }, { id: 1 }],
+                        keyExtractor: (item: { id: number }) => `item-${item.id}`,
+                        maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(false),
+                    },
+                    scroll: 120,
+                    visibleContentAnchor: { key: "item-1", offset: 20 },
+                },
+            );
+            const adjust = prepareMVCP(ctx, dataChanged);
+            ctx.state.positions[1] += 50;
+            adjust?.();
+            expect(ctx.state.scroll - ctx.state.positions[1]!).toBe(20);
+            expect(ctx.state.pendingNativeMVCPAdjust).toBeUndefined();
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
     it("clears a web anchor lock immediately when its anchor disappears", () => {
         Platform.OS = "web";
 
