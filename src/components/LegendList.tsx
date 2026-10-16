@@ -446,6 +446,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             ctx.scrollToEnd = (options) => scrollToEnd(ctx, options);
             internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, params);
             internalState.reprocessCurrentScroll = () => updateScroll(ctx, internalState.scroll, true);
+            internalState.resumeMaintainScrollAtEnd = () => doMaintainScrollAtEnd(ctx);
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPositionConfig);
             set$(ctx, "extraData", extraData);
@@ -457,7 +458,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const state = refState.current!;
-    state.resumeMaintainScrollAtEnd = () => doMaintainScrollAtEnd(ctx);
     const isFirstLocal = state.isFirst;
     const previousAdaptiveRender = state.props.adaptiveRender;
     const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
