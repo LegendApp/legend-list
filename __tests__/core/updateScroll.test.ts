@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { interruptUserScroll } from "@/core/cancelScroll";
 import * as doMaintainScrollAtEndModule from "@/core/doMaintainScrollAtEnd";
 import { updateScroll } from "@/core/updateScroll";
 import * as flushSyncModule from "@/platform/flushSync";
@@ -676,5 +677,57 @@ describe("updateScroll mvcp active mode", () => {
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+    });
+});
+
+describe("updateScroll user scroll ownership", () => {
+    const originalPlatform = Platform.OS;
+
+    afterEach(() => {
+        Platform.OS = originalPlatform;
+    });
+
+    function createUserScrollContext(isFollowingEnd = false) {
+        const onUserScroll = mock(() => {});
+        const ctx = createMockContext(
+            { isFollowingEnd },
+            { props: { onUserScroll }, scroll: 500, scrollLength: 100, triggerCalculateItemsInView: () => {} },
+        );
+        return { ctx, onUserScroll };
+    }
+
+    it("reports each user scroll once on web and leaves native user scrolls to drag callbacks", () => {
+        Platform.OS = "web";
+        const plain = createUserScrollContext();
+        updateScroll(plain.ctx, 550, true, { fromNativeScrollEvent: true });
+        expect(plain.onUserScroll).toHaveBeenCalledTimes(1);
+
+        const following = createUserScrollContext(true);
+        updateScroll(following.ctx, 400, true, { fromNativeScrollEvent: true });
+        expect(peek$(following.ctx, "isFollowingEnd")).toBe(false);
+        expect(following.onUserScroll).toHaveBeenCalledTimes(1);
+
+        Platform.OS = "ios";
+        const native = createUserScrollContext();
+        updateScroll(native.ctx, 550, true, { fromNativeScrollEvent: true });
+        expect(native.onUserScroll).not.toHaveBeenCalled();
+        interruptUserScroll(native.ctx);
+        expect(native.onUserScroll).toHaveBeenCalledTimes(1);
+    });
+
+    it("releases the reader anchor and DOM target only for user scroll events", () => {
+        const { ctx } = createUserScrollContext();
+        const anchor = { key: "reader", offset: 20 };
+        const target = { element: {} as Element };
+        ctx.state.visibleContentAnchor = anchor;
+        ctx.state.scrollElementTarget = target;
+
+        updateScroll(ctx, 550, true);
+        expect(ctx.state.visibleContentAnchor).toBe(anchor);
+        expect(ctx.state.scrollElementTarget).toBe(target);
+
+        updateScroll(ctx, 600, true, { fromNativeScrollEvent: true });
+        expect(ctx.state.visibleContentAnchor).toBeUndefined();
+        expect(ctx.state.scrollElementTarget).toBeUndefined();
     });
 });
