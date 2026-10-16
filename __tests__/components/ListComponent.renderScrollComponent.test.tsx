@@ -170,6 +170,38 @@ describe("ListComponent renderScrollComponent", () => {
         }
     });
 
+    it("renders the size component for the end spacer even with zero padding", async () => {
+        const { ListComponent } = await import("../../src/components/ListComponent?size-component-spacer");
+        const sizeRenders: any[] = [];
+        const SizeComponent = (sizeProps: any) => {
+            sizeRenders.push(sizeProps);
+            return null;
+        };
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(
+                <StateProvider>
+                    <ListComponentHarness
+                        alignItemsAtEndPaddingEnabled
+                        events={[]}
+                        ListComponent={ListComponent}
+                        label="size"
+                        onContext={(ctx) => {
+                            ctx.state.props.sizeComponentInternal = SizeComponent;
+                            ctx.values.set("alignItemsAtEndPadding", 0);
+                        }}
+                    />
+                </StateProvider>,
+            );
+        });
+
+        const spacer = sizeRenders.find((sizeProps) => sizeProps.signalName === "alignItemsAtEndPadding");
+        expect(spacer).toBeDefined();
+        expect(spacer.style).toEqual({ flexShrink: 0 });
+        act(() => renderer.unmount());
+    });
+
     it("materializes anchored end space only when the list owns it", async () => {
         const { ListComponent } = await import("../../src/components/ListComponent?custom-scroll-anchored-end-space");
         const events: string[] = [];
