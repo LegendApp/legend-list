@@ -24,9 +24,13 @@ export function cancelScroll(ctx: StateContext, stopAnimation = true) {
     set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling);
     state.scrollPending = observed;
     updateScroll(ctx, observed, true, { markHasScrolled: false });
-    const x = state.props.horizontal ? toNativeHorizontalOffset(state, observed, getContentSize(ctx)) : 0;
-    if (wasAnimating && stopAnimation)
+    if (wasAnimating && stopAnimation) {
+        // Stop at the scroller's own raw offset when it reports one, avoiding an RTL round trip.
+        const x = state.props.horizontal
+            ? (scroller?.getCurrentScrollOffset?.() ?? toNativeHorizontalOffset(state, observed, getContentSize(ctx)))
+            : 0;
         scroller?.scrollTo({ animated: false, x, y: state.props.horizontal ? 0 : observed });
+    }
     // Apply MVCP adjustments deferred during the cancelled animation now; otherwise
     // the next request's finishScrollTo would apply them to its own target.
     state.scrollAdjustHandler.commitPendingAdjust();

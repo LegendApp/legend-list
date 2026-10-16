@@ -56,6 +56,24 @@ describe("cancelScroll", () => {
         expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 100, y: 0 });
     });
 
+    it.each([
+        ["inverted", 500, 900],
+        [undefined, -350, 700],
+    ] as const)("stops a %s RTL DOM animation at its raw offset", (convention, rawOffset, maxOffset) => {
+        const { ctx, scrollTo } = createScrollingContext(
+            { animated: true, offset: 900 },
+            { horizontal: true, rtl: true },
+        );
+        ctx.state.horizontalRTLScrollType = convention;
+        ctx.state.refScroller.current = {
+            getCurrentScrollOffset: () => rawOffset,
+            getMaxScrollOffset: () => maxOffset,
+            scrollTo,
+        } as any;
+        cancelScroll(ctx);
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: rawOffset, y: 0 });
+    });
+
     it("commits adjustments deferred by the cancelled animation", () => {
         const { ctx } = createScrollingContext({ animated: true, offset: 900 });
         const commitPendingAdjust = mock((target?: unknown) => {
