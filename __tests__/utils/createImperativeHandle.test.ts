@@ -1379,3 +1379,73 @@ describe("createImperativeHandle.anchorVisibleContent", () => {
     });
 });
 
+describe("createImperativeHandle.scrollIndexIntoView", () => {
+    let scrollToIndexSpy: ReturnType<typeof spyOn>;
+
+    beforeEach(() => {
+        scrollToIndexSpy = spyOn(scrollToIndexModule, "scrollToIndex");
+        scrollToIndexSpy.mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+        scrollToIndexSpy.mockRestore();
+    });
+
+    // Rows of 100 with the observed viewport at 1000-1300 while JS state still reads 0.
+    const createList = (contentInsetBottom = 0) => {
+        const data = Array.from({ length: 20 }, (_, index) => index);
+        const ctx = createMockContext(
+            {},
+            {
+                positions: data.map((index) => index * 100),
+                props: {
+                    contentInset: { bottom: contentInsetBottom, left: 0, right: 0, top: 0 },
+                    data,
+                    getFixedItemSize: () => 100,
+                },
+                scroll: 0,
+                scrollLength: 300,
+            },
+        );
+        ctx.state.refScroller.current = { getCurrentScrollOffset: () => 1000 } as NonNullable<
+            typeof ctx.state.refScroller.current
+        >;
+        return createImperativeHandle(ctx);
+    };
+
+    it("aligns a row below the observed viewport to the bottom margin", async () => {
+        await createList().scrollIndexIntoView({ animated: false, index: 15, viewportMargin: { bottom: 20 } });
+
+        expect(scrollToIndexSpy).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ animated: false, index: 15, viewOffset: -20, viewPosition: 1 }),
+        );
+    });
+
+    it("aligns a row hidden by the top margin to the top margin", async () => {
+        await createList().scrollIndexIntoView({ index: 10, viewportMargin: { top: 40 } });
+
+        expect(scrollToIndexSpy).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ index: 10, viewOffset: 40, viewPosition: 0 }),
+        );
+    });
+
+    it("does not scroll for a fully visible or out-of-range row", async () => {
+        const handle = createList();
+        for (const index of [11, 12, -1, 20]) {
+            await handle.scrollIndexIntoView({ index });
+        }
+
+        expect(scrollToIndexSpy).not.toHaveBeenCalled();
+    });
+
+    it("treats a row behind the bottom content inset as below the viewport", async () => {
+        await createList(50).scrollIndexIntoView({ index: 12 });
+
+        expect(scrollToIndexSpy).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ index: 12, viewPosition: 1 }),
+        );
+    });
+});
