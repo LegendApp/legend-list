@@ -42,10 +42,10 @@ const ContainersLayer = typedMemo(function ContainersLayer({
         ? {
               height: otherAxisSize || "100%",
               minHeight: otherAxisSize,
-              opacity: isVisible ? 1 : 0,
+              transform: [{ translateY: isVisible ? 0 : -100000 }],
               width: animSize,
           }
-        : { height: animSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0 };
+        : { height: animSize, minWidth: otherAxisSize, transform: [{ translateX: isVisible ? 0 : -100000 }] };
 
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
