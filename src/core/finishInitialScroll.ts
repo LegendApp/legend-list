@@ -23,6 +23,7 @@ export function clearPreservedInitialScrollTarget(state: StateContext["state"]) 
     clearPreservedInitialScrollTargetTimeout(state);
     state.clearPreservedInitialScrollOnNextFinish = undefined;
     state.initialScroll = undefined;
+    state.preservedEndAnchorCorrection = undefined;
     setInitialScrollSession(state);
 }
 

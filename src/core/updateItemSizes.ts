@@ -1,3 +1,4 @@
+import { schedulePreservedEndAnchorCorrection } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
@@ -97,6 +98,10 @@ function mergeItemSizeUpdateResult(result: ItemSizeUpdateResult, next: ItemSizeU
 function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     const state = ctx.state;
     if (result.needsRecalculate) {
+        if (result.didChange) {
+            // Keep the saved end target through MVCP and ScrollAdjust's temporary padding.
+            schedulePreservedEndAnchorCorrection(ctx);
+        }
         state.scrollForNextCalculateItemsInView = undefined;
         runOrScheduleMVCPRecalculate(ctx);
     } else if (result.didMeasureUserScrollAnchorResetItem && state.userScrollAnchorReset?.keys.size === 0) {

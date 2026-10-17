@@ -16,8 +16,7 @@ import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { requestAdjust } from "@/utils/requestAdjust";
-import { getStylePaddingEnd } from "@/utils/rtl";
+import { getStylePaddingEnd, peekLogicalHorizontalOffset } from "@/utils/rtl";
 
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
@@ -403,7 +402,9 @@ function didFinishedInitialScrollMoveAwayFromTarget(
 function getObservedBootstrapInitialScrollOffset(state: InternalState) {
     const observedOffset = state.refScroller.current?.getCurrentScrollOffset?.();
     return typeof observedOffset === "number" && Number.isFinite(observedOffset)
-        ? observedOffset
+        ? Platform.OS === "web" && state.props.horizontal
+            ? peekLogicalHorizontalOffset(state, observedOffset, state.refScroller.current?.getMaxScrollOffset?.())
+            : observedOffset
         : (state.scrollPending ?? state.scroll ?? 0);
 }
 
@@ -465,23 +466,15 @@ function schedulePreservedEndAnchorCorrectionFrame(
         const hasObservedNativeScrollAfterRequest =
             !activeCorrection.lastRequestTime || (state.lastNativeScrollTime ?? 0) > activeCorrection.lastRequestTime;
 
-        if (hasObservedNativeScrollAfterRequest) {
+        // Web can clamp against an old DOM extent without emitting a scroll event.
+        if (Platform.OS === "web" || hasObservedNativeScrollAfterRequest) {
             activeCorrection.lastRequestTime = Date.now();
-            // Web layout/end following may already have moved the DOM before
-            // its scroll event arrives. Apply the remaining delta from that
-            // observed position, not from an already advanced cached target.
-            if (Platform.OS === "web") {
-                state.scroll = getObservedBootstrapInitialScrollOffset(state);
-                requestAdjust(ctx, offsetDiff);
-            } else {
-                // Native may already have clamped the resized viewport before its scroll event.
-                // An absolute target avoids applying the same movement again through MVCP.
-                doScrollTo(ctx, {
-                    animated: false,
-                    horizontal: state.props.horizontal,
-                    offset: resolveInitialScrollOffset(ctx, state.initialScroll!),
-                });
-            }
+            // Use an absolute target: the viewport may already have clamped after layout.
+            doScrollTo(ctx, {
+                animated: false,
+                horizontal: state.props.horizontal,
+                offset: resolveInitialScrollOffset(ctx, state.initialScroll!),
+            });
         }
 
         schedulePreservedEndAnchorCorrectionFrame(ctx, correction);
@@ -709,10 +702,10 @@ export function handleBootstrapInitialScrollDataChange(
     }
 
     /*
-     * Non-retargeting data changes still need to rearm an active or replayed
-     * bootstrap session against the current preserved target.
+     * Rearm active sessions and new datasets, including those whose render reset
+     * already cleared didFinishInitialScroll before the data handoff.
      */
-    if (bootstrapInitialScroll || shouldResetDidFinish) {
+    if (bootstrapInitialScroll || (previousDataLength === 0 && dataLength > 0)) {
         setInitialScrollTarget(ctx, initialScroll, {
             resetDidFinish: shouldResetDidFinish,
         });
