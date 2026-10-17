@@ -709,10 +709,10 @@ export function handleBootstrapInitialScrollDataChange(
     }
 
     /*
-     * Non-retargeting data changes still need to rearm an active or replayed
-     * bootstrap session against the current preserved target.
+     * Rearm active sessions and new datasets, including those whose render reset
+     * already cleared didFinishInitialScroll before the data handoff.
      */
-    if (bootstrapInitialScroll || shouldResetDidFinish) {
+    if (bootstrapInitialScroll || (previousDataLength === 0 && dataLength > 0)) {
         setInitialScrollTarget(ctx, initialScroll, {
             resetDidFinish: shouldResetDidFinish,
         });
