@@ -57,7 +57,9 @@ export class ScrollAdjustHandler {
                     targetScroll = clampScrollOffset(this.ctx, targetScroll, scrollTarget);
                 } else {
                     // Fallback: just add pending to current scroll
-                    targetScroll = clampScrollOffset(this.ctx, state.scroll + pending);
+                    targetScroll = clampScrollOffset(this.ctx, state.scroll + pending, {
+                        clampToContentContainerMinSize: scrollTarget?.clampToContentContainerMinSize,
+                    });
                 }
 
                 const adjustment = targetScroll - state.scroll;

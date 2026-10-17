@@ -33,8 +33,8 @@ const cases: Array<{
     { expected: 0, name: "scrollToOffset ignores a percentage minHeight", style: { minHeight: "160%" } },
     {
         expected: 0,
-        name: "scrollToIndex ignores minHeight",
-        scroll: (ref) => ref.scrollToIndex({ animated: false, index: 0 }),
+        name: "scrollToIndex top alignment clamps to the logical max despite minHeight",
+        scroll: (ref) => ref.scrollToIndex({ animated: false, index: 0, viewPosition: 0 }),
         style: { minHeight: 800 },
     },
     {
