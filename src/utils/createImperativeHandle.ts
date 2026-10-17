@@ -398,7 +398,7 @@ export function createImperativeHandle(
             ),
         scrollToOffset: (params) =>
             runScrollWithPromise(() => {
-                scrollTo(ctx, params);
+                scrollTo(ctx, { ...params, clampToContentContainerMinSize: true });
                 return true;
             }),
         setItemSize: (itemKey, size) => {

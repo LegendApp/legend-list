@@ -5,7 +5,8 @@ import type { ScrollTarget } from "@/types.internal";
 
 export function clampScrollOffset(ctx: StateContext, offset: number, scrollTarget?: Partial<ScrollTarget>) {
     const state = ctx.state;
-    const contentSize = getContentSize(ctx);
+    const minSize = scrollTarget?.clampToContentContainerMinSize ? state.props.contentContainerMinSize : undefined;
+    const contentSize = minSize === undefined ? getContentSize(ctx) : Math.max(getContentSize(ctx), minSize);
     let clampedOffset = offset;
     if (
         Number.isFinite(contentSize) &&

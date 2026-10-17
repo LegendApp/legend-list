@@ -80,6 +80,8 @@ export type ScrollResolve = (result?: LegendListScrollResult) => void;
 export interface ScrollTarget {
     averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
+    /** scrollToOffset can reach the contentContainerStyle minimum size, like native scroll views. */
+    clampToContentContainerMinSize?: boolean;
     index?: number;
     key?: string;
     isInitialScroll?: boolean;
@@ -334,6 +336,7 @@ export interface InternalState {
         anchoredEndSpaceOwner: AnchoredEndSpaceOwner;
         alwaysRender: AlwaysRenderConfig | undefined;
         contentContainerAlignItems: ViewStyle["alignItems"] | undefined;
+        contentContainerMinSize?: number;
         alwaysRenderIndicesArr: number[];
         alwaysRenderIndicesSet: Set<number>;
         contentInset: Insets | undefined;
