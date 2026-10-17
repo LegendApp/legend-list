@@ -3,9 +3,15 @@ import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
+import { invalidateFixedItemSizes } from "../../src/core/containerItemMetadata";
 import { interruptMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
-import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch } from "../../src/core/updateItemSizes";
+import {
+    batchItemSizeUpdates,
+    updateItemSizes,
+    updateItemSizesBatch,
+    updateOneItemSize,
+} from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -64,6 +70,19 @@ describe("updateItemSizes", () => {
 
     afterEach(() => {
         Platform.OS = prevPlatform;
+    });
+
+    it("keeps a fixed row's new measurement when it becomes dynamic", () => {
+        mockState.props.getFixedItemSize = () => 100;
+        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
+        expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(true);
+
+        mockState.props.getFixedItemSize = () => undefined;
+        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
+        invalidateFixedItemSizes(mockState);
+
+        expect(mockState.sizesKnown.get("item_0")).toBe(100);
+        expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(false);
     });
 
     it("follows every web size measurement before the next frame without replacing the end request", async () => {

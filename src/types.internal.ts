@@ -283,6 +283,7 @@ export interface InternalState {
     scheduledWork: ScheduledWork;
     sizes: Map<string, number>;
     sizesKnown: Map<string, number>;
+    fixedItemSizeKeys?: Set<string>;
     startBuffered: number;
     startBufferedId?: string;
     startNoBuffer: number;

@@ -64,7 +64,11 @@ export function resolveContainerItemMetadata(
     return metadata;
 }
 
-export function invalidateContainerFixedItemSizes(state: InternalState) {
+export function invalidateFixedItemSizes(state: InternalState) {
+    for (const key of state.fixedItemSizeKeys ?? []) {
+        state.sizesKnown.delete(key);
+    }
+    state.fixedItemSizeKeys?.clear();
     for (const metadata of state.containerItemMetadata.values()) {
         metadata.didResolveFixedItemSize = false;
         metadata.fixedItemSize = undefined;

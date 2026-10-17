@@ -312,6 +312,12 @@ export function updateOneItemSize(
         resolvedItemSize,
     );
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
+    if (fixedItemSize === undefined) {
+        state.fixedItemSizeKeys?.delete(itemKey);
+    } else {
+        state.fixedItemSizeKeys ??= new Set();
+        state.fixedItemSizeKeys.add(itemKey);
+    }
     const prevSizeKnown = sizesKnown.get(itemKey);
     if (Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown)) {
         return 0;
