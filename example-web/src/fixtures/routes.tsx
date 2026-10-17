@@ -14,6 +14,7 @@ import ChatFloatingComposerExample from "./ChatFloatingComposerExample";
 import ColumnsExample from "./ColumnsExample";
 import CountriesExample from "./CountriesExample";
 import CountriesWithHeadersStickyExample from "./CountriesWithHeadersStickyExample";
+import DatasetSwitchExample from "./DatasetSwitchExample";
 import EndResizeExample from "./EndResizeExample";
 import ExternalScrollExample from "./ExternalScrollExample";
 import ExtraDataExample from "./ExtraDataExample";
@@ -40,6 +41,14 @@ export type FixtureRoute = {
 };
 
 export const FIXTURE_ROUTES: FixtureRoute[] = [
+    {
+        description:
+            "Switches datasets in one mounted list with end, unread, and jump targets, tall rows, and late sizes.",
+        element: () => <DatasetSwitchExample />,
+        group: "Scroll & Position",
+        path: "dataset-switch",
+        title: "Dataset Switch",
+    },
     {
         description: "Two virtual lists share an ancestor scrollbar with dynamic content above them.",
         element: () => <ExternalScrollExample />,
