@@ -291,6 +291,60 @@ describe("ListComponentScrollView (web)", () => {
         expect(scrollListeners.has("wheel")).toBe(false);
     });
 
+    for (const horizontal of [false, true]) {
+        it(`filters input before interrupting an active ${horizontal ? "horizontal" : "vertical"} request on an external owner`, async () => {
+            resetMocks();
+            maxOffset = 1000;
+            ownerScroll = 800;
+            mockCtx.state.scrollingTo = { animated: true, index: 50 };
+            mockCtx.state.pendingScrollResolve = mock(() => {});
+            const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
+            const { ListComponentScrollView } = await import(
+                "../../src/components/ListComponentScrollView?web-active-input-filters"
+            );
+            let renderer: TestRenderer.ReactTestRenderer | undefined;
+            try {
+                act(() => {
+                    renderer = TestRenderer.create(
+                        <ListComponentScrollView horizontal={horizontal} onLayout={() => {}} style={{}} useWindowScroll>
+                            <div />
+                        </ListComponentScrollView>,
+                    );
+                });
+                const send = (type: string, event: Record<string, unknown>) =>
+                    scrollListeners.get(type)?.(event as any);
+                const delta = horizontal ? { deltaX: 40, deltaY: 0 } : { deltaX: 0, deltaY: 40 };
+                send("wheel", { ...delta, defaultPrevented: true });
+                send("wheel", { ...delta, ctrlKey: true });
+                send("wheel", horizontal ? { deltaX: 0, deltaY: 40 } : { deltaX: 40, deltaY: 0 });
+                send("keydown", { defaultPrevented: true, key: "PageDown" });
+                send("keydown", { key: "a" });
+                send("keydown", { key: horizontal ? "ArrowDown" : "ArrowRight" });
+                send("keydown", {
+                    key: " ",
+                    target: { closest: (selector: string) => (selector.includes("button") ? {} : null) },
+                });
+                const touch = { touches: [{ clientX: 40, clientY: 40 }] };
+                send("touchstart", { ...touch, defaultPrevented: true });
+                // Other controls and nested scroll owners share the external event target.
+                ownsInput = false;
+                send("wheel", delta);
+                send("keydown", { key: "PageDown" });
+                send("touchstart", touch);
+                expect(interrupt).not.toHaveBeenCalled();
+
+                ownsInput = true;
+                send("wheel", delta);
+                send("keydown", { key: horizontal ? "ArrowLeft" : "ArrowDown" });
+                send("touchstart", touch);
+                expect(interrupt).toHaveBeenCalledTimes(3);
+            } finally {
+                act(() => renderer?.unmount());
+                interrupt.mockRestore();
+            }
+        });
+    }
+
     it("interrupts end following for upward keys and scrollbar presses while the list is in range", async () => {
         resetMocks();
         maxOffset = 1000;
@@ -392,11 +446,13 @@ describe("ListComponentScrollView (web)", () => {
         }
     }
 
-    it("keeps downward touch navigation from interrupting end-follow targets", async () => {
+    it("preserves automatic end following with a pending promise on input toward the end", async () => {
         resetMocks();
         maxOffset = 1000;
         ownerScroll = 800;
         mockCtx.state.scrollingTo = { animated: true, isScrollToEnd: true };
+        mockCtx.state.pendingScrollResolve = mock(() => {});
+        mockCtx.state.maintainingScrollAtEnd = "animated";
         const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => {});
         const { ListComponentScrollView } = await import(
             "../../src/components/ListComponentScrollView?web-end-downward-touch"
@@ -405,14 +461,23 @@ describe("ListComponentScrollView (web)", () => {
         try {
             act(() => {
                 renderer = TestRenderer.create(
-                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}}>
+                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}} useWindowScroll>
                         <div />
                     </ListComponentScrollView>,
                 );
             });
+            scrollListeners.get("wheel")?.({ deltaY: 40 } as any);
+            scrollListeners.get("keydown")?.({ key: "PageDown", target: { closest: () => null } } as any);
             scrollListeners.get("touchstart")?.({ touches: [{ clientY: 40 }] } as any);
             scrollListeners.get("touchmove")?.({ touches: [{ clientY: 0 }] } as any);
             expect(interrupt).not.toHaveBeenCalled();
+            // The same end target is explicit when it is not owned by automatic maintenance.
+            mockCtx.state.maintainingScrollAtEnd = undefined;
+            scrollListeners.get("wheel")?.({ deltaY: 40 } as any);
+            expect(interrupt).toHaveBeenCalledTimes(1);
+            mockCtx.state.maintainingScrollAtEnd = "animated";
+            scrollListeners.get("wheel")?.({ deltaY: -40 } as any);
+            expect(interrupt).toHaveBeenCalledTimes(2);
         } finally {
             act(() => renderer?.unmount());
             interrupt.mockRestore();

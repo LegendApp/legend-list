@@ -24,6 +24,7 @@ export type {
     LegendListMetrics,
     LegendListRecyclingState,
     LegendListRenderItemProps,
+    LegendListScrollResult,
     MaintainScrollAtEndOnOptions,
     MaintainScrollAtEndOptions,
     MaintainVisibleContentPositionConfig,

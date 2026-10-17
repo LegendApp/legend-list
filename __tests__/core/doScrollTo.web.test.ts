@@ -149,11 +149,14 @@ describe("doScrollTo (web)", () => {
                 scrollTo: scrollerScrollTo,
             },
         } as any;
+        ctx.state.scrollingTo = { animated: true, offset: 80 };
 
         doScrollTo(ctx, { animated: true, horizontal: false, offset: 80 });
 
         expect(scrollerScrollTo).toHaveBeenCalledWith({ animated: true, x: 0, y: 80 });
         expect(addEventListener).toHaveBeenCalledWith("scroll", expect.any(Function));
+        // Input belongs to ListComponentScrollView, which applies ownership and control filters.
+        expect(addEventListener.mock.calls.every(([type]) => type === "scroll")).toBe(true);
     });
 
     it("does not let an old non-animated frame finish a newer scroll", async () => {

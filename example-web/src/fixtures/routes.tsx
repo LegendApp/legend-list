@@ -26,6 +26,7 @@ import MutableCellsExample from "./MutableCellsExample";
 import MVCPTestExample from "./MVCPTestExample";
 import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
 import RecycleImagePriorityExample from "./RecycleImagePriorityExample";
+import ScrollPromiseLandedExample from "./ScrollPromiseLandedExample";
 import SnapToIndicesExample from "./SnapToIndicesExample";
 import WindowScrollExample from "./WindowScrollExample";
 
@@ -74,6 +75,14 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "accurate-scrollto",
         title: "Accurate ScrollTo",
+    },
+    {
+        description:
+            "Reports whether animated scrollToIndex/scrollToOffset promises resolve on the target while rows above measure late and renders stall.",
+        element: () => <ScrollPromiseLandedExample />,
+        group: "Scroll & Position",
+        path: "scroll-promise-landed",
+        title: "Scroll Promise Landed",
     },
     {
         description: "Stress-tests scrollTo accuracy deep into a very large dataset.",

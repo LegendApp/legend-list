@@ -12,6 +12,7 @@ import type {
     LegendListPropsBase,
     LegendListRef,
     LegendListRenderItemProps,
+    LegendListScrollResult,
     NativeScrollEvent,
     NativeSyntheticEvent,
     ScrollIndexWithOffsetAndContentOffset,
@@ -74,6 +75,8 @@ export interface ThresholdSnapshot {
 
 export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";
 
+export type ScrollResolve = (result?: LegendListScrollResult) => void;
+
 export interface ScrollTarget {
     averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
@@ -103,6 +106,10 @@ type BootstrapInitialScrollSession = {
 
 type InternalScrollTarget = ScrollTarget & {
     isScrollToEnd?: boolean;
+    /** Web retries reissued after an animated scroll settled short of its recomputed target. */
+    landingRetries?: number;
+    /** Offset the latest landing retry started from, used to stop when the scroll makes no progress. */
+    landingRetryFrom?: number;
     waitForInitialScrollCompletionFrame?: boolean;
 };
 
@@ -267,11 +274,11 @@ export interface InternalState {
     pendingDataComparison?: PendingDataComparison;
     pendingScrollToEnd?: {
         options?: ScrollToEndOptions;
-        resolve: () => void;
+        resolve: ScrollResolve;
         token: number;
     };
     pendingTotalSize?: number;
-    pendingScrollResolve?: (() => void) | undefined;
+    pendingScrollResolve?: ScrollResolve | undefined;
     runPendingScrollToEnd?: () => void;
     positions: Array<number | undefined>;
     positionsAreCurrent?: boolean;

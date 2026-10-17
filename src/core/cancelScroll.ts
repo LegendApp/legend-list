@@ -8,15 +8,19 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { toNativeHorizontalOffset } from "@/utils/rtl";
 
-export function cancelScroll(ctx: StateContext, stopAnimation = true) {
+export function cancelScroll(
+    ctx: StateContext,
+    stopAnimation = true,
+    reason: "interrupted" | "superseded" = "superseded",
+) {
     const { state } = ctx;
     const wasAnimating = !!state.scrollingTo?.animated;
     const scroller = state.refScroller.current;
     // Without a native observation, scrollPending has not yet absorbed deferred adjustments.
     const observed = getObservedScrollOffset(ctx, peek$(ctx, "scrollAdjustPending") ? state.scrollPending : undefined);
     ctx.scrollRequestTracker?.cancel();
-    interruptMaintainScrollAtEnd(ctx);
-    cancelImperativeScroll(state);
+    interruptMaintainScrollAtEnd(ctx, reason);
+    cancelImperativeScroll(state, reason);
     supersedeInitialScroll(ctx);
     clearPreservedInitialScrollTarget(state);
     state.pendingEndMeasurements = undefined;
@@ -44,11 +48,11 @@ export function cancelScroll(ctx: StateContext, stopAnimation = true) {
 
 export function interruptUserScroll(ctx: StateContext) {
     if (ctx.state.scrollingTo || (ctx.state.initialScroll && !ctx.state.didFinishInitialScroll)) {
-        cancelScroll(ctx, Platform.OS === "web");
+        cancelScroll(ctx, Platform.OS === "web", "interrupted");
     } else {
         ctx.scrollRequestTracker?.cancel();
         interruptMaintainScrollAtEnd(ctx);
-        cancelImperativeScroll(ctx.state);
+        cancelImperativeScroll(ctx.state, "interrupted");
         ctx.state.pendingEndMeasurements = undefined;
         ctx.state.visibleContentAnchor = undefined;
         ctx.state.scrollElementTarget = undefined;

@@ -10,7 +10,7 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import { areKnownOrFixedItemSizesAvailable } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-export function interruptMaintainScrollAtEnd(ctx: StateContext) {
+export function interruptMaintainScrollAtEnd(ctx: StateContext, reason: "interrupted" | "superseded" = "interrupted") {
     const { state } = ctx;
     const maintaining = state.maintainingScrollAtEnd;
     state.endFollowInterrupted = true;
@@ -21,7 +21,7 @@ export function interruptMaintainScrollAtEnd(ctx: StateContext) {
         (maintaining && state.scrollingTo?.isScrollToEnd)
     );
     if (cancelActiveScroll) {
-        cancelImperativeScroll(state);
+        cancelImperativeScroll(state, reason);
         set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling);
     }
     if (maintaining || state.pendingMaintainScrollAtEnd) {

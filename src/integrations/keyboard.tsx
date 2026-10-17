@@ -61,7 +61,7 @@ type ScrollMessageToEndOptions = {
 type KeyboardScrollToEndListRef = {
     current: {
         getState: LegendListRef["getState"];
-        scrollToEnd(params?: { animated?: boolean }): Promise<void>;
+        scrollToEnd: LegendListRef["scrollToEnd"];
     } | null;
 };
 
