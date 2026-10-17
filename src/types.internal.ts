@@ -10,6 +10,7 @@ import type {
     LayoutRectangle,
     LegendListMetrics,
     LegendListPropsBase,
+    LegendListRef,
     LegendListRenderItemProps,
     NativeScrollEvent,
     NativeSyntheticEvent,
@@ -162,7 +163,14 @@ export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export type AnchoredEndSpaceOwner = "list" | "scroll";
 
+// Keyboard integrations report occlusion separately from scroll-range insets.
+// This is an internal bridge, not part of the public list ref contract.
+export interface LegendListInternalRef extends LegendListRef {
+    reportViewabilityInsetEndInternal?: (inset: number) => void;
+}
+
 export interface InternalState {
+    viewabilityInsetEnd?: number;
     adjustingFromInitialMount?: number;
     anchoredEndSpacePendingReady?: boolean;
     anchoredEndSpaceReadyAnchorIndex?: number;
@@ -218,6 +226,13 @@ export interface InternalState {
     loadStartTime: number;
     pendingEndMeasurements?: Set<string>;
     isMomentumScrolling?: boolean;
+    // Release provenance survives the handoff timeout and repeated native begins.
+    releasedFromUserDrag?: boolean;
+    didDeferMaintainScrollAtEndForMomentum?: boolean;
+    // Growth not already compensated by MVCP can retain the reader's end intent.
+    momentumSuspendContentSize?: number;
+    momentumSuspendCompensated?: boolean;
+    momentumStallFirstLateFireAt?: number;
     activeSizeAnimations?: Set<string>;
     resumeMaintainScrollAtEnd?: () => void;
     layoutAdjustmentEpoch?: number;

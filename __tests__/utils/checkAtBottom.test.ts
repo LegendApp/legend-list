@@ -1,12 +1,189 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import "../setup";
 
+import { clampScrollOffset } from "../../src/core/clampScrollOffset";
+import { Platform } from "../../src/platform/Platform";
 import { listen$ } from "../../src/state/state";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAtBottom", () => {
+    it.each([0, 0.5, 1, 1.01, 30])("uses the end-position epsilon for zero-threshold following at %ipx", (gap) => {
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                props: { data: [{ id: 1 }], maintainScrollAtEndThreshold: 0 },
+                queuedInitialLayout: true,
+                scroll: 700 - gap,
+                scrollLength: 300,
+            },
+        );
+        checkAtBottom(ctx);
+        expect(ctx.values.get("isAtEnd")).toBe(gap <= 1);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(gap <= 1);
+    });
+
+    for (const inset of [
+        { name: "vertical prop", props: { contentInset: { bottom: 100 } } },
+        { name: "horizontal prop", props: { contentInset: { right: 100 }, horizontal: true } },
+        { name: "horizontal RTL prop", props: { contentInset: { left: 100 }, horizontal: true, rtl: true } },
+        { name: "reported inset", override: { bottom: 100 }, props: {} },
+        { name: "end adjustment", props: { contentInsetEndAdjustment: 100 } },
+    ]) {
+        it(`measures the remaining scroll range consistently with clamping (${inset.name})`, () => {
+            const calls: number[] = [];
+            const ctx = createMockContext(
+                { totalSize: 1000 },
+                {
+                    contentInsetOverride: inset.override,
+                    isEndReached: false,
+                    props: {
+                        data: [{ id: 1 }],
+                        onEndReached: ({ distanceFromEnd }) => calls.push(distanceFromEnd),
+                        onEndReachedThreshold: 0.2,
+                        ...inset.props,
+                    },
+                    queuedInitialLayout: true,
+                    scrollLength: 300,
+                },
+            );
+            const end = clampScrollOffset(ctx, Number.POSITIVE_INFINITY);
+            expect(end).toBe(800);
+
+            // The final row is visible, but 100px of inset remains to scroll.
+            // Following at this position would steal a user's scroll away from the end.
+            ctx.state.scroll = end - 100;
+            checkAtBottom(ctx);
+            expect(ctx.values.get("isAtEnd")).toBe(false);
+            expect(ctx.values.get("isNearEnd")).toBe(false);
+            expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
+            expect(calls).toEqual([]);
+
+            ctx.state.scroll = end - 50;
+            checkAtBottom(ctx);
+            expect(calls).toEqual([50]);
+            expect(ctx.values.get("isAtEnd")).toBe(false);
+            ctx.state.scroll = end;
+            checkAtBottom(ctx);
+            expect(ctx.values.get("isAtEnd")).toBe(true);
+            expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+        });
+    }
+
+    describe("platform-specific contentInset prop counting", () => {
+        const originalPlatform = Platform.OS;
+
+        afterEach(() => {
+            Platform.OS = originalPlatform;
+        });
+
+        // Only iOS applies the contentInset prop natively, so only there does
+        // it extend the scroll range. Android and web scroll views ignore the
+        // prop, so counting it would make the end appear 100px further away
+        // than the native scroll range actually has.
+        for (const os of ["android", "web"] as const) {
+            it(`ignores the contentInset prop on ${os}`, () => {
+                Platform.OS = os;
+                const ctx = createMockContext(
+                    { totalSize: 1000 },
+                    {
+                        props: {
+                            contentInset: { bottom: 100, left: 0, right: 0, top: 0 },
+                            data: [{ id: 1 }],
+                            maintainScrollAtEndThreshold: 0,
+                        },
+                        queuedInitialLayout: true,
+                        scroll: 700,
+                        scrollLength: 300,
+                    },
+                );
+                // Native scroll range ends at 700 despite the ignored prop inset.
+                checkAtBottom(ctx);
+                expect(ctx.values.get("isAtEnd")).toBe(true);
+                expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+
+                ctx.state.scroll = 600;
+                checkAtBottom(ctx);
+                expect(ctx.values.get("isAtEnd")).toBe(false);
+            });
+        }
+
+        it("counts the contentInset prop on ios", () => {
+            Platform.OS = "ios";
+            const ctx = createMockContext(
+                { totalSize: 1000 },
+                {
+                    props: {
+                        contentInset: { bottom: 100, left: 0, right: 0, top: 0 },
+                        data: [{ id: 1 }],
+                        maintainScrollAtEndThreshold: 0,
+                    },
+                    queuedInitialLayout: true,
+                    scrollLength: 300,
+                },
+            );
+            const end = clampScrollOffset(ctx, Number.POSITIVE_INFINITY);
+            expect(end).toBe(800);
+
+            // The native inset still has to be scrolled through before the
+            // list is at its scrollable end.
+            ctx.state.scroll = end - 100;
+            checkAtBottom(ctx);
+            expect(ctx.values.get("isAtEnd")).toBe(false);
+            expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
+
+            ctx.state.scroll = end;
+            checkAtBottom(ctx);
+            expect(ctx.values.get("isAtEnd")).toBe(true);
+            expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+        });
+
+        for (const os of ["ios", "android", "web"] as const) {
+            it(`counts a reported inset on ${os}`, () => {
+                Platform.OS = os;
+                const ctx = createMockContext(
+                    { totalSize: 1000 },
+                    {
+                        contentInsetOverride: { bottom: 100 },
+                        props: { data: [{ id: 1 }], maintainScrollAtEndThreshold: 0 },
+                        queuedInitialLayout: true,
+                        scrollLength: 300,
+                    },
+                );
+                // Reported insets are realized as real scroll range everywhere.
+                ctx.state.scroll = 700;
+                checkAtBottom(ctx);
+                expect(ctx.values.get("isAtEnd")).toBe(false);
+                ctx.state.scroll = 800;
+                checkAtBottom(ctx);
+                expect(ctx.values.get("isAtEnd")).toBe(true);
+            });
+
+            it(`counts an end adjustment on ${os}`, () => {
+                Platform.OS = os;
+                const ctx = createMockContext(
+                    { totalSize: 1000 },
+                    {
+                        props: {
+                            contentInsetEndAdjustment: 100,
+                            data: [{ id: 1 }],
+                            maintainScrollAtEndThreshold: 0,
+                        },
+                        queuedInitialLayout: true,
+                        scrollLength: 300,
+                    },
+                );
+                ctx.state.scroll = 700;
+                checkAtBottom(ctx);
+                expect(ctx.values.get("isAtEnd")).toBe(false);
+                ctx.state.scroll = 800;
+                checkAtBottom(ctx);
+                expect(ctx.values.get("isAtEnd")).toBe(true);
+            });
+        }
+    });
+
     it("returns early when state is null or undefined", () => {
         const ctx = createMockContext();
         ctx.state = null as any;
@@ -180,6 +357,13 @@ describe("checkAtBottom", () => {
         expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
         state.scroll = 700;
+        checkAtBottom(ctx);
+
+        expect(calls).toEqual([]);
+        expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+
+        state.scroll = 800;
         checkAtBottom(ctx);
 
         expect(calls).toEqual([{ distanceFromEnd: 0 }]);

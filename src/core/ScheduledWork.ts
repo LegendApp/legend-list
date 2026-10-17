@@ -13,7 +13,8 @@ export type ScheduledWorkKey =
     | "platformScrollCompletion"
     | "scrollElementTarget"
     | "preservedInitialScroll"
-    | "renderRangeProjection";
+    | "renderRangeProjection"
+    | "userMomentumStallCheck";
 
 interface Work {
     callback?: () => void;

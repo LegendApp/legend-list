@@ -4,10 +4,34 @@ import "../setup";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
 import { checkAtTop } from "../../src/utils/checkAtTop";
 import { checkThresholds } from "../../src/utils/checkThresholds";
-import { beginReachedEdgeUserScroll, prepareReachedEdgeForNextUserScroll } from "../../src/utils/edgeReachedGate";
+import {
+    beginReachedEdgeUserScroll,
+    prepareReachedEdgeForNextUserScroll,
+    resetSharedEdgeGateIfOutsideHysteresis,
+} from "../../src/utils/edgeReachedGate";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("reached edge gate", () => {
+    it("rearms after scrolling away from the end within a large end inset", () => {
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                edgeReachedGate: "closed",
+                props: {
+                    contentInset: { bottom: 400 },
+                    data: [{ id: 1 }],
+                    onEndReachedThreshold: 0.2,
+                    onStartReachedThreshold: 0.2,
+                },
+                scroll: 700,
+                scrollLength: 300,
+            },
+        );
+        // The scrollable end is 1100, so this is 400px from it and from either edge's hysteresis band.
+        resetSharedEdgeGateIfOutsideHysteresis(ctx);
+        expect(ctx.state.edgeReachedGate).toBeUndefined();
+    });
+
     it("blocks a residual end scroll after a programmatic reach and rearms for the next gesture", () => {
         const calls: number[] = [];
         const ctx = createMockContext(

@@ -73,6 +73,27 @@ describe("doScrollTo (native)", () => {
         expect(ctx.state.horizontalRTLScrollType).toBeUndefined();
     });
 
+    it.each([false, true])("preserves released-drag ownership only for adjustment re-asserts (%s)", (isAdjustment) => {
+        const ctx = createMockContext(
+            {},
+            {
+                didDeferMaintainScrollAtEndForMomentum: true,
+                momentumSuspendContentSize: 1000,
+                refScroller: { current: { scrollTo: mock() } } as any,
+                releasedFromUserDrag: true,
+            },
+        );
+        ctx.state.scheduledWork.register("endFollowRearm", () => {});
+        ctx.state.scheduledWork.register("userMomentumStallCheck", () => {});
+        doScrollTo(ctx, { animated: true, isAdjustment, offset: 100 });
+        expect(ctx.state.releasedFromUserDrag).toBe(isAdjustment);
+        expect(ctx.state.didDeferMaintainScrollAtEndForMomentum).toBe(isAdjustment);
+        expect(ctx.state.momentumSuspendContentSize).toBe(isAdjustment ? 1000 : undefined);
+        expect(ctx.state.scheduledWork.has("endFollowRearm")).toBe(isAdjustment);
+        expect(ctx.state.scheduledWork.has("userMomentumStallCheck")).toBe(isAdjustment);
+        ctx.state.scheduledWork.dispose();
+    });
+
     for (const platform of ["ios", "android"] as const) {
         it(`finishes an animated ${platform} request that is already at its target`, () => {
             Platform.OS = platform;

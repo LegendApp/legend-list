@@ -12,7 +12,7 @@ import {
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { useDevChecks } from "@/components/useDevChecks";
-import { ENABLE_DEBUG_VIEW } from "@/constants";
+import { ENABLE_DEBUG_VIEW, USER_MOMENTUM_WAIT_TIMEOUT_MS } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { resetAdaptiveRender } from "@/core/adaptiveRender";
 import {
@@ -31,7 +31,7 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import {
     doMaintainScrollAtEnd,
     finishMaintainScrollAtEnd,
-    rearmEndFollowIfSettled,
+    interruptMaintainScrollAtEnd,
 } from "@/core/doMaintainScrollAtEnd";
 import { emitMetrics } from "@/core/emitMetrics";
 import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
@@ -49,6 +49,7 @@ import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdj
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateScroll } from "@/core/updateScroll";
+import { armUserMomentumStallCheck, finishUserMomentum, settleEndFollowingAfterGesture } from "@/core/userMomentum";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
@@ -61,6 +62,7 @@ import { RefreshControl } from "@/platform/RefreshControl";
 import { StyleSheet } from "@/platform/StyleSheet";
 import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from "@/platform/scrollview-types";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
+import { getContentSize } from "@/state/getContentSize";
 import { peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type { LegendListRef, LegendListRenderItemProps } from "@/types.base";
 import type {
@@ -903,14 +905,19 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         () => ({
             getRenderedItem: (key: string, containerId: number) => getRenderedItem(ctx, key, containerId),
             onMomentumScrollBegin: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                state.scheduledWork.cancel("endFollowRearm");
                 state.isMomentumScrolling = true;
+                if (state.releasedFromUserDrag) {
+                    // A late or repeated native begin still belongs to the released drag.
+                    interruptMaintainScrollAtEnd(ctx);
+                    armUserMomentumStallCheck(ctx);
+                }
                 set$(ctx, "isScrollActive", true);
                 state.props.onMomentumScrollBegin?.(event as any);
             },
             onMomentumScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                state.isMomentumScrolling = false;
-                set$(ctx, "isScrollActive", !!state.isDragging || !!state.scrollingTo || !!state.pendingScrollResolve);
-                rearmEndFollowIfSettled(ctx);
+                state.scheduledWork.cancel("endFollowRearm");
+                finishUserMomentum(ctx);
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
@@ -923,6 +930,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
             onScrollBeginDrag: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
                 state.isMomentumScrolling = false;
+                state.releasedFromUserDrag = false;
+                state.scheduledWork.cancel("endFollowRearm");
+                state.scheduledWork.cancel("userMomentumStallCheck");
+                state.didDeferMaintainScrollAtEndForMomentum = false;
+                state.momentumSuspendContentSize = undefined;
+                state.momentumSuspendCompensated = false;
+                state.momentumStallFirstLateFireAt = undefined;
                 state.isDragging = true;
                 interruptUserScroll(ctx);
                 prepareReachedEdgeForNextUserScroll(ctx);
@@ -936,8 +950,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     "isScrollActive",
                     !!state.isMomentumScrolling || !!state.scrollingTo || !!state.pendingScrollResolve,
                 );
-                // Momentum-begin follows drag-end. Keep the interruption through that handoff.
-                state.scheduledWork.frame(() => rearmEndFollowIfSettled(ctx), "endFollowRearm");
+                // Suspend from release through momentum, including delayed or missing pairs.
+                state.releasedFromUserDrag = true;
+                state.momentumSuspendContentSize = getContentSize(ctx);
+                state.momentumSuspendCompensated = false;
+                state.scheduledWork.timeout(
+                    () => settleEndFollowingAfterGesture(ctx),
+                    USER_MOMENTUM_WAIT_TIMEOUT_MS,
+                    "endFollowRearm",
+                );
                 state.props.onScrollEndDrag?.(event as any);
             },
         }),

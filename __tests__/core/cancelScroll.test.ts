@@ -94,6 +94,22 @@ describe("cancelScroll", () => {
         expect(ctx.state.ignoreScrollFromMVCP).toBe(ignoreWindow);
     });
 
+    it.each([100, -100])(
+        "uses the uncompensated fallback for a deferred %ipx adjustment without native observations",
+        (pending) => {
+            const { ctx } = createScrollingContext({ animated: true, index: 2, offset: 200 });
+            ctx.state.refScroller.current = { scrollTo: mock(() => {}) } as any;
+            ctx.state.scrollPending = 500;
+            ctx.state.scroll = 500 + pending;
+            ctx.values.set("scrollAdjustPending", pending);
+            ctx.state.scrollAdjustHandler.commitPendingAdjust = mock(() => {
+                expect(ctx.state.scroll).toBe(500);
+            });
+            cancelScroll(ctx);
+            expect(ctx.state.scrollAdjustHandler.commitPendingAdjust).toHaveBeenCalledTimes(1);
+        },
+    );
+
     it("commits adjustments deferred by the cancelled animation", () => {
         const { ctx } = createScrollingContext({ animated: true, offset: 900 });
         const commitPendingAdjust = mock((target?: unknown) => {

@@ -2162,7 +2162,7 @@ describe("LegendList props behavior", () => {
             globalThis.requestAnimationFrame = (callback) => frames.push(callback);
             const flushFrames = () => frames.splice(0).forEach((callback) => callback(0));
 
-            act(() => {
+            await act(async () => {
                 lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
                 updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
                 lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
@@ -2176,11 +2176,13 @@ describe("LegendList props behavior", () => {
                 lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
                 expect(followModule.doMaintainScrollAtEnd(ctx)).toBe(false);
 
-                // A release without momentum must still rearm once the handoff frame passes.
+                // A release without momentum rearms after the bounded handoff window.
                 lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
                 updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
                 lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
                 flushFrames();
+                expect(ctx.state.endFollowInterrupted).toBe(true);
+                await new Promise((resolve) => setTimeout(resolve, 150));
                 expect(ctx.state.endFollowInterrupted).toBe(false);
                 expect(peek$(ctx, "isFollowingEnd")).toBe(true);
 

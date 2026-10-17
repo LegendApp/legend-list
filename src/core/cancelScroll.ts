@@ -12,7 +12,8 @@ export function cancelScroll(ctx: StateContext, stopAnimation = true) {
     const { state } = ctx;
     const wasAnimating = !!state.scrollingTo?.animated;
     const scroller = state.refScroller.current;
-    const observed = getObservedScrollOffset(ctx);
+    // Without a native observation, scrollPending has not yet absorbed deferred adjustments.
+    const observed = getObservedScrollOffset(ctx, peek$(ctx, "scrollAdjustPending") ? state.scrollPending : undefined);
     ctx.scrollRequestTracker?.cancel();
     interruptMaintainScrollAtEnd(ctx);
     cancelImperativeScroll(state);
