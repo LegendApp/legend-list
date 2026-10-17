@@ -125,6 +125,57 @@ describe("PositionView (web)", () => {
         });
     });
 
+    it("sizes horizontal containers by their content instead of the space left after their offset", async () => {
+        const refView = React.createRef<HTMLDivElement>();
+        const { PositionView, PositionViewSticky } = await import(
+            "../../src/components/PositionView?web-horizontal-width"
+        );
+        const renderStyle = (element: React.ReactElement) => {
+            let renderer: TestRenderer.ReactTestRenderer | undefined;
+            act(() => {
+                renderer = TestRenderer.create(
+                    <StateProvider>
+                        <StateSetup>{element}</StateSetup>
+                    </StateProvider>,
+                );
+            });
+            const style = renderer!.root.findByType("div").props.style;
+            act(() => {
+                renderer?.unmount();
+            });
+            return style;
+        };
+
+        expect(
+            renderStyle(
+                <PositionView horizontal id={0} refView={refView} style={{ height: 40 }}>
+                    {null}
+                </PositionView>,
+            ),
+        ).toMatchObject({ left: 32, width: "max-content" });
+        expect(
+            renderStyle(
+                <PositionView horizontal id={0} refView={refView} style={{ width: 120 }}>
+                    {null}
+                </PositionView>,
+            ).width,
+        ).toBe(120);
+        expect(
+            renderStyle(
+                <PositionViewSticky horizontal id={0} refView={refView} style={{ height: 40 }}>
+                    {null}
+                </PositionViewSticky>,
+            ).width,
+        ).toBe("max-content");
+        expect(
+            renderStyle(
+                <PositionView horizontal={false} id={0} refView={refView} style={{ height: 40 }}>
+                    {null}
+                </PositionView>,
+            ).width,
+        ).toBeUndefined();
+    });
+
     it("rerenders with recalculated positions before the next animation frame", async () => {
         const refView = React.createRef<HTMLDivElement>();
         const { PositionView } = await import("../../src/components/PositionView?web-replacement-measurement");
