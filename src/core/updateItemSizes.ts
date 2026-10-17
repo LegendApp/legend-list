@@ -102,7 +102,7 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     } else if (result.didMeasureUserScrollAnchorResetItem && state.userScrollAnchorReset?.keys.size === 0) {
         state.userScrollAnchorReset = undefined;
     }
-    if (result.didChange) {
+    if (result.didChange || state.anchoredEndSpacePendingReady) {
         maybeUpdateAnchoredEndSpace(ctx);
         if (state.scrollElementTarget)
             state.scheduledWork.microtask(() => scrollElementIntoView(ctx, false), "scrollElementTarget");
