@@ -2,6 +2,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
+import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -97,8 +98,10 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
         return undefined;
     }
 
-    const viewportStart = Math.max(0, targetOffset);
-    const viewportEnd = Math.max(viewportStart, targetOffset + state.scrollLength);
+    // Use the same item-space conversion as calculateItemsInView.
+    const itemOffset = getItemSpaceOffset(ctx, targetOffset);
+    const viewportStart = Math.max(0, itemOffset);
+    const viewportEnd = Math.max(viewportStart, itemOffset + state.scrollLength);
     let start =
         targetIndex !== undefined
             ? Math.max(0, Math.min(dataLength - 1, targetIndex))

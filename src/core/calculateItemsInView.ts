@@ -2,6 +2,7 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { createContainerItemMetadata, resolveContainerItemMetadata } from "@/core/containerItemMetadata";
+import { getItemSpaceOffset, getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
@@ -358,7 +359,7 @@ export function calculateItemsInView(
 
         let totalSize = getContentSize(ctx);
         let changedContainerIds: Set<number> | undefined;
-        const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "alignItemsAtEndPadding") + peek$(ctx, "headerSize");
+        const topPad = getStartOffsetAdjustment(ctx);
         const numColumns = peek$(ctx, "numColumns");
         const speed = params.scrollVelocity ?? getScrollVelocity(state);
 
@@ -378,7 +379,6 @@ export function calculateItemsInView(
               : state.scroll;
 
         let scrollAdjustPending = 0;
-        let scrollAdjustPad = 0;
         let scroll = 0;
         let scrollTopBuffered = 0;
         let scrollBottom = 0;
@@ -387,9 +387,8 @@ export function calculateItemsInView(
         const updateScroll = (nextScrollState: number) => {
             nativeScrollState = nextScrollState;
             scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
-            scrollAdjustPad = scrollAdjustPending - topPad;
             // Subtract top padding to put scroll into the coordinate system of the item positions
-            scroll = Math.round(nextScrollState + scrollExtra + scrollAdjustPad);
+            scroll = getItemSpaceOffset(ctx, nextScrollState + scrollExtra, scrollAdjustPending, topPad);
             if (!state.props.hasExternalScroll && scroll + scrollLength > totalSize) {
                 // Sometimes we may have scrolled past the visible area which can make items at the top of the
                 // screen not render. So make sure we clamp scroll to the end.

@@ -323,6 +323,49 @@ describe("scrollTo", () => {
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
     });
 
+    for (const geometry of [
+        { alignment: 0, end: 22, header: 0, offset: 600, padding: 0, pending: 0, start: 9 },
+        { alignment: 0, end: 19, header: 133, offset: 600, padding: 0, pending: 0, start: 7 },
+        { alignment: 64, end: 18, header: 133, offset: 600, padding: 31, pending: 17, start: 6 },
+        { alignment: 0, end: 18, header: 133, offset: 600, padding: 0, pending: -64, start: 6 },
+        { alignment: 0, end: 19, header: 133, offset: 580.6, padding: 0, pending: 0, start: 7 },
+        { alignment: 0, end: 20, header: 133, offset: 600.6, padding: 0, pending: 0, start: 7 },
+        { alignment: 0, end: 10, header: 133, offset: 0, padding: 0, pending: 0, start: 0 },
+        { alignment: 0, end: 10, header: 133, offset: -100, padding: 0, pending: 0, start: 0 },
+    ]) {
+        it(`pins the item-space viewport for ${JSON.stringify(geometry)}`, () => {
+            mockCtx.state.props.data = Array.from({ length: 120 }, (_, id) => ({ id }));
+            mockCtx.state.props.getFixedItemSize = () => 64;
+            mockCtx.state.totalSize = 120 * 64;
+            mockCtx.state.scrollLength = 812;
+            mockCtx.values.set("headerSize", geometry.header);
+            mockCtx.values.set("stylePaddingTop", geometry.padding);
+            mockCtx.values.set("alignItemsAtEndPadding", geometry.alignment);
+            mockCtx.values.set("scrollAdjustPending", geometry.pending);
+            for (let index = 0; index < 120; index++) {
+                mockCtx.state.positions[index] = index * 64;
+            }
+            scrollTo(mockCtx, { animated: true, offset: geometry.offset });
+            expect(mockCtx.state.scrollTargetPinnedRange).toEqual({ end: geometry.end, start: geometry.start });
+        });
+    }
+
+    it("uses grouped fractional rounding at a target row boundary", () => {
+        mockCtx.state.props.data = Array.from({ length: 30 }, (_, id) => ({ id }));
+        mockCtx.state.props.getFixedItemSize = () => 10;
+        mockCtx.state.totalSize = 300;
+        mockCtx.state.scrollLength = 10;
+        mockCtx.values.set("stylePaddingTop", 0.7);
+        mockCtx.values.set("scrollAdjustPending", 0.1);
+        for (let index = 0; index < 30; index++) {
+            mockCtx.state.positions[index] = index * 10;
+        }
+
+        scrollTo(mockCtx, { animated: true, offset: 100.1 });
+
+        expect(mockCtx.state.scrollTargetPinnedRange).toEqual({ end: 11, start: 10 });
+    });
+
     it("skips offset-only target pinning when known positions do not cover the target offset", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
