@@ -104,7 +104,10 @@ interface ExtraPropsFromRN {
 
 const SCROLLBAR_HIDDEN_STYLE_ID = "legend-list-scrollbar-axis-hidden-style";
 const SCROLL_END_FALLBACK_MS = 200;
-const SCROLLBAR_HIDDEN_STYLE = `.${LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS}::-webkit-scrollbar:vertical{width:0;display:none;}.${LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS}::-webkit-scrollbar:horizontal{height:0;display:none;}`;
+// scrollbar-width covers Firefox and Chrome 121+ (which ignores ::-webkit-scrollbar once scrollbar-width or the
+// inherited scrollbar-color is set); ::-webkit-scrollbar covers older WebKit. Like react-native-web's ScrollView,
+// this hides the element's scrollbars on both axes, since the standard property can't target one axis.
+const SCROLLBAR_HIDDEN_STYLE = `.${LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS},.${LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS}{scrollbar-width:none;}.${LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS}::-webkit-scrollbar,.${LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS}::-webkit-scrollbar{display:none;}`;
 
 function ensureScrollbarHiddenStyle() {
     if (typeof document === "undefined" || document.getElementById(SCROLLBAR_HIDDEN_STYLE_ID)) {
