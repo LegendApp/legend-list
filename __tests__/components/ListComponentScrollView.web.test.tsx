@@ -922,6 +922,53 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    it("does not forward React Native-only scroll view props to the DOM element", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-native-only-props"
+        );
+        const nativeOnlyProps = {
+            alwaysBounceVertical: false,
+            automaticallyAdjustsScrollIndicatorInsets: false,
+            contentInsetAdjustmentBehavior: "never",
+            keyboardDismissMode: "on-drag",
+            keyboardShouldPersistTaps: "handled",
+            nestedScrollEnabled: true,
+            overScrollMode: "never",
+        };
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        aria-label="feed"
+                        data-testid="list"
+                        id="list-id"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                        {...(nativeOnlyProps as object)}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const scrollProps = renderer!.root.findAllByType("div")[0]!.props;
+            for (const name of Object.keys(nativeOnlyProps)) {
+                expect(scrollProps).not.toHaveProperty(name);
+            }
+            expect(scrollProps["aria-label"]).toBe("feed");
+            expect(scrollProps["data-testid"]).toBe("list");
+            expect(scrollProps.id).toBe("list-id");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("adds the hidden scrollbar class for vertical lists without changing overflow behavior", async () => {
         resetMocks();
         const { ListComponentScrollView } = await import(
