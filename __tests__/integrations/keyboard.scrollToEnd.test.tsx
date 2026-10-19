@@ -93,6 +93,7 @@ type PendingScroll = {
 function createList() {
     const scrolls: PendingScroll[] = [];
     const list = {
+        getState: () => ({ dataEpoch: 0 }),
         scrollToEnd: () =>
             new Promise<void>((resolve, reject) => {
                 for (const scroll of scrolls) {
