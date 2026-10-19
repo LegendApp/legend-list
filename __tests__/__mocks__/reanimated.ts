@@ -24,6 +24,7 @@ const createSharedValue = <T>(initial: T) => {
 };
 
 const defaults = {
+    cancelAnimation: () => {},
     createAnimatedComponent: <T extends ComponentType<any>>(component: T): T => component,
     executeOnUIRuntimeSync:
         (worklet: (...args: any[]) => unknown) =>
@@ -31,8 +32,10 @@ const defaults = {
             worklet(...args),
     isWorkletFunction: () => false,
     runOnJS: (callback: (...args: any[]) => any) => callback,
+    runOnUI: (callback: (...args: any[]) => any) => callback,
     ScrollView: () => null,
     useAnimatedProps: (updater: () => unknown) => updater,
+    useAnimatedReaction: () => {},
     useAnimatedRef: () => ({ current: null }),
     useAnimatedScrollHandler: (handler: any) => handler,
     useAnimatedStyle: (updater: () => unknown) => updater(),

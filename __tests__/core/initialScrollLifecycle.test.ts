@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, mock, spyOn } from "bun:test";
 import "../setup";
 
+import { evaluateBootstrapInitialScroll } from "../../src/core/bootstrapInitialScroll";
 import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
 import * as initialScrollModule from "../../src/core/initialScroll";
 import {
@@ -8,6 +9,9 @@ import {
     handleInitialScrollLayoutReady,
     retargetActiveInitialScrollAtEnd,
 } from "../../src/core/initialScrollLifecycle";
+import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
+import { updateItemPositions } from "../../src/core/updateItemPositions";
+import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -15,10 +19,12 @@ describe("initialScrollLifecycle", () => {
     let advanceCurrentInitialScrollSessionSpy: Mock<typeof initialScrollModule.advanceCurrentInitialScrollSession>;
     let checkFinishedScrollSpy: Mock<typeof checkFinishedScrollModule.checkFinishedScroll>;
     let originalRAF: typeof requestAnimationFrame;
+    let originalPlatform: typeof Platform.OS;
     let rafCallbacks: FrameRequestCallback[];
 
     beforeEach(() => {
         rafCallbacks = [];
+        originalPlatform = Platform.OS;
         originalRAF = globalThis.requestAnimationFrame;
         globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
             rafCallbacks.push(cb);
@@ -34,13 +40,14 @@ describe("initialScrollLifecycle", () => {
     afterEach(() => {
         rafCallbacks = [];
         globalThis.requestAnimationFrame = originalRAF;
+        Platform.OS = originalPlatform;
         advanceCurrentInitialScrollSessionSpy.mockRestore();
         checkFinishedScrollSpy.mockRestore();
     });
 
     for (const didStartFreshData of [false, true]) {
-        it(`only cancels previous scroll ownership for a fresh dataset (${didStartFreshData})`, () => {
-            const ctx = createMockContext();
+        it(`only cancels previous scroll ownership and end-follow state for a fresh dataset (${didStartFreshData})`, () => {
+            const ctx = createMockContext({ isFollowingEnd: true, isScrollActive: true });
             const state = ctx.state;
             const resolve = mock(() => {});
             const cancelCompletion = mock(() => {});
@@ -51,7 +58,14 @@ describe("initialScrollLifecycle", () => {
             state.pendingScrollResolve = resolve;
             state.maintainingScrollAtEnd = "pending-instant";
             state.pendingMaintainScrollAtEnd = true;
+            state.didDeferMaintainScrollAtEndForMomentum = true;
+            state.momentumSuspendContentSize = 1000;
+            state.momentumSuspendCompensated = true;
             state.scheduledWork.register("platformScrollCompletion", cancelCompletion);
+            state.endFollowInterrupted = true;
+            state.visibleContentAnchor = { key: "reader", offset: 20 };
+            state.pendingEndMeasurements = new Set(["tail"]);
+            state.scrollElementTarget = { element: {} as Element };
 
             handleInitialScrollDataChange(ctx, {
                 dataLength: 25,
@@ -66,9 +80,97 @@ describe("initialScrollLifecycle", () => {
 
             expect(state.scrollingTo).toBe(didStartFreshData ? undefined : oldTarget);
             expect(state.pendingMaintainScrollAtEnd).toBe(!didStartFreshData);
+            expect(state.didDeferMaintainScrollAtEndForMomentum).toBe(!didStartFreshData);
+            expect(state.momentumSuspendContentSize).toBe(didStartFreshData ? undefined : 1000);
+            expect(state.momentumSuspendCompensated).toBe(!didStartFreshData);
             expect(resolve).toHaveBeenCalledTimes(didStartFreshData ? 1 : 0);
             expect(cancelCompletion).toHaveBeenCalledTimes(didStartFreshData ? 1 : 0);
+            expect(state.endFollowInterrupted).toBe(!didStartFreshData);
+            expect(state.visibleContentAnchor).toEqual(didStartFreshData ? undefined : { key: "reader", offset: 20 });
+            expect(state.pendingEndMeasurements).toEqual(didStartFreshData ? undefined : new Set(["tail"]));
+            expect(state.scrollElementTarget).toEqual(didStartFreshData ? undefined : { element: {} });
+            expect(ctx.values.get("isFollowingEnd")).toBe(!didStartFreshData);
+            // Releasing the old request must not leave scroll-gated transitions disabled.
+            expect(ctx.values.get("isScrollActive")).toBe(!didStartFreshData);
         });
+    }
+
+    for (const measured of [false, true]) {
+        for (const target of ["end", "unread", "jump"] as const) {
+            it(`seeds rapid mid-flight dataset switches from incoming positions (${target}, cached ${measured})`, () => {
+                Platform.OS = "web";
+                const dataA = Array.from({ length: 151 }, (_, index) => ({ id: `a-${index}` }));
+                const dataB = Array.from({ length: 19 }, (_, index) => ({ id: `b-${index}` }));
+                const ctx = createMockContext(
+                    { footerSize: 0, numColumns: 1, stylePaddingTop: 0 },
+                    {
+                        hasHadNonEmptyData: true,
+                        initialScrollSession: {
+                            bootstrap: { mountFrameCount: 0, passCount: 0, scroll: 1298, seedContentOffset: 1298 },
+                            kind: "bootstrap",
+                            previousDataLength: 19,
+                        },
+                        props: {
+                            data: dataB,
+                            estimatedItemSize: 86,
+                            keyExtractor: (item: { id: string }) => item.id,
+                        },
+                        scrollLength: 648,
+                    },
+                );
+                const sizeAt = (index: number) => (index % 7 === 0 ? 600 : 86);
+                if (measured) {
+                    for (const data of [dataA, dataB]) {
+                        data.forEach((item, index) => {
+                            ctx.state.sizes.set(item.id, sizeAt(index));
+                            ctx.state.sizesKnown.set(item.id, sizeAt(index));
+                        });
+                    }
+                }
+                updateItemPositions(ctx, true);
+                expect(ctx.state.positions).toHaveLength(19);
+
+                // Do not run queued frames between switches: each destination supersedes an active bootstrap.
+                for (const data of [dataA, dataB, dataA]) {
+                    const index =
+                        target === "end" ? data.length - 1 : data === dataB ? 10 : target === "unread" ? 75 : 130;
+                    ctx.state.props.data = data;
+                    handleInitialScrollDataChange(ctx, {
+                        dataLength: data.length,
+                        didDataChange: true,
+                        didStartFreshData: true,
+                        initialScrollAtEnd: target === "end",
+                        latestInitialScroll: { index, viewPosition: target === "end" ? 1 : 0 },
+                        latestInitialScrollSessionKind: "bootstrap",
+                        stylePaddingEnd: 0,
+                        useBootstrapInitialScroll: true,
+                    });
+                    const position = Array.from({ length: index }, (_, i) => (measured ? sizeAt(i) : 86)).reduce(
+                        (a, b) => a + b,
+                        0,
+                    );
+                    const expectedOffset =
+                        target === "end" ? position + (measured ? sizeAt(index) : 86) - 648 : position;
+                    expect(ctx.state.positions).toHaveLength(data.length);
+                    expect(ctx.state.positions[index]).toBe(position);
+                    expect(ctx.state.initialScrollSession?.bootstrap?.scroll).toBe(expectedOffset);
+                }
+
+                // Measurements arriving after the last switch must refine the new target, never restore B's offset.
+                dataA.forEach((item, index) => {
+                    ctx.state.sizes.set(item.id, sizeAt(index) + 60);
+                    ctx.state.sizesKnown.set(item.id, sizeAt(index) + 60);
+                });
+                resetLayoutCachesForDataChange(ctx.state);
+                updateItemPositions(ctx, true);
+                evaluateBootstrapInitialScroll(ctx);
+                const finalTargetIndex = ctx.state.initialScroll!.index!;
+                const expected =
+                    ctx.state.positions[finalTargetIndex]! +
+                    (target === "end" ? sizeAt(finalTargetIndex) + 60 - 648 : 0);
+                expect(ctx.state.initialScrollSession?.bootstrap?.scroll).toBe(expected);
+            });
+        }
     }
 
     it("replays finished offset-only initial scrolls when data arrives after an empty mount", () => {

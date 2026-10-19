@@ -579,6 +579,64 @@ describe("LegendList initial scroll integration", () => {
         await scenario.cleanup();
     });
 
+    for (const recycleItems of [false, true]) {
+        for (const target of ["end", "unread", "jump"] as const) {
+            it(`allocates the destination window on web dataset switches (${target}, recycling ${recycleItems})`, async () => {
+                const allocated: number[] = [];
+                const dataA = createItems(151).map((item) => ({ ...item, id: `a-${item.id}` }));
+                const dataB = createItems(19).map((item) => ({ ...item, id: `b-${item.id}` }));
+                const props = (dataKey: string) => ({
+                    dataKey,
+                    initialScrollAtEnd: target === "end",
+                    initialScrollIndex:
+                        target === "end" ? undefined : dataKey === "a" ? (target === "unread" ? 75 : 130) : 10,
+                    recycleItems,
+                    renderItem: ({ index, item }: { index: number; item: { id: string; label: string } }) => {
+                        if (item.id.startsWith("a-")) allocated.push(index);
+                        return <Text>{item.label}</Text>;
+                    },
+                });
+                const scenario = await renderInitialScrollScenario({
+                    data: dataB,
+                    importKey: `dataset-switch-${target}-${recycleItems}`,
+                    legendListProps: props("b"),
+                    platform: "web",
+                });
+                try {
+                    await scenario.fireLayout();
+                    for (const dataKey of ["a", "b", "a"]) {
+                        allocated.length = 0;
+                        await scenario.rerender(dataKey === "a" ? dataA : dataB, props(dataKey));
+                        if (dataKey === "a") {
+                            const index = target === "end" ? 150 : target === "unread" ? 75 : 130;
+                            expect(allocated.length).toBeGreaterThan(0);
+                            expect(Math.min(...allocated)).toBeGreaterThan(index - 10);
+                            expectScrollClose(scenario.ref, target === "end" ? 14900 : index * 100);
+                        }
+                    }
+                    const fresh = await renderInitialScrollScenario({
+                        data: dataA,
+                        importKey: `dataset-switch-fresh-${target}-${recycleItems}`,
+                        legendListProps: props("a"),
+                        platform: "web",
+                    });
+                    try {
+                        await fresh.fireLayout();
+                        const switched = scenario.ref.current!.getState();
+                        const mounted = fresh.ref.current!.getState();
+                        expect(switched.scroll).toBe(mounted.scroll);
+                        expect(switched.startBuffered).toBe(mounted.startBuffered);
+                        expect(switched.endBuffered).toBe(mounted.endBuffered);
+                    } finally {
+                        await fresh.cleanup();
+                    }
+                } finally {
+                    await scenario.cleanup();
+                }
+            });
+        }
+    }
+
     it("renders the target window when initialScrollIndex becomes available with data", async () => {
         const scenario = await renderInitialScrollScenario({
             data: [],

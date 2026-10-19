@@ -239,6 +239,9 @@ function computeViewability(
     item: any,
     index: number,
 ): ViewAmountToken {
+    // Content inset can reserve empty scroll range without covering any pixels.
+    // Only an integration's explicitly reported occlusion clips viewability.
+    scrollSize = Math.max(0, scrollSize - (state.viewabilityInsetEnd ?? 0));
     const { sizes, scroll: scrollState } = state;
     const topPad =
         (peek$(ctx, "stylePaddingTop") || 0) +
@@ -282,10 +285,13 @@ function computeViewability(
 
     const sizeVisible = isEntirelyVisible ? size : Math.min(bottom, scrollSize) - Math.max(top, 0);
     const percentVisible = size ? (isEntirelyVisible ? 100 : 100 * (sizeVisible / size)) : 0;
-    const percentOfScroller = size ? 100 * (sizeVisible / scrollSize) : 0;
+    const percentOfScroller = size && scrollSize > 0 ? 100 * (sizeVisible / scrollSize) : 0;
     const percent = isEntirelyVisible ? 100 : viewAreaMode ? percentOfScroller : percentVisible;
 
-    const isViewable = percent >= viewablePercentThreshold!;
+    // A zero-size viewport means an integration covers everything: no row is
+    // viewable, and coverage ratios stay finite. Zero-size or edge-touching
+    // rows keep their historical percent-of-threshold result.
+    const isViewable = scrollSize > 0 && percent >= viewablePercentThreshold!;
 
     const value: ViewAmountToken = {
         containerId,

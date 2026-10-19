@@ -138,6 +138,8 @@ describe("reached edges lifecycle", () => {
             setDidLayout(ctx);
             expect(end).toEqual([]);
             updateScroll(ctx, 92, true, { fromNativeScrollEvent: true });
+            expect(end).toEqual([]);
+            updateScroll(ctx, 192, true, { fromNativeScrollEvent: true });
             expect(end).toEqual([0]);
         });
     }

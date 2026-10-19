@@ -244,6 +244,10 @@ export function prepareMVCP(
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
     const scrollingTo = state.scrollingTo;
+    if (scrollingTo?.key !== undefined) {
+        const nextIndex = state.indexByKey.get(scrollingTo.key);
+        if (nextIndex !== undefined) scrollingTo.index = nextIndex;
+    }
     // A deferred scrollToEnd has not become state.scrollingTo yet. On web, data MVCP would otherwise
     // preserve the old visible anchor with an instant ScrollAdjust before the intended end scroll can animate.
     if (isWeb && dataChanged && state.pendingScrollToEnd && scrollingTo === undefined) {
@@ -264,7 +268,8 @@ export function prepareMVCP(
         scrollTarget >= state.props.data.length - 1 &&
         (scrollingToViewPosition ?? 0) > 0;
 
-    const shouldMVCP = dataChanged ? mvcpData : mvcpScroll;
+    const explicitAnchor = state.visibleContentAnchor;
+    const shouldMVCP = !!explicitAnchor || (dataChanged ? mvcpData : mvcpScroll);
     const indexByKey = state.indexByKey;
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
@@ -276,7 +281,10 @@ export function prepareMVCP(
             return undefined;
         }
 
-        if (anchorLock && scrollTarget === undefined) {
+        if (explicitAnchor && scrollTarget === undefined) {
+            targetId = explicitAnchor.key;
+            prevPosition = state.scroll - explicitAnchor.offset;
+        } else if (anchorLock && scrollTarget === undefined) {
             targetId = anchorLock.id;
             prevPosition = anchorLock.position;
         } else if (scrollTarget !== undefined) {
@@ -380,6 +388,7 @@ export function prepareMVCP(
                 const newPosition = targetIndex !== undefined ? positions[targetIndex] : undefined;
 
                 if (newPosition !== undefined) {
+                    if (scrollingTo?.key === targetId && targetIndex !== undefined) scrollingTo.index = targetIndex;
                     const totalSize = getContentSize(ctx);
                     let diff = newPosition - prevPosition;
 

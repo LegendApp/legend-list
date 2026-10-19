@@ -59,6 +59,7 @@ function ListComponentHarness({
     ListComponent,
     ListFooterComponent,
     maintainScrollAtEnd,
+    maintainVisibleContentPosition,
     onContext,
     onInternalScrollBeginDrag,
     onInternalScrollEndDrag,
@@ -75,6 +76,7 @@ function ListComponentHarness({
     ListComponent: React.ComponentType<any>;
     ListFooterComponent?: React.ReactNode;
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
+    maintainVisibleContentPosition?: { data: boolean; size: boolean };
     onContext?: (ctx: StateContext) => void;
     onInternalScrollBeginDrag?: (event: unknown) => void;
     onInternalScrollEndDrag?: (event: unknown) => void;
@@ -89,6 +91,7 @@ function ListComponentHarness({
     state.props.anchoredEndSpace = anchoredEndSpaceSize === undefined ? undefined : { anchorIndex: 0 };
     state.props.horizontal = horizontal;
     state.props.maintainScrollAtEnd = maintainScrollAtEnd;
+    if (maintainVisibleContentPosition) state.props.maintainVisibleContentPosition = maintainVisibleContentPosition;
     state.props.rtl = rtl;
     ctx.state = state;
     if (anchoredEndSpaceSize !== undefined) {
@@ -134,6 +137,105 @@ function ListComponentHarness({
 }
 
 describe("ListComponent renderScrollComponent", () => {
+    it("keeps the iOS adjustment sentinel bound while restoration is toggled", async () => {
+        const { Platform } = await import("../../src/platform/Platform");
+        const { ListComponent } = await import("../../src/components/ListComponent?native-mvcp-mode-transition");
+        const originalPlatform = Platform.OS;
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        try {
+            Platform.OS = "ios";
+            for (const enabled of [true, false, true]) {
+                const tree = (
+                    <StateProvider>
+                        <ListComponentHarness
+                            events={[]}
+                            ListComponent={ListComponent}
+                            label="native"
+                            maintainVisibleContentPosition={{ data: enabled, size: enabled }}
+                        />
+                    </StateProvider>
+                );
+                act(() => {
+                    if (renderer) renderer.update(tree);
+                    else renderer = TestRenderer.create(tree);
+                });
+                expect(renderer.root.findAllByType(View)[0]?.props.maintainVisibleContentPosition).toEqual({
+                    minIndexForVisible: 0,
+                });
+            }
+        } finally {
+            Platform.OS = originalPlatform;
+            act(() => renderer?.unmount());
+        }
+    });
+
+    it("gates native MVCP on the restoration configuration outside iOS", async () => {
+        const { Platform } = await import("../../src/platform/Platform");
+        const { ListComponent } = await import("../../src/components/ListComponent?android-mvcp-gate");
+        const originalPlatform = Platform.OS;
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        try {
+            Platform.OS = "android";
+            for (const [config, expected] of [
+                [{ data: false, size: false }, undefined],
+                [{ data: false, size: true }, { minIndexForVisible: 0 }],
+            ] as const) {
+                const tree = (
+                    <StateProvider>
+                        <ListComponentHarness
+                            events={[]}
+                            ListComponent={ListComponent}
+                            label="native"
+                            maintainVisibleContentPosition={config}
+                        />
+                    </StateProvider>
+                );
+                act(() => {
+                    if (renderer) renderer.update(tree);
+                    else renderer = TestRenderer.create(tree);
+                });
+                expect(renderer.root.findAllByType(View)[0]?.props.maintainVisibleContentPosition).toEqual(expected);
+            }
+        } finally {
+            Platform.OS = originalPlatform;
+            act(() => renderer?.unmount());
+        }
+    });
+
+    it("renders the size component for the end spacer even with zero padding", async () => {
+        const { ListComponent } = await import("../../src/components/ListComponent?size-component-spacer");
+        const sizeRenders: any[] = [];
+        const SizeComponent = (sizeProps: any) => {
+            sizeRenders.push(sizeProps);
+            return null;
+        };
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(
+                <StateProvider>
+                    <ListComponentHarness
+                        alignItemsAtEndPaddingEnabled
+                        events={[]}
+                        ListComponent={ListComponent}
+                        label="size"
+                        onContext={(ctx) => {
+                            ctx.state.props.sizeComponentInternal = SizeComponent;
+                            ctx.values.set("alignItemsAtEndPadding", 0);
+                        }}
+                    />
+                </StateProvider>,
+            );
+        });
+
+        const spacer = sizeRenders.find((sizeProps) => sizeProps.signalName === "alignItemsAtEndPadding");
+        expect(spacer).toBeDefined();
+        expect(spacer.style).toEqual({ flexShrink: 0 });
+        act(() => renderer.unmount());
+    });
+
     it("materializes anchored end space only when the list owns it", async () => {
         const { ListComponent } = await import("../../src/components/ListComponent?custom-scroll-anchored-end-space");
         const events: string[] = [];

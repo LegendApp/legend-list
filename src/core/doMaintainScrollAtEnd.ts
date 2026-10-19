@@ -1,28 +1,53 @@
 import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { getAlignItemsAtEndPadding } from "@/core/updateContentMetricsState";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
+import { areKnownOrFixedItemSizesAvailable } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-export function interruptMaintainScrollAtEnd(ctx: StateContext) {
+export function interruptMaintainScrollAtEnd(ctx: StateContext, reason: "interrupted" | "superseded" = "interrupted") {
     const { state } = ctx;
     const maintaining = state.maintainingScrollAtEnd;
+    state.endFollowInterrupted = true;
+    set$(ctx, "isFollowingEnd", false);
     const cancelActiveScroll = !!(
         maintaining === "animated" ||
         maintaining === "instant" ||
         (maintaining && state.scrollingTo?.isScrollToEnd)
     );
     if (cancelActiveScroll) {
-        cancelImperativeScroll(state);
+        cancelImperativeScroll(state, reason);
+        set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling);
     }
     if (maintaining || state.pendingMaintainScrollAtEnd) {
         finishMaintainScrollAtEnd(ctx);
     }
     return cancelActiveScroll;
+}
+
+// Once no reader anchor or scroll owns the position, settling within the threshold re-arms following.
+export function rearmEndFollowIfSettled(ctx: StateContext) {
+    const { state } = ctx;
+    if (
+        state.endFollowInterrupted &&
+        !state.visibleContentAnchor &&
+        !state.isDragging &&
+        !state.isMomentumScrolling &&
+        !state.scheduledWork.has("endFollowRearm") &&
+        !state.scrollingTo &&
+        !state.pendingScrollResolve &&
+        !ctx.scrollRequestTracker?.isWaitingToRun() &&
+        peek$(ctx, "isWithinMaintainScrollAtEndThreshold")
+    ) {
+        state.endFollowInterrupted = false;
+        // Retain settled intent if the next content measurement moves the end beyond the threshold.
+        if (state.props.maintainScrollAtEnd) set$(ctx, "isFollowingEnd", true);
+    }
 }
 
 export function finishMaintainScrollAtEnd(ctx: StateContext) {
@@ -36,7 +61,10 @@ export function finishMaintainScrollAtEnd(ctx: StateContext) {
         state.scrollForNextCalculateItemsInView = undefined;
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         const nextScroll = clampScrollOffset(ctx, state.scroll + nextPadding - currentPadding);
-        requestAdjust(ctx, nextScroll - state.scroll);
+        // iOS clamps the native offset when the padding shrinks, before MVCP applies this adjustment.
+        const nativeScroll = Platform.OS === "ios" ? clampScrollOffset(ctx, state.scroll) : state.scroll;
+        state.scroll = nativeScroll;
+        requestAdjust(ctx, nextScroll - nativeScroll);
     }
 }
 
@@ -45,7 +73,12 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
     let didMaintain = false;
     // Measurements can arrive after drag start canceled the previous follow.
     // Suspend following during a drag or while a shared owner is scrolled outside this list.
-    if (state.isDragging || state.refScroller.current?.isScrollInRange?.() === false) {
+    if (
+        state.isDragging ||
+        (state.releasedFromUserDrag && (state.isMomentumScrolling || state.scheduledWork.has("endFollowRearm"))) ||
+        state.refScroller.current?.isScrollInRange?.() === false
+    ) {
+        if (state.releasedFromUserDrag) state.didDeferMaintainScrollAtEndForMomentum = true;
         finishMaintainScrollAtEnd(ctx);
     } else {
         const {
@@ -54,8 +87,25 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
             pendingNativeMVCPAdjust,
             props: { maintainScrollAtEnd },
         } = state;
+        if (
+            Platform.OS === "web" &&
+            (!didFinishInitialScroll || state.scrollingTo?.isInitialScroll) &&
+            maintainScrollAtEnd &&
+            !state.endFollowInterrupted &&
+            !ctx.scrollRequestTracker?.isWaitingToRun() &&
+            (!state.scrollingTo || state.scrollingTo.isInitialScroll) &&
+            (state.scrollingTo?.isInitialScroll ||
+                (didContainersLayout &&
+                    state.initialScrollSession?.kind === "bootstrap" &&
+                    !state.initialScrollSession.bootstrap &&
+                    state.initialScrollSession.completion)) &&
+            isEndOfContentTarget(state.initialScroll, state.props.data.length)
+        ) {
+            state.pendingMaintainScrollAtEnd = true;
+            return false;
+        }
         // ResizeObserver runs after DOM layout and before paint. Instant web
-        // viewport following can commit now; data/item changes still wait for RAF.
+        // layout following can commit now; data changes still wait for RAF.
         const immediate = options?.immediate && Platform.OS === "web" && !maintainScrollAtEnd?.animated;
         const isWithinMaintainScrollAtEndThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
         const isReplayingPendingMaintain = !!state.pendingMaintainScrollAtEnd;
@@ -64,10 +114,18 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
         const shouldMaintainScrollAtEnd = !!(
             !ctx.scrollRequestTracker?.isWaitingToRun() &&
             (!state.scrollingTo || state.scrollingTo.isScrollToEnd) &&
-            (isWithinMaintainScrollAtEndThreshold || isReplayingPendingMaintain || state.scrollingTo?.isScrollToEnd) &&
+            !state.endFollowInterrupted &&
+            (peek$(ctx, "isFollowingEnd") ||
+                isWithinMaintainScrollAtEndThreshold ||
+                isReplayingPendingMaintain ||
+                state.scrollingTo?.isScrollToEnd) &&
             maintainScrollAtEnd &&
             didFinishInitialScroll
         );
+
+        if (shouldMaintainScrollAtEnd) {
+            set$(ctx, "isFollowingEnd", true);
+        }
 
         if (shouldMaintainScrollAtEnd && !state.scrollingTo) {
             const scroller = state.refScroller.current;
@@ -88,7 +146,18 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
             }
         }
 
-        if (shouldMaintainScrollAtEnd && !didContainersLayout) {
+        const anchorIndex = state.props.anchoredEndSpace?.anchorIndex;
+        const dataLength = state.props.data.length;
+        if (
+            shouldMaintainScrollAtEnd &&
+            (!didContainersLayout ||
+                state.activeSizeAnimations?.size ||
+                // Wait for the anchored tail to be measured.
+                (anchorIndex !== undefined &&
+                    anchorIndex >= 0 &&
+                    anchorIndex < dataLength &&
+                    !areKnownOrFixedItemSizesAvailable(ctx, anchorIndex, dataLength - 1)))
+        ) {
             state.pendingMaintainScrollAtEnd = true;
         } else if (pendingNativeMVCPAdjust) {
             // Native MVCP can still be finishing its own clamp after data changes. Defer the end-anchor scroll
@@ -104,7 +173,6 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                 didMaintain = true;
             } else {
                 state.pendingMaintainScrollAtEnd = true;
-                state.maintainingScrollAtEnd ??= maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
             }
         } else if (shouldMaintainScrollAtEnd && didContainersLayout) {
             // Run this only if scroll is at the bottom and after initial layout
@@ -116,14 +184,27 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                 state.scroll = 0;
             }
 
-            if (!state.maintainingScrollAtEnd || (immediate && state.maintainingScrollAtEnd === "pending-instant")) {
+            if (
+                !state.maintainingScrollAtEnd ||
+                (immediate &&
+                    (state.maintainingScrollAtEnd === "pending-instant" || state.maintainingScrollAtEnd === "instant"))
+            ) {
                 const pendingState = maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
                 const activeState = maintainScrollAtEnd.animated ? "animated" : "instant";
                 const scrollAtRequest = state.scroll;
                 state.maintainingScrollAtEnd = pendingState;
                 const run = () => {
                     if (state.maintainingScrollAtEnd === pendingState) {
-                        if (state.isDragging || state.refScroller.current?.isScrollInRange?.() === false) {
+                        if (state.activeSizeAnimations?.size) {
+                            state.pendingMaintainScrollAtEnd = true;
+                            state.maintainingScrollAtEnd = undefined;
+                        } else if (
+                            state.isDragging ||
+                            (state.releasedFromUserDrag &&
+                                (state.isMomentumScrolling || state.scheduledWork.has("endFollowRearm"))) ||
+                            state.refScroller.current?.isScrollInRange?.() === false
+                        ) {
+                            if (state.releasedFromUserDrag) state.didDeferMaintainScrollAtEndForMomentum = true;
                             finishMaintainScrollAtEnd(ctx);
                         } else {
                             const isStillWithinThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
@@ -134,6 +215,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                             if (isReplayingPendingMaintain || isStillWithinThreshold || !didScrollSinceRequest) {
                                 if (state.scrollingTo || state.pendingScrollResolve) {
                                     state.pendingMaintainScrollAtEnd = true;
+                                    state.maintainingScrollAtEnd = undefined;
                                 } else {
                                     state.maintainingScrollAtEnd = activeState;
                                     const scrollPromise = getScrollRequestTracker(ctx).runNowIfIdle(() =>
@@ -141,7 +223,11 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
                                     );
 
                                     void scrollPromise.then(() => {
-                                        if (state.maintainingScrollAtEnd === activeState) {
+                                        if (
+                                            state.maintainingScrollAtEnd === activeState &&
+                                            !state.scrollingTo &&
+                                            !state.pendingScrollResolve
+                                        ) {
                                             if (state.pendingMaintainScrollAtEnd) {
                                                 state.maintainingScrollAtEnd = undefined;
                                                 doMaintainScrollAtEnd(ctx);

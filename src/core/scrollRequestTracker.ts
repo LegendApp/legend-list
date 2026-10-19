@@ -1,13 +1,16 @@
 import { settlePendingImperativeScroll } from "@/core/cancelImperativeScroll";
-import { finishMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
-import type { StateContext } from "@/state/state";
+import { interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { type StateContext, set$ } from "@/state/state";
+import type { LegendListScrollResult } from "@/types.base";
+import type { ScrollResolve } from "@/types.internal";
 
 export interface ScrollRequestTracker {
+    cancel(): void;
     isCurrent(token: number): boolean;
     isWaitingToRun(): boolean;
-    runNow(token: number, resolve: () => void, run: () => boolean): void;
-    runNowIfIdle(run: () => boolean): Promise<void>;
-    start(resolve: () => void): number;
+    runNow(token: number, resolve: ScrollResolve, run: () => boolean): void;
+    runNowIfIdle(run: () => boolean): Promise<LegendListScrollResult>;
+    start(resolve: ScrollResolve): number;
 }
 
 export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker {
@@ -15,11 +18,15 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
         let currentToken = 0;
         let waitingToken: number | undefined;
 
-        const start = (resolve: () => void, isInternal = false) => {
+        const start = (resolve: ScrollResolve, isInternal = false) => {
             const state = ctx.state;
             // A newer explicit target supersedes automatic end-follow intent.
-            if (!isInternal && (state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd)) {
-                finishMaintainScrollAtEnd(ctx);
+            if (!isInternal) {
+                state.pendingEndMeasurements = undefined;
+                state.visibleContentAnchor = undefined;
+                state.scrollElementTarget = undefined;
+                state.userScrollAnchorReset = undefined;
+                interruptMaintainScrollAtEnd(ctx, "superseded");
             }
             state.scheduledWork.cancel("imperativeScrollReady");
             const token = ++currentToken;
@@ -27,11 +34,12 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
             settlePendingImperativeScroll(state);
             state.pendingScrollResolve = resolve;
             waitingToken = token;
+            set$(ctx, "isScrollActive", true);
 
             return token;
         };
 
-        const runNow = (token: number, resolve: () => void, run: () => boolean) => {
+        const runNow = (token: number, resolve: ScrollResolve, run: () => boolean) => {
             const state = ctx.state;
             if (token !== currentToken) {
                 return;
@@ -43,11 +51,23 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
                 if (state.pendingScrollResolve === resolve) {
                     state.pendingScrollResolve = undefined;
                 }
+                set$(
+                    ctx,
+                    "isScrollActive",
+                    !!state.isDragging ||
+                        !!state.isMomentumScrolling ||
+                        !!state.scrollingTo ||
+                        !!state.pendingScrollResolve,
+                );
                 resolve();
             }
         };
 
         ctx.scrollRequestTracker = {
+            cancel: () => {
+                currentToken++;
+                waitingToken = undefined;
+            },
             isCurrent: (token) => token === currentToken,
             isWaitingToRun: () => waitingToken === currentToken && !!ctx.state.pendingScrollResolve,
             runNow,
@@ -55,9 +75,9 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
                 const state = ctx.state;
                 // Automatic end maintenance must not supersede an explicit or otherwise active scroll target.
                 if (state.pendingScrollResolve || state.scrollingTo) {
-                    return Promise.resolve();
+                    return Promise.resolve(undefined);
                 }
-                return new Promise<void>((resolve) => {
+                return new Promise<LegendListScrollResult>((resolve) => {
                     const token = start(resolve, true);
                     runNow(token, resolve, run);
                 });

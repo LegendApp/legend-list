@@ -3,7 +3,15 @@ import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
-import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch } from "../../src/core/updateItemSizes";
+import { invalidateFixedItemSizes } from "../../src/core/containerItemMetadata";
+import { interruptMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
+import { scrollToEnd } from "../../src/core/scrollToEnd";
+import {
+    batchItemSizeUpdates,
+    updateItemSizes,
+    updateItemSizesBatch,
+    updateOneItemSize,
+} from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -62,6 +70,112 @@ describe("updateItemSizes", () => {
 
     afterEach(() => {
         Platform.OS = prevPlatform;
+    });
+
+    it("keeps a fixed row's new measurement when it becomes dynamic", () => {
+        mockState.props.getFixedItemSize = () => 100;
+        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
+        expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(true);
+
+        mockState.props.getFixedItemSize = () => undefined;
+        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
+        invalidateFixedItemSizes(mockState);
+
+        expect(mockState.sizesKnown.get("item_0")).toBe(100);
+        expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(false);
+    });
+
+    it("follows every web size measurement before the next frame without replacing the end request", async () => {
+        Platform.OS = "web";
+        const originalRAF = globalThis.requestAnimationFrame;
+        const originalCAF = globalThis.cancelAnimationFrame;
+        const frames = new Map<number, FrameRequestCallback>();
+        let nextFrame = 0;
+        globalThis.requestAnimationFrame = (callback) => {
+            frames.set(++nextFrame, callback);
+            return nextFrame;
+        };
+        globalThis.cancelAnimationFrame = (handle) => {
+            frames.delete(handle);
+        };
+        const flushFrames = () => {
+            const pending = [...frames.values()];
+            frames.clear();
+            for (const callback of pending) callback(0);
+        };
+        let physicalScroll = 900;
+        mockState.scroll = 900;
+        mockState.scrollPending = 900;
+        mockState.totalSize = 1500;
+        mockCtx.values.set("totalSize", 1500);
+        mockCtx.values.set("isFollowingEnd", true);
+        mockState.props.maintainScrollAtEnd = { animated: false };
+        mockState.positions = [0, 500, 1000];
+        for (let index = 0; index < 3; index++) {
+            const key = `item_${index}`;
+            mockState.sizes.set(key, 500);
+            mockState.sizesKnown.set(key, 500);
+            assignContainer(index, key);
+        }
+        mockState.refScroller.current = {
+            getCurrentScrollOffset: () => physicalScroll,
+            getMaxScrollOffset: () => mockState.totalSize - mockState.scrollLength,
+            getScrollableNode: () => ({}),
+            scrollTo: ({ y }: { y?: number }) => {
+                physicalScroll = Math.min(y ?? 0, mockState.totalSize - mockState.scrollLength);
+            },
+        } as any;
+        mockCtx.scrollToEnd = (options) => scrollToEnd(mockCtx, options);
+        try {
+            let resolve: (() => void) | undefined;
+            for (const height of [518, 552, 579, 591, 580, 561, 535, 500]) {
+                updateItemSizes(mockCtx, { itemKey: "item_2", size: { height, width: 400 } });
+                expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
+                expect(mockState.scrollingTo?.isScrollToEnd).toBe(true);
+                resolve ??= mockState.pendingScrollResolve;
+                expect(resolve).toBeDefined();
+                expect(mockState.pendingScrollResolve).toBe(resolve);
+            }
+            // Following never waits for a frame; only the latest instant scroll's
+            // completion frame stays queued, and it releases the end request.
+            expect(frames.size).toBe(1);
+            expect(mockState.scrollingTo?.isScrollToEnd).toBe(true);
+            flushFrames();
+            expect(mockState.scrollingTo).toBeUndefined();
+            updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 520, width: 400 } });
+            expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
+            const nextResolve = mockState.pendingScrollResolve;
+            expect(nextResolve).toBeDefined();
+            expect(nextResolve).not.toBe(resolve);
+            await Promise.resolve();
+            expect(mockState.maintainingScrollAtEnd).toBe("instant");
+            expect(mockState.pendingScrollResolve).toBe(nextResolve);
+            interruptMaintainScrollAtEnd(mockCtx);
+            physicalScroll = 800;
+            mockState.scroll = 800;
+            updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 550, width: 400 } });
+            expect(physicalScroll).toBe(800);
+            expect(mockState.scrollingTo).toBeUndefined();
+            expect(mockState.pendingScrollResolve).toBeUndefined();
+        } finally {
+            mockState.scheduledWork.dispose();
+            globalThis.requestAnimationFrame = originalRAF;
+            globalThis.cancelAnimationFrame = originalCAF;
+        }
+    });
+
+    it("keeps append-only following idle during a measured item resize", () => {
+        Platform.OS = "web";
+        mockCtx.values.set("isFollowingEnd", true);
+        mockState.props.maintainScrollAtEnd = { on: { dataChange: true } };
+        mockState.sizes.set("item_0", 100);
+        mockState.sizesKnown.set("item_0", 100);
+        mockState.positions = [0, 100, 200];
+        updateItemSizes(mockCtx, { itemKey: "item_0", size: { height: 150, width: 400 } });
+        expect(mockState.scroll).toBe(0);
+        expect(mockState.scrollingTo).toBeUndefined();
+        expect(mockState.pendingScrollResolve).toBeUndefined();
+        expect(mockState.maintainingScrollAtEnd).toBeUndefined();
     });
 
     it("updates only the measured item without draining unrelated anchor resets", () => {

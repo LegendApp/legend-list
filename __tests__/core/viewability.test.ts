@@ -56,6 +56,82 @@ function createMockState(
 }
 
 describe("viewability system", () => {
+    describe("explicit viewport occlusion", () => {
+        function measure(size: number, inset: number | undefined, config: ViewabilityConfig) {
+            const state = createMockState({
+                idCache: ["row"],
+                indexByKey: new Map([["row", 0]]),
+                positions: [0],
+                props: { contentInset: { bottom: 1000 }, data: ["row"], keyExtractor: (item: string) => item },
+                scroll: 0,
+                sizes: new Map([["row", size]]),
+                viewabilityInsetEnd: inset,
+            });
+            const ctx = createMockContext({ containerItemKey0: "row", numContainers: 1 });
+            ctx.state = state;
+            let items: ViewToken[] = [];
+            updateViewableItems(
+                state,
+                ctx,
+                [
+                    {
+                        onViewableItemsChanged: (info) => {
+                            items = info.viewableItems;
+                        },
+                        viewabilityConfig: { id: "occlusion", ...config },
+                    },
+                ],
+                580,
+                0,
+                0,
+            );
+            return { items, token: ctx.mapViewabilityAmountValues.get(0)! };
+        }
+
+        it("keeps scroll-range padding separate from an integration's occluded viewport", () => {
+            const { token } = measure(1000, undefined, { itemVisiblePercentThreshold: 50 });
+            expect(token.sizeVisible).toBe(580);
+            expect(token.scrollSize).toBe(580);
+            expect(token.isViewable).toBe(true);
+        });
+
+        it("preserves the item percentage threshold when a tall row fills the remaining viewport", () => {
+            const { token, items } = measure(1000, 335, { itemVisiblePercentThreshold: 50 });
+            expect(token.sizeVisible).toBe(245);
+            expect(token.percentVisible).toBe(24.5);
+            expect(token.percentOfScroller).toBe(100);
+            expect(token.isViewable).toBe(false);
+            expect(items).toEqual([]);
+        });
+
+        it("uses the remaining visible area for a viewport coverage threshold", () => {
+            const { token, items } = measure(1000, 335, { viewAreaCoveragePercentThreshold: 100 });
+            expect(token.percentOfScroller).toBe(100);
+            expect(items).toHaveLength(1);
+        });
+
+        it("reports no viewable rows or non-finite coverage when the viewport is fully covered", () => {
+            const { token, items } = measure(100, 600, { viewAreaCoveragePercentThreshold: 0 });
+            expect(token.scrollSize).toBe(0);
+            expect(token.sizeVisible).toBe(0);
+            expect(token.percentOfScroller).toBe(0);
+            expect(token.isViewable).toBe(false);
+            expect(items).toEqual([]);
+        });
+
+        it("keeps zero-coverage rows viewable at a zero threshold without occlusion", () => {
+            // The default config is a zero viewport-coverage threshold, which
+            // historically admits rows with no visible pixels, such as a
+            // zero-height row inside the viewport. Occlusion alone, not a
+            // blanket visible-pixel requirement, gates this.
+            const { token, items } = measure(0, undefined, { viewAreaCoveragePercentThreshold: 0 });
+            expect(token.scrollSize).toBe(580);
+            expect(token.sizeVisible).toBe(0);
+            expect(token.isViewable).toBe(true);
+            expect(items).toHaveLength(1);
+        });
+    });
+
     describe("setupViewability", () => {
         it("should return undefined when no viewability config provided", () => {
             const props = {};

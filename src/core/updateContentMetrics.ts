@@ -1,6 +1,7 @@
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { Insets } from "@/types.base";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { maybeUpdateAnchoredEndSpace } from "./updateAnchoredEndSpace";
 import { updateContentMetricsState } from "./updateContentMetricsState";
@@ -54,12 +55,14 @@ export function setHeaderSize(ctx: StateContext, size: number) {
     }
 
     state.didMeasureHeader = true;
+    if (didChange) checkThresholds(ctx);
 }
 
 export function setFooterSize(ctx: StateContext, size: number) {
     const didChange = setContentLengthSignal(ctx, "footerSize", size);
     if (didChange) {
         maybeUpdateAnchoredEndSpace(ctx);
+        checkThresholds(ctx);
     }
     return didChange;
 }

@@ -222,6 +222,7 @@ export function ActivityHistoryExample() {
                 contentContainerStyle={styles.listContent}
                 data={timeline.rows}
                 estimatedItemSize={118}
+                extraData={expandedIds}
                 initialScrollAtEnd
                 keyExtractor={(item) => item.id}
                 maintainScrollAtEnd

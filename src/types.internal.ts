@@ -8,8 +8,11 @@ import type {
     AnchoredEndSpaceConfig,
     Insets,
     LayoutRectangle,
+    LegendListMetrics,
     LegendListPropsBase,
+    LegendListRef,
     LegendListRenderItemProps,
+    LegendListScrollResult,
     NativeScrollEvent,
     NativeSyntheticEvent,
     ScrollIndexWithOffsetAndContentOffset,
@@ -59,7 +62,7 @@ export interface MaintainScrollAtEndNormalized {
     animated: boolean;
     onLayout: boolean;
     onItemLayout: boolean;
-    onDataChange: boolean;
+    onDataChange: boolean | "append";
     onFooterLayout: boolean;
 }
 
@@ -72,10 +75,13 @@ export interface ThresholdSnapshot {
 
 export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";
 
+export type ScrollResolve = (result?: LegendListScrollResult) => void;
+
 export interface ScrollTarget {
     averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
     index?: number;
+    key?: string;
     isInitialScroll?: boolean;
     itemSize?: number;
     offset: number;
@@ -100,6 +106,10 @@ type BootstrapInitialScrollSession = {
 
 type InternalScrollTarget = ScrollTarget & {
     isScrollToEnd?: boolean;
+    /** Web retries reissued after an animated scroll settled short of its recomputed target. */
+    landingRetries?: number;
+    /** Offset the latest landing retry started from, used to stop when the scroll makes no progress. */
+    landingRetryFrom?: number;
     waitForInitialScrollCompletionFrame?: boolean;
 };
 
@@ -160,7 +170,14 @@ export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export type AnchoredEndSpaceOwner = "list" | "scroll";
 
+// Keyboard integrations report occlusion separately from scroll-range insets.
+// This is an internal bridge, not part of the public list ref contract.
+export interface LegendListInternalRef extends LegendListRef {
+    reportViewabilityInsetEndInternal?: (inset: number) => void;
+}
+
 export interface InternalState {
+    viewabilityInsetEnd?: number;
     adjustingFromInitialMount?: number;
     anchoredEndSpacePendingReady?: boolean;
     anchoredEndSpaceReadyAnchorIndex?: number;
@@ -214,6 +231,26 @@ export interface InternalState {
     lastScrollAdjustForHistory?: number;
     lastScrollDelta: number;
     loadStartTime: number;
+    pendingEndMeasurements?: Set<string>;
+    isMomentumScrolling?: boolean;
+    // Release provenance survives the handoff timeout and repeated native begins.
+    releasedFromUserDrag?: boolean;
+    didDeferMaintainScrollAtEndForMomentum?: boolean;
+    // Growth not already compensated by MVCP can retain the reader's end intent.
+    momentumSuspendContentSize?: number;
+    momentumSuspendCompensated?: boolean;
+    momentumStallFirstLateFireAt?: number;
+    activeSizeAnimations?: Set<string>;
+    resumeMaintainScrollAtEnd?: () => void;
+    layoutAdjustmentEpoch?: number;
+    lastMetrics?: LegendListMetrics;
+    endFollowInterrupted?: boolean;
+    visibleContentAnchor?: { key: string; offset: number };
+    scrollElementTarget?: {
+        element: Element | Range;
+        viewportMargin?: { top?: number; bottom?: number };
+        viewPosition?: number;
+    };
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
     positionRecalculationStartIndex: number | undefined;
     mvcpAnchorLock?: {
@@ -237,11 +274,11 @@ export interface InternalState {
     pendingDataComparison?: PendingDataComparison;
     pendingScrollToEnd?: {
         options?: ScrollToEndOptions;
-        resolve: () => void;
+        resolve: ScrollResolve;
         token: number;
     };
     pendingTotalSize?: number;
-    pendingScrollResolve?: (() => void) | undefined;
+    pendingScrollResolve?: ScrollResolve | undefined;
     runPendingScrollToEnd?: () => void;
     positions: Array<number | undefined>;
     positionsAreCurrent?: boolean;
@@ -268,6 +305,7 @@ export interface InternalState {
     scheduledWork: ScheduledWork;
     sizes: Map<string, number>;
     sizesKnown: Map<string, number>;
+    fixedItemSizeKeys?: Set<string>;
     startBuffered: number;
     startBufferedId?: string;
     startNoBuffer: number;
@@ -322,7 +360,11 @@ export interface InternalState {
         onItemSizeChanged: LegendListPropsInternal["onItemSizeChanged"];
         onLoad: LegendListPropsInternal["onLoad"];
         onReady: LegendListPropsInternal["onReady"];
+        onMomentumScrollBegin: LegendListPropsInternal["onMomentumScrollBegin"];
         onMomentumScrollEnd: LegendListPropsInternal["onMomentumScrollEnd"];
+        onMetricsChange: LegendListPropsInternal["onMetricsChange"];
+        trackScrollMetrics: LegendListPropsInternal["trackScrollMetrics"];
+        onUserScroll: LegendListPropsInternal["onUserScroll"];
         onScroll: LegendListPropsInternal["onScroll"];
         onScrollBeginDrag: LegendListPropsInternal["onScrollBeginDrag"];
         onScrollEndDrag: LegendListPropsInternal["onScrollEndDrag"];
@@ -335,6 +377,7 @@ export interface InternalState {
         renderItem: LegendListPropsInternal["renderItem"];
         scrollBuffer?: number;
         snapToIndices: number[] | undefined;
+        sizeComponentInternal: React.ComponentType<any> | undefined;
         positionComponentInternal: React.ComponentType<any> | undefined;
         stickyPositionComponentInternal: React.ComponentType<any> | undefined;
         stickyHeaderIndicesArr: number[];

@@ -12,6 +12,7 @@ export default function MutableCellsExample() {
             className="min-h-0 flex-1"
             data={data}
             estimatedItemSize={100}
+            extraData={expanded}
             keyExtractor={(it) => it?.id}
             recycleItems={false}
             renderItem={({ item }: { item: SimpleItem }) => {

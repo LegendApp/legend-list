@@ -1,4 +1,3 @@
-import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { isOutsideThresholdHysteresis } from "@/utils/checkThreshold";
@@ -23,7 +22,7 @@ export function resetSharedEdgeGateIfOutsideHysteresis(ctx: StateContext) {
     }
 
     const contentSize = getContentSize(ctx);
-    const endDistance = contentSize - state.scroll - state.scrollLength - getContentInsetEnd(ctx);
+    const endDistance = contentSize - state.scroll - state.scrollLength;
     const isContentLess = contentSize < state.scrollLength;
     const startThreshold = state.props.onStartReachedThreshold! * state.scrollLength;
     const endThreshold = state.props.onEndReachedThreshold! * state.scrollLength;

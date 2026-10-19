@@ -16,6 +16,16 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         return;
     }
 
+    if (!params.isAdjustment) {
+        // Explicit requests own their momentum; MVCP re-assertions keep the gesture's ownership.
+        state.releasedFromUserDrag = false;
+        state.didDeferMaintainScrollAtEndForMomentum = false;
+        state.momentumSuspendContentSize = undefined;
+        state.momentumSuspendCompensated = false;
+        state.scheduledWork.cancel("endFollowRearm");
+        state.scheduledWork.cancel("userMomentumStallCheck");
+    }
+
     const isHorizontal = !!horizontal;
     const contentSize = isHorizontal ? getContentSize(ctx) : undefined;
     const nativeOffset = toNativeHorizontalOffset(state, offset, contentSize);

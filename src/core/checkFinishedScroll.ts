@@ -3,6 +3,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
+import { clampScrollIndex } from "@/core/scrollToIndex";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -101,14 +102,22 @@ function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScroll
     return scrollingTo.index === ctx.state.props.data.length - 1 && scrollingTo.viewPosition === 1;
 }
 
-function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    const index = scrollingTo.index;
-    const shouldRecomputeEndTarget = isEndAlignedLastItemTarget(ctx, scrollingTo);
+export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const index =
+        scrollingTo.index === undefined ? undefined : clampScrollIndex(scrollingTo.index, ctx.state.props.data.length);
+    // Web animated scrolls retarget until they land, so their completion follows rows that measure
+    // mid-scroll and content that grows enough to reach an offset clamped when the scroll started.
+    const isRetargetingWebScroll =
+        Platform.OS === "web" &&
+        (!!scrollingTo.animated || !!scrollingTo.landingRetries) &&
+        !scrollingTo.isInitialScroll;
     const requestedTargetOffset =
-        shouldRecomputeEndTarget && index !== undefined
-            ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), scrollingTo)
-            : (scrollingTo.targetOffset ??
-              clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo));
+        index !== undefined && (isRetargetingWebScroll || isEndAlignedLastItemTarget(ctx, scrollingTo))
+            ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), { ...scrollingTo, index })
+            : isRetargetingWebScroll
+              ? calculateOffsetWithOffsetPosition(ctx, scrollingTo.offset, scrollingTo)
+              : (scrollingTo.targetOffset ??
+                clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo));
 
     return clampScrollOffset(ctx, requestedTargetOffset, scrollingTo);
 }
@@ -138,7 +147,14 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 
     const { state } = ctx;
     const completionState = getResolvedScrollCompletionState(ctx, scrollingTo);
+    // Passing a newly measured target does not stop the browser's animation toward the issued offset.
+    const isPassingWebTarget =
+        Platform.OS === "web" &&
+        scrollingTo.animated &&
+        !scrollingTo.isInitialScroll &&
+        Math.abs(completionState.clampedTargetOffset - (scrollingTo.targetOffset ?? scrollingTo.offset)) > 1;
     if (
+        !isPassingWebTarget &&
         completionState.isAtResolvedTarget &&
         hasScrollCompletionOwnership(state, {
             clampedTargetOffset: completionState.clampedTargetOffset,
@@ -149,9 +165,9 @@ function checkFinishedScrollFrame(ctx: StateContext) {
     }
 }
 
-function scrollToFallbackOffset(ctx: StateContext, offset: number) {
+function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
     ctx.state.refScroller.current?.scrollTo({
-        animated: false,
+        animated,
         x: ctx.state.props.horizontal ? offset : 0,
         y: ctx.state.props.horizontal ? 0 : offset,
     });
@@ -183,6 +199,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 : 100;
 
     let numChecks = 0;
+    let previousScroll = state.scrollPending;
     const scheduleFallbackCheck = (delay: number) => {
         state.scheduledWork.timeout(checkHasScrolled, delay, "checkFinishedScrollFallback");
     };
@@ -221,7 +238,19 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 isEndAlignedLastItemTarget(ctx, isStillScrollingTo) &&
                 !completionState.isAtResolvedTarget &&
                 numChecks <= maxChecks;
-            if (shouldRetrySilentInitialNativeScroll) {
+            const isAnimatedMaintain = !!(
+                isStillScrollingTo.animated &&
+                isStillScrollingTo.isScrollToEnd &&
+                state.maintainingScrollAtEnd === "animated"
+            );
+            const didMaintainProgress = isAnimatedMaintain && Math.abs(state.scrollPending - previousScroll) > 0.1;
+            previousScroll = state.scrollPending;
+            if (didMaintainProgress && !completionState.isAtResolvedTarget) {
+                // A previous momentum-end event can schedule this check during the next coalesced animation.
+                // Keep its runway until native stops moving, rather than snapping to the latest measured end.
+                numChecks = 0;
+                scheduleFallbackCheck(100);
+            } else if (shouldRetrySilentInitialNativeScroll) {
                 const targetOffset =
                     getInitialScrollWatchdogTargetOffset(state) ?? isStillScrollingTo.targetOffset ?? 0;
                 const jiggleOffset =
@@ -236,7 +265,15 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 );
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
             } else if (shouldRetryUnalignedEndScroll) {
-                scrollToFallbackOffset(ctx, completionState.clampedTargetOffset);
+                const isMakingNativeProgress =
+                    !!isStillScrollingTo.animated && Date.now() - (state.lastNativeScrollTime ?? 0) < 100;
+                if (!isMakingNativeProgress) {
+                    scrollToFallbackOffset(
+                        ctx,
+                        completionState.clampedTargetOffset,
+                        isAnimatedMaintain || !!isStillScrollingTo.animated,
+                    );
+                }
                 scheduleFallbackCheck(100);
             } else if (
                 shouldFinishZeroTarget ||

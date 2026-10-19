@@ -1,9 +1,10 @@
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { releaseDeferredPublicOnScroll } from "@/core/deferredPublicOnScroll";
+import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { initialScrollCompletion, initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { Platform } from "@/platform/Platform";
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 const PRESERVED_INITIAL_SCROLL_FALLBACK_CLEAR_DELAY_MS = 2000;
@@ -78,6 +79,13 @@ export function finishInitialScroll(
         }
         const shouldReleaseDeferredPublicOnScroll =
             Platform.OS === "web" && state.initialScrollSession?.kind === "bootstrap";
+        if (
+            isEndOfContentTarget(state.initialScroll, state.props.data.length) &&
+            state.props.maintainScrollAtEnd &&
+            !state.endFollowInterrupted
+        ) {
+            set$(ctx, "isFollowingEnd", true);
+        }
         const finalScrollOffset = options?.resolvedOffset ?? state.scrollPending ?? state.scroll ?? 0;
         initialScrollWatchdog.clear(state);
         if (options?.preserveTarget && state.initialScroll) {

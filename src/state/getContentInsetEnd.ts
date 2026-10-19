@@ -1,3 +1,4 @@
+import { Platform } from "@/platform/Platform";
 import { getHorizontalInsetEnd } from "@/utils/rtl";
 import { peek$, type StateContext } from "./state";
 
@@ -10,7 +11,10 @@ export function getContentInsetEnd(ctx: StateContext, contentInsetEndAdjustmentO
     const { props } = state;
 
     const horizontal = props.horizontal;
-    const contentInset = props.contentInset;
+    // Only iOS applies the contentInset prop natively; Android and web scroll
+    // views ignore it. Counting it there would reserve end distance the native
+    // scroll range never has, so those platforms keep the reported inset.
+    const contentInset = Platform.OS === "ios" ? props.contentInset : undefined;
     const baseInset = contentInset ?? state.nativeContentInset;
     const baseEndInset = (horizontal ? getHorizontalInsetEnd(state, baseInset) : baseInset?.bottom) || 0;
     const contentInsetEndAdjustment = getContentInsetEndAdjustmentEnd(
