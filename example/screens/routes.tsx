@@ -62,6 +62,7 @@ import InitialScrollIndexFixture from "~/screens/fixtures/initial-scroll-index";
 import InitialScrollIndexFreeHeightFixture from "~/screens/fixtures/initial-scroll-index-free-height";
 import InitialScrollIndexKeyedFixture from "~/screens/fixtures/initial-scroll-index-keyed";
 import InitialScrollStartAtTheEndFixture from "~/screens/fixtures/initial-scroll-start-at-the-end";
+import KeyboardViewabilityFixture from "~/screens/fixtures/keyboard-viewability";
 import LargeListRenderTimeFixture from "~/screens/fixtures/large-list-render-time";
 import LayoutAnimationFixture from "~/screens/fixtures/layout-animation";
 import LazyListFixture from "~/screens/fixtures/lazy-list";
@@ -70,6 +71,7 @@ import MoviesLFixture from "~/screens/fixtures/moviesL";
 import MoviesLRFixture from "~/screens/fixtures/moviesLR";
 import MutableCellsFixture from "~/screens/fixtures/mutable-cells";
 import MvcpTestFixture from "~/screens/fixtures/mvcp-test";
+import NativeContentShrinkFixture from "~/screens/fixtures/native-content-shrink";
 import ProductShelfFixture from "~/screens/fixtures/product-shelf";
 import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
 import ScrollRegressionQaFixture from "~/screens/fixtures/scroll-regression-qa";
@@ -162,6 +164,25 @@ const DEBUGGING_ROUTE: RouteDefinition = {
 };
 
 export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
+    {
+        component: KeyboardViewabilityFixture,
+        description: "Compares reported viewable rows with the area left visible above a real keyboard.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "keyboard-viewability",
+        title: "Keyboard Viewability",
+    },
+    {
+        component: NativeContentShrinkFixture,
+        description:
+            "Shrinks a mounted row above the viewport; compares Fabric layout and native clamping with raw RN.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "native-content-shrink",
+        title: "Native Content Shrink",
+    },
     {
         component: ScrollRegressionQaFixture,
         description: "Runs deterministic end-maintenance, MVCP, and initial-scroll regression scenarios.",

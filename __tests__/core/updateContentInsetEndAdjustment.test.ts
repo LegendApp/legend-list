@@ -34,6 +34,8 @@ describe("updateContentInsetEndAdjustment", () => {
     });
 
     it("adds contentInsetEndAdjustment to the base end inset", () => {
+        // The contentInset prop is only counted where natively applied.
+        Platform.OS = "ios";
         mockState.props.contentInset = { bottom: 24, left: 0, right: 0, top: 0 };
         mockState.props.contentInsetEndAdjustment = 48;
 
@@ -45,6 +47,7 @@ describe("updateContentInsetEndAdjustment", () => {
     });
 
     it("uses left inset as the horizontal RTL end inset", () => {
+        Platform.OS = "ios";
         mockState.props.horizontal = true;
         mockState.props.rtl = true;
         mockState.props.contentInset = { bottom: 0, left: 24, right: 8, top: 0 };

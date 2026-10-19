@@ -1,7 +1,7 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
-import { getContentInsetEnd } from "@/state/getContentInsetEnd";
+import { getDistanceFromEnd } from "@/core/emitMetrics";
 import { getContentSize } from "@/state/getContentSize";
-import { type StateContext, set$ } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import {
     canDispatchReachedEdge,
@@ -11,7 +11,12 @@ import {
 } from "@/utils/edgeReachedGate";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 
-export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allowGateCreatedInCurrentCheck?: boolean) {
+export function checkAtBottom(
+    ctx: StateContext,
+    allowedEdge?: ReachedEdge,
+    allowGateCreatedInCurrentCheck?: boolean,
+    options?: { maintainScrollAtEndGrowthCredit?: number },
+) {
     const state = ctx.state;
     if (!state) {
         return;
@@ -25,6 +30,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
     } = state;
 
     const contentSize = getContentSize(ctx);
+    set$(ctx, "distanceFromEnd", getDistanceFromEnd(ctx));
     resetSharedEdgeGateIfOutsideHysteresis(ctx);
     if (state.props.data.length === 0 && scrollLength > 0 && contentSize <= scrollLength) {
         set$(ctx, "isAtEnd", true);
@@ -33,8 +39,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
         return;
     }
     if (contentSize > 0 && queuedInitialLayout) {
-        const insetEnd = getContentInsetEnd(ctx);
-        const distanceFromEnd = contentSize - scroll - scrollLength - insetEnd;
+        const distanceFromEnd = contentSize - scroll - scrollLength;
         const isContentLess = contentSize < scrollLength;
         set$(ctx, "isAtEnd", isContentLess || distanceFromEnd <= EDGE_POSITION_EPSILON);
         set$(ctx, "isNearEnd", isContentLess || distanceFromEnd <= onEndReachedThreshold! * scrollLength);
@@ -42,9 +47,13 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
             ctx,
             "isWithinMaintainScrollAtEndThreshold",
             isContentLess ||
-                distanceFromEnd <= maintainScrollAtEndThreshold! * scrollLength ||
+                // A zero threshold still includes fractional offsets considered
+                // at the end; otherwise following can stop after rounding/layout.
+                distanceFromEnd - (options?.maintainScrollAtEndGrowthCredit ?? 0) <=
+                    Math.max(EDGE_POSITION_EPSILON, maintainScrollAtEndThreshold! * scrollLength) ||
                 state.pendingMaintainScrollAtEnd ||
-                !!maintainingScrollAtEnd,
+                !!maintainingScrollAtEnd ||
+                !!peek$(ctx, "isFollowingEnd"),
         );
 
         const shouldSkipThresholdChecks = hasActiveInitialScroll(state) || maintainingScrollAtEnd;

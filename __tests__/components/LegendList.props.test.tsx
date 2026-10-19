@@ -8,9 +8,16 @@ let lastListProps: any;
 let requestAdjustCalls: number[] = [];
 let scrollToCalls: any[] = [];
 
+import { spyOn } from "bun:test";
+import * as calculateModule from "../../src/core/calculateItemsInView";
+import * as followModule from "../../src/core/doMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
+import { updateScroll } from "../../src/core/updateScroll";
+import { Platform } from "../../src/platform/Platform";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
+import { getKnownOrFixedItemSize } from "../../src/utils/getItemSize";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
@@ -123,6 +130,126 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    for (const change of ["callback", "extraData"] as const) {
+        it(`refreshes offscreen fixed-size positions when ${change} changes without MVCP`, async () => {
+            const data = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            let fixedSize: number | undefined;
+            const getFixedItemSize = () => fixedSize;
+            const { LegendList } = await import("../../src/components/LegendList?props-test-fixed-size-positions");
+            const list = (version: number) => (
+                <LegendList
+                    data={data}
+                    drawDistance={0}
+                    estimatedItemSize={100}
+                    extraData={change === "extraData" ? version : undefined}
+                    getFixedItemSize={change === "callback" ? () => fixedSize : getFixedItemSize}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    maintainVisibleContentPosition={false}
+                    renderItem={() => null}
+                />
+            );
+            const rendered = render(list(0));
+            const ctx = await getContextFromRender();
+            act(() => {
+                lastListProps.onLayout({ nativeEvent: { layout: { height: 50, width: 320, x: 0, y: 0 } } });
+            });
+            await flushAsync();
+
+            expect(ctx.state.positions).toEqual([0, 100, 200]);
+            expect(ctx.state.positionsAreCurrent).toBe(true);
+            expect([...ctx.state.containerItemKeys.keys()]).not.toContain("c");
+            expect(ctx.state.sizesKnown.has("c")).toBe(false);
+
+            fixedSize = 150;
+            rendered.rerender(list(1));
+            expect(ctx.state.positions).toEqual([0, 150, 300]);
+            expect(ctx.state.totalSize).toBe(450);
+
+            fixedSize = 200;
+            rendered.rerender(list(2));
+            expect(ctx.state.positions).toEqual([0, 200, 400]);
+            expect(ctx.state.totalSize).toBe(600);
+            rendered.unmount();
+        });
+    }
+
+    it("preserves measured sizes when extraData refreshes fixed sizes", async () => {
+        const data = [{ id: "a" }, { id: "b" }, { id: "c" }];
+        let fixedSize = 100;
+        const getFixedItemSize = (item: { id: string }) => (item.id === "b" ? fixedSize : undefined);
+        const { LegendList } = await import("../../src/components/LegendList?props-test-preserve-measured-sizes");
+        const list = (extraData: number) => (
+            <LegendList
+                data={data}
+                drawDistance={0}
+                estimatedItemSize={100}
+                extraData={extraData}
+                getFixedItemSize={getFixedItemSize}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainVisibleContentPosition={false}
+                renderItem={() => null}
+            />
+        );
+        const rendered = render(list(0));
+        const ctx = await getContextFromRender();
+        act(() => {
+            lastListProps.onLayout({ nativeEvent: { layout: { height: 50, width: 320, x: 0, y: 0 } } });
+            updateItemSizesBatch(ctx, [
+                { itemKey: "a", size: { height: 125, width: 320 } },
+                { itemKey: "c", size: { height: 175, width: 320 } },
+            ]);
+        });
+        await flushAsync();
+        expect(ctx.state.positions).toEqual([0, 125, 225]);
+        expect(ctx.state.sizesKnown.get("a")).toBe(125);
+        expect(ctx.state.sizesKnown.get("c")).toBe(175);
+        expect([...ctx.state.containerItemKeys.keys()]).not.toContain("c");
+
+        fixedSize = 150;
+        rendered.rerender(list(1));
+        expect(ctx.state.sizesKnown.get("a")).toBe(125);
+        expect(ctx.state.sizesKnown.get("b")).toBe(150);
+        expect(ctx.state.sizesKnown.get("c")).toBe(175);
+        expect(ctx.state.positions).toEqual([0, 125, 275]);
+        expect(ctx.state.totalSize).toBe(450);
+        rendered.unmount();
+    });
+
+    it("recalculates from a newly resolved fixed size above the non-MVCP render window", async () => {
+        const data = [{ id: "a" }, { id: "b" }, { id: "c" }];
+        let fixedSize: number | undefined;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-fixed-size-resolution");
+        const rendered = render(
+            <LegendList
+                data={data}
+                drawDistance={0}
+                estimatedItemSize={100}
+                getFixedItemSize={(_item, index) => (index === 0 ? fixedSize : undefined)}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainVisibleContentPosition={false}
+                renderItem={() => null}
+            />,
+        );
+        const ctx = await getContextFromRender();
+        act(() => {
+            lastListProps.onLayout({ nativeEvent: { layout: { height: 50, width: 320, x: 0, y: 0 } } });
+            updateScroll(ctx, 200, true);
+        });
+        await flushAsync();
+        expect(ctx.state.startBuffered).toBeGreaterThan(0);
+        expect([...ctx.state.containerItemKeys.keys()]).not.toContain("a");
+        expect(ctx.state.positions).toEqual([0, 100, 200]);
+
+        act(() => {
+            fixedSize = 150;
+            expect(getKnownOrFixedItemSize(ctx, 0)).toBe(150);
+            ctx.state.triggerCalculateItemsInView!();
+        });
+        expect(ctx.state.positions).toEqual([0, 150, 250]);
+        expect(ctx.state.totalSize).toBe(350);
+        rendered.unmount();
+    });
+
     it("registers internal end scrolling without creating a public imperative handle", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
@@ -203,7 +330,7 @@ describe("LegendList props behavior", () => {
         });
     }
 
-    it("does not cancel another imperative scroll while end maintenance is only pending", async () => {
+    it("cancels an imperative target when native user dragging begins", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
         const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
         const resolveScroll = mock(() => {});
@@ -228,8 +355,8 @@ describe("LegendList props behavior", () => {
             lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
         });
 
-        expect(resolveScroll).not.toHaveBeenCalled();
-        expect(state.scrollingTo).toBe(scrollingTo);
+        expect(resolveScroll).toHaveBeenCalledTimes(1);
+        expect(state.scrollingTo).toBeUndefined();
         expect(state.maintainingScrollAtEnd).toBeUndefined();
         rendered.unmount();
     });
@@ -1854,6 +1981,252 @@ describe("LegendList props behavior", () => {
         });
         expect(peek$(ctx, "anchoredEndSpaceSize")).toBe(0);
 
+        rendered.unmount();
+    });
+
+    it("preserves end intent while maintenance is paused and resumes beyond the threshold", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?follow-pause-resume");
+        const data = ["row"];
+        const renderItem = () => null;
+        const list = (maintainScrollAtEnd: boolean) => (
+            <LegendList data={data} maintainScrollAtEnd={maintainScrollAtEnd} renderItem={renderItem} />
+        );
+        const rendered = render(list(true));
+        const state = await getStateFromRender();
+        const ctx = (handlerInstances.at(-1) as any).context as StateContext;
+        state.didContainersLayout = true;
+        state.didFinishInitialScroll = true;
+        set$(ctx, "isFollowingEnd", true);
+        state.pendingMaintainScrollAtEnd = true;
+        state.maintainingScrollAtEnd = "pending-instant";
+        await act(async () => {
+            rendered.rerender(list(false));
+        });
+        expect(peek$(ctx, "isFollowingEnd")).toBe(true);
+        expect(state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(state.maintainingScrollAtEnd).toBeUndefined();
+        set$(ctx, "isWithinMaintainScrollAtEndThreshold", false);
+        const maintain = spyOn(followModule, "doMaintainScrollAtEnd").mockReturnValue(true);
+        await act(async () => {
+            rendered.rerender(list(true));
+        });
+        expect(maintain).toHaveBeenCalledTimes(1);
+        rendered.unmount();
+    });
+
+    it("replays pending end maintenance when the size component is removed", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?size-component-removal");
+        const data = ["row"];
+        const renderItem = () => null;
+        const SizeComponent = () => null;
+        const list = (sizeComponentInternal?: typeof SizeComponent) => (
+            <LegendList
+                data={data}
+                maintainScrollAtEnd
+                renderItem={renderItem}
+                {...({ sizeComponentInternal } as any)}
+            />
+        );
+        const rendered = render(list(SizeComponent));
+        const state = await getStateFromRender();
+        state.pendingMaintainScrollAtEnd = true;
+        const maintain = spyOn(followModule, "doMaintainScrollAtEnd").mockReturnValue(true);
+        await act(async () => {
+            rendered.rerender(list(SizeComponent));
+        });
+        expect(maintain).not.toHaveBeenCalled();
+        await act(async () => {
+            rendered.rerender(list());
+        });
+        expect(maintain).toHaveBeenCalledTimes(1);
+        maintain.mockRestore();
+        rendered.unmount();
+    });
+
+    it("resumes end maintenance through the state callback", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?resume-maintain");
+        const rendered = render(<LegendList data={["row"]} maintainScrollAtEnd renderItem={() => null} />);
+        const state = await getStateFromRender();
+        const maintain = spyOn(followModule, "doMaintainScrollAtEnd").mockReturnValue(true);
+        state.resumeMaintainScrollAtEnd();
+        expect(maintain).toHaveBeenCalledTimes(1);
+        maintain.mockRestore();
+        rendered.unmount();
+    });
+
+    it("does not reallocate unchanged pins when the default key callback is recreated", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?semantic-pins");
+        const data = ["row"];
+        const renderItem = () => null;
+        const list = () => <LegendList data={data} renderItem={renderItem} />;
+        const rendered = render(list());
+        const calculate = spyOn(calculateModule, "calculateItemsInView").mockImplementation(() => {});
+        await act(async () => {
+            rendered.rerender(list());
+        });
+        expect(calculate).not.toHaveBeenCalled();
+        rendered.unmount();
+    });
+
+    it("emits current geometry when the metrics subscriber changes without a layout change", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?metrics-subscriber-replacement");
+        const data = ["row"];
+        const renderItem = () => null;
+        const first = mock(() => {});
+        const next = mock(() => {});
+        const list = (onMetricsChange: typeof first) => (
+            <LegendList data={data} onMetricsChange={onMetricsChange} renderItem={renderItem} />
+        );
+        const rendered = render(list(first));
+        expect(first).toHaveBeenCalled();
+        await act(async () => {
+            rendered.rerender(list(next));
+        });
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(next).toHaveBeenCalledWith(
+            expect.objectContaining({ contentLength: expect.any(Number), distanceFromEnd: expect.any(Number) }),
+        );
+        rendered.unmount();
+    });
+
+    it("re-emits current geometry when trackScrollMetrics changes", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?metrics-tracking-toggle");
+        const data = ["row"];
+        const renderItem = () => null;
+        const onMetricsChange = mock(() => {});
+        const list = (trackScrollMetrics: boolean) => (
+            <LegendList
+                data={data}
+                onMetricsChange={onMetricsChange}
+                renderItem={renderItem}
+                trackScrollMetrics={trackScrollMetrics}
+            />
+        );
+        const rendered = render(list(false));
+        const callsBefore = onMetricsChange.mock.calls.length;
+        await act(async () => {
+            rendered.rerender(list(true));
+        });
+        expect(onMetricsChange).toHaveBeenCalledTimes(callsBefore + 1);
+        rendered.unmount();
+    });
+
+    it("owns native momentum state through begin and end callbacks", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?momentum-state");
+        const onMomentumScrollBegin = mock(() => {});
+        const rendered = render(
+            <LegendList data={["row"]} onMomentumScrollBegin={onMomentumScrollBegin} renderItem={() => null} />,
+        );
+        const ctx = await getContextFromRender();
+        const state = ctx.state;
+        act(() => {
+            lastListProps.onMomentumScrollBegin({ nativeEvent: {} });
+        });
+        expect(state.isMomentumScrolling).toBe(true);
+        expect(peek$(ctx, "isScrollActive")).toBe(true);
+        expect(onMomentumScrollBegin).toHaveBeenCalledTimes(1);
+        act(() => {
+            lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
+        });
+        expect(state.isMomentumScrolling).toBe(false);
+        expect(peek$(ctx, "isScrollActive")).toBe(false);
+        act(() => {
+            lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+        });
+        expect(peek$(ctx, "isScrollActive")).toBe(true);
+        act(() => {
+            lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
+        });
+        expect(peek$(ctx, "isScrollActive")).toBe(false);
+        rendered.unmount();
+    });
+
+    it.each(["ios", "android"] as const)(
+        "waits for the drag-to-momentum handoff before rearming on %s",
+        async (platform) => {
+            Platform.OS = platform;
+            const { LegendList } = await import("../../src/components/LegendList?end-follow-momentum-handoff");
+            const rendered = render(<LegendList data={["row"]} maintainScrollAtEnd renderItem={() => null} />);
+            const ctx = await getContextFromRender();
+            Object.assign(ctx.state, {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                queuedInitialLayout: true,
+                scroll: 800,
+                scrollLength: 200,
+                totalSize: 1000,
+                triggerCalculateItemsInView: () => {},
+            });
+            set$(ctx, "totalSize", 1000);
+            const frames: FrameRequestCallback[] = [];
+            globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+            const flushFrames = () => frames.splice(0).forEach((callback) => callback(0));
+
+            await act(async () => {
+                lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+                updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
+                lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
+                // Layout checks can run between drag-end and momentum-begin.
+                updateScroll(ctx, 790, true);
+                expect(ctx.state.endFollowInterrupted).toBe(true);
+                lastListProps.onMomentumScrollBegin({ nativeEvent: {} });
+                flushFrames();
+                expect(followModule.doMaintainScrollAtEnd(ctx)).toBe(false);
+                updateScroll(ctx, 600, true, { fromNativeScrollEvent: true });
+                lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
+                expect(followModule.doMaintainScrollAtEnd(ctx)).toBe(false);
+
+                // A release without momentum rearms after the bounded handoff window.
+                lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+                updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
+                lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
+                flushFrames();
+                expect(ctx.state.endFollowInterrupted).toBe(true);
+                await new Promise((resolve) => setTimeout(resolve, 150));
+                expect(ctx.state.endFollowInterrupted).toBe(false);
+                expect(peek$(ctx, "isFollowingEnd")).toBe(true);
+
+                // Momentum that ends inside the threshold rearms when it ends.
+                lastListProps.onInternalScrollBeginDrag({ nativeEvent: {} });
+                lastListProps.onInternalScrollEndDrag({ nativeEvent: {} });
+                lastListProps.onMomentumScrollBegin({ nativeEvent: {} });
+                flushFrames();
+                updateScroll(ctx, 790, true, { fromNativeScrollEvent: true });
+                expect(ctx.state.endFollowInterrupted).toBe(true);
+                lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
+                expect(ctx.state.endFollowInterrupted).toBe(false);
+                expect(peek$(ctx, "isFollowingEnd")).toBe(true);
+            });
+            rendered.unmount();
+        },
+    );
+
+    it("allocates an alwaysRender pin without changing data or extraData", async () => {
+        const data = Array.from({ length: 100 }, (_, index) => ({ id: `item-${index}` }));
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = () => null;
+        const { LegendList } = await import("../../src/components/LegendList?always-render-pin-update");
+        const list = (keys?: string[]) => (
+            <LegendList
+                alwaysRender={{ keys }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+        const rendered = render(list());
+        const state = await getStateFromRender();
+        act(() => {
+            lastListProps.onLayout(layoutEvent);
+        });
+        expect(state.containerItemKeys.has("item-99")).toBe(false);
+        await act(async () => {
+            rendered.rerender(list(["item-99"]));
+        });
+        expect(state.containerItemKeys.has("item-99")).toBe(true);
+        expect(state.props.data).toBe(data);
         rendered.unmount();
     });
 

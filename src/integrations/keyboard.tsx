@@ -2,12 +2,14 @@
 import * as React from "react";
 import { type ForwardedRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { LayoutChangeEvent, ScrollViewProps, View } from "react-native";
+import { Platform } from "react-native";
 import {
     KeyboardChatScrollView,
     type KeyboardChatScrollViewProps,
     KeyboardController,
+    useKeyboardHandler,
 } from "react-native-keyboard-controller";
-import { type SharedValue, useSharedValue } from "react-native-reanimated";
+import { runOnJS, type SharedValue, useAnimatedReaction, useSharedValue } from "react-native-reanimated";
 
 import type { AnchoredEndSpaceConfig } from "@legendapp/list/react";
 import type { LegendListRef } from "@legendapp/list/react-native";
@@ -47,6 +49,10 @@ type KeyboardChatScrollViewContentInsets = Parameters<
     NonNullable<KeyboardChatScrollViewProps["onContentInsetChange"]>
 >[0];
 
+type KeyboardViewabilityListRef = LegendListRef & {
+    reportViewabilityInsetEndInternal?: (inset: number) => void;
+};
+
 type ScrollMessageToEndOptions = {
     animated: boolean;
     closeKeyboard: boolean;
@@ -54,7 +60,8 @@ type ScrollMessageToEndOptions = {
 
 type KeyboardScrollToEndListRef = {
     current: {
-        scrollToEnd(params?: { animated?: boolean }): Promise<void>;
+        getState: LegendListRef["getState"];
+        scrollToEnd: LegendListRef["scrollToEnd"];
     } | null;
 };
 
@@ -111,19 +118,30 @@ export function useKeyboardChatComposerInset(
 export function useKeyboardScrollToEnd({ freeze: freezeProp, listRef }: UseKeyboardScrollToEndOptions) {
     const internalFreeze = useSharedValue(false);
     const freeze = freezeProp ?? internalFreeze;
+    const latestRequest = useRef(0);
 
     const scrollMessageToEnd = useCallback(
         async ({ animated, closeKeyboard }: ScrollMessageToEndOptions) => {
-            const listRefCurrent = listRef.current;
-            if (listRefCurrent) {
-                freeze.set(true);
-
-                const dismissPromise = closeKeyboard && KeyboardController.dismiss();
-                const scrollPromise = listRefCurrent.scrollToEnd({ animated });
-
-                await Promise.all([scrollPromise, dismissPromise]);
-
+            const requestedList = listRef.current;
+            if (!requestedList) return;
+            const request = ++latestRequest.current;
+            const dataEpoch = requestedList.getState().dataEpoch;
+            if (closeKeyboard) {
                 freeze.set(false);
+                await KeyboardController.dismiss();
+            }
+            const currentList = listRef.current;
+            if (
+                request !== latestRequest.current ||
+                currentList !== requestedList ||
+                currentList.getState().dataEpoch !== dataEpoch
+            )
+                return;
+            freeze.set(true);
+            try {
+                await currentList.scrollToEnd({ animated });
+            } finally {
+                if (request === latestRequest.current) freeze.set(false);
             }
         },
         [freeze, listRef],
@@ -150,9 +168,40 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         ...rest
     } = props;
 
-    const refLegendList = useRef<LegendListRef | null>(null);
+    const refLegendList = useRef<KeyboardViewabilityListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
+    // The forwarded static contentInset, read at report time. Keep it flowing
+    // through rest as well.
+    const staticContentInsetRef = useRef(rest.contentInset);
+    staticContentInsetRef.current = rest.contentInset;
     const blankSpace = useSharedValue<number>(0);
+    const initialKeyboardHeight = KeyboardController.state().height;
+    const keyboard = useSharedValue({ height: initialKeyboardHeight, progress: initialKeyboardHeight > 0 ? 1 : 0 });
+    // Worklets deep-copy captured objects; keep only the primitive in the reaction scope.
+    const isHorizontal = !!rest.horizontal;
+    const reportViewabilityInset = useCallback((inset: number) => {
+        refLegendList.current?.reportViewabilityInsetEndInternal?.(inset);
+    }, []);
+    const onKeyboardMove = (event: { height: number; progress: number }) => {
+        "worklet";
+        keyboard.value = { height: event.height, progress: event.progress };
+    };
+    // onStart carries the target; movement events describe actual occlusion.
+    useKeyboardHandler({ onEnd: onKeyboardMove, onInteractive: onKeyboardMove, onMove: onKeyboardMove }, []);
+    useAnimatedReaction(
+        // Blank space extends the scroll range but does not obscure content.
+        () =>
+            isHorizontal
+                ? 0
+                : Math.max(0, keyboard.value.height - (keyboardOffset ?? 0) * keyboard.value.progress) +
+                  Math.max(0, contentInsetEndAdjustment?.value ?? 0),
+        (current, previous) => {
+            if (current !== previous) {
+                runOnJS(reportViewabilityInset)(current);
+            }
+        },
+        [contentInsetEndAdjustment, isHorizontal, keyboard, keyboardOffset, reportViewabilityInset],
+    );
 
     useEffect(() => {
         if (!anchoredEndSpace) {
@@ -175,7 +224,19 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     }, [anchoredEndSpace, blankSpace]);
 
     const onContentInsetChange = useCallback((insets: KeyboardChatScrollViewContentInsets) => {
-        refLegendList.current?.reportContentInset(insets);
+        // Android applies only the dynamic padding; the controller's report
+        // also includes the iOS-only static prop, which must not enter its range.
+        const staticInset = staticContentInsetRef.current;
+        if (Platform.OS === "ios" || !staticInset) {
+            refLegendList.current?.reportContentInset(insets);
+            return;
+        }
+        refLegendList.current?.reportContentInset({
+            bottom: Math.max(0, (insets.bottom ?? 0) - (staticInset.bottom ?? 0)),
+            left: Math.max(0, (insets.left ?? 0) - (staticInset.left ?? 0)),
+            right: Math.max(0, (insets.right ?? 0) - (staticInset.right ?? 0)),
+            top: Math.max(0, (insets.top ?? 0) - (staticInset.top ?? 0)),
+        });
     }, []);
 
     const memoList = useCallback(

@@ -4,7 +4,7 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
@@ -25,6 +25,7 @@ export function finishScrollTo(ctx: StateContext) {
         state.scrollHistory.length = 0;
         state.scrollingTo = undefined;
         state.scrollTargetPinnedRange = undefined;
+        set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling || !!state.pendingScrollResolve);
 
         if (state.pendingTotalSize !== undefined) {
             addTotalSize(ctx, null, state.pendingTotalSize);
@@ -34,6 +35,14 @@ export function finishScrollTo(ctx: StateContext) {
             state.scrollAdjustHandler.commitPendingAdjust(scrollingTo);
         }
 
+        const complete = () => {
+            resolvePendingScroll?.();
+            if (state.pendingMaintainScrollAtEnd) {
+                state.maintainingScrollAtEnd = undefined;
+                doMaintainScrollAtEnd(ctx, { immediate: !!scrollingTo.isInitialScroll });
+            }
+        };
+
         if (scrollingTo.isInitialScroll || state.initialScroll) {
             const isOffsetSession = state.initialScrollSession?.kind === "offset";
             const shouldPreserveResizeTarget =
@@ -42,9 +51,7 @@ export function finishScrollTo(ctx: StateContext) {
                 state.props.data.length > 0 &&
                 state.initialScroll?.viewPosition === 1;
             finishInitialScroll(ctx, {
-                onFinished: () => {
-                    resolvePendingScroll?.();
-                },
+                onFinished: complete,
                 preserveTarget: (isOffsetSession && state.props.data.length === 0) || shouldPreserveResizeTarget,
                 recalculateItems: true,
                 schedulePreservedTargetClear: shouldPreserveResizeTarget,
@@ -55,10 +62,6 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         recalculateSettledScroll(ctx);
-        resolvePendingScroll?.();
-        if (state.pendingMaintainScrollAtEnd) {
-            state.maintainingScrollAtEnd = undefined;
-            doMaintainScrollAtEnd(ctx);
-        }
+        complete();
     }
 }

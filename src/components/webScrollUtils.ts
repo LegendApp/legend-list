@@ -115,3 +115,23 @@ export function resolveExternalScrollOffset({
         top: horizontal ? scroll.y : listPos.top + clampedOffset,
     };
 }
+
+export function ownsScrollInput(target: EventTarget | null, scroller: HTMLElement, horizontal: boolean) {
+    let element = target as HTMLElement | null;
+    if (element?.nodeType !== 1) element = element?.parentElement ?? null;
+    while (element && element !== scroller) {
+        const style = getComputedStyle(element);
+        const overflow = horizontal ? style.overflowX : style.overflowY;
+        const size = horizontal
+            ? element.scrollWidth - element.clientWidth
+            : element.scrollHeight - element.clientHeight;
+        const overscroll = horizontal ? style.overscrollBehaviorX : style.overscrollBehaviorY;
+        if (
+            /auto|scroll|overlay/.test(overflow) &&
+            (size > 1 || /contain|none/.test(overscroll || style.overscrollBehavior))
+        )
+            return false;
+        element = element.parentElement;
+    }
+    return element === scroller;
+}

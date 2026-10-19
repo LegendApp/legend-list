@@ -1,8 +1,10 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
+import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { scrollElementIntoView } from "@/core/scrollElementIntoView";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
+import { getId } from "@/utils/getId";
 
 interface CheckResetContainersOptions {
     didColumnsChange?: boolean;
@@ -20,7 +22,7 @@ export function checkResetContainers(
     if (didColumnsChange) {
         state.sizes.clear();
         state.sizesKnown.clear();
-        invalidateContainerFixedItemSizes(state);
+        invalidateFixedItemSizes(state);
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }
@@ -29,8 +31,33 @@ export function checkResetContainers(
     }
 
     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+    if (state.scrollElementTarget)
+        state.scheduledWork.microtask(() => scrollElementIntoView(ctx, false), "scrollElementTarget");
 
-    const shouldMaintainScrollAtEnd = !didColumnsChange && maintainScrollAtEnd?.onDataChange;
+    const isAppend =
+        maintainScrollAtEnd?.onDataChange === "append" &&
+        !!previousData &&
+        dataProp.length > previousData.length &&
+        previousData.every((item, index) => {
+            const key = state.props.keyExtractor?.(item, index) ?? index;
+            return key === getId(state, index);
+        });
+    const shouldMaintainScrollAtEnd =
+        !didColumnsChange &&
+        maintainScrollAtEnd?.onDataChange &&
+        (maintainScrollAtEnd.onDataChange !== "append" || isAppend);
+    if (
+        shouldMaintainScrollAtEnd &&
+        !maintainScrollAtEnd.onItemLayout &&
+        previousData &&
+        dataProp.length > previousData.length
+    ) {
+        state.pendingEndMeasurements ??= new Set();
+        for (let index = previousData.length; index < dataProp.length; index++) {
+            const key = getId(state, index);
+            if (!state.sizesKnown.has(key)) state.pendingEndMeasurements.add(key);
+        }
+    }
 
     const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx);
 
