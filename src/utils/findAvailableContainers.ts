@@ -64,6 +64,7 @@ export function findAvailableContainers(
         requests[order] = request;
         (request.isSticky ? stickyRequests : normalRequests).push(request);
     }
+    const emptyNormalCandidates: AvailableContainer[] = [];
     const normalCandidates: AvailableContainer[] = [];
     const stickyCandidates: AvailableContainer[] = [];
 
@@ -86,6 +87,8 @@ export function findAvailableContainers(
             if (key === undefined || isPendingRemoval) {
                 stickyCandidates.push({ containerIndex, distance: Number.POSITIVE_INFINITY });
             }
+        } else if (key === undefined && state.props.recycleItems === false) {
+            emptyNormalCandidates.push({ containerIndex, distance: Number.POSITIVE_INFINITY });
         } else if (key === undefined || isPendingRemoval) {
             normalCandidates.push({ containerIndex, distance: Number.POSITIVE_INFINITY });
         } else if (!shouldAvoidAssignedContainerReuse) {
@@ -155,6 +158,8 @@ export function findAvailableContainers(
         }
     };
 
+    // Without recycling, prefer an empty cell even over an assigned exact-type match.
+    assignFromPool(normalRequests, emptyNormalCandidates, true);
     assignFromPool(normalRequests, normalCandidates, true);
     assignFromPool(stickyRequests, stickyCandidates, false);
 
