@@ -26,6 +26,10 @@ const createSharedValue = <T>(initial: T) => {
 const defaults = {
     cancelAnimation: () => {},
     createAnimatedComponent: <T extends ComponentType<any>>(component: T): T => component,
+    executeOnUIRuntimeSync:
+        (worklet: (...args: any[]) => unknown) =>
+        (...args: any[]) =>
+            worklet(...args),
     isWorkletFunction: () => false,
     runOnJS: (callback: (...args: any[]) => any) => callback,
     runOnUI: (callback: (...args: any[]) => any) => callback,

@@ -9,7 +9,13 @@ import {
     KeyboardController,
     useKeyboardHandler,
 } from "react-native-keyboard-controller";
-import { runOnJS, type SharedValue, useAnimatedReaction, useSharedValue } from "react-native-reanimated";
+import {
+    executeOnUIRuntimeSync,
+    runOnJS,
+    type SharedValue,
+    useAnimatedReaction,
+    useSharedValue,
+} from "react-native-reanimated";
 
 import type { AnchoredEndSpaceConfig } from "@legendapp/list/react";
 import type { LegendListRef } from "@legendapp/list/react-native";
@@ -115,33 +121,126 @@ export function useKeyboardChatComposerInset(
     return { contentInsetEndAdjustment, onComposerLayout };
 }
 
+function setFreeze(freeze: SharedValue<boolean>, value: boolean) {
+    if (Platform.OS === "web") {
+        freeze.set(value);
+        return;
+    }
+
+    // Write on the UI runtime synchronously, so the keyboard handlers see the value
+    // before a keyboard close started in the same task begins.
+    executeOnUIRuntimeSync((next: boolean) => {
+        "worklet";
+        freeze.value = next;
+    })(value);
+}
+
+// Releases a call's freeze if its scroll or keyboard close never settles. An animated
+// scrollToEnd that is already at its clamped target can emit no scroll events, so its
+// promise may never resolve, and dismiss() waits for a native keyboardDidHide. The scroll
+// can wait up to 800 ms for item sizes before it starts (IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS),
+// then animates in parallel with the keyboard close. On simulators and emulators the close
+// finished within 1 s, and most calls settled within 750 ms. The freeze only matters while
+// the keyboard moves, so releasing after the close has finished is harmless.
+const FREEZE_RELEASE_TIMEOUT_MS = 2000;
+
+interface FreezeOwner {
+    activeCalls: number;
+    freeze: SharedValue<boolean>;
+    isRetired: boolean;
+    releaseTimers: Set<ReturnType<typeof setTimeout>>;
+}
+
+function createFreezeOwner(freeze: SharedValue<boolean>): FreezeOwner {
+    return { activeCalls: 0, freeze, isRetired: false, releaseTimers: new Set() };
+}
+
 export function useKeyboardScrollToEnd({ freeze: freezeProp, listRef }: UseKeyboardScrollToEndOptions) {
     const internalFreeze = useSharedValue(false);
     const freeze = freezeProp ?? internalFreeze;
-    const latestRequest = useRef(0);
+    // Callers often scroll from their own layout effects, which can run before this
+    // hook's effects, so a call before the first effect still counts as mounted.
+    const isMountedRef = useRef(true);
+    // Calls belong to the effect lifetime they start in. A cleanup (unmount, effect
+    // replay, or a new `freeze`) retires its owner, so an older call never releases
+    // a newer lifetime's freeze.
+    const ownerRef = useRef<FreezeOwner | undefined>(undefined);
+
+    useLayoutEffect(() => {
+        isMountedRef.current = true;
+
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
+    useLayoutEffect(() => {
+        if (!ownerRef.current || ownerRef.current.freeze !== freeze) {
+            ownerRef.current = createFreezeOwner(freeze);
+        }
+        const owner = ownerRef.current;
+
+        return () => {
+            owner.isRetired = true;
+            for (const timer of owner.releaseTimers) {
+                clearTimeout(timer);
+            }
+            owner.releaseTimers.clear();
+            if (ownerRef.current === owner) {
+                ownerRef.current = undefined;
+            }
+            if (owner.activeCalls > 0) {
+                owner.activeCalls = 0;
+                setFreeze(owner.freeze, false);
+            }
+        };
+    }, [freeze]);
 
     const scrollMessageToEnd = useCallback(
         async ({ animated, closeKeyboard }: ScrollMessageToEndOptions) => {
-            const requestedList = listRef.current;
-            if (!requestedList) return;
-            const request = ++latestRequest.current;
-            const dataEpoch = requestedList.getState().dataEpoch;
-            if (closeKeyboard) {
-                freeze.set(false);
-                await KeyboardController.dismiss();
-            }
-            const currentList = listRef.current;
-            if (
-                request !== latestRequest.current ||
-                currentList !== requestedList ||
-                currentList.getState().dataEpoch !== dataEpoch
-            )
+            const listRefCurrent = listRef.current;
+            if (!listRefCurrent || !isMountedRef.current) {
                 return;
-            freeze.set(true);
+            }
+
+            if (!ownerRef.current || ownerRef.current.freeze !== freeze) {
+                ownerRef.current = createFreezeOwner(freeze);
+            }
+            const owner = ownerRef.current;
+
+            // Overlapping calls share the freeze; only the last one to settle releases it.
+            owner.activeCalls += 1;
+            if (owner.activeCalls === 1) {
+                setFreeze(owner.freeze, true);
+            }
+
+            // Each call releases its share once: when it settles or at the timeout,
+            // whichever comes first.
+            let isReleased = false;
+            const release = () => {
+                if (isReleased) {
+                    return;
+                }
+                isReleased = true;
+                clearTimeout(releaseTimer);
+                owner.releaseTimers.delete(releaseTimer);
+                if (!owner.isRetired) {
+                    owner.activeCalls -= 1;
+                    if (owner.activeCalls === 0) {
+                        setFreeze(owner.freeze, false);
+                    }
+                }
+            };
+            const releaseTimer = setTimeout(release, FREEZE_RELEASE_TIMEOUT_MS);
+            owner.releaseTimers.add(releaseTimer);
+
             try {
-                await currentList.scrollToEnd({ animated });
+                const scrollPromise = listRefCurrent.scrollToEnd({ animated });
+                const dismissPromise = closeKeyboard && KeyboardController.dismiss();
+
+                await Promise.all([scrollPromise, dismissPromise]);
             } finally {
-                if (request === latestRequest.current) freeze.set(false);
+                release();
             }
         },
         [freeze, listRef],
