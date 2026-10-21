@@ -159,7 +159,9 @@ export function findAvailableContainers(
     };
 
     // Without recycling, prefer an empty cell even over an assigned exact-type match.
-    assignFromPool(normalRequests, emptyNormalCandidates, true);
+    if (emptyNormalCandidates.length > 0) {
+        assignFromPool(normalRequests, emptyNormalCandidates, true);
+    }
     assignFromPool(normalRequests, normalCandidates, true);
     assignFromPool(stickyRequests, stickyCandidates, false);
 
