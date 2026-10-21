@@ -190,7 +190,6 @@ export interface InternalState {
     containerItemMetadata: Map<number, ContainerItemMetadata>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
-    preparedDataLayoutEpoch?: number;
     freshDataTransitionEpoch: number;
     handledDataChangeEpoch: number;
     handledFreshDataTransitionEpoch: number;

@@ -11,10 +11,12 @@ import {
     handleInitialScrollLayoutReady,
     retargetActiveInitialScrollAtEnd,
 } from "../../src/core/initialScrollLifecycle";
+import { prepareMVCP } from "../../src/core/mvcp";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("initialScrollLifecycle", () => {
@@ -266,6 +268,80 @@ describe("initialScrollLifecycle", () => {
         ctx.state.scheduledWork.dispose();
     });
 
+    for (const sessionKind of ["offset", "bootstrap"] as const) {
+        it(`preserves prepend compensation while a ${sessionKind} initial scroll settles without active bootstrap`, () => {
+            Platform.OS = "ios";
+            const data = Array.from({ length: 20 }, (_, index) => ({ id: `row-${index}` }));
+            const ctx = createMockContext(
+                { numColumns: 1, numContainers: 8 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: false,
+                    hasHadNonEmptyData: true,
+                    idsInView: ["row-4"],
+                    initialScroll: { index: 4 },
+                    initialScrollSession: { kind: sessionKind, previousDataLength: 20 },
+                    props: {
+                        data,
+                        estimatedItemSize: 50,
+                        keyExtractor: (item: { id: string }) => item.id,
+                        maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition({ data: true }),
+                    },
+                    scroll: 200,
+                    scrollLength: 200,
+                    scrollPending: 200,
+                },
+            );
+            updateItemPositions(ctx, true);
+            ctx.state.props.data = [{ id: "prepended" }, ...data];
+            handleInitialScrollDataChange(ctx, {
+                dataLength: 21,
+                didDataChange: true,
+                initialScrollAtEnd: false,
+                latestInitialScroll: ctx.state.initialScroll,
+                latestInitialScrollSessionKind: sessionKind,
+                stylePaddingEnd: 0,
+                useBootstrapInitialScroll: sessionKind === "bootstrap",
+            });
+            // Capture the same old positions that calculateItemsInView passes to MVCP.
+            const compensate = prepareMVCP(ctx, true, "data");
+            resetLayoutCachesForDataChange(ctx.state);
+            updateItemPositions(ctx, true);
+            compensate?.();
+            expect(ctx.state.scroll).toBe(250);
+            expect(ctx.state.positions[ctx.state.indexByKey.get("row-4")!]).toBe(250);
+            ctx.state.scheduledWork.dispose();
+        });
+    }
+
+    it("invalidates column measurements when a prepared data pass is deferred", () => {
+        const data = [{ id: "row" }];
+        const ctx = createMockContext(
+            { numColumns: 1, numContainers: 8 },
+            {
+                dataChangeEpoch: 1,
+                props: { data, estimatedItemSize: 50, keyExtractor: (item: { id: string }) => item.id },
+                scrollLength: 200,
+                sizesKnown: new Map([["row", 100]]),
+            },
+        );
+        handleInitialScrollDataChange(ctx, {
+            dataLength: 1,
+            didDataChange: true,
+            didStartFreshData: true,
+            initialScrollAtEnd: false,
+            latestInitialScroll: undefined,
+            latestInitialScrollSessionKind: "bootstrap",
+            stylePaddingEnd: 0,
+            useBootstrapInitialScroll: true,
+        });
+        // No allocation between data preparation and the columns-only update.
+        ctx.state.props.numColumns = 2;
+        checkResetContainers(ctx, data, { didColumnsChange: true });
+        expect(ctx.state.sizesKnown.size).toBe(0);
+        ctx.state.scheduledWork.dispose();
+    });
+
     it("invalidates column sizes after a prepared layout could not allocate a viewport", () => {
         const data = [{ id: "row" }];
         const ctx = createMockContext(
@@ -295,7 +371,7 @@ describe("initialScrollLifecycle", () => {
         ctx.state.scheduledWork.dispose();
     });
 
-    it("reuses prepared geometry once and invalidates it for a later data epoch", () => {
+    it("allocates prepared destination geometry and resets caches for later data changes", () => {
         Platform.OS = "web";
         const data = Array.from({ length: 20 }, (_, index) => ({ id: `next-${index}` }));
         const ctx = createMockContext(
@@ -317,21 +393,15 @@ describe("initialScrollLifecycle", () => {
             stylePaddingEnd: 0,
             useBootstrapInitialScroll: true,
         });
-        const clear = spyOn(ctx.state.indexByKey, "clear");
-        try {
-            calculateItemsInView(ctx, { dataChanged: true });
-            expect(clear).not.toHaveBeenCalled();
-            expect(ctx.state.startBuffered).toBeGreaterThan(0);
-            ctx.state.dataChangeEpoch++;
-            ctx.state.props.data = Array.from({ length: 10 }, (_, index) => ({ id: `new-${index}` }));
-            calculateItemsInView(ctx, { dataChanged: true });
-            expect(clear).toHaveBeenCalledTimes(1);
-            expect(ctx.state.indexByKey.has("next-19")).toBe(false);
-            expect(ctx.state.idCache).toHaveLength(10);
-        } finally {
-            clear.mockRestore();
-            ctx.state.scheduledWork.dispose();
-        }
+        calculateItemsInView(ctx, { dataChanged: true });
+        expect(ctx.state.startBuffered).toBeGreaterThan(0);
+        expect(ctx.state.containerItemKeys.has("next-19")).toBe(true);
+        ctx.state.dataChangeEpoch++;
+        ctx.state.props.data = Array.from({ length: 10 }, (_, index) => ({ id: `new-${index}` }));
+        calculateItemsInView(ctx, { dataChanged: true });
+        expect(ctx.state.indexByKey.has("next-19")).toBe(false);
+        expect(ctx.state.idCache).toHaveLength(10);
+        ctx.state.scheduledWork.dispose();
     });
 
     it("replays finished offset-only initial scrolls when data arrives after an empty mount", () => {

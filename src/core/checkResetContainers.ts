@@ -20,7 +20,7 @@ export function checkResetContainers(
     const { previousData } = state;
     const { maintainScrollAtEnd } = state.props;
 
-    if (didColumnsChange && state.preparedDataLayoutEpoch !== state.dataChangeEpoch) {
+    if (didColumnsChange) {
         resetColumnLayoutCaches(state);
     }
 
@@ -69,7 +69,6 @@ export function checkResetContainers(
 }
 
 export function resetColumnLayoutCaches(state: InternalState) {
-    state.preparedDataLayoutEpoch = undefined;
     state.sizes.clear();
     state.sizesKnown.clear();
     invalidateFixedItemSizes(state);

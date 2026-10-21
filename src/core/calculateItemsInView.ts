@@ -353,7 +353,6 @@ export function calculateItemsInView(
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            state.preparedDataLayoutEpoch = undefined;
             return;
         }
 
@@ -517,9 +516,7 @@ export function calculateItemsInView(
                 ? prepareMVCP(ctx, dataChanged, mvcpAdjustmentSource)
                 : undefined;
 
-        const hasPreparedDataLayout = state.preparedDataLayoutEpoch === state.dataChangeEpoch;
-        state.preparedDataLayoutEpoch = undefined;
-        if (dataChanged && !hasPreparedDataLayout) {
+        if (dataChanged) {
             resetLayoutCachesForDataChange(state);
         }
 

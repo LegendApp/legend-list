@@ -12,7 +12,6 @@ import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { type StateContext, set$ } from "@/state/state";
-import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { resetInitialRenderState, setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function retargetActiveInitialScrollAtEnd(ctx: StateContext) {
@@ -151,15 +150,16 @@ export function handleInitialScrollDataChange(
         state.pendingMaintainScrollAtEnd = false;
     }
 
-    if (didStartFreshData || (didDataChange && hasActiveInitialScroll(state))) {
-        // Bootstrap and container allocation must use the same destination geometry.
+    const hasActiveBootstrap =
+        state.initialScrollSession?.kind === "bootstrap" && !!state.initialScrollSession.bootstrap;
+    if (didStartFreshData || (didDataChange && hasActiveBootstrap)) {
+        // Resolve fresh targets from destination geometry. Otherwise keep old positions until MVCP captures them.
         set$(ctx, "numColumns", state.props.numColumns);
         if (state.didColumnsChange) {
             resetColumnLayoutCaches(state);
         }
         resetLayoutCachesForDataChange(state);
         updateItemPositions(ctx, true);
-        state.preparedDataLayoutEpoch = state.dataChangeEpoch;
     }
 
     if (dataLength > 0) {
