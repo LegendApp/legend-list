@@ -167,11 +167,15 @@ describe("doScrollTo (web)", () => {
         const originalRAF = globalThis.requestAnimationFrame;
         const originalCancelRAF = globalThis.cancelAnimationFrame;
         const resolveSecondScroll = mock(() => {});
+        let observedOffset = 0;
 
         ctx.state.refScroller = {
             current: {
+                getCurrentScrollOffset: () => observedOffset,
                 getScrollableNode: () => element,
-                scrollTo: mock(() => {}),
+                scrollTo: mock(({ y }: { y: number }) => {
+                    observedOffset = y;
+                }),
             },
         } as any;
         globalThis.requestAnimationFrame = (callback) => {

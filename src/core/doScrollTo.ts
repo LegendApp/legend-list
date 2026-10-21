@@ -1,7 +1,7 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { cancelScroll } from "@/core/cancelScroll";
-import { getCurrentTargetOffset } from "@/core/checkFinishedScroll";
+import { checkFinishedScrollFallback, getCurrentTargetOffset } from "@/core/checkFinishedScroll";
 import type { DoScrollToParams } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { scrollTo } from "@/core/scrollTo";
@@ -101,7 +101,20 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
                     retryLanding(ctx, targetToken, currentOffset, landingOffset);
                 }
             } else {
-                finishScrollTo(ctx);
+                // Custom scrollers without observation retain their next-frame completion contract.
+                const canFinish =
+                    !targetToken ||
+                    !scroller.getCurrentScrollOffset ||
+                    Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON;
+                // Initial fallback checks must also use observed state instead of the optimistic offset.
+                if (targetToken && (canFinish || targetToken.isInitialScroll) && Number.isFinite(currentOffset)) {
+                    state.scroll = state.scrollPending = currentOffset;
+                }
+                if (canFinish) {
+                    finishScrollTo(ctx);
+                } else {
+                    checkFinishedScrollFallback(ctx);
+                }
             }
         }
     }, "platformScrollCompletion");

@@ -1,6 +1,6 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { resetColumnLayoutCaches } from "@/core/resetLayoutCachesForDataChange";
 import { scrollElementIntoView } from "@/core/scrollElementIntoView";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -20,14 +20,7 @@ export function checkResetContainers(
     const { maintainScrollAtEnd } = state.props;
 
     if (didColumnsChange) {
-        state.sizes.clear();
-        state.sizesKnown.clear();
-        invalidateFixedItemSizes(state);
-        for (const key in state.averageSizes) {
-            delete state.averageSizes[key];
-        }
-        state.positionRecalculationStartIndex = 0;
-        state.scrollForNextCalculateItemsInView = undefined;
+        resetColumnLayoutCaches(state);
     }
 
     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });

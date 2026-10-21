@@ -758,6 +758,48 @@ describe("checkFinishedScroll", () => {
         expect(ctx.state.scheduledWork.has("checkFinishedScrollFrame")).toBe(true);
     });
 
+    for (const distance of [1, 1.01]) {
+        it(`uses an inclusive 1px completion tolerance (distance: ${distance})`, () => {
+            Platform.OS = "web";
+            const ctx = createMockContext(
+                { totalSize: 2000 },
+                {
+                    scroll: 100 - distance,
+                    scrollingTo: { animated: false, offset: 100, targetOffset: 100 },
+                    scrollPending: 100 - distance,
+                },
+            );
+
+            checkFinishedScroll(ctx);
+            pendingFrame?.(0);
+
+            expect(ctx.state.scrollingTo === undefined).toBe(distance <= 1);
+        });
+    }
+
+    for (const platform of ["web", "ios", "android"] as const) {
+        for (const distance of [1, 1.01]) {
+            it(`uses an inclusive 1px tolerance past the end clamp on ${platform} (distance: ${distance})`, () => {
+                Platform.OS = platform;
+                const ctx = createMockContext(
+                    { totalSize: 2000 },
+                    {
+                        lastLayout: { height: 500, width: 320, x: 0, y: 0 },
+                        scroll: 1500 + distance,
+                        scrollingTo: { animated: false, offset: 1500, targetOffset: 1500 },
+                        scrollLength: 500,
+                        scrollPending: 1500 + distance,
+                    },
+                );
+
+                checkFinishedScroll(ctx);
+                pendingFrame?.(0);
+
+                expect(ctx.state.scrollingTo === undefined).toBe(distance <= 1);
+            });
+        }
+    }
+
     it("finishes when the scroll reaches the resolved end clamp target", () => {
         const ctx = createMockContext(
             { totalSize: 40731.25 },

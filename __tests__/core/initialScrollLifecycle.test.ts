@@ -2,17 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, mock, spyOn } f
 import "../setup";
 
 import { evaluateBootstrapInitialScroll } from "../../src/core/bootstrapInitialScroll";
+import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
+import { checkResetContainers } from "../../src/core/checkResetContainers";
 import * as initialScrollModule from "../../src/core/initialScroll";
 import {
     handleInitialScrollDataChange,
     handleInitialScrollLayoutReady,
     retargetActiveInitialScrollAtEnd,
 } from "../../src/core/initialScrollLifecycle";
+import { prepareMVCP } from "../../src/core/mvcp";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("initialScrollLifecycle", () => {
@@ -172,6 +176,233 @@ describe("initialScrollLifecycle", () => {
             });
         }
     }
+
+    for (const fresh of [false, true]) {
+        it(`prepares uncached destination geometry before rearming bootstrap (fresh: ${fresh})`, () => {
+            Platform.OS = "web";
+            const data = Array.from({ length: 20 }, (_, index) => ({ id: `next-${index}` }));
+            const ctx = createMockContext(
+                { footerSize: 0, headerSize: 0, numColumns: 1, numContainers: 8, stylePaddingTop: 0 },
+                {
+                    averageSizes: { "": { avg: 60, num: 3 } },
+                    dataChangeEpoch: 1,
+                    hasHadNonEmptyData: true,
+                    idCache: ["old-0", "old-1", "old-2"],
+                    initialScroll: { index: 2, viewPosition: 1 },
+                    initialScrollSession: {
+                        bootstrap: { mountFrameCount: 0, passCount: 0, scroll: 0, seedContentOffset: 0 },
+                        kind: "bootstrap",
+                        previousDataLength: 3,
+                    },
+                    positions: [0, 50, 100],
+                    props: { data, estimatedItemSize: 50, keyExtractor: (item: { id: string }) => item.id },
+                    scrollLength: 200,
+                },
+            );
+            const resolve = mock(() => {});
+            if (fresh) {
+                ctx.state.scrollingTo = { animated: true, averageSizeSnapshot: { "": 900 }, offset: 500 };
+                ctx.state.pendingScrollResolve = resolve;
+            }
+            // Measured sizes and pooled containers belong to the list, not the departing scroll.
+            ctx.state.sizes.set("cached-other", 73);
+            ctx.state.sizesKnown.set("cached-other", 73);
+            ctx.values.set("numContainersPooled", 12);
+
+            handleInitialScrollDataChange(ctx, {
+                dataLength: data.length,
+                didDataChange: true,
+                didStartFreshData: fresh,
+                initialScrollAtEnd: true,
+                latestInitialScroll: { index: 19, viewPosition: 1 },
+                latestInitialScrollSessionKind: "bootstrap",
+                stylePaddingEnd: 0,
+                useBootstrapInitialScroll: true,
+            });
+
+            expect(ctx.state.initialScrollSession?.bootstrap?.scroll).toBe(1000);
+            expect(ctx.state.positions[19]).toBe(1140);
+            expect(ctx.state.idCache[0]).toBe("next-0");
+            expect(resolve).toHaveBeenCalledTimes(fresh ? 1 : 0);
+            expect(ctx.state.sizesKnown.get("cached-other")).toBe(73);
+            expect(ctx.values.get("numContainersPooled")).toBe(12);
+            ctx.state.scheduledWork.dispose();
+        });
+    }
+
+    it("invalidates column-dependent measurements before seeding a fresh destination", () => {
+        Platform.OS = "web";
+        const data = Array.from({ length: 80 }, (_, index) => ({ id: `row-${index}` }));
+        const ctx = createMockContext(
+            { footerSize: 0, headerSize: 0, numColumns: 1, numContainers: 8, stylePaddingTop: 0 },
+            {
+                dataChangeEpoch: 1,
+                didColumnsChange: true,
+                hasHadNonEmptyData: true,
+                props: {
+                    data,
+                    estimatedItemSize: 50,
+                    getFixedItemSize: () => 50,
+                    keyExtractor: (item: { id: string }) => item.id,
+                    numColumns: 2,
+                },
+                scrollLength: 200,
+                sizes: new Map(data.map((item) => [item.id, 100])),
+                sizesKnown: new Map(data.map((item) => [item.id, 100])),
+            },
+        );
+        handleInitialScrollDataChange(ctx, {
+            dataLength: data.length,
+            didDataChange: true,
+            didStartFreshData: true,
+            initialScrollAtEnd: true,
+            latestInitialScroll: { index: 79, viewPosition: 1 },
+            latestInitialScrollSessionKind: "bootstrap",
+            stylePaddingEnd: 0,
+            useBootstrapInitialScroll: true,
+        });
+        expect(ctx.state.initialScrollSession?.bootstrap?.scroll).toBe(1800);
+        checkResetContainers(ctx, data, { didColumnsChange: true });
+        expect(ctx.state.startBuffered).toBeGreaterThan(0);
+        expect(ctx.state.containerItemKeys.has("row-79")).toBe(true);
+        ctx.state.scheduledWork.dispose();
+    });
+
+    for (const sessionKind of ["offset", "bootstrap"] as const) {
+        it(`preserves prepend compensation while a ${sessionKind} initial scroll settles without active bootstrap`, () => {
+            Platform.OS = "ios";
+            const data = Array.from({ length: 20 }, (_, index) => ({ id: `row-${index}` }));
+            const ctx = createMockContext(
+                { numColumns: 1, numContainers: 8 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: false,
+                    hasHadNonEmptyData: true,
+                    idsInView: ["row-4"],
+                    initialScroll: { index: 4 },
+                    initialScrollSession: { kind: sessionKind, previousDataLength: 20 },
+                    props: {
+                        data,
+                        estimatedItemSize: 50,
+                        keyExtractor: (item: { id: string }) => item.id,
+                        maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition({ data: true }),
+                    },
+                    scroll: 200,
+                    scrollLength: 200,
+                    scrollPending: 200,
+                },
+            );
+            updateItemPositions(ctx, true);
+            ctx.state.props.data = [{ id: "prepended" }, ...data];
+            handleInitialScrollDataChange(ctx, {
+                dataLength: 21,
+                didDataChange: true,
+                initialScrollAtEnd: false,
+                latestInitialScroll: ctx.state.initialScroll,
+                latestInitialScrollSessionKind: sessionKind,
+                stylePaddingEnd: 0,
+                useBootstrapInitialScroll: sessionKind === "bootstrap",
+            });
+            // Capture the same old positions that calculateItemsInView passes to MVCP.
+            const compensate = prepareMVCP(ctx, true, "data");
+            resetLayoutCachesForDataChange(ctx.state);
+            updateItemPositions(ctx, true);
+            compensate?.();
+            expect(ctx.state.scroll).toBe(250);
+            expect(ctx.state.positions[ctx.state.indexByKey.get("row-4")!]).toBe(250);
+            ctx.state.scheduledWork.dispose();
+        });
+    }
+
+    it("invalidates column measurements when a prepared data pass is deferred", () => {
+        const data = [{ id: "row" }];
+        const ctx = createMockContext(
+            { numColumns: 1, numContainers: 8 },
+            {
+                dataChangeEpoch: 1,
+                props: { data, estimatedItemSize: 50, keyExtractor: (item: { id: string }) => item.id },
+                scrollLength: 200,
+                sizesKnown: new Map([["row", 100]]),
+            },
+        );
+        handleInitialScrollDataChange(ctx, {
+            dataLength: 1,
+            didDataChange: true,
+            didStartFreshData: true,
+            initialScrollAtEnd: false,
+            latestInitialScroll: undefined,
+            latestInitialScrollSessionKind: "bootstrap",
+            stylePaddingEnd: 0,
+            useBootstrapInitialScroll: true,
+        });
+        // No allocation between data preparation and the columns-only update.
+        ctx.state.props.numColumns = 2;
+        checkResetContainers(ctx, data, { didColumnsChange: true });
+        expect(ctx.state.sizesKnown.size).toBe(0);
+        ctx.state.scheduledWork.dispose();
+    });
+
+    it("invalidates column sizes after a prepared layout could not allocate a viewport", () => {
+        const data = [{ id: "row" }];
+        const ctx = createMockContext(
+            { numColumns: 1, numContainers: 8 },
+            {
+                dataChangeEpoch: 1,
+                props: { data, estimatedItemSize: 50, keyExtractor: (item: { id: string }) => item.id },
+                scrollLength: 0,
+                sizesKnown: new Map([["row", 100]]),
+            },
+        );
+        handleInitialScrollDataChange(ctx, {
+            dataLength: 1,
+            didDataChange: true,
+            didStartFreshData: true,
+            initialScrollAtEnd: false,
+            latestInitialScroll: undefined,
+            latestInitialScrollSessionKind: "bootstrap",
+            stylePaddingEnd: 0,
+            useBootstrapInitialScroll: true,
+        });
+        checkResetContainers(ctx, data);
+        // A columns-only update has the same data epoch, but the old measurements are invalid.
+        ctx.state.props.numColumns = 2;
+        checkResetContainers(ctx, data, { didColumnsChange: true });
+        expect(ctx.state.sizesKnown.size).toBe(0);
+        ctx.state.scheduledWork.dispose();
+    });
+
+    it("allocates prepared destination geometry and resets caches for later data changes", () => {
+        Platform.OS = "web";
+        const data = Array.from({ length: 20 }, (_, index) => ({ id: `next-${index}` }));
+        const ctx = createMockContext(
+            { footerSize: 0, headerSize: 0, numColumns: 1, numContainers: 8, stylePaddingTop: 0 },
+            {
+                dataChangeEpoch: 1,
+                hasHadNonEmptyData: true,
+                props: { data, estimatedItemSize: 50, keyExtractor: (item: { id: string }) => item.id },
+                scrollLength: 200,
+            },
+        );
+        handleInitialScrollDataChange(ctx, {
+            dataLength: data.length,
+            didDataChange: true,
+            didStartFreshData: true,
+            initialScrollAtEnd: true,
+            latestInitialScroll: { index: 19, viewPosition: 1 },
+            latestInitialScrollSessionKind: "bootstrap",
+            stylePaddingEnd: 0,
+            useBootstrapInitialScroll: true,
+        });
+        calculateItemsInView(ctx, { dataChanged: true });
+        expect(ctx.state.startBuffered).toBeGreaterThan(0);
+        expect(ctx.state.containerItemKeys.has("next-19")).toBe(true);
+        ctx.state.dataChangeEpoch++;
+        ctx.state.props.data = Array.from({ length: 10 }, (_, index) => ({ id: `new-${index}` }));
+        calculateItemsInView(ctx, { dataChanged: true });
+        expect(ctx.state.indexByKey.has("next-19")).toBe(false);
+        expect(ctx.state.idCache).toHaveLength(10);
+        ctx.state.scheduledWork.dispose();
+    });
 
     it("replays finished offset-only initial scrolls when data arrives after an empty mount", () => {
         const ctx = createMockContext(

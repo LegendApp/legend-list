@@ -196,6 +196,49 @@ describe("findAvailableContainers", () => {
         }
     });
 
+    describe("empty cells without recycling", () => {
+        for (const recycleItems of [false, true]) {
+            for (const emptyType of [undefined, "other", "row"]) {
+                it(`chooses empty before assigned exact-type cells (recycle: ${recycleItems}, empty type: ${emptyType})`, () => {
+                    ctx.values.set("numContainers", 2);
+                    ctx.values.set("containerItemKey0", "old");
+                    mockState.indexByKey.set("old", 0);
+                    setContainerItemType(0, "row");
+                    if (emptyType !== undefined) setContainerItemType(1, emptyType);
+                    mockState.props.recycleItems = recycleItems;
+                    mockState.props.getItemType = () => "row";
+
+                    const result = findAvailableContainers(ctx, [10], 8, 12, []);
+
+                    expect(result).toEqual([
+                        { containerIndex: recycleItems && emptyType !== "row" ? 0 : 1, itemIndex: 10, itemType: "row" },
+                    ]);
+                });
+            }
+        }
+
+        it("uses empty cells before pending removals and then reuses assigned capacity", () => {
+            ctx.values.set("numContainers", 3);
+            ctx.values.set("containerItemKey0", "removed");
+            ctx.values.set("containerItemKey2", "old");
+            mockState.indexByKey.set("old", 0);
+            mockState.props.recycleItems = false;
+            mockState.props.getItemType = () => "row";
+            setContainerItemType(0, "row");
+            setContainerItemType(2, "row");
+            const pendingRemoval = [0];
+
+            expect(findAvailableContainers(ctx, [10], 8, 12, pendingRemoval)).toEqual([
+                { containerIndex: 1, itemIndex: 10, itemType: "row" },
+            ]);
+            expect(pendingRemoval).toEqual([0]);
+            ctx.values.set("containerItemKey1", "active");
+            mockState.indexByKey.set("active", 10);
+            expect(containerIndices(findAvailableContainers(ctx, [11, 12], 8, 12, pendingRemoval))).toEqual([0, 2]);
+            expect(pendingRemoval).toEqual([]);
+        });
+    });
+
     describe("when there are unallocated containers", () => {
         it("should return unallocated containers first", () => {
             // Setup container data via context

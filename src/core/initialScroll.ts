@@ -1,3 +1,4 @@
+import { EDGE_POSITION_EPSILON } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
@@ -123,17 +124,19 @@ function advanceMeasuredInitialScroll(
     const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
     const activeInitialTargetOffset = scrollingTo ? (scrollingTo.targetOffset ?? scrollingTo.offset) : undefined;
     const didOffsetChange =
-        initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - resolvedOffset) > 1;
+        initialScroll.contentOffset === undefined ||
+        Math.abs(initialScroll.contentOffset - resolvedOffset) > EDGE_POSITION_EPSILON;
     const didActiveInitialTargetChange =
-        activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - resolvedOffset) > 1;
+        activeInitialTargetOffset !== undefined &&
+        Math.abs(activeInitialTargetOffset - resolvedOffset) > EDGE_POSITION_EPSILON;
     // An instant web request can be clamped before a footer's new extent commits.
     // Its optimistic cache is not evidence that the browser applied that offset.
     const observedOffset = options?.forceScroll && Platform.OS === "web" ? getObservedScrollOffset(ctx) : undefined;
     const isAlreadyAtDesiredInitialTarget =
         activeInitialTargetOffset !== undefined &&
-        Math.abs(state.scroll - resolvedOffset) <= 1 &&
-        Math.abs(state.scrollPending - resolvedOffset) <= 1 &&
-        (observedOffset === undefined || Math.abs(observedOffset - resolvedOffset) <= 1);
+        Math.abs(state.scroll - resolvedOffset) <= EDGE_POSITION_EPSILON &&
+        Math.abs(state.scrollPending - resolvedOffset) <= EDGE_POSITION_EPSILON &&
+        (observedOffset === undefined || Math.abs(observedOffset - resolvedOffset) <= EDGE_POSITION_EPSILON);
 
     if (!options?.forceScroll && !didOffsetChange && isInitialScrollInProgress && !didActiveInitialTargetChange) {
         return false;
@@ -174,7 +177,8 @@ function advanceOffsetInitialScroll(
     const { initialScroll, queuedInitialLayout } = advanceableState;
     const resolvedOffset = initialScroll.contentOffset ?? 0;
     const isAlreadyAtDesiredInitialTarget =
-        Math.abs(state.scroll - resolvedOffset) <= 1 && Math.abs(state.scrollPending - resolvedOffset) <= 1;
+        Math.abs(state.scroll - resolvedOffset) <= EDGE_POSITION_EPSILON &&
+        Math.abs(state.scrollPending - resolvedOffset) <= EDGE_POSITION_EPSILON;
 
     if (options?.forceScroll && isAlreadyAtDesiredInitialTarget) {
         return false;

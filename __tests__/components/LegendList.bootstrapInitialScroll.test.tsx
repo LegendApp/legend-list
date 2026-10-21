@@ -84,7 +84,11 @@ async function flushAsync() {
     });
 }
 
-function trackAssignedStateValue<T extends object, K extends keyof T>(object: T, key: K) {
+function trackAssignedStateValue<T extends object, K extends keyof T>(
+    object: T,
+    key: K,
+    onAssign?: (value: T[K]) => void,
+) {
     const originalDescriptor = Object.getOwnPropertyDescriptor(object, key);
     let currentValue = object[key];
     const assignedValues: T[K][] = [];
@@ -98,6 +102,7 @@ function trackAssignedStateValue<T extends object, K extends keyof T>(object: T,
         set(value: T[K]) {
             assignedValues.push(value);
             currentValue = value;
+            onAssign?.(value);
         },
     });
 
@@ -227,6 +232,55 @@ describe("LegendList bootstrap initial scroll", () => {
             expect(firstBootstrap?.kind === "bootstrap" && firstBootstrap.bootstrap?.seedContentOffset).toBe(300);
             expect(ctx.state.sizesKnown.get("first-4")).toBe(100);
             expect(ctx.state.positions).toEqual([0, 100, 200, 300, 400]);
+        } finally {
+            tracker.restore();
+            rendered.unmount();
+        }
+    });
+
+    it("commits the destination window first when dataKey and columns change during a scroll", async () => {
+        Platform.OS = "web";
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-data-key-columns");
+        const first = Array.from({ length: 3 }, (_, index) => ({ id: `old-${index}` }));
+        const next = Array.from({ length: 80 }, (_, index) => ({ id: `next-${index}` }));
+        const list = (data: typeof first, dataKey: string, numColumns: number) => (
+            <LegendList
+                data={data}
+                dataKey={dataKey}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                getFixedItemSize={() => 50}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                numColumns={numColumns}
+                renderItem={() => <Text>Row</Text>}
+            />
+        );
+        const rendered = render(list(first, "old", 1));
+        const ctx = await getContextFromRender();
+        const resolve = mock(() => {});
+        ctx.state.scrollingTo = { animated: true, averageSizeSnapshot: { "": 900 }, offset: 400 };
+        ctx.state.pendingScrollResolve = resolve;
+        const bootstrapLayouts: Array<{ numColumns: unknown; positions: number[] }> = [];
+        const tracker = trackAssignedStateValue(ctx.state, "initialScrollSession", (session) => {
+            if (session?.kind === "bootstrap" && session.bootstrap) {
+                bootstrapLayouts.push({
+                    numColumns: ctx.values.get("numColumns"),
+                    positions: ctx.state.positions.slice(),
+                });
+            }
+        });
+        try {
+            rendered.rerender(list(next, "next", 2));
+            const firstBootstrap = tracker.assignedValues.find(
+                (session) => session?.kind === "bootstrap" && session.bootstrap,
+            );
+            expect(bootstrapLayouts[0]?.numColumns).toBe(2);
+            expect(bootstrapLayouts[0]?.positions).toEqual(next.map((_, index) => Math.floor(index / 2) * 50));
+            expect(firstBootstrap?.bootstrap?.scroll).toBe(1800);
+            expect(ctx.state.startBuffered).toBeGreaterThan(0);
+            expect(ctx.state.containerItemKeys.has("next-0")).toBe(false);
+            expect(resolve).toHaveBeenCalledWith({ reason: "superseded" });
         } finally {
             tracker.restore();
             rendered.unmount();
