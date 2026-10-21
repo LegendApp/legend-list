@@ -233,6 +233,45 @@ describe("LegendList bootstrap initial scroll", () => {
         }
     });
 
+    it("commits the destination window first when dataKey and columns change during a scroll", async () => {
+        Platform.OS = "web";
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-data-key-columns");
+        const first = Array.from({ length: 3 }, (_, index) => ({ id: `old-${index}` }));
+        const next = Array.from({ length: 80 }, (_, index) => ({ id: `next-${index}` }));
+        const list = (data: typeof first, dataKey: string, numColumns: number) => (
+            <LegendList
+                data={data}
+                dataKey={dataKey}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                getFixedItemSize={() => 50}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                numColumns={numColumns}
+                renderItem={() => <Text>Row</Text>}
+            />
+        );
+        const rendered = render(list(first, "old", 1));
+        const ctx = await getContextFromRender();
+        const resolve = mock(() => {});
+        ctx.state.scrollingTo = { animated: true, averageSizeSnapshot: { "": 900 }, offset: 400 };
+        ctx.state.pendingScrollResolve = resolve;
+        const tracker = trackAssignedStateValue(ctx.state, "initialScrollSession");
+        try {
+            rendered.rerender(list(next, "next", 2));
+            const firstBootstrap = tracker.assignedValues.find(
+                (session) => session?.kind === "bootstrap" && session.bootstrap,
+            );
+            expect(firstBootstrap?.bootstrap?.scroll).toBe(1800);
+            expect(ctx.state.startBuffered).toBeGreaterThan(0);
+            expect(ctx.state.containerItemKeys.has("next-0")).toBe(false);
+            expect(resolve).toHaveBeenCalledWith({ reason: "superseded" });
+        } finally {
+            tracker.restore();
+            rendered.unmount();
+        }
+    });
+
     for (const platform of ["web", "ios", "android"] as const) {
         it(`retains oversized alignment through initial props and dataKey changes on ${platform}`, async () => {
             Platform.OS = platform;

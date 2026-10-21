@@ -5,12 +5,14 @@ import {
 } from "@/core/bootstrapInitialScroll";
 import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
+import { resetColumnLayoutCaches } from "@/core/checkResetContainers";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { type StateContext, set$ } from "@/state/state";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { resetInitialRenderState, setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function retargetActiveInitialScrollAtEnd(ctx: StateContext) {
@@ -149,6 +151,17 @@ export function handleInitialScrollDataChange(
         state.pendingMaintainScrollAtEnd = false;
     }
 
+    if (didStartFreshData || (didDataChange && hasActiveInitialScroll(state))) {
+        // Bootstrap and container allocation must use the same destination geometry.
+        set$(ctx, "numColumns", state.props.numColumns);
+        if (state.didColumnsChange) {
+            resetColumnLayoutCaches(state);
+        }
+        resetLayoutCachesForDataChange(state);
+        updateItemPositions(ctx, true);
+        state.preparedDataLayoutEpoch = state.dataChangeEpoch;
+    }
+
     if (dataLength > 0) {
         state.hasHadNonEmptyData = true;
     }
@@ -171,10 +184,6 @@ export function handleInitialScrollDataChange(
     setInitialScrollSession(state);
 
     if (useBootstrapInitialScroll) {
-        if (didStartFreshData && !state.didColumnsChange) {
-            resetLayoutCachesForDataChange(state);
-            updateItemPositions(ctx, true);
-        }
         handleBootstrapInitialScrollDataChange(ctx, {
             dataLength,
             didDataChange,

@@ -3,6 +3,7 @@ import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { scrollElementIntoView } from "@/core/scrollElementIntoView";
 import type { StateContext } from "@/state/state";
+import type { InternalState } from "@/types.internal";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { getId } from "@/utils/getId";
 
@@ -19,15 +20,8 @@ export function checkResetContainers(
     const { previousData } = state;
     const { maintainScrollAtEnd } = state.props;
 
-    if (didColumnsChange) {
-        state.sizes.clear();
-        state.sizesKnown.clear();
-        invalidateFixedItemSizes(state);
-        for (const key in state.averageSizes) {
-            delete state.averageSizes[key];
-        }
-        state.positionRecalculationStartIndex = 0;
-        state.scrollForNextCalculateItemsInView = undefined;
+    if (didColumnsChange && state.preparedDataLayoutEpoch !== state.dataChangeEpoch) {
+        resetColumnLayoutCaches(state);
     }
 
     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
@@ -72,4 +66,16 @@ export function checkResetContainers(
     }
 
     delete state.previousData;
+}
+
+export function resetColumnLayoutCaches(state: InternalState) {
+    state.preparedDataLayoutEpoch = undefined;
+    state.sizes.clear();
+    state.sizesKnown.clear();
+    invalidateFixedItemSizes(state);
+    for (const key in state.averageSizes) {
+        delete state.averageSizes[key];
+    }
+    state.positionRecalculationStartIndex = 0;
+    state.scrollForNextCalculateItemsInView = undefined;
 }
