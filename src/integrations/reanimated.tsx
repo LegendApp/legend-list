@@ -61,8 +61,10 @@ export interface AnimatedLegendListSharedValues {
     scrollOffset?: SharedValue<number>;
 }
 
-export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView"> {
+export interface AnimatedLegendListPropsBase<ItemT>
+    extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView" | "style"> {
     animatedProps?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
+    style?: ComponentProps<typeof Reanimated.ScrollView>["style"];
     refScrollView?: React.Ref<AnimatedScrollView>;
     sharedValues?: AnimatedLegendListSharedValues;
     /**
