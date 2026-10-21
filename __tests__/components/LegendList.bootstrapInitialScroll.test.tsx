@@ -84,7 +84,11 @@ async function flushAsync() {
     });
 }
 
-function trackAssignedStateValue<T extends object, K extends keyof T>(object: T, key: K) {
+function trackAssignedStateValue<T extends object, K extends keyof T>(
+    object: T,
+    key: K,
+    onAssign?: (value: T[K]) => void,
+) {
     const originalDescriptor = Object.getOwnPropertyDescriptor(object, key);
     let currentValue = object[key];
     const assignedValues: T[K][] = [];
@@ -98,6 +102,7 @@ function trackAssignedStateValue<T extends object, K extends keyof T>(object: T,
         set(value: T[K]) {
             assignedValues.push(value);
             currentValue = value;
+            onAssign?.(value);
         },
     });
 
@@ -256,12 +261,22 @@ describe("LegendList bootstrap initial scroll", () => {
         const resolve = mock(() => {});
         ctx.state.scrollingTo = { animated: true, averageSizeSnapshot: { "": 900 }, offset: 400 };
         ctx.state.pendingScrollResolve = resolve;
-        const tracker = trackAssignedStateValue(ctx.state, "initialScrollSession");
+        const bootstrapLayouts: Array<{ numColumns: unknown; positions: number[] }> = [];
+        const tracker = trackAssignedStateValue(ctx.state, "initialScrollSession", (session) => {
+            if (session?.kind === "bootstrap" && session.bootstrap) {
+                bootstrapLayouts.push({
+                    numColumns: ctx.values.get("numColumns"),
+                    positions: ctx.state.positions.slice(),
+                });
+            }
+        });
         try {
             rendered.rerender(list(next, "next", 2));
             const firstBootstrap = tracker.assignedValues.find(
                 (session) => session?.kind === "bootstrap" && session.bootstrap,
             );
+            expect(bootstrapLayouts[0]?.numColumns).toBe(2);
+            expect(bootstrapLayouts[0]?.positions).toEqual(next.map((_, index) => Math.floor(index / 2) * 50));
             expect(firstBootstrap?.bootstrap?.scroll).toBe(1800);
             expect(ctx.state.startBuffered).toBeGreaterThan(0);
             expect(ctx.state.containerItemKeys.has("next-0")).toBe(false);
