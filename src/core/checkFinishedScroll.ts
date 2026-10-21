@@ -1,3 +1,4 @@
+import { EDGE_POSITION_EPSILON } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
@@ -10,8 +11,6 @@ import type { StateContext } from "@/state/state";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
-const INITIAL_SCROLL_COMPLETION_TARGET_EPSILON = 1;
-const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
@@ -37,11 +36,7 @@ function hasScrollCompletionOwnership(
     options: { clampedTargetOffset: number; scrollingTo: ActiveScrollTarget },
 ) {
     const { clampedTargetOffset, scrollingTo } = options;
-    return (
-        !scrollingTo.isInitialScroll ||
-        state.hasScrolled ||
-        clampedTargetOffset <= INITIAL_SCROLL_COMPLETION_TARGET_EPSILON
-    );
+    return !scrollingTo.isInitialScroll || state.hasScrolled || clampedTargetOffset <= EDGE_POSITION_EPSILON;
 }
 
 function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
@@ -79,8 +74,8 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
 
     if (
         initialScrollWatchdog.isAtZeroTargetOffset(targetOffset) ||
-        Math.abs(state.scroll - targetOffset) > 1 ||
-        Math.abs(state.scrollPending - targetOffset) > 1
+        Math.abs(state.scroll - targetOffset) > EDGE_POSITION_EPSILON ||
+        Math.abs(state.scrollPending - targetOffset) > EDGE_POSITION_EPSILON
     ) {
         return false;
     }
@@ -94,7 +89,7 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
         !!state.scrollingTo?.isInitialScroll &&
         state.props.data.length > 0 &&
         getContentSize(ctx) <= state.scrollLength &&
-        state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
+        state.scrollPending <= EDGE_POSITION_EPSILON
     );
 }
 
@@ -135,7 +130,9 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
 
     return {
         clampedTargetOffset,
-        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (canUseAdjustedCompletion && diff2 < 1)),
+        isAtResolvedTarget:
+            Math.abs(scroll - maxOffset) <= EDGE_POSITION_EPSILON &&
+            (diff1 <= EDGE_POSITION_EPSILON || (canUseAdjustedCompletion && diff2 <= EDGE_POSITION_EPSILON)),
     };
 }
 
@@ -152,7 +149,8 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         Platform.OS === "web" &&
         scrollingTo.animated &&
         !scrollingTo.isInitialScroll &&
-        Math.abs(completionState.clampedTargetOffset - (scrollingTo.targetOffset ?? scrollingTo.offset)) > 1;
+        Math.abs(completionState.clampedTargetOffset - (scrollingTo.targetOffset ?? scrollingTo.offset)) >
+            EDGE_POSITION_EPSILON;
     if (
         !isPassingWebTarget &&
         completionState.isAtResolvedTarget &&

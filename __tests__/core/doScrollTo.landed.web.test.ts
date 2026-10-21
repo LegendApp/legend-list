@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
+import { getCurrentTargetOffset } from "@/core/checkFinishedScroll";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { scrollToEnd } from "@/core/scrollToEnd";
 import { Platform } from "@/platform/Platform";
@@ -56,6 +57,118 @@ beforeEach(() => {
 afterEach(() => {
     harness?.restore();
     harness = undefined;
+});
+
+describe("instant web scroll completion", () => {
+    for (const mode of ["vertical", "horizontal", "negative RTL", "inverted RTL"] as const) {
+        const options = {
+            horizontal: mode !== "vertical",
+            horizontalRTLScrollType: mode === "negative RTL" ? "negative" : "inverted",
+            rtl: mode.endsWith("RTL"),
+        } as const;
+
+        it(`confirms the observed ${mode} offset on the next frame`, async () => {
+            const h = setup(options);
+            const scroll = trackScroll(h.ref.scrollToOffset({ animated: false, offset: 1500 }));
+            expect(scroll.resolved).toBe(false);
+
+            h.clock.tick();
+            await flushMicrotasks();
+
+            expect(h.clock.now).toBe(16);
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.browser.offset).toBe(1500);
+        });
+
+        it(`keeps the fallback when the ${mode} DOM offset does not confirm the request`, async () => {
+            const h = setup(options);
+            h.state.didContainersLayout = true;
+            h.state.hasScrolled = true;
+            h.state.refScroller.current!.scrollTo = () => {};
+            const scroll = trackScroll(h.ref.scrollToOffset({ animated: false, offset: 1500 }));
+
+            h.clock.tick();
+            await flushMicrotasks();
+
+            expect(h.browser.offset).toBe(0);
+            expect(scroll.resolved).toBe(false);
+            expect(h.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(true);
+            h.clock.advance(99);
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(false);
+            h.clock.advance(1);
+            await flushMicrotasks();
+            expect(scroll.resolved).toBe(true);
+        });
+    }
+
+    it("rechecks a clamped offset after the footer shrinks before the completion frame", async () => {
+        const h = setup();
+        h.ctx.values.set("footerSize", 120);
+        let observedOffset = 0;
+        const scroller = h.state.refScroller.current!;
+        scroller.getCurrentScrollOffset = () => observedOffset;
+        scroller.scrollTo = ({ y }) => {
+            observedOffset = y!;
+        };
+        const scroll = trackScroll(h.ref.scrollToOffset({ animated: false, offset: 12000 }));
+        expect(observedOffset).toBe(9620);
+        h.ctx.values.set("footerSize", 0);
+
+        h.clock.tick();
+        await flushMicrotasks();
+        expect(getCurrentTargetOffset(h.ctx, h.state.scrollingTo!)).toBe(9500);
+        expect(scroll.resolved).toBe(false);
+        expect(h.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(true);
+
+        observedOffset = 9500;
+        h.browser.moveTo(observedOffset);
+        h.clock.tick();
+        await flushMicrotasks();
+        expect(scroll.resolved).toBe(true);
+    });
+
+    it("rechecks an end target after the width changes before the completion frame", async () => {
+        const h = setup({ horizontal: true });
+        const scroll = trackScroll(h.ref.scrollToIndex({ animated: false, index: 99, viewPosition: 1 }));
+        expect(h.browser.offset).toBe(9500);
+        h.state.scrollLength = 400;
+        const target = getCurrentTargetOffset(h.ctx, h.state.scrollingTo!);
+        expect(target).toBe(9600);
+
+        h.clock.tick();
+        await flushMicrotasks();
+        expect(scroll.resolved).toBe(false);
+        expect(h.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(true);
+
+        h.browser.moveTo(target);
+        h.clock.tick();
+        await flushMicrotasks();
+        expect(scroll.resolved).toBe(true);
+        expect(h.browser.offset).toBe(target);
+    });
+
+    it("settles from the observed offset when width moves the target before any scroll event", async () => {
+        const h = setup({ horizontal: true });
+        let observedOffset = 0;
+        const scroller = h.state.refScroller.current!;
+        scroller.getCurrentScrollOffset = () => observedOffset;
+        scroller.scrollTo = ({ x }) => {
+            observedOffset = x!;
+        };
+        const scroll = trackScroll(h.ref.scrollToIndex({ animated: false, index: 99, viewPosition: 1 }));
+        expect(observedOffset).toBe(9500);
+        h.state.scrollLength = 400;
+        observedOffset = 9600;
+
+        h.clock.tick();
+        await flushMicrotasks();
+
+        expect(scroll.resolved).toBe(true);
+        expect(h.state.scroll).toBe(observedOffset);
+        expect(h.state.scrollPending).toBe(observedOffset);
+    });
 });
 
 describe("animated web scrolls resolve only once landed", () => {

@@ -1,7 +1,7 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { cancelScroll } from "@/core/cancelScroll";
-import { getCurrentTargetOffset } from "@/core/checkFinishedScroll";
+import { checkFinishedScrollFallback, getCurrentTargetOffset } from "@/core/checkFinishedScroll";
 import type { DoScrollToParams } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { scrollTo } from "@/core/scrollTo";
@@ -100,8 +100,14 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
                 } else {
                     retryLanding(ctx, targetToken, currentOffset, landingOffset);
                 }
-            } else {
+            } else if (!targetToken || Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON) {
+                if (targetToken) {
+                    state.scroll = state.scrollPending = currentOffset;
+                }
                 finishScrollTo(ctx);
+            } else {
+                // Optimistic state is not evidence that the DOM accepted an instant scroll.
+                checkFinishedScrollFallback(ctx);
             }
         }
     }, "platformScrollCompletion");
