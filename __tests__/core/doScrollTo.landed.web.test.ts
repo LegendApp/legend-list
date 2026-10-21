@@ -129,6 +129,45 @@ describe("instant web scroll completion", () => {
         expect(h.state.scrollingTo).toBeDefined();
     });
 
+    for (const mode of ["negative", "inverted"] as const) {
+        it(`retries a near-landed initial scroll using ${mode} RTL coordinates`, async () => {
+            const h = setup({ horizontal: true, horizontalRTLScrollType: mode, rtl: true });
+            h.state.didContainersLayout = true;
+            h.state.didFinishInitialScroll = false;
+            h.state.hasScrolled = false;
+            h.state.initialScroll = { contentOffset: 1500 };
+            h.state.initialScrollSession = { kind: "offset", previousDataLength: 100 };
+            h.state.scrollingTo = {
+                animated: false,
+                isInitialScroll: true,
+                offset: 1500,
+                targetOffset: 1500,
+                waitForInitialScrollCompletionFrame: true,
+            };
+            h.state.scrollPending = 1500;
+            const scroller = h.state.refScroller.current!;
+            const scrollTo = scroller.scrollTo;
+            scroller.scrollTo = (params) => {
+                // The first dispatch lands two pixels short; subsequent requests land exactly.
+                scrollTo(h.scrollToCalls.length === 0 ? { ...params, x: mode === "negative" ? -1498 : 8002 } : params);
+            };
+            const { doScrollTo } = await import("@/core/doScrollTo");
+            doScrollTo(h.ctx, { animated: false, horizontal: true, isInitialScroll: true, offset: 1500 });
+
+            h.clock.tick();
+            expect(h.browser.offset).toBe(1498);
+            expect(h.state.scrollingTo).toBeDefined();
+            expect(h.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(true);
+            h.clock.advance(1100);
+
+            expect(h.browser.offset).toBe(1500);
+            expect(h.scrollToCalls).toHaveLength(2);
+            expect(h.scrollToCalls[1]).toEqual({ animated: false, x: mode === "negative" ? -1500 : 8000, y: 0 });
+            expect(h.state.scrollingTo).toBeUndefined();
+            expect(h.state.didFinishInitialScroll).toBe(true);
+        });
+    }
+
     it("retains next-frame completion for custom scrollers without offset observation", async () => {
         const h = setup();
         h.state.refScroller.current!.getCurrentScrollOffset = undefined;

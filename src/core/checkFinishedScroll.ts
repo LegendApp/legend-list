@@ -8,6 +8,7 @@ import { clampScrollIndex } from "@/core/scrollToIndex";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -164,10 +165,12 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 }
 
 function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
-    ctx.state.refScroller.current?.scrollTo({
+    const { state } = ctx;
+    const horizontal = state.props.horizontal;
+    state.refScroller.current?.scrollTo({
         animated,
-        x: ctx.state.props.horizontal ? offset : 0,
-        y: ctx.state.props.horizontal ? 0 : offset,
+        x: horizontal ? toNativeHorizontalOffset(state, offset, getContentSize(ctx)) : 0,
+        y: horizontal ? 0 : offset,
     });
 }
 
