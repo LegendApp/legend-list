@@ -100,22 +100,21 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
                 } else {
                     retryLanding(ctx, targetToken, currentOffset, landingOffset);
                 }
-            } else if (
-                !targetToken ||
-                !scroller.getCurrentScrollOffset ||
-                Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON
-            ) {
-                // Custom scrollers without observation retain their next-frame completion contract.
-                if (targetToken && Number.isFinite(currentOffset)) {
-                    state.scroll = state.scrollPending = currentOffset;
-                }
-                finishScrollTo(ctx);
             } else {
-                // Initial fallback checks must not mistake optimistic state for an observed landing.
-                if (targetToken.isInitialScroll && Number.isFinite(currentOffset)) {
+                // Custom scrollers without observation retain their next-frame completion contract.
+                const canFinish =
+                    !targetToken ||
+                    !scroller.getCurrentScrollOffset ||
+                    Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON;
+                // Initial fallback checks must also use observed state instead of the optimistic offset.
+                if (targetToken && (canFinish || targetToken.isInitialScroll) && Number.isFinite(currentOffset)) {
                     state.scroll = state.scrollPending = currentOffset;
                 }
-                checkFinishedScrollFallback(ctx);
+                if (canFinish) {
+                    finishScrollTo(ctx);
+                } else {
+                    checkFinishedScrollFallback(ctx);
+                }
             }
         }
     }, "platformScrollCompletion");
