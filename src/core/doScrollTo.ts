@@ -100,13 +100,21 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
                 } else {
                     retryLanding(ctx, targetToken, currentOffset, landingOffset);
                 }
-            } else if (!targetToken || Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON) {
-                if (targetToken) {
+            } else if (
+                !targetToken ||
+                !scroller.getCurrentScrollOffset ||
+                Math.abs(currentOffset - landingOffset) <= EDGE_POSITION_EPSILON
+            ) {
+                // Custom scrollers without observation retain their next-frame completion contract.
+                if (targetToken && Number.isFinite(currentOffset)) {
                     state.scroll = state.scrollPending = currentOffset;
                 }
                 finishScrollTo(ctx);
             } else {
-                // Optimistic state is not evidence that the DOM accepted an instant scroll.
+                // Initial fallback checks must not mistake optimistic state for an observed landing.
+                if (targetToken.isInitialScroll && Number.isFinite(currentOffset)) {
+                    state.scroll = state.scrollPending = currentOffset;
+                }
                 checkFinishedScrollFallback(ctx);
             }
         }

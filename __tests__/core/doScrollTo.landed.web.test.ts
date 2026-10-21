@@ -103,6 +103,46 @@ describe("instant web scroll completion", () => {
         });
     }
 
+    it("does not finish an unconfirmed offset initial scroll from optimistic state", async () => {
+        const h = setup();
+        h.state.didContainersLayout = true;
+        h.state.didFinishInitialScroll = false;
+        h.state.initialScroll = { contentOffset: 1500 };
+        h.state.initialScrollSession = { kind: "offset", previousDataLength: 100 };
+        h.state.scrollingTo = {
+            animated: false,
+            isInitialScroll: true,
+            offset: 1500,
+            targetOffset: 1500,
+            waitForInitialScrollCompletionFrame: true,
+        };
+        h.state.scrollPending = 1500;
+        h.state.refScroller.current!.scrollTo = () => {};
+        const { doScrollTo } = await import("@/core/doScrollTo");
+        doScrollTo(h.ctx, { animated: false, isInitialScroll: true, offset: 1500 });
+
+        h.clock.tick();
+        expect(h.browser.offset).toBe(0);
+        expect(h.state.scrollingTo).toBeDefined();
+        expect(h.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(true);
+        h.clock.advance(99);
+        expect(h.state.scrollingTo).toBeDefined();
+    });
+
+    it("retains next-frame completion for custom scrollers without offset observation", async () => {
+        const h = setup();
+        h.state.refScroller.current!.getCurrentScrollOffset = undefined;
+        const scroll = trackScroll(h.ref.scrollToOffset({ animated: false, offset: 1500 }));
+
+        h.clock.tick();
+        await flushMicrotasks();
+
+        expect(scroll.resolved).toBe(true);
+        expect(scroll.value).toBeUndefined();
+        expect(h.state.scroll).toBe(1500);
+        expect(h.state.scrollPending).toBe(1500);
+    });
+
     it("rechecks a clamped offset after the footer shrinks before the completion frame", async () => {
         const h = setup();
         h.ctx.values.set("footerSize", 120);
