@@ -96,6 +96,25 @@ describe("rtl horizontal coordinate helpers", () => {
         expect(toNativeHorizontalOffset(state, 100, 1000)).toBe(-100);
     });
 
+    it("uses negative web offsets before any scroll event, including an initial zero sample", () => {
+        Platform.OS = "web";
+        expect(toNativeHorizontalOffset(state, 100, 1000)).toBe(-100);
+        expect(toLogicalHorizontalOffset(state, 0, 1000)).toBe(0);
+        expect(state.horizontalRTLScrollType).toBe("negative");
+        expect(toNativeHorizontalOffset(state, 100, 1000)).toBe(-100);
+    });
+
+    it("retains negative web coordinates when returning to the start", () => {
+        Platform.OS = "web";
+        state.hasScrolled = true;
+        state.scroll = 600;
+        state.horizontalRTLScrollType = "negative";
+
+        expect(toLogicalHorizontalOffset(state, 0, 1000)).toBe(0);
+        expect(state.horizontalRTLScrollType).toBe("negative");
+        expect(toNativeHorizontalOffset(state, 100, 1000)).toBe(-100);
+    });
+
     it("mirrors logical item positions for physical horizontal rendering", () => {
         expect(toPhysicalHorizontalItemPosition(state, 200, 50, 1000)).toBe(750);
 

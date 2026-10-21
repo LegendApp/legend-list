@@ -46,7 +46,7 @@ function getHorizontalMaxOffset(
 }
 
 function getDefaultHorizontalRTLScrollType(): HorizontalRTLScrollType {
-    return Platform.OS === "web" ? "normal" : "inverted";
+    return Platform.OS === "web" ? "negative" : "inverted";
 }
 
 function getNativeHorizontalRTLScrollType(
@@ -165,7 +165,7 @@ export function toLogicalHorizontalOffset(
 
     const maxOffset = getHorizontalMaxOffset(state, contentWidth);
 
-    if (rawOffset < 0) {
+    if (rawOffset < 0 || state.horizontalRTLScrollType === "negative") {
         state.horizontalRTLScrollType = "negative";
         return clampHorizontalOffset(-rawOffset, maxOffset);
     }

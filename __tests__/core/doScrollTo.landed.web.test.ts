@@ -60,6 +60,35 @@ afterEach(() => {
 });
 
 describe("instant web scroll completion", () => {
+    it("lands a cold RTL initial target on the first frame without fallback dispatches", async () => {
+        const h = setup({ horizontal: true, horizontalRTLScrollType: "negative", rtl: true });
+        // The browser uses negative coordinates before the list has observed any scroll event.
+        h.state.horizontalRTLScrollType = undefined;
+        h.state.didContainersLayout = true;
+        h.state.didFinishInitialScroll = false;
+        h.state.hasScrolled = false;
+        h.state.initialScroll = { contentOffset: 1500, index: 15 };
+        h.state.initialScrollSession = { kind: "bootstrap", previousDataLength: 100 };
+        h.state.scrollingTo = {
+            animated: false,
+            index: 15,
+            isInitialScroll: true,
+            offset: 1500,
+            targetOffset: 1500,
+        };
+        h.state.scrollPending = 1500;
+        const { doScrollTo } = await import("@/core/doScrollTo");
+        doScrollTo(h.ctx, { animated: false, horizontal: true, isInitialScroll: true, offset: 1500 });
+
+        h.clock.tick();
+        expect(h.browser.rawOffset).toBe(-1500);
+        expect(h.state.scroll).toBe(1500);
+        expect(h.state.didFinishInitialScroll).toBe(true);
+        expect(h.state.scheduledWork.has("checkFinishedScrollFallback")).toBe(false);
+        h.clock.advance(3000);
+        expect(h.scrollToCalls).toEqual([{ animated: false, x: -1500, y: 0 }]);
+    });
+
     for (const mode of ["vertical", "horizontal", "negative RTL", "inverted RTL"] as const) {
         const options = {
             horizontal: mode !== "vertical",
