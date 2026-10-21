@@ -26,5 +26,6 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
       - run: bun install --frozen-lockfile
       - run: bun run tsc:src
-      - run: bun run test
+      # Prevent module mocks from leaking between test files.
+      - run: bun run test --isolate
       - run: bun run build
