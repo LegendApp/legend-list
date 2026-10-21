@@ -5,11 +5,10 @@ import {
 } from "@/core/bootstrapInitialScroll";
 import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
-import { resetColumnLayoutCaches } from "@/core/checkResetContainers";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
-import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
+import { resetColumnLayoutCaches, resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { type StateContext, set$ } from "@/state/state";
 import { resetInitialRenderState, setInitialRenderState } from "@/utils/setInitialRenderState";

@@ -1,9 +1,8 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { resetColumnLayoutCaches } from "@/core/resetLayoutCachesForDataChange";
 import { scrollElementIntoView } from "@/core/scrollElementIntoView";
 import type { StateContext } from "@/state/state";
-import type { InternalState } from "@/types.internal";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { getId } from "@/utils/getId";
 
@@ -66,15 +65,4 @@ export function checkResetContainers(
     }
 
     delete state.previousData;
-}
-
-export function resetColumnLayoutCaches(state: InternalState) {
-    state.sizes.clear();
-    state.sizesKnown.clear();
-    invalidateFixedItemSizes(state);
-    for (const key in state.averageSizes) {
-        delete state.averageSizes[key];
-    }
-    state.positionRecalculationStartIndex = 0;
-    state.scrollForNextCalculateItemsInView = undefined;
 }
