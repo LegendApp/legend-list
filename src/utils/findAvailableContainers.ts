@@ -67,8 +67,8 @@ export function findAvailableContainers(
     const normalCandidates: AvailableContainer[] = [];
     const stickyCandidates: AvailableContainer[] = [];
 
-    // Unassigned and pending-removal containers are immediately reusable, so they
-    // sort ahead with an infinite distance. Assigned normal containers are eligible
+    // Pending-removal containers sort first; warm normal containers precede empty
+    // slots (distance 0) to avoid mounting new row trees. Assigned containers are eligible
     // only outside the buffered range and are ranked farthest-first to avoid stealing
     // a container that may soon re-enter the viewport. Assigned reuse is disabled while
     // recycled layout animations may still need the outgoing view. Sticky containers
@@ -87,7 +87,7 @@ export function findAvailableContainers(
                 stickyCandidates.push({ containerIndex, distance: Number.POSITIVE_INFINITY });
             }
         } else if (key === undefined || isPendingRemoval) {
-            normalCandidates.push({ containerIndex, distance: Number.POSITIVE_INFINITY });
+            normalCandidates.push({ containerIndex, distance: isPendingRemoval ? Number.POSITIVE_INFINITY : 0 });
         } else if (!shouldAvoidAssignedContainerReuse) {
             const index = state.indexByKey.get(key);
             if (index !== undefined && (index < startBuffered || index > endBuffered)) {
