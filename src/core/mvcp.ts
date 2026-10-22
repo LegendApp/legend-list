@@ -452,6 +452,10 @@ export function prepareMVCP(
                 positionDiff,
             });
 
+            if (Platform.OS === "android" && !dataChanged && scrollTarget === undefined) {
+                positionDiff = getAndroidNativeClampedAdjust(ctx, positionDiff);
+            }
+
             if (
                 shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)
             ) {
@@ -477,4 +481,18 @@ export function prepareMVCP(
             }
         };
     }
+}
+
+function getAndroidNativeClampedAdjust(ctx: StateContext, positionDiff: number) {
+    const state = ctx.state;
+    const maxScroll = Math.max(0, getContentSize(ctx) - state.scrollLength);
+    if (state.scroll <= maxScroll + MVCP_POSITION_EPSILON) {
+        return positionDiff;
+    }
+
+    // Android clamps shrinking content before native MVCP applies the anchor delta.
+    const targetScroll = Math.max(0, Math.min(state.scroll + positionDiff, maxScroll));
+    state.scroll = maxScroll;
+    state.scrollPending = maxScroll;
+    return targetScroll - maxScroll;
 }
