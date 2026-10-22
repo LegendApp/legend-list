@@ -102,6 +102,67 @@ interface ExtraPropsFromRN {
     ScrollComponent?: React.ComponentType<unknown>;
 }
 
+// React Native ScrollView/View props that have no DOM equivalent. Code shared with native often passes them,
+// and forwarding them to the div makes React warn about unknown DOM props.
+const NATIVE_ONLY_SCROLL_VIEW_PROPS = new Set([
+    "alwaysBounceHorizontal",
+    "alwaysBounceVertical",
+    "automaticallyAdjustContentInsets",
+    "automaticallyAdjustKeyboardInsets",
+    "automaticallyAdjustsScrollIndicatorInsets",
+    "bounces",
+    "bouncesZoom",
+    "canCancelContentTouches",
+    "centerContent",
+    "collapsable",
+    "contentInsetAdjustmentBehavior",
+    "decelerationRate",
+    "directionalLockEnabled",
+    "disableIntervalMomentum",
+    "disableScrollViewPanResponder",
+    "endFillColor",
+    "fadingEdgeLength",
+    "indicatorStyle",
+    "invertStickyHeaders",
+    "keyboardDismissMode",
+    "keyboardShouldPersistTaps",
+    "maximumZoomScale",
+    "minimumZoomScale",
+    "needsOffscreenAlphaCompositing",
+    "nestedScrollEnabled",
+    "onScrollBeginDrag",
+    "onScrollEndDrag",
+    "onScrollToTop",
+    "overScrollMode",
+    "pagingEnabled",
+    "persistentScrollbar",
+    "pinchGestureEnabled",
+    "removeClippedSubviews",
+    "renderToHardwareTextureAndroid",
+    "scrollIndicatorInsets",
+    "scrollPerfTag",
+    "scrollToOverflowEnabled",
+    "scrollsToTop",
+    "shouldRasterizeIOS",
+    "snapToAlignment",
+    "snapToEnd",
+    "snapToInterval",
+    "snapToStart",
+    "StickyHeaderComponent",
+    "stickyHeaderHiddenOnScroll",
+    "zoomScale",
+]);
+
+function omitNativeOnlyProps(props: Record<string, unknown>): Record<string, unknown> {
+    const domProps: Record<string, unknown> = {};
+    for (const key in props) {
+        if (!NATIVE_ONLY_SCROLL_VIEW_PROPS.has(key)) {
+            domProps[key] = props[key];
+        }
+    }
+    return domProps;
+}
+
 const SCROLLBAR_HIDDEN_STYLE_ID = "legend-list-scrollbar-axis-hidden-style";
 const SCROLL_END_FALLBACK_MS = 200;
 const SCROLLBAR_HIDDEN_STYLE = `.${LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS}::-webkit-scrollbar:vertical{width:0;display:none;}.${LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS}::-webkit-scrollbar:horizontal{height:0;display:none;}`;
@@ -632,7 +693,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         <div
             className={scrollViewClassName}
             ref={scrollRef}
-            {...(webProps as HTMLAttributes<HTMLDivElement>)}
+            {...(omitNativeOnlyProps(webProps) as HTMLAttributes<HTMLDivElement>)}
             style={scrollViewStyle}
         >
             {refreshControl}
