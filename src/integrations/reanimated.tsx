@@ -176,22 +176,30 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
 ) {
     const ctx = useStateContext();
     const { id, horizontal, style, refView, stickyScrollOffset, stickyHeaderConfig, children, ...rest } = props;
-    const [position = POSITION_OUT_OF_VIEW, headerSize = 0, stylePaddingTop = 0, itemKey, itemIndex, _totalSize = 0] =
-        useArr$([
-            `containerPosition${id}`,
-            "headerSize",
-            "stylePaddingTop",
-            `containerItemKey${id}`,
-            `containerItemIndex${id}`,
-            "totalSize",
-        ]);
+    const [
+        position = POSITION_OUT_OF_VIEW,
+        alignItemsAtEndPadding = 0,
+        headerSize = 0,
+        stylePaddingTop = 0,
+        itemKey,
+        itemIndex,
+        _totalSize = 0,
+    ] = useArr$([
+        `containerPosition${id}`,
+        "alignItemsAtEndPadding",
+        "headerSize",
+        "stylePaddingTop",
+        `containerItemKey${id}`,
+        `containerItemIndex${id}`,
+        "totalSize",
+    ]);
     const pushLimit = React.useMemo(
         () => getStickyPushLimit(ctx.state, itemIndex, itemKey),
         [ctx.state, itemIndex, itemKey, _totalSize],
     );
 
     const stickyOffset = stickyHeaderConfig?.offset ?? 0;
-    const stickyStart = position + headerSize + stylePaddingTop - stickyOffset;
+    const stickyStart = position + headerSize + stylePaddingTop + alignItemsAtEndPadding - stickyOffset;
 
     const stickyPositionStyle = useAnimatedStyle(() => {
         const delta = Math.max(0, stickyScrollOffset.value - stickyStart);

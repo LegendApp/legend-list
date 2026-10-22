@@ -131,12 +131,16 @@ function PositionComponentHarness({
 }
 
 function StickyPositionComponentHarness({
+    alignItemsAtEndPadding = 0,
+    horizontal = false,
     containerId,
     index,
     itemKey,
     position,
     PositionComponent,
 }: {
+    alignItemsAtEndPadding?: number;
+    horizontal?: boolean;
     containerId: number;
     index: number;
     itemKey: string;
@@ -163,13 +167,14 @@ function StickyPositionComponentHarness({
         set$(ctx, `containerItemKey${containerId}` as any, itemKey as any);
         set$(ctx, `containerItemIndex${containerId}` as any, index as any);
         set$(ctx, `containerPosition${containerId}` as any, position as any);
+        set$(ctx, "alignItemsAtEndPadding", alignItemsAtEndPadding);
         set$(ctx, "headerSize" as any, 0 as any);
         set$(ctx, "stylePaddingTop" as any, 0 as any);
         set$(ctx, "totalSize" as any, (position + 120) as any);
-    }, [containerId, ctx, index, itemKey, position]);
+    }, [alignItemsAtEndPadding, containerId, ctx, index, itemKey, position]);
 
     return (
-        <PositionComponent horizontal={false} id={containerId} onLayout={() => {}} refView={refView} style={{}}>
+        <PositionComponent horizontal={horizontal} id={containerId} onLayout={() => {}} refView={refView} style={{}}>
             {null}
         </PositionComponent>
     );
@@ -625,6 +630,57 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         expect(flattenLastStyle()?.opacity).toBeUndefined();
         expect(flattenLastStyle()?.top).toBe(40);
         expect(reanimatedViewRenders.at(-1)?.pointerEvents).toBeUndefined();
+    });
+
+    it.each([false, true])("anchors short sticky lists to the viewport (horizontal: %s)", async (horizontal) => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?sticky-viewport-alignment");
+        const scrollOffset = { value: 100 };
+        let listRenderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            listRenderer = TestRenderer.create(
+                <AnimatedLegendList
+                    data={[{ id: "header" }]}
+                    renderItem={() => null}
+                    sharedValues={{ scrollOffset: scrollOffset as any }}
+                    stickyHeaderIndices={[0]}
+                />,
+            );
+        });
+        const StickyPositionComponent = legendListPropsRenders.at(-1).stickyPositionComponentInternal;
+        const renderHeader = (padding: number) => (
+            <StateProvider>
+                <StickyPositionComponentHarness
+                    alignItemsAtEndPadding={padding}
+                    horizontal={horizontal}
+                    containerId={9}
+                    index={0}
+                    itemKey="header"
+                    PositionComponent={StickyPositionComponent}
+                    position={0}
+                />
+            </StateProvider>
+        );
+        let renderer!: TestRenderer.ReactTestRenderer;
+        act(() => {
+            renderer = TestRenderer.create(renderHeader(300));
+        });
+        const expectViewportPosition = (padding: number) => {
+            const style = Object.assign({}, ...reanimatedViewRenders.at(-1).style.filter(Boolean));
+            const translation = style.transform[0][horizontal ? "translateX" : "translateY"];
+            expect(padding + translation - scrollOffset.value).toBe(Math.max(0, padding - scrollOffset.value));
+        };
+        expectViewportPosition(300);
+
+        // Keyboard/viewport resizing and pagination change the alignment spacer
+        // without moving the header within the list's content coordinates.
+        for (const padding of [500, 50, 0, 200]) {
+            act(() => renderer.update(renderHeader(padding)));
+            expectViewportPosition(padding);
+        }
+        act(() => {
+            renderer.unmount();
+            listRenderer.unmount();
+        });
     });
 
     it("uses transform-based sticky styles for the reanimated sticky bridge", async () => {
