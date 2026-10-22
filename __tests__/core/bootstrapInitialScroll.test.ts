@@ -8,10 +8,13 @@ import {
     handleBootstrapInitialScrollFooterLayout,
     handleBootstrapInitialScrollLayoutChange,
 } from "../../src/core/bootstrapInitialScroll";
+import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { installFakeClock } from "../helpers/webScrollHarness";
 
 describe("bootstrapInitialScroll", () => {
     let originalRequestAnimationFrame: typeof requestAnimationFrame;
@@ -28,6 +31,159 @@ describe("bootstrapInitialScroll", () => {
         Platform.OS = originalPlatform;
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
         rafHandle = 0;
+    });
+
+    for (const mode of [undefined, "negative", "inverted"] as const) {
+        for (const interrupt of [false, true]) {
+            it(`keeps measurement corrections in the logical viewport and yields to user input (RTL ${mode}, interrupt ${interrupt})`, () => {
+                Platform.OS = "web";
+                const clock = installFakeClock();
+                const data = Array.from({ length: 20 }, (_, index) => index);
+                const ctx = createMockContext(
+                    {
+                        headerSize: 0,
+                        numColumns: 1,
+                        numContainers: 20,
+                        numContainersPooled: 20,
+                        readyToRender: true,
+                        stylePaddingTop: 0,
+                    },
+                    {
+                        didContainersLayout: true,
+                        didFinishInitialScroll: true,
+                        endBuffered: 10,
+                        horizontalRTLScrollType: mode,
+                        idCache: data.map((index) => `item_${index}`),
+                        indexByKey: new Map(data.map((index) => [`item_${index}`, index])),
+                        initialScroll: { index: 5, viewPosition: 1 },
+                        initialScrollSession: { kind: "bootstrap", previousDataLength: 20 },
+                        positions: data.map((index) => index * 100),
+                        props: {
+                            data,
+                            drawDistance: 100,
+                            estimatedItemSize: 100,
+                            horizontal: !!mode,
+                            maintainVisibleContentPosition: { data: false, size: false },
+                            rtl: !!mode,
+                        },
+                        queuedInitialLayout: true,
+                        scroll: 300,
+                        scrollLength: 300,
+                        scrollPending: 300,
+                        sizes: new Map(data.map((index) => [`item_${index}`, 100])),
+                        sizesKnown: new Map(data.map((index) => [`item_${index}`, 100])),
+                        startBuffered: 1,
+                        totalSize: 2000,
+                    },
+                );
+                let rawOffset = mode === "negative" ? -300 : mode === "inverted" ? 1400 : 300;
+                const max = () => ctx.state.totalSize - 300;
+                const logicalOffset = () =>
+                    mode === "negative" ? -rawOffset : mode === "inverted" ? max() - rawOffset : rawOffset;
+                const clampRaw = (offset: number) =>
+                    mode === "negative" ? Math.max(-max(), Math.min(0, offset)) : Math.max(0, Math.min(max(), offset));
+                ctx.state.refScroller.current = {
+                    getCurrentScrollOffset: () => rawOffset,
+                    getMaxScrollOffset: max,
+                    getScrollableNode: () => ({}),
+                    scrollTo: ({ x = 0, y = 0 }) => {
+                        rawOffset = clampRaw(mode ? x : y);
+                    },
+                } as any;
+                ctx.state.scrollAdjustHandler.requestAdjust = () => {
+                    rawOffset = clampRaw(ctx.state.scroll);
+                };
+                try {
+                    // Growth below the target must not produce a scroll correction.
+                    updateItemSizesBatch(ctx, [
+                        { itemKey: "item_6", size: { height: mode ? 100 : 150, width: mode ? 150 : 100 } },
+                    ]);
+                    if (mode === "inverted") rawOffset += 50; // Browser preserves the logical offset as content grows.
+                    if (interrupt) {
+                        interruptUserScroll(ctx);
+                        rawOffset = mode === "negative" ? -200 : mode === "inverted" ? max() - 200 : 200;
+                    }
+                    clock.tick();
+                    expect(logicalOffset()).toBe(interrupt ? 200 : 300);
+                    if (interrupt) {
+                        expect(ctx.state.initialScroll).toBeUndefined();
+                        expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                    } else {
+                        expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                        // Growth above the target moves its logical offset by 50px.
+                        updateItemSizesBatch(ctx, [
+                            { itemKey: "item_4", size: { height: mode ? 100 : 150, width: mode ? 150 : 100 } },
+                        ]);
+                        if (mode === "inverted") rawOffset += 50;
+                        clock.tick();
+                        expect(logicalOffset()).toBe(350);
+                        clock.tick();
+                        expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                    }
+                } finally {
+                    ctx.state.scheduledWork.dispose();
+                    clock.restore();
+                }
+            });
+        }
+    }
+
+    it("retries a preserved end correction after silent DOM extent growth", () => {
+        Platform.OS = "web";
+        const clock = installFakeClock();
+        const data = Array.from({ length: 20 }, (_, index) => index);
+        const ctx = createMockContext(
+            { headerSize: 0, numColumns: 1, numContainers: 20, numContainersPooled: 20, readyToRender: true },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                endBuffered: 19,
+                idCache: data.map((index) => `item_${index}`),
+                indexByKey: new Map(data.map((index) => [`item_${index}`, index])),
+                initialScroll: { index: 19, viewPosition: 1 },
+                initialScrollSession: { kind: "bootstrap", previousDataLength: 20 },
+                positions: data.map((index) => index * 100),
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    maintainVisibleContentPosition: { data: false, size: false },
+                },
+                queuedInitialLayout: true,
+                scroll: 1700,
+                scrollLength: 300,
+                scrollPending: 1700,
+                sizes: new Map(data.map((index) => [`item_${index}`, 100])),
+                sizesKnown: new Map(data.map((index) => [`item_${index}`, 100])),
+                startBuffered: 1,
+                totalSize: 2000,
+            },
+        );
+        let domHeight = 2000;
+        let observed = 1700;
+        ctx.state.refScroller.current = {
+            getCurrentScrollOffset: () => observed,
+            getMaxScrollOffset: () => domHeight - 300,
+            getScrollableNode: () => ({}),
+            scrollTo: ({ y = 0 }) => {
+                observed = Math.max(0, Math.min(y, domHeight - 300));
+            },
+        } as any;
+        try {
+            updateItemSizesBatch(ctx, [{ itemKey: "item_19", size: { height: 200, width: 100 } }]);
+            clock.tick();
+            expect(observed).toBe(1700);
+            expect(ctx.state.preservedEndAnchorCorrection).toBeDefined();
+            // A clamped no-op emits no scroll event; committing height alone does not either.
+            clock.advance(64);
+            domHeight = ctx.state.totalSize;
+            clock.tick();
+            expect(observed).toBe(1800);
+            clock.tick();
+            expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+        } finally {
+            ctx.state.scheduledWork.dispose();
+            clock.restore();
+        }
     });
 
     it("resets render readiness when finished bootstrap initial scroll is replayed for arriving data", () => {

@@ -53,6 +53,7 @@ export function interruptUserScroll(ctx: StateContext) {
         ctx.scrollRequestTracker?.cancel();
         interruptMaintainScrollAtEnd(ctx);
         cancelImperativeScroll(ctx.state, "interrupted");
+        clearPreservedInitialScrollTarget(ctx.state);
         ctx.state.pendingEndMeasurements = undefined;
         ctx.state.visibleContentAnchor = undefined;
         ctx.state.scrollElementTarget = undefined;

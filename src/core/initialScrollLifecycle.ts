@@ -179,7 +179,8 @@ export function handleInitialScrollDataChange(
             dataLength,
             didDataChange,
             initialScrollAtEnd,
-            previousDataLength: previousInitialScrollDataLength,
+            // A new dataset reuses the empty-to-non-empty bootstrap handoff.
+            previousDataLength: didStartFreshData ? 0 : previousInitialScrollDataLength,
             stylePaddingEnd,
         });
         return;
