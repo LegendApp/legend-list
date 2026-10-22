@@ -158,6 +158,25 @@ describe("updateAnchoredEndSpace", () => {
         expect(onReady).toHaveBeenCalledWith({ anchorIndex: 1, anchorKey: "item_1", size: 50 });
     });
 
+    it("becomes ready when the tail is first measured at exactly its estimated size", () => {
+        const onSizeChanged = mock(() => {});
+        const onReady = mock(() => {});
+        mockState.props.anchoredEndSpace = { anchorIndex: 1, onReady, onSizeChanged };
+        mockState.props.estimatedItemSize = 80;
+        mockState.props.onItemSizeChanged = undefined;
+        mockState.didContainersLayout = true;
+        mockState.sizesKnown.delete("item_2");
+
+        maybeUpdateAnchoredEndSpace(mockCtx);
+        expect(onReady).not.toHaveBeenCalled();
+
+        updateItemSizesBatch(mockCtx, [{ itemKey: "item_2", size: { height: 80, width: 100 } }]);
+
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledWith(100);
+        expect(onReady).toHaveBeenCalledWith({ anchorIndex: 1, anchorKey: "item_1", size: 100 });
+    });
+
     it("subtracts footer size and bottom padding from the required anchored end space", () => {
         const onSizeChanged = mock(() => {});
         mockCtx.values.set("footerSize", 24);
