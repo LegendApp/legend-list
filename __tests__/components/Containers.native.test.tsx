@@ -318,7 +318,8 @@ describe("Containers native", () => {
         );
 
         const props = (toJSON() as any)?.props;
-        expect(props?.style?.opacity).toBe(0);
+        expect(props?.style?.opacity).toBeUndefined();
+        expect(props?.style?.transform).toEqual([{ translateX: -100000 }]);
         expect(props?.pointerEvents).toBe("none");
         unmount();
     });
@@ -391,7 +392,8 @@ describe("Containers native", () => {
             expect(props.horizontal).toBe(horizontal);
             expect(props.pointerEvents).toBe("none");
             expect(props.style).not.toHaveProperty(horizontal ? "width" : "height");
-            expect(props.style.opacity).toBe(0);
+            expect(props.style.opacity).toBeUndefined();
+            expect(props.style.transform).toEqual([{ [horizontal ? "translateY" : "translateX"]: -100000 }]);
 
             // The containers subtree, including its layout coordinator, mounts inside the size component.
             act(() => {
