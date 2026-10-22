@@ -130,6 +130,42 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("rechecks the end-follow threshold when it changes while the list is stationary", async () => {
+        const data = Array.from({ length: 20 }, (_, id) => ({ id: String(id) }));
+        const { LegendList } = await import("../../src/components/LegendList?props-test-follow-threshold");
+        const list = (threshold: number) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                getFixedItemSize={() => 50}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainScrollAtEndThreshold={threshold}
+                renderItem={() => null}
+            />
+        );
+        const rendered = render(list(0.01));
+        const ctx = await getContextFromRender();
+        act(() => {
+            lastListProps.onLayout({ nativeEvent: { layout: { height: 500, width: 320, x: 0, y: 0 } } });
+        });
+        await flushAsync();
+        act(() => updateScroll(ctx, 450, true));
+        expect(peek$(ctx, "isWithinMaintainScrollAtEndThreshold")).toBe(false);
+
+        rendered.rerender(list(0.1));
+        expect(peek$(ctx, "isWithinMaintainScrollAtEndThreshold")).toBe(true);
+
+        rendered.rerender(list(0.01));
+        expect(peek$(ctx, "isWithinMaintainScrollAtEndThreshold")).toBe(false);
+
+        followModule.interruptMaintainScrollAtEnd(ctx);
+        expect(ctx.state.endFollowInterrupted).toBe(true);
+        rendered.rerender(list(0.1));
+        expect(peek$(ctx, "isWithinMaintainScrollAtEndThreshold")).toBe(true);
+        expect(ctx.state.endFollowInterrupted).toBe(false);
+        rendered.unmount();
+    });
+
     for (const change of ["callback", "extraData"] as const) {
         it(`refreshes offscreen fixed-size positions when ${change} changes without MVCP`, async () => {
             const data = [{ id: "a" }, { id: "b" }, { id: "c" }];
