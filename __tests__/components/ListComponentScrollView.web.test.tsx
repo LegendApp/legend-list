@@ -1216,11 +1216,13 @@ describe("ListComponentScrollView (web)", () => {
             expect(appendChild).toHaveBeenCalledWith(styleElement);
             expect(styleElement.id).toBe("legend-list-scrollbar-axis-hidden-style");
             expect(styleElement.textContent).toContain(
-                ".legend-list-scrollbar-y-hidden::-webkit-scrollbar:vertical{width:0;display:none;}",
+                ".legend-list-scrollbar-y-hidden,.legend-list-scrollbar-x-hidden{scrollbar-width:none;}",
             );
             expect(styleElement.textContent).toContain(
-                ".legend-list-scrollbar-x-hidden::-webkit-scrollbar:horizontal{height:0;display:none;}",
+                ".legend-list-scrollbar-y-hidden::-webkit-scrollbar,.legend-list-scrollbar-x-hidden::-webkit-scrollbar{display:none;}",
             );
+            expect(styleElement.textContent).not.toContain(":vertical");
+            expect(styleElement.textContent).not.toContain(":horizontal");
         } finally {
             act(() => {
                 renderer?.unmount();
