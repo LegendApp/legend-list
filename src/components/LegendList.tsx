@@ -237,6 +237,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         alignItemsAtEnd &&
         !useAlignItemsAtEndPadding &&
         (horizontal ? contentContainerStyleBase?.minWidth == null : contentContainerStyleBase?.minHeight == null);
+    const contentContainerMinSizeStyle = horizontal
+        ? contentContainerStyleBase?.minWidth
+        : contentContainerStyleBase?.minHeight;
+    const contentContainerMinSize =
+        typeof contentContainerMinSizeStyle === "number" && Number.isFinite(contentContainerMinSizeStyle)
+            ? contentContainerMinSizeStyle
+            : undefined;
     const contentContainerStyle: ViewStyle = {
         ...contentContainerStyleBase,
         ...(alignItemsAtEnd && !useAlignItemsAtEndPadding
@@ -521,6 +528,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         anchoredEndSpaceOwner,
         animatedProps: animatedPropsInternal,
         contentContainerAlignItems: contentContainerStyle.alignItems,
+        contentContainerMinSize,
         contentInset,
         contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
         data: dataProp,
