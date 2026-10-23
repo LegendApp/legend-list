@@ -11,6 +11,12 @@
             "require": "./animated.js",
             "default": "./animated.js"
         },
+        "./infinite": {
+            "types": "./infinite.d.ts",
+            "import": "./infinite.mjs",
+            "require": "./infinite.js",
+            "default": "./infinite.js"
+        },
         "./keyboard": {
             "types": "./keyboard.d.ts",
             "import": "./keyboard.mjs",
