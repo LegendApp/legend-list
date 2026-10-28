@@ -20,6 +20,11 @@
     - Now: explicit instant end requests wait for native progress before completing, active end requests retarget as measurements settle, clamped native end requests are reissued when the native content size changes unless a replacement request is waiting, a replacement that needs no scroll releases the old instant target, Android's shrink clamp is counted once, and threshold prop changes refresh end following right away.
     - When: iOS and Android lists using `maintainScrollAtEnd` or `scrollToEnd({ animated: false })`, especially across keyboard, rotation and other viewport changes.
     - Why: the end moves while rows measure and the viewport changes, so a request fixed to its first target lands short.
+- Fix: On web, a wheel that interrupts an animated list scroll applies its delta exactly once.
+    - Before: interrupting an animated `scrollTo`, `scrollToEnd` or end follow stopped at the pre-wheel offset. Chromium lost the wheel, which near the end could let following re-arm, while WebKit and Firefox applied it natively.
+    - Now: the stop write includes a cancelable wheel's delta and cancels its native scroll. Non-cancelable wheels keep their native movement without adding it again. Deferred scroll adjustments commit from that same wheel destination, including while a replacement request waits for layout. The wheel listener is non-passive only while a list scroll is active, so idle wheel scrolling stays passive.
+    - When: web lists receiving wheel or trackpad input during an animated list scroll.
+    - Why: browsers disagree on whether such a wheel still scrolls, and a non-passive wheel listener on every list delays scrolling.
 - Fix: Container measurements are applied only to the item the container currently holds.
     - Before: after data changes, a container's measurement could arrive with a stale item index and overwrite another item's size, misplacing rows.
     - Now: native, web and batched measurements are checked against the current key index and retried after the parent's layout effects refresh it. Data changes before the first viewport also invalidate cached positions so measurement retries settle on current keys.

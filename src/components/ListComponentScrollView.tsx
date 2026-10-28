@@ -17,7 +17,7 @@ import { interruptUserScroll } from "@/core/cancelScroll";
 import { rearmEndFollowIfSettled } from "@/core/finishMaintainScrollAtEnd";
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
-import { useArr$, useStateContext } from "@/state/state";
+import { listen$, peek$, useArr$, useStateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { warnDevOnce } from "@/utils/helpers";
@@ -494,7 +494,16 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                     return false;
                 }
                 // A wheel tail that predates a command keeps its gesture owner.
-                if (explicit ? !keepsExplicitOwner : direction <= 0) interruptUserScroll(ctx);
+                // Browsers disagree on whether a wheel that interrupts a smooth scroll still applies natively
+                // (Chromium drops it, WebKit and Firefox apply it), so the stop write applies it and the native
+                // scroll is cancelled. A non-cancelable wheel still applies natively, so stop at the observed
+                // offset without adding its delta again.
+                if (
+                    (explicit ? !keepsExplicitOwner : direction <= 0) &&
+                    interruptUserScroll(ctx, isWheel && event.cancelable ? direction : 0) &&
+                    event.cancelable
+                )
+                    event.preventDefault();
                 if (isNew) state.props.onUserScroll?.();
                 return true;
             }
@@ -507,11 +516,15 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             isHorizontalRTL(ctx.state) && getNativeHorizontalRTLScrollType(ctx.state) !== "normal" ? -delta : delta;
         const onWheel = (nativeEvent: Event) => {
             const event = nativeEvent as WheelEvent;
-            const delta = horizontal ? event.deltaX || (event.shiftKey ? event.deltaY : 0) : event.deltaY;
+            const delta = normalizeWheelDelta(
+                horizontal ? event.deltaX || (event.shiftKey ? event.deltaY : 0) : event.deltaY,
+                event.deltaMode,
+                ctx.state.scrollLength,
+            );
             if (delta !== 0 && !event.ctrlKey && !event.defaultPrevented) {
                 wheelGesture = getWheelGesture(
                     wheelGesture,
-                    normalizeWheelDelta(delta, event.deltaMode, ctx.state.scrollLength),
+                    delta,
                     event.timeStamp,
                     (event as WheelEvent & { momentum?: boolean }).momentum,
                 );
@@ -600,7 +613,16 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             scrollbarPressOffset = undefined;
             if (offset !== undefined && getCurrentScrollOffset() === offset) rearmEndFollowIfSettled(ctx);
         };
-        target.addEventListener("wheel", onWheel, { passive: true });
+        // Only an active scroll can need preventDefault, so idle wheel scrolling stays passive.
+        let wheelPassive: boolean | undefined;
+        const setWheelPassive = (passive: boolean) => {
+            if (passive === wheelPassive) return;
+            if (wheelPassive !== undefined) target.removeEventListener("wheel", onWheel);
+            target.addEventListener("wheel", onWheel, { passive });
+            wheelPassive = passive;
+        };
+        setWheelPassive(!peek$(ctx, "isScrollActive"));
+        const unlistenScrollActive = listen$(ctx, "isScrollActive", (active) => setWheelPassive(!active));
         target.addEventListener("touchstart", onTouchStart, { passive: true });
         target.addEventListener("touchmove", onTouchMove, { passive: true });
         target.addEventListener("keydown", onKeyDown);
@@ -608,6 +630,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         target.addEventListener("pointerup", onPointerRelease);
         target.addEventListener("pointercancel", onPointerRelease);
         return () => {
+            unlistenScrollActive();
             target.removeEventListener("wheel", onWheel);
             target.removeEventListener("touchstart", onTouchStart);
             target.removeEventListener("touchmove", onTouchMove);

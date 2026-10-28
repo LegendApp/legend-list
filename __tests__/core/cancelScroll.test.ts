@@ -3,6 +3,7 @@ import "../setup";
 
 import { cancelScroll, interruptUserScroll } from "../../src/core/cancelScroll";
 import { setInitialScrollSession } from "../../src/core/initialScrollSession";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -55,6 +56,18 @@ describe("cancelScroll", () => {
         // The raw inverted DOM offset 100 is logical 600; stopping keeps the native position.
         expect(ctx.state.scroll).toBe(600);
         expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 100, y: 0 });
+    });
+
+    it("stops a web wheel interruption at the offset the wheel reached", () => {
+        Platform.OS = "web";
+        const { ctx, scrollTo } = createScrollingContext(
+            { animated: true, offset: 900 },
+            { horizontal: true, rtl: true },
+        );
+        ctx.state.horizontalRTLScrollType = "inverted";
+        interruptUserScroll(ctx, -100);
+        // Logical 600 minus the wheel's 100 is logical 500, raw inverted 700 - 500.
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 200, y: 0 });
     });
 
     it.each([
@@ -151,6 +164,42 @@ describe("cancelScroll", () => {
             ctx.state.scheduledWork.dispose();
         },
     );
+
+    it.each([
+        ["web", -80],
+        ["web", 0],
+        ["ios", 0],
+        ["android", 0],
+    ] as const)("releases a waiting replacement on %s user input %i", (platform, delta) => {
+        Platform.OS = platform;
+        const { ctx, scrollTo } = createScrollingContext({ animated: true, offset: 900 });
+        const resolve = mock(() => {});
+        const tracker = getScrollRequestTracker(ctx);
+        const token = tracker.start(resolve);
+        const commit = mock(() => {});
+        ctx.state.scrollAdjustHandler.commitPendingAdjust = commit;
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(tracker.isWaitingToRun()).toBe(true);
+        expect(scrollTo).not.toHaveBeenCalled();
+
+        expect(interruptUserScroll(ctx, delta)).toBe(platform === "web" && delta !== 0);
+
+        if (platform === "web") {
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+            expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: 100 + delta });
+        } else {
+            expect(scrollTo).not.toHaveBeenCalled();
+        }
+        expect(ctx.state.scroll).toBe(100 + delta);
+        expect(commit).toHaveBeenCalledTimes(1);
+        expect(resolve).toHaveBeenCalledTimes(1);
+        expect(tracker.isWaitingToRun()).toBe(false);
+        expect(tracker.isCurrent(token)).toBe(false);
+        tracker.runNow(token, resolve, () => {
+            throw new Error("cancelled replacement must not dispatch");
+        });
+        ctx.state.scheduledWork.dispose();
+    });
 
     it("commits adjustments deferred by the cancelled animation", () => {
         const { ctx } = createScrollingContext({ animated: true, offset: 900 });
