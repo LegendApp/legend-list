@@ -113,6 +113,12 @@ export default LegendListExample
 
 ---
 
+### Native scroll offsets and top insets
+
+`scrollToOffset({ offset })` and `initialScrollOffset` use raw native scroll offsets, like React Native's `ScrollView`. With a vertical iOS `contentInset.top` of `T`, the resting start is `-T`: use `scrollToOffset({ offset: -T })` or `initialScrollOffset={-T}` to request it. An explicit `0` still requests native offset `0`, subject to the reachable content bounds. Omitting the initial target starts at `-T`.
+
+`scrollToEnd()` lands at `-T` when the content plus both insets fits within the viewport. Start thresholds and `distanceFromStart` measure from this resting start.
+
 ### Sharing a scrollbar on the web
 
 React DOM lists can use an ancestor element's scrollbar with `scrollElement`:

@@ -1,6 +1,7 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { cancelScroll } from "@/core/cancelScroll";
+import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
@@ -176,9 +177,10 @@ export function createImperativeHandle(
         const observed = getObservedScrollOffset(ctx);
         const position = calculateOffsetForIndex(ctx, index) + getStartOffsetAdjustment(ctx) + (itemOffset ?? 0);
         const size = hasRegion ? (itemLength ?? 0) : (getItemSizeAtIndex(ctx, index) ?? 0) - ctx.scrollAxisGap;
-        const viewportLength = state.scrollLength - getContentInsetEnd(ctx);
-        const viewportStart = observed + (viewportMargin?.start ?? 0);
-        const viewportEnd = observed + viewportLength - (viewportMargin?.end ?? 0);
+        const insetTop = getContentInsetTop(ctx);
+        const viewportLength = state.scrollLength - insetTop - getContentInsetEnd(ctx);
+        const viewportStart = observed + insetTop + (viewportMargin?.start ?? 0);
+        const viewportEnd = observed + insetTop + viewportLength - (viewportMargin?.end ?? 0);
         if (!hasRegion && position <= viewportStart && position + size >= viewportEnd) return false;
         const above = position < viewportStart;
         const below = position + size > viewportEnd;

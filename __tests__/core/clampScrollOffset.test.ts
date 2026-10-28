@@ -66,4 +66,39 @@ describe("clampScrollOffset", () => {
     it("still clamps to zero at the lower bound", () => {
         expect(clampScrollOffset(mockCtx, -20, { viewOffset: -120 })).toBe(0);
     });
+
+    it.each([
+        { base: 60, expected: -20, native: 60, reported: 20 },
+        { base: undefined, expected: -20, native: 60, reported: 20 },
+        { base: undefined, expected: -20, native: undefined, reported: 20 },
+        { base: 60, expected: -60, native: undefined, reported: undefined },
+        { base: -60, expected: -20, native: undefined, reported: 20 },
+        { base: 60, expected: 0, native: undefined, reported: 0 },
+        { base: 60, expected: 0, native: undefined, reported: -20 },
+        { base: -60, expected: 0, native: undefined, reported: undefined },
+    ])("uses the iOS top inset without double-counting native reports: %j", ({ base, native, reported, expected }) => {
+        Platform.OS = "ios";
+        mockCtx.state.props.contentInset = base === undefined ? undefined : { bottom: 0, left: 0, right: 0, top: base };
+        mockCtx.state.nativeContentInset =
+            native === undefined ? undefined : { bottom: 0, left: 0, right: 0, top: native };
+        mockCtx.state.contentInsetOverride = reported === undefined ? undefined : { top: reported };
+        expect(clampScrollOffset(mockCtx, -1000)).toBe(expected);
+        expect(clampScrollOffset(mockCtx, -10)).toBe(Math.max(expected, -10));
+        expect(clampScrollOffset(mockCtx, 1000)).toBe(500);
+    });
+
+    it("falls back to the base top when an override only reports the bottom", () => {
+        Platform.OS = "ios";
+        mockCtx.state.props.contentInset = { bottom: 0, left: 0, right: 0, top: 60 };
+        mockCtx.state.contentInsetOverride = { bottom: 300 };
+        expect(clampScrollOffset(mockCtx, -1000)).toBe(-60);
+    });
+
+    it("keeps horizontal iOS targets at zero despite a top inset", () => {
+        Platform.OS = "ios";
+        mockCtx.state.props.horizontal = true;
+        mockCtx.state.props.contentInset = { bottom: 0, left: 40, right: 0, top: 60 };
+        mockCtx.state.contentInsetOverride = { top: 20 };
+        expect(clampScrollOffset(mockCtx, -100)).toBe(0);
+    });
 });

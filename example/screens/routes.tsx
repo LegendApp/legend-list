@@ -77,6 +77,7 @@ import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
 import ScrollRegressionQaFixture from "~/screens/fixtures/scroll-regression-qa";
 import SectionListFixedSizeFixture from "~/screens/fixtures/section-list-fixed-size";
 import StatusBarFollowFixture from "~/screens/fixtures/status-bar-follow";
+import TopInsetFixture from "~/screens/fixtures/top-inset";
 import VideoFeedFixture from "~/screens/fixtures/video-feed";
 import AiChatFixture from "./fixtures/ai-chat";
 
@@ -165,6 +166,16 @@ const DEBUGGING_ROUTE: RouteDefinition = {
 };
 
 export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
+    {
+        component: TopInsetFixture,
+        description:
+            "Checks index and region targets under a translucent header; add ?initial=1 for initialScrollIndex.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "top-inset",
+        title: "Top Inset",
+    },
     {
         component: StatusBarFollowFixture,
         description: "Tests end-follow ownership after an iOS status-bar tap scrolls to the top.",

@@ -212,6 +212,6 @@ export function scrollTo(
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });
     } else {
-        state.scroll = offset;
+        state.scroll = targetOffset;
     }
 }

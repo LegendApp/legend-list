@@ -1,3 +1,4 @@
+import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
@@ -33,11 +34,10 @@ export function calculateOffsetWithOffsetPosition(
 
     // Header/footer adjustments are index-based. Absolute offsets (for scrollToOffset
     // and MVCP/requestAdjust paths) should not be shifted by header/footer sizes.
+    // Index targets also align below the top inset that iOS scrolls under.
+    const leadingInset = index !== undefined ? getContentInsetTop(ctx) : 0;
     if (index !== undefined) {
-        const startOffsetAdjustment = getStartOffsetAdjustment(ctx);
-        if (startOffsetAdjustment) {
-            offset += startOffsetAdjustment;
-        }
+        offset += getStartOffsetAdjustment(ctx) - leadingInset;
     }
 
     if (viewPosition !== undefined && index !== undefined) {
@@ -53,7 +53,7 @@ export function calculateOffsetWithOffsetPosition(
         const itemSize = Math.max(0, measuredItemSize - (isOutOfBounds ? 0 : ctx.scrollAxisGap));
         const trailingInset = getContentInsetEnd(ctx);
 
-        const availableSpace = state.scrollLength - trailingInset - itemSize;
+        const availableSpace = state.scrollLength - leadingInset - trailingInset - itemSize;
         offset += getViewPositionOffset(availableSpace, viewPosition, viewPositionFallback);
 
         // Aligns the item itself. End-of-content targets carry padding and footer

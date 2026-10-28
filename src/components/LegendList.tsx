@@ -26,6 +26,7 @@ import { interruptUserScroll } from "@/core/cancelScroll";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
+import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { resetContainerLayoutReady } from "@/core/containerLayoutReady";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
@@ -277,8 +278,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !hasInitialScrollIndex &&
         !hasInitialScrollOffset &&
         isHorizontalRTLProps({ horizontal, rtl });
+    const initialInsetTop = Platform.OS === "ios" && !horizontal ? Math.max(0, contentInset?.top ?? 0) : 0;
     const initialScrollUsesOffsetOnly =
-        !initialScrollAtEnd && !hasInitialScrollIndex && (hasInitialScrollOffset || shouldInitializeHorizontalRTL);
+        !initialScrollAtEnd &&
+        !hasInitialScrollIndex &&
+        (hasInitialScrollOffset || shouldInitializeHorizontalRTL || initialInsetTop > 0);
     const usesBootstrapInitialScroll = initialScrollAtEnd || hasInitialScrollIndex;
     const shouldBottomAlignNumericInitialScrollIndex =
         typeof initialScrollIndexProp === "number" &&
@@ -323,7 +327,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
           : initialScrollUsesOffsetOnly
             ? {
-                  contentOffset: initialScrollOffsetProp ?? 0,
+                  contentOffset: initialScrollOffsetProp ?? -initialInsetTop,
                   index: 0,
                   viewOffset: 0,
               }
@@ -617,9 +621,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             prevPaddingTop !== undefined &&
             Platform.OS === "ios"
         ) {
-            // Scroll can be negative if being animated and that can break the pendingDiff
-            if (state.scroll < 0) {
-                paddingDiff += state.scroll;
+            // Scroll can overscroll the start if being animated and that can break the pendingDiff.
+            // The start is the -contentInset.top resting offset, not native zero.
+            const distanceFromStart = state.scroll + getContentInsetTop(ctx);
+            if (distanceFromStart < 0) {
+                paddingDiff += distanceFromStart;
             }
 
             requestAdjust(ctx, paddingDiff);
@@ -802,6 +808,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(
         () => initializeStateVars(true),
         [
+            contentInset?.bottom,
+            contentInset?.top,
             dataKey,
             dataVersion,
             memoizedLastItemKeys.join(","),
@@ -812,6 +820,39 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             useAlignItemsAtEndPadding,
         ],
     );
+
+    // UIKit leaves contentOffset alone when contentInset changes, so a list resting at its
+    // start would end up under (or away from) a new top inset. Keep it at the new start.
+    const previousContentInsetTop = useRef(contentInset?.top);
+    useLayoutEffect(() => {
+        const prevTop = Math.max(0, previousContentInsetTop.current ?? 0);
+        const didChange = previousContentInsetTop.current !== contentInset?.top;
+        previousContentInsetTop.current = contentInset?.top;
+        if (
+            didChange &&
+            Platform.OS === "ios" &&
+            !horizontal &&
+            !state.contentInsetOverride &&
+            !state.isDragging &&
+            !state.isMomentumScrolling
+        ) {
+            const offset = -getContentInsetTop(ctx);
+            if (
+                !state.didFinishInitialScroll &&
+                !initialScrollAtEnd &&
+                !hasInitialScrollIndex &&
+                !hasInitialScrollOffset &&
+                state.initialScrollSession?.kind === "offset" &&
+                state.initialScroll &&
+                (!state.scrollingTo || state.scrollingTo.isInitialScroll)
+            ) {
+                state.initialScroll.contentOffset = offset;
+                advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
+            } else if (state.didFinishInitialScroll && !state.scrollingTo && Math.abs(state.scroll + prevTop) < 1) {
+                scrollTo(ctx, { animated: false, offset });
+            }
+        }
+    }, [contentInset?.top]);
 
     useLayoutEffect(() => {
         if (!maintainScrollAtEndConfig) {

@@ -9,6 +9,7 @@ import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
+import { updateScroll } from "../../src/core/updateScroll";
 import { Platform } from "../../src/platform/Platform";
 import { peek$, type StateContext, set$ } from "../../src/state/state";
 import type { InternalState, LegendListInternalRef } from "../../src/types.internal";
@@ -21,6 +22,7 @@ let lastListProps: any;
 let WebContainers: React.ComponentType<any> | undefined;
 let renderWebContainersInListComponent = false;
 const handlerInstances: ScrollAdjustHandler[] = [];
+const layoutEvent = { nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } } };
 
 function registerLegendListBootstrapMocks() {
     mock.module("@/components/ListComponent", () => ({
@@ -188,6 +190,69 @@ afterEach(() => {
 });
 
 describe("LegendList bootstrap initial scroll", () => {
+    it.each(["before layout", "native seed", "initial request"])(
+        "retargets the resting start inset during %s",
+        async (stage) => {
+            const { LegendList } = await import("../../src/components/LegendList?pending-resting-inset");
+            const data = Array.from({ length: 43 }, (_, id) => ({ id }));
+            const list = (top: number) => (
+                <LegendList
+                    contentInset={{ bottom: 0, left: 0, right: 0, top }}
+                    data={data}
+                    getFixedItemSize={() => 80}
+                    renderItem={() => null}
+                />
+            );
+            const rendered = render(list(62));
+            const ctx = await getContextFromRender();
+            const state = ctx.state;
+            const writes = installRecordingScroller(state);
+            expect(state.didFinishInitialScroll).not.toBe(true);
+            expect(resolveInitialScrollOffset(ctx, state.initialScroll!)).toBe(-62);
+            if (stage === "native seed") act(() => updateScroll(ctx, -62, true, { fromNativeScrollEvent: true }));
+            if (stage === "initial request") {
+                act(() => lastListProps.onLayout(layoutEvent));
+                expect(state.scrollingTo?.isInitialScroll).toBe(true);
+            }
+
+            rendered.rerender(list(116));
+            expect(resolveInitialScrollOffset(ctx, state.initialScroll!)).toBe(-116);
+            act(() => lastListProps.onLayout(layoutEvent));
+            await flushAsync();
+            expect(writes.at(-1)?.y).toBe(-116);
+            act(() => updateScroll(ctx, -116, true, { fromNativeScrollEvent: true }));
+            expect(state.scroll).toBe(-116);
+            expect(peek$(ctx, "isAtStart")).toBe(true);
+            rendered.unmount();
+        },
+    );
+
+    it.each([0, -62, 120])(
+        "preserves an explicit raw initial offset %s across a mount inset change",
+        async (offset) => {
+            const { LegendList } = await import("../../src/components/LegendList?pending-explicit-inset");
+            const data = Array.from({ length: 43 }, (_, id) => ({ id }));
+            const list = (top: number) => (
+                <LegendList
+                    contentInset={{ bottom: 0, left: 0, right: 0, top }}
+                    data={data}
+                    getFixedItemSize={() => 80}
+                    initialScrollOffset={offset}
+                    renderItem={() => null}
+                />
+            );
+            const rendered = render(list(62));
+            const ctx = await getContextFromRender();
+            const writes = installRecordingScroller(ctx.state);
+            rendered.rerender(list(116));
+            act(() => lastListProps.onLayout(layoutEvent));
+            await flushAsync();
+            expect(writes.every(({ y }) => y === offset)).toBe(true);
+            expect(ctx.state.scroll).toBe(offset);
+            rendered.unmount();
+        },
+    );
+
     it("resumes end following when a suspended list reappears with appended data", async () => {
         Platform.OS = "web";
         const { LegendList } = await import("../../src/components/LegendList?end-follow-reappear");

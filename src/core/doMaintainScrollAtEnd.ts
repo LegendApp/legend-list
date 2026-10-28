@@ -1,3 +1,4 @@
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
@@ -122,8 +123,8 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
     // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
     const contentSize = getContentSize(ctx);
     if (contentSize < state.scrollLength) {
-        // If content fits within the viewport, we should be at scroll 0.
-        state.scroll = 0;
+        // Keep short content at its reachable end, including the negative iOS inset range.
+        state.scroll = clampScrollOffset(ctx, 0);
     }
 
     if (

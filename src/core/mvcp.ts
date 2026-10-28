@@ -1,6 +1,6 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { getViewPositionOffset } from "@/core/calculateOffsetWithOffsetPosition";
-import { getScrollRangeEnd } from "@/core/clampScrollOffset";
+import { getContentInsetTop, getScrollRangeEnd } from "@/core/clampScrollOffset";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
@@ -433,7 +433,7 @@ export function prepareMVCP(
                 const prevSize = scrollingTo.itemSize;
                 if (prevSize !== undefined && newSize !== prevSize) {
                     if (scrollingTo.viewPositionFallback) {
-                        const viewport = state.scrollLength - getContentInsetEnd(ctx);
+                        const viewport = state.scrollLength - getContentInsetTop(ctx) - getContentInsetEnd(ctx);
                         const previousSpace = viewport - Math.max(0, prevSize - ctx.scrollAxisGap);
                         const nextSpace = viewport - Math.max(0, newSize - ctx.scrollAxisGap);
                         positionDiff +=

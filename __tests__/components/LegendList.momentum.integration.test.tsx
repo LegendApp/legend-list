@@ -185,6 +185,70 @@ describe.each([false, true])("native end following during momentum (screen reade
             clock = undefined;
         });
 
+        it.each([690, 500])("recovers dropped momentum-end across Suspense at offset %s", async (offset) => {
+            const list = await mountFollowingList();
+            try {
+                const ctx = list.context();
+                const { state } = ctx;
+                list.beginDrag();
+                list.scroll(offset);
+                list.endDrag();
+                list.beginMomentum();
+                await list.append();
+                expect(list.writes).toEqual([]);
+                expect(state.isMomentumScrolling).toBe(true);
+
+                list.setSuspended(true);
+                expect(state.isUnmounted).toBe(true);
+                expect(peek$(ctx, "isScrollActive")).toBe(true);
+                // A hidden list must not dispatch even after the recovery window.
+                await advanceTime(600);
+                expect(list.writes).toEqual([]);
+                list.setSuspended(false);
+                expect(list.context()).toBe(ctx);
+                expect(state.isUnmounted).toBe(false);
+                expect(peek$(ctx, "isScrollActive")).toBe(true);
+
+                // No momentum-end arrives. Near-end growth must recover, while a
+                // reader who flicked away must retain their position.
+                await advanceTime(100);
+                await flushFrames();
+                expect(state.isMomentumScrolling).toBe(false);
+                expect(peek$(ctx, "isScrollActive")).toBe(offset === 690);
+                expect(list.writes.map(({ y }) => y)).toEqual(offset === 690 ? [750] : []);
+                expect(list.events).toEqual(["dragBegin", "dragEnd", "momentumBegin"]);
+                if (offset === 690) list.scroll(750);
+                await flushFrames();
+                expect(peek$(ctx, "isScrollActive")).toBe(false);
+                list.writes.length = 0;
+                await list.append();
+                expect(list.writes.map(({ y }) => y)).toEqual(offset === 690 ? [800] : []);
+            } finally {
+                list.unmount();
+            }
+        });
+
+        it.each([0, 150])("follows 150px growth after momentum begins %sms after release", async (delay) => {
+            const list = await mountFollowingList();
+            try {
+                list.beginDrag();
+                list.scroll(690);
+                list.endDrag();
+                if (delay) {
+                    await advanceTime(delay);
+                }
+                expect(list.writes).toEqual([]);
+                list.beginMomentum();
+                await list.append(3);
+                expect(list.writes.map(({ y }) => y)).toEqual(delay ? [850] : []);
+                list.endMomentum(690);
+                await flushFrames();
+                expect(list.writes.map(({ y }) => y)).toEqual([850]);
+            } finally {
+                list.unmount();
+            }
+        });
+
         it.each(["late-away-delivered", "late-away-dropped", "late-hidden-dropped"])(
             "preserves the settled reader outcome for %s",
             async (scenario) => {
@@ -950,56 +1014,6 @@ describe.each([false, true])("native end following during momentum (screen reade
         },
     );
 
-    it.each([690, 500])("recovers dropped momentum-end across Suspense at offset %s", async (offset) => {
-        const list = await mountFollowingList();
-        try {
-            const ctx = list.context();
-            const { state } = ctx;
-            list.beginDrag();
-            list.scroll(offset);
-            list.endDrag();
-            list.beginMomentum();
-            await list.append();
-            expect(list.writes).toEqual([]);
-            expect(state.isMomentumScrolling).toBe(true);
-
-            list.setSuspended(true);
-            expect(state.isUnmounted).toBe(true);
-            expect(peek$(ctx, "isScrollActive")).toBe(true);
-            // A hidden list must not dispatch even after the recovery window.
-            await act(async () => {
-                await new Promise((resolve) => setTimeout(resolve, 600));
-            });
-            expect(list.writes).toEqual([]);
-            list.setSuspended(false);
-            expect(list.context()).toBe(ctx);
-            expect(state.isUnmounted).toBe(false);
-            expect(peek$(ctx, "isScrollActive")).toBe(true);
-
-            // No momentum-end arrives. Near-end growth must recover, while a
-            // reader who flicked away must retain their position.
-            const deadline = Date.now() + 3000;
-            while (state.isMomentumScrolling && Date.now() < deadline) {
-                await act(async () => {
-                    await new Promise((resolve) => setTimeout(resolve, 25));
-                });
-            }
-            await flushFrames();
-            expect(state.isMomentumScrolling).toBe(false);
-            expect(peek$(ctx, "isScrollActive")).toBe(offset === 690);
-            expect(list.writes.map(({ y }) => y)).toEqual(offset === 690 ? [750] : []);
-            expect(list.events).toEqual(["dragBegin", "dragEnd", "momentumBegin"]);
-            if (offset === 690) list.scroll(750);
-            await flushFrames();
-            expect(peek$(ctx, "isScrollActive")).toBe(false);
-            list.writes.length = 0;
-            await list.append();
-            expect(list.writes.map(({ y }) => y)).toEqual(offset === 690 ? [800] : []);
-        } finally {
-            list.unmount();
-        }
-    });
-
     it("follows after a cancelled request and dropped momentum-end", async () => {
         const list = await mountFollowingList();
         act(() => {
@@ -1093,29 +1107,6 @@ describe.each([false, true])("native end following during momentum (screen reade
             await list.append();
             expect(list.writes).toEqual([]);
             expect(list.ref.current!.getState().scroll).toBe(400);
-        } finally {
-            list.unmount();
-        }
-    });
-
-    it.each([0, 150])("follows 150px growth after momentum begins %sms after release", async (delay) => {
-        const list = await mountFollowingList();
-        try {
-            list.beginDrag();
-            list.scroll(690);
-            list.endDrag();
-            if (delay) {
-                await act(async () => {
-                    await new Promise((resolve) => setTimeout(resolve, delay));
-                });
-            }
-            expect(list.writes).toEqual([]);
-            list.beginMomentum();
-            await list.append(3);
-            expect(list.writes.map(({ y }) => y)).toEqual(delay ? [850] : []);
-            list.endMomentum(690);
-            await flushFrames();
-            expect(list.writes.map(({ y }) => y)).toEqual([850]);
         } finally {
             list.unmount();
         }

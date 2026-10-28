@@ -14,6 +14,7 @@ import * as calculateModule from "../../src/core/calculateItemsInView";
 import * as allocationModule from "../../src/core/doInitialAllocateContainers";
 import * as followModule from "../../src/core/doMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
@@ -2495,4 +2496,234 @@ describe("LegendList props behavior", () => {
         second.unmount();
         expect(removed[1]).toHaveBeenCalledTimes(1);
     });
+    it("recomputes alignItemsAtEnd padding when the iOS top inset prop changes", async () => {
+        const previous = Platform.OS;
+        Platform.OS = "ios";
+        try {
+            const { LegendList } = await import("../../src/components/LegendList?align-end-top-inset");
+            const data = [{ id: "a" }, { id: "b" }];
+            const list = (top: number) => (
+                <LegendList
+                    alignItemsAtEnd
+                    contentInset={{ bottom: 0, left: 0, right: 0, top }}
+                    data={data}
+                    getFixedItemSize={() => 20}
+                    keyExtractor={(item) => item.id}
+                    renderItem={() => null}
+                />
+            );
+            const rendered = render(list(62));
+            act(() => lastListProps.onLayout(layoutEvent));
+            await flushAsync();
+            const ctx = await getContextFromRender();
+            expect(peek$(ctx, "alignItemsAtEndPadding")).toBe(200 - 40 - 62);
+
+            rendered.rerender(list(116));
+            await flushAsync();
+            expect(peek$(ctx, "alignItemsAtEndPadding")).toBe(200 - 40 - 116);
+            rendered.unmount();
+        } finally {
+            Platform.OS = previous;
+        }
+    });
+
+    const startAnchorCases = [
+        { name: "re-anchors an iOS list resting at its start", reanchor: true },
+        { alignItemsAtEnd: true, name: "re-anchors a short alignItemsAtEnd list", reanchor: true },
+        { name: "leaves a list in the middle alone", scroll: 300 },
+        { dragging: true, name: "leaves a dragging list alone" },
+        { momentum: true, name: "leaves a momentum-scrolling list alone" },
+        { name: "leaves a list with a scroll in flight alone", scrollingTo: true },
+        { horizontal: true, name: "leaves a horizontal list alone" },
+        { name: "leaves a top inset override alone", override: { top: 96 } },
+        { name: "leaves a bottom inset override alone", override: { bottom: 120 } },
+        { name: "leaves Android alone", platform: "android" as const, scroll: 0 },
+        { name: "leaves web alone", platform: "web" as const, scroll: 0 },
+    ];
+    for (const [before, after] of [
+        [62, 116],
+        [116, 62],
+        [62, 0],
+        [0, 96],
+    ]) {
+        for (const testCase of startAnchorCases) {
+            it(`${testCase.name} when the top inset prop changes ${before} -> ${after}`, async () => {
+                const previous = Platform.OS;
+                Platform.OS = testCase.platform ?? "ios";
+                try {
+                    const { LegendList } = await import(
+                        `../../src/components/LegendList?start-anchor-${testCase.name}`
+                    );
+                    const data = Array.from({ length: testCase.alignItemsAtEnd ? 2 : 50 }, (_, id) => ({ id }));
+                    const list = (top: number) => (
+                        <LegendList
+                            alignItemsAtEnd={testCase.alignItemsAtEnd}
+                            contentInset={{ bottom: 0, left: 0, right: 0, top }}
+                            data={data}
+                            getFixedItemSize={() => 20}
+                            horizontal={testCase.horizontal}
+                            keyExtractor={(item: { id: number }) => String(item.id)}
+                            renderItem={() => null}
+                        />
+                    );
+                    const rendered = render(list(before));
+                    act(() => lastListProps.onLayout(layoutEvent));
+                    await flushAsync();
+                    const ctx = await getContextFromRender();
+                    expect(scrollToCalls.filter((call) => !call.isInitialScroll)).toEqual([]);
+                    ctx.state.didFinishInitialScroll = true;
+                    ctx.state.contentInsetOverride = testCase.override;
+                    ctx.state.isDragging = testCase.dragging;
+                    ctx.state.isMomentumScrolling = testCase.momentum;
+                    ctx.state.scroll = testCase.scroll ?? -before;
+                    if (testCase.scrollingTo) ctx.state.scrollingTo = { animated: true, offset: 200 } as any;
+                    scrollToCalls = [];
+
+                    rendered.rerender(list(after));
+                    await flushAsync();
+                    expect(scrollToCalls.map((call) => call.offset)).toEqual(testCase.reanchor ? [-after] : []);
+                    if (!testCase.reanchor) expect(ctx.state.scroll).toBe(testCase.scroll ?? -before);
+                    if (testCase.alignItemsAtEnd) {
+                        expect(peek$(ctx, "alignItemsAtEndPadding")).toBe(Math.max(0, 200 - 40 - after));
+                    }
+                    rendered.unmount();
+                } finally {
+                    Platform.OS = previous;
+                }
+            });
+        }
+    }
+    it.each([
+        { expected: 24, inset: 116, name: "resting at the top inset start", scroll: -116 },
+        { expected: -6, inset: 116, name: "overscrolled 30 past the top inset start", scroll: -146 },
+        { expected: 24, inset: 0, name: "resting at zero without an inset", scroll: 0 },
+        { expected: -6, inset: 0, name: "overscrolled 30 without an inset", scroll: -30 },
+    ])("compensates an iOS paddingTop change by its overscroll only while $name", async (testCase) => {
+        Platform.OS = "ios";
+        const { LegendList } = await import("../../src/components/LegendList?ios-padding-top-inset");
+        const data = Array.from({ length: 50 }, (_, id) => ({ id }));
+        const list = (paddingTop: number) => (
+            <LegendList
+                contentContainerStyle={{ paddingTop }}
+                contentInset={{ bottom: 0, left: 0, right: 0, top: testCase.inset }}
+                data={data}
+                getFixedItemSize={() => 20}
+                keyExtractor={(item: { id: number }) => String(item.id)}
+                renderItem={() => null}
+            />
+        );
+        const rendered = render(list(0));
+        act(() => lastListProps.onLayout(layoutEvent));
+        await flushAsync();
+        const ctx = await getContextFromRender();
+        ctx.state.scroll = testCase.scroll;
+        requestAdjustCalls = [];
+
+        rendered.rerender(list(24));
+        await flushAsync();
+        expect(requestAdjustCalls).toEqual([testCase.expected]);
+        rendered.unmount();
+    });
+
+    it.each([
+        [{}, -96],
+        [{ initialScrollIndex: 0 }, -96],
+        [{ initialScrollIndex: 3 }, 204],
+        [{ initialScrollIndex: { index: 3, viewOffset: 24 } }, 180],
+        [{ initialScrollOffset: -96 }, -96],
+        [{ initialScrollOffset: 0 }, 0],
+        [{ initialScrollOffset: 120 }, 120],
+        [{ initialScrollAtEnd: true }, 800],
+    ])("seeds an iOS initial target %j at exactly %i", async (initialProps, expected) => {
+        Platform.OS = "ios";
+        const { LegendList } = await import("../../src/components/LegendList?top-inset-initial-targets");
+        const rendered = render(
+            <LegendList
+                contentInset={{ bottom: 0, left: 0, right: 0, top: 96 }}
+                data={Array.from({ length: 10 }, (_, id) => ({ id }))}
+                getFixedItemSize={() => 100}
+                renderItem={() => null}
+                {...initialProps}
+            />,
+        );
+        const ctx = await getContextFromRender();
+        // The native initial contentOffset is seeded before the first scroll event.
+        if (!("initialScrollAtEnd" in initialProps)) expect(lastListProps.initialContentOffset).toBe(expected);
+        act(() => lastListProps.onLayout(layoutEvent));
+        await flushAsync();
+        if ("initialScrollAtEnd" in initialProps)
+            expect(resolveInitialScrollOffset(ctx, ctx.state.initialScroll!)).toBe(expected);
+        rendered.unmount();
+    });
+
+    it("mounts empty iOS data at the resting top inset offset", async () => {
+        Platform.OS = "ios";
+        const { LegendList } = await import("../../src/components/LegendList?empty-top-inset-mount");
+        const rendered = render(
+            <LegendList contentInset={{ bottom: 0, left: 0, right: 0, top: 96 }} data={[]} renderItem={() => null} />,
+        );
+        expect(lastListProps.initialContentOffset).toBe(-96);
+        const ctx = await getContextFromRender();
+        act(() => lastListProps.onLayout(layoutEvent));
+        await flushAsync();
+        expect(scrollToCalls).toContainEqual(expect.objectContaining({ isInitialScroll: true, offset: -96 }));
+        act(() => updateScroll(ctx, lastListProps.initialContentOffset, true, { fromNativeScrollEvent: true }));
+        expect(ctx.state.scroll).toBe(-96);
+        expect(ctx.state.positions).toEqual([]);
+        rendered.unmount();
+    });
+
+    it.each([false, true])("keeps inset geometry after dataset replacement (initially empty: %s)", async (empty) => {
+        Platform.OS = "ios";
+        const { LegendList } = await import("../../src/components/LegendList?top-inset-data-replace");
+        const first = [{ id: "a" }, { id: "b" }];
+        const replacement = [{ id: "c" }, { id: "d" }];
+        const list = (data: typeof first) => (
+            <LegendList
+                alignItemsAtEnd
+                contentInset={{ bottom: 24, left: 0, right: 0, top: 96 }}
+                data={data}
+                getFixedItemSize={() => 20}
+                keyExtractor={(item) => item.id}
+                renderItem={() => null}
+            />
+        );
+        const rendered = render(list(empty ? [] : first));
+        act(() => lastListProps.onLayout(layoutEvent));
+        await flushAsync();
+        const ctx = await getContextFromRender();
+        ctx.state.scroll = -96;
+        rendered.rerender(list(replacement));
+        await flushAsync();
+        expect(peek$(ctx, "alignItemsAtEndPadding")).toBe(40);
+        expect(ctx.state.scroll).toBe(-96);
+        expect(ctx.state.positions).toEqual([0, 20]);
+        rendered.unmount();
+    });
+
+    it.each(["never", "automatic", "always"] as const)(
+        "forwards iOS adjustment mode %s without changing explicit index targets",
+        async (behavior) => {
+            Platform.OS = "ios";
+            const { LegendList } = await import("../../src/react-native?top-inset-adjustment");
+            const rendered = render(
+                <LegendList
+                    automaticallyAdjustContentInsets={behavior === "automatic"}
+                    contentInset={{ bottom: 0, left: 0, right: 0, top: 96 }}
+                    contentInsetAdjustmentBehavior={behavior}
+                    data={[1, 2]}
+                    getFixedItemSize={() => 100}
+                    initialScrollIndex={{ index: 1, viewPosition: 0 }}
+                    renderItem={() => null}
+                    stickyHeaderIndices={[0]}
+                />,
+            );
+            const ctx = await getContextFromRender();
+            expect(lastListProps.contentInsetAdjustmentBehavior).toBe(behavior);
+            expect(lastListProps.automaticallyAdjustContentInsets).toBe(behavior === "automatic");
+            expect(lastListProps.initialContentOffset).toBe(4);
+            expect(ctx.state.props.stickyHeaderIndicesArr).toEqual([0]);
+            rendered.unmount();
+        },
+    );
 });
