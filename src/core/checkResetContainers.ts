@@ -30,6 +30,8 @@ export function checkResetContainers(
         state.scrollForNextCalculateItemsInView = undefined;
     }
 
+    // Keep data invalidated if calculation must wait for the first viewport.
+    state.positionsAreCurrent = false;
     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
     if (state.pendingEndMeasurements?.size) {

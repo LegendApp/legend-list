@@ -1,6 +1,6 @@
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { setContainerLayoutBaseline } from "@/core/containerLayoutBaseline";
-import { type ItemSizeMeasurement, updateItemSizesBatch } from "@/core/updateItemSizes";
+import { type ItemSizeMeasurement, isContainerItemCurrent, updateItemSizesBatch } from "@/core/updateItemSizes";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
@@ -20,7 +20,7 @@ export function measureContainersInLayoutEffect(
         const viewRef = ctx.viewRefs.get(containerId);
         const itemKey = peek$(ctx, `containerItemKey${containerId}`);
         const element = viewRef?.current as HTMLElement | null;
-        if (itemKey !== undefined && element) {
+        if (itemKey !== undefined && element && isContainerItemCurrent(ctx, containerId, itemKey)) {
             const generation = ctx.state.containerItemGenerations[containerId] ?? 0;
             const rect = element.getBoundingClientRect();
             // ResizeObserver uses this same border-box baseline to recognize the

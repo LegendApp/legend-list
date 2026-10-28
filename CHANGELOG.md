@@ -1,3 +1,11 @@
+## Unreleased
+
+- Fix: Container measurements are applied only to the item the container currently holds.
+    - Before: after data changes, a container's measurement could arrive with a stale item index and overwrite another item's size, misplacing rows.
+    - Now: native, web and batched measurements are checked against the current key index and retried after the parent's layout effects refresh it. Data changes before the first viewport also invalidate cached positions so measurement retries settle on current keys.
+    - When: inserts, removals, reorders or recycling while containers are measuring.
+    - Why: a size must belong to the row that was measured.
+
 ## 3.7.0
 
 - Fix: List ref methods `scrollToIndex`, `scrollToOffset`, `scrollToItem`, `scrollToKey`, `scrollToEnd`, `scrollIndexIntoView`, and `scrollItemIntoView` resolve their promises once the scroll lands, or when it is interrupted by user input, canceled or replaced, or cannot reach its target (including removed targets, dataset replacement, and unmounting), instead of resolving early or never.

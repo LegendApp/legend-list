@@ -8,6 +8,7 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { checkThresholds } from "@/utils/checkThresholds";
+import { getId } from "@/utils/getId";
 import { getItemSize, type ResolvedItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 import { isNativeLayoutNoise } from "@/utils/layoutMeasurement";
@@ -134,6 +135,21 @@ export function updateItemSizes(ctx: StateContext, measurement: ItemSizeMeasurem
     }
 }
 
+export function isContainerItemCurrent(ctx: StateContext, containerId: number, itemKey: string) {
+    if (peek$(ctx, `containerItemKey${containerId}`) !== itemKey) return false;
+    const state = ctx.state;
+    const index = state.indexByKey.get(itemKey);
+    if (index !== undefined && index < state.props.data.length && getId(state, index) === itemKey) return true;
+
+    // The parent refreshes the index map after child layout effects. Remeasure the
+    // committed slot afterward, including when recycling has changed its assignment.
+    state.scheduledWork.microtask(
+        () => ctx.containerLayoutTriggers.get(containerId)?.(),
+        `containerMeasurementRetry${containerId}`,
+    );
+    return false;
+}
+
 // Applies every measurement from one committed layout pass before recalculating positions once.
 export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMeasurement[]) {
     const state = ctx.state;
@@ -145,7 +161,7 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
         // which have no container id, bypass the current-assignment check.
         const ownsMeasuredItem =
             measurement.containerId === undefined ||
-            peek$(ctx, `containerItemKey${measurement.containerId}`) === measurement.itemKey;
+            isContainerItemCurrent(ctx, measurement.containerId, measurement.itemKey);
         if (ownsMeasuredItem) {
             const index = state.indexByKey.get(measurement.itemKey);
             const itemData = index === undefined ? undefined : state.props.data?.[index];
