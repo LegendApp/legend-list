@@ -74,6 +74,7 @@ import type {
 } from "@/types.internal";
 import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
@@ -853,6 +854,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
         }
     }, [contentInset?.top]);
+
+    useLayoutEffect(() => {
+        checkThresholds(ctx);
+    }, [maintainScrollAtEndThreshold]);
 
     useLayoutEffect(() => {
         if (!maintainScrollAtEndConfig) {

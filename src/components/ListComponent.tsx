@@ -10,7 +10,7 @@ import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
 import { interruptUserScroll } from "@/core/cancelScroll";
-import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { doMaintainScrollAtEnd, reissueClampedNativeEndScroll } from "@/core/doMaintainScrollAtEnd";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { setFooterSize, setHeaderSize } from "@/core/updateContentMetrics";
 import { useStableRenderComponent } from "@/hooks/useStableRenderComponent";
@@ -199,6 +199,15 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         [ctx, onScrollToTop],
     );
 
+    const { onContentSizeChange } = rest;
+    const onContentSizeChangeInternal = useCallback(
+        (width: number, height: number) => {
+            reissueClampedNativeEndScroll(ctx);
+            onContentSizeChange?.(width, height);
+        },
+        [ctx, onContentSizeChange],
+    );
+
     const onLayoutHeader = useCallback(
         (rect: LayoutRectangle) => {
             const size = rect[horizontal ? "width" : "height"];
@@ -225,6 +234,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     ? { onInternalScrollEnd, scrollElement, useWindowScroll }
                     : {}
                 : {
+                      onContentSizeChange: onContentSizeChangeInternal,
                       onScrollBeginDrag: onInternalScrollBeginDrag,
                       onScrollEndDrag: onInternalScrollEndDrag,
                       onScrollToTop: onScrollToTopInternal,

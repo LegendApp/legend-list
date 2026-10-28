@@ -13,6 +13,7 @@ import { spyOn } from "bun:test";
 import * as calculateModule from "../../src/core/calculateItemsInView";
 import * as allocationModule from "../../src/core/doInitialAllocateContainers";
 import * as followModule from "../../src/core/doMaintainScrollAtEnd";
+import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
@@ -136,6 +137,42 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("rechecks the end-follow threshold when it changes while the list is stationary", async () => {
+        const data = Array.from({ length: 20 }, (_, id) => ({ id: String(id) }));
+        const { LegendList } = await import("../../src/components/LegendList?props-test-follow-threshold");
+        const list = (threshold: number) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                getFixedItemSize={() => 50}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainScrollAtEndThreshold={threshold}
+                renderItem={() => null}
+            />
+        );
+        const rendered = render(list(0.01));
+        const ctx = await getContextFromRender();
+        act(() => {
+            lastListProps.onLayout({ nativeEvent: { layout: { height: 500, width: 320, x: 0, y: 0 } } });
+        });
+        await flushAsync();
+        act(() => updateScroll(ctx, 450, true));
+        expect(peek$(ctx, "isWithinMaintainScrollAtEndThreshold")).toBe(false);
+
+        rendered.rerender(list(0.1));
+        expect(peek$(ctx, "isWithinMaintainScrollAtEndThreshold")).toBe(true);
+
+        rendered.rerender(list(0.01));
+        expect(peek$(ctx, "isWithinMaintainScrollAtEndThreshold")).toBe(false);
+
+        interruptMaintainScrollAtEnd(ctx);
+        expect(ctx.state.endFollowInterrupted).toBe(true);
+        rendered.rerender(list(0.1));
+        expect(peek$(ctx, "isWithinMaintainScrollAtEndThreshold")).toBe(true);
+        expect(ctx.state.endFollowInterrupted).toBe(false);
+        rendered.unmount();
+    });
+
     it("skips data allocation for equivalent inline key extractors", async () => {
         const { LegendList } = await import("../../src/components/LegendList?inline-extractor-allocation");
         const data = [{ id: "a" }];

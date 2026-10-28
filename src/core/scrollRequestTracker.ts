@@ -65,7 +65,8 @@ export function getScrollRequestTracker(ctx: StateContext): ScrollRequestTracker
                     state.scrollAdjustHandler.commitPendingAdjust();
                 }
             }
-            if (didStartScroll === "unreachable") {
+            if (didStartScroll === "unreachable" || (!didStartScroll && state.scrollingTo)) {
+                // A visible-region request can finish without replacing the previous instant target.
                 cancelScroll(ctx);
                 return;
             }

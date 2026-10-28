@@ -462,6 +462,17 @@ export function prepareMVCP(
                 positionDiff,
             });
 
+            if (Platform.OS === "android" && !dataChanged && scrollTarget === undefined) {
+                const maxScroll = getScrollRangeEnd(ctx);
+                if (state.scroll > maxScroll + MVCP_POSITION_EPSILON) {
+                    // Android clamps shrinking content before native MVCP applies the anchor delta.
+                    const targetScroll = Math.max(0, Math.min(state.scroll + positionDiff, maxScroll));
+                    state.scroll = maxScroll;
+                    state.scrollPending = maxScroll;
+                    positionDiff = targetScroll - maxScroll;
+                }
+            }
+
             if (
                 shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)
             ) {

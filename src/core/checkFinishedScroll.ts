@@ -1,16 +1,16 @@
 import { USER_MOMENTUM_STALL_TIMEOUT_MS } from "@/constants";
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { cancelScroll } from "@/core/cancelScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getCurrentTargetOffset, isEndAlignedLastItemTarget } from "@/core/getCurrentTargetOffset";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import { clampScrollIndex } from "@/utils/clampScrollIndex";
+
+export { getCurrentTargetOffset };
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -86,32 +86,6 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     );
 }
 
-function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    return (
-        (scrollingTo.isScrollToEnd || scrollingTo.index === ctx.state.props.data.length - 1) &&
-        scrollingTo.viewPosition === 1
-    );
-}
-
-export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    const index = scrollingTo.isScrollToEnd
-        ? ctx.state.props.data.length - 1
-        : scrollingTo.index === undefined
-          ? undefined
-          : clampScrollIndex(scrollingTo.index, ctx.state.props.data.length);
-    // Web requests follow measurements; initial placement keeps its own completion policy.
-    const isRetargetingWebScroll =
-        Platform.OS === "web" && (!scrollingTo.isInitialScroll || ctx.state.initialScrollSession?.kind === "bootstrap");
-    const requestedTargetOffset =
-        index !== undefined && (isRetargetingWebScroll || isEndAlignedLastItemTarget(ctx, scrollingTo))
-            ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), { ...scrollingTo, index })
-            : isRetargetingWebScroll
-              ? calculateOffsetWithOffsetPosition(ctx, scrollingTo.offset, scrollingTo)
-              : (scrollingTo.targetOffset ?? scrollingTo.offset - (scrollingTo.viewOffset || 0));
-
-    return clampScrollOffset(ctx, requestedTargetOffset, scrollingTo);
-}
-
 function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const { state } = ctx;
     const isWebInitialScroll = Platform.OS === "web" && scrollingTo.isInitialScroll;
@@ -123,10 +97,23 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
     const adjustedTargetOffset = clampedTargetOffset + adjust;
     const diff2 = Math.abs(scroll - adjustedTargetOffset);
     const canUseAdjustedCompletion = !isWebInitialScroll && (!scrollingTo.animated || Platform.OS === "ios");
+    // Layout can predict the end before an explicit native command lands. Keep its
+    // owner until native catches up, so later measurements can correct the target.
+    const isWaitingForNativeEnd =
+        Platform.OS !== "web" &&
+        scrollingTo.isScrollToEnd &&
+        !state.maintainingScrollAtEnd &&
+        !scrollingTo.isInitialScroll &&
+        !scrollingTo.animated &&
+        state.lastNativeScroll !== undefined &&
+        state.lastNativeScroll < Math.min(clampedTargetOffset, adjustedTargetOffset) - 1;
 
     return {
         clampedTargetOffset,
-        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (canUseAdjustedCompletion && diff2 < 1)),
+        isAtResolvedTarget:
+            !isWaitingForNativeEnd &&
+            Math.abs(scroll - maxOffset) < 1 &&
+            (diff1 < 1 || (canUseAdjustedCompletion && diff2 < 1)),
     };
 }
 

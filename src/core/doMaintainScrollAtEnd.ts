@@ -1,12 +1,30 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
+import { getCurrentTargetOffset } from "@/core/getCurrentTargetOffset";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { areKnownOrFixedItemSizesAvailable } from "@/utils/getItemSize";
+
+// Native clamps an instant scroll to the content it has mounted, and a clamped scroll that cannot
+// move emits no event. Reissue the current measured end when the mounted content size changes.
+export function reissueClampedNativeEndScroll(ctx: StateContext) {
+    const state = ctx.state;
+    const target = state.scrollingTo;
+    if (target?.isScrollToEnd && !target.animated && !ctx.scrollRequestTracker?.isWaitingToRun()) {
+        const targetOffset = getCurrentTargetOffset(ctx, target);
+        // Shrinking content clamps natively. A backward retry can arrive after that
+        // clamp and undo it when native layout extends beyond the modeled end.
+        const distanceToTarget = targetOffset - (state.lastNativeScroll ?? state.scroll);
+        if (distanceToTarget > 1 || (state.lastNativeScroll === undefined && distanceToTarget < -1)) {
+            state.refScroller.current?.scrollTo({ animated: false, ...getNativeScrollPoint(ctx, targetOffset) });
+        }
+    }
+}
 
 export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?: boolean }) {
     const state = ctx.state;
@@ -109,7 +127,14 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
     if (state.scrollingTo || state.pendingScrollResolve) {
         // A content change during scrollToEnd belongs to the same end-follow intent.
         // Wait for the active request instead of letting runNowIfIdle discard it.
-        if (immediate && state.scrollingTo?.isScrollToEnd && !state.scrollingTo.animated) {
+        // Native layout and item measurements retarget too: an instant end target that moved
+        // would otherwise wait for its completion fallback before following.
+        if (
+            options?.immediate &&
+            !maintainScrollAtEnd.animated &&
+            state.scrollingTo?.isScrollToEnd &&
+            !state.scrollingTo.animated
+        ) {
             // Retarget the same end request without replacing its promise.
             state.pendingMaintainScrollAtEnd = false;
             ctx.scrollToEnd!({ animated: false });
