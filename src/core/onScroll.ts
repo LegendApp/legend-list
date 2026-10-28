@@ -5,6 +5,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { armAppScrollRearm } from "@/core/finishMaintainScrollAtEnd";
 import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
+import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
@@ -75,6 +76,9 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         ) {
             state.nativeContentInset = contentInset;
             insetChanged = true;
+            if (Platform.OS !== "web" && state.props.anchoredEndSpaceOwner === "list") {
+                maybeUpdateAnchoredEndSpace(ctx);
+            }
         }
     }
 

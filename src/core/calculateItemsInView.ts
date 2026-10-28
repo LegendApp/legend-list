@@ -27,6 +27,7 @@ import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
+import { isHorizontalRTL } from "@/utils/rtl";
 import { setDidLayout } from "@/utils/setDidLayout";
 
 const RENDER_RANGE_PROJECTION_FULL_VELOCITY = 4;
@@ -357,7 +358,9 @@ export function calculateItemsInView(
             return;
         }
 
-        let totalSize = getContentSize(ctx);
+        // Native RTL rows are positioned within the item extent, before the container minimum.
+        const includeContentContainerMinSize = Platform.OS === "web" || !isHorizontalRTL(state);
+        let totalSize = getContentSize(ctx, includeContentContainerMinSize);
         let changedContainerIds: Set<number> | undefined;
         const topPad = getStartOffsetAdjustment(ctx);
         const numColumns = peek$(ctx, "numColumns");
@@ -540,7 +543,7 @@ export function calculateItemsInView(
         // Appends can grow content size while the scroll offset is unchanged. Refresh the
         // cached content size after positions update so the next scroll-range cache reflects
         // the new tail instead of the pre-update end-of-list.
-        totalSize = getContentSize(ctx);
+        totalSize = getContentSize(ctx, includeContentContainerMinSize);
 
         if (positionRecalculationStartIndex !== undefined) {
             // Clear the invalidation marker after using it for position updates.

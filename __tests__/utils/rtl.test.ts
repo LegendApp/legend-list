@@ -3,6 +3,7 @@ import "../setup";
 
 import { I18nManager } from "react-native";
 
+import { getNativeScrollPoint } from "../../src/core/doScrollParams";
 import { handleLayout } from "../../src/core/handleLayout";
 import { onScroll } from "../../src/core/onScroll";
 import { Platform } from "../../src/platform/Platform";
@@ -48,6 +49,59 @@ describe("rtl horizontal coordinate helpers", () => {
         state.props.rtl = false;
         I18nManager.isRTL = true;
         expect(isHorizontalRTL(state)).toBe(false);
+    });
+
+    it("preserves the native minWidth origin when the end inset extends a short container", () => {
+        const ctx = createMockContext(
+            { totalSize: 350 },
+            {
+                props: {
+                    contentContainerMinSize: 861.667,
+                    contentInset: { bottom: 0, left: 86, right: 0, top: 0 },
+                    horizontal: true,
+                    rtl: true,
+                },
+                scrollLength: 874,
+            },
+        );
+        expect(getNativeScrollPoint(ctx, 0).x).toBe(0);
+        expect(getNativeScrollPoint(ctx, 861.667 + 86 - 874).x).toBe(0);
+    });
+
+    it.each(["ios", "android"] as const)("round trips a minWidth RTL offset through %s scroll events", (platform) => {
+        Platform.OS = platform;
+        const ctx = createMockContext(
+            { totalSize: 350 },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                hasScrolled: true,
+                horizontalRTLScrollType: "inverted",
+                props: {
+                    contentContainerMinSize: 1000,
+                    contentInset: { bottom: 0, left: 86, right: 0, top: 0 },
+                    horizontal: true,
+                    rtl: true,
+                },
+                queuedInitialLayout: true,
+                scrollLength: 600,
+            },
+        );
+        try {
+            const point = getNativeScrollPoint(ctx, 300);
+            onScroll(ctx, {
+                nativeEvent: {
+                    contentInset: { bottom: 0, left: platform === "ios" ? 86 : 0, right: 0, top: 0 },
+                    contentOffset: point,
+                    contentSize: { height: 100, width: 1000 },
+                    layoutMeasurement: { height: 100, width: 600 },
+                },
+            } as any);
+            expect(ctx.state.scroll).toBe(300);
+            expect(point.x).toBe(100);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
     });
 
     it("resolves style padding from the logical scroll end", () => {

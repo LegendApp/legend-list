@@ -31,6 +31,18 @@ describe("clampScrollOffset", () => {
         expect(clampScrollOffset(mockCtx, 550)).toBe(500);
     });
 
+    it.each([350, 800, 900])("adds the bottom inset after applying minHeight over %i points of content", (size) => {
+        Platform.OS = "ios";
+        mockCtx.state.totalSize = size;
+        mockCtx.state.scrollLength = 874;
+        mockCtx.state.props.contentContainerMinSize = 861.667;
+        mockCtx.state.props.contentInset = { bottom: 86, left: 0, right: 0, top: 116 };
+        const target = { clampToContentContainerMinSize: true };
+        expect(clampScrollOffset(mockCtx, 0, target)).toBe(0);
+        expect(clampScrollOffset(mockCtx, Infinity, target)).toBeCloseTo(Math.max(size, 861.667) + 86 - 874, 6);
+        expect(clampScrollOffset(mockCtx, -1000, target)).toBe(-116);
+    });
+
     it("ignores negative viewOffset only during web initial placement", () => {
         const previous = Platform.OS;
         Platform.OS = "web";

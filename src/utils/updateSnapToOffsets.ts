@@ -9,7 +9,8 @@ export function updateSnapToOffsets(ctx: StateContext) {
         props: { snapToIndices },
     } = state;
 
-    const contentSize = state.props.horizontal ? getContentSize(ctx) : undefined;
+    // Preserve snap coordinates when a container minimum adds space.
+    const contentSize = state.props.horizontal ? getContentSize(ctx, false) : undefined;
     const snapToOffsets: number[] = Array<number>(snapToIndices!.length);
     for (let i = 0; i < snapToIndices!.length; i++) {
         const idx = snapToIndices![i];

@@ -1,7 +1,7 @@
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
+import { getScrollRangeEnd } from "@/core/clampScrollOffset";
 import { setContainerLayoutBaseline } from "@/core/containerLayoutBaseline";
 import { type ItemSizeMeasurement, isContainerItemCurrent, updateItemSizesBatch } from "@/core/updateItemSizes";
-import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 
@@ -65,7 +65,7 @@ export function measureContainersInLayoutEffect(
                     );
                 });
                 const physicalMax = state.refScroller.current?.getMaxScrollOffset?.();
-                const layoutMax = Math.max(0, getContentSize(ctx) - state.scrollLength);
+                const layoutMax = getScrollRangeEnd(ctx);
                 if (
                     isCurrentViewportMeasured &&
                     isCurrentBufferMeasured &&

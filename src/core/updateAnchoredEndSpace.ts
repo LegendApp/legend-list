@@ -1,9 +1,11 @@
 import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { updateScroll } from "@/core/updateScroll";
+import { Platform } from "@/platform/Platform";
+import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getKnownOrFixedItemSize } from "@/utils/getItemSize";
-import { getStylePaddingEnd } from "@/utils/rtl";
+import { getStylePaddingEnd, isHorizontalRTL } from "@/utils/rtl";
 
 export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
     const state = ctx.state;
@@ -48,7 +50,15 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
             // Ready means we've processed this valid anchor and all tail items that affect
             // anchored end-space math have authoritative sizes.
             isReady = !hasUnknownTailSize;
-            const knownSizeBound = Math.max(0, state.scrollLength - contentBelowAnchor - anchorOffset);
+            // Exclude the previous list-owned padding from the inset that consumes this viewport.
+            const externalEndInset =
+                Platform.OS !== "web" && state.props.anchoredEndSpaceOwner === "list" && !isHorizontalRTL(state)
+                    ? getContentInsetEnd(ctx) - (previousSize || 0)
+                    : 0;
+            const knownSizeBound = Math.max(
+                0,
+                state.scrollLength - contentBelowAnchor - anchorOffset - externalEndInset,
+            );
             // Unknown rows can only consume more of the viewport, so known rows provide an upper bound.
             // Shrink stale space to that bound, but do not grow it until every tail size is authoritative.
             nextSize = hasUnknownTailSize ? Math.min(previousSize || 0, knownSizeBound) : knownSizeBound;

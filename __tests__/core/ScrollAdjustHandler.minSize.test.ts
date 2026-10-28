@@ -13,7 +13,8 @@ describe("ScrollAdjustHandler content container minimum size", () => {
     it.each([
         { expected: 300, flag: true, name: "keeps an animated scrollToOffset past the logical end" },
         { expected: 0, flag: undefined, name: "keeps unflagged offset targets on the logical max" },
-    ])("$name", async ({ expected, flag }) => {
+        { canceled: true, expected: 300, flag: undefined, name: "keeps a canceled target inside the physical range" },
+    ])("$name", async ({ expected, flag, canceled }) => {
         const { ScrollAdjustHandler } = await import("../../src/core/ScrollAdjustHandler?min-size");
         const ctx = createMockContext(
             {},
@@ -34,7 +35,12 @@ describe("ScrollAdjustHandler content container minimum size", () => {
 
         // The animation lands before completion commits the queued MVCP adjustment.
         ctx.state.scroll = 300;
-        finishScrollTo(ctx);
+        if (canceled) {
+            ctx.state.scrollingTo = undefined;
+            handler.commitPendingAdjust();
+        } else {
+            finishScrollTo(ctx);
+        }
 
         expect(ctx.state.scroll).toBe(expected);
         expect(handler.getAdjust()).toBe(expected - 300);

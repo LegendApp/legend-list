@@ -70,7 +70,7 @@ export class ScrollAdjustHandler {
                 } else {
                     // Fallback: just add pending to current scroll
                     targetScroll = clampScrollOffset(this.ctx, state.scroll + pending - superseded, {
-                        clampToContentContainerMinSize: scrollTarget?.clampToContentContainerMinSize,
+                        clampToContentContainerMinSize: !scrollTarget || scrollTarget.clampToContentContainerMinSize,
                     });
                 }
 

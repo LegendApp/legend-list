@@ -1,5 +1,6 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { getViewPositionOffset } from "@/core/calculateOffsetWithOffsetPosition";
+import { getScrollRangeEnd } from "@/core/clampScrollOffset";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
@@ -108,12 +109,13 @@ function shouldQueueNativeMVCPAdjust(
     return distanceFromEnd < Math.abs(positionDiff) - MVCP_POSITION_EPSILON;
 }
 
-function getPredictedNativeClamp(state: StateContext["state"], unresolvedAmount: number, totalSize: number) {
+function getPredictedNativeClamp(ctx: StateContext, unresolvedAmount: number, totalSize: number) {
     if (Math.abs(unresolvedAmount) <= MVCP_POSITION_EPSILON) {
         return 0;
     }
 
-    const maxScroll = Math.max(0, totalSize - state.scrollLength);
+    const state = ctx.state;
+    const maxScroll = getScrollRangeEnd(ctx, totalSize);
     const clampDelta = maxScroll - state.scroll;
 
     if (unresolvedAmount < 0) {
@@ -149,7 +151,7 @@ function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
     }
 
     const totalSize = getContentSize(ctx);
-    const predictedNativeClamp = getPredictedNativeClamp(state, pending.amount, totalSize);
+    const predictedNativeClamp = getPredictedNativeClamp(ctx, pending.amount, totalSize);
     if (Math.abs(predictedNativeClamp) <= MVCP_POSITION_EPSILON) {
         return;
     }
@@ -195,7 +197,7 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
         return true;
     }
 
-    const expectedNativeClampScroll = Math.max(0, getContentSize(ctx) - state.scrollLength);
+    const expectedNativeClampScroll = getScrollRangeEnd(ctx);
     const distanceToClamp = Math.abs(newScroll - expectedNativeClampScroll);
     const isAtExpectedNativeClamp = distanceToClamp <= NATIVE_END_CLAMP_EPSILON;
 
@@ -408,7 +410,7 @@ export function prepareMVCP(
                         } else {
                             // Content shrank while the end target was already past the new max scroll. Native will clamp
                             // to this value during layout, so keep JS state in sync and skip an extra MVCP anchor move.
-                            const maxScroll = Math.max(0, totalSize - state.scrollLength);
+                            const maxScroll = getScrollRangeEnd(ctx, totalSize);
                             state.scroll = maxScroll;
                             state.scrollPending = maxScroll;
                             diff = 0;

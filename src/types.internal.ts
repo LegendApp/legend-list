@@ -78,7 +78,7 @@ export type ScrollResolve = () => void;
 export interface ScrollTarget {
     averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
-    /** scrollToOffset can reach the contentContainerStyle minimum size, like native scroll views. */
+    /** Absolute and end targets include the contentContainerStyle minimum; item targets align to rows. */
     clampToContentContainerMinSize?: boolean;
     index?: number;
     key?: string;

@@ -70,6 +70,35 @@ describe("checkAtBottom", () => {
         });
     }
 
+    it("measures the native end beyond minHeight and the bottom inset", () => {
+        const calls: number[] = [];
+        const ctx = createMockContext(
+            { totalSize: 350 },
+            {
+                props: {
+                    contentContainerMinSize: 861.667,
+                    contentInset: { bottom: 86, left: 0, right: 0, top: 116 },
+                    data: [{ id: 1 }],
+                    maintainScrollAtEndThreshold: 0,
+                    onEndReached: ({ distanceFromEnd }) => calls.push(distanceFromEnd),
+                    onEndReachedThreshold: 0.001,
+                },
+                queuedInitialLayout: true,
+                scroll: 0,
+                scrollLength: 874,
+            },
+        );
+        checkAtBottom(ctx);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
+        expect(calls).toEqual([]);
+        ctx.state.scroll = 861.667 + 86 - 874;
+        checkAtBottom(ctx);
+        expect(ctx.values.get("isAtEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+        expect(calls).toEqual([0]);
+    });
+
     describe("platform-specific contentInset prop counting", () => {
         const originalPlatform = Platform.OS;
 

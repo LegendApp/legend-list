@@ -16,9 +16,15 @@ export function scrollToIndex(
         animated = true,
         forceScroll,
         isInitialScroll,
+        clampToContentContainerMinSize,
         viewPosition,
         viewPositionFallback,
-    }: ScrollToIndexParams & { forceScroll?: boolean; isInitialScroll?: boolean; key?: string },
+    }: ScrollToIndexParams & {
+        forceScroll?: boolean;
+        isInitialScroll?: boolean;
+        clampToContentContainerMinSize?: boolean;
+        key?: string;
+    },
 ) {
     const state = ctx.state;
     const { data } = state.props;
@@ -36,6 +42,7 @@ export function scrollToIndex(
 
     scrollTo(ctx, {
         animated,
+        clampToContentContainerMinSize,
         forceScroll,
         index,
         isInitialScroll,

@@ -98,6 +98,42 @@ describe("calculateItemsInView", () => {
         expect(mockState.endNoBuffer).toBe(11);
     });
 
+    it("keeps the visible range at a reachable offset inside minHeight", () => {
+        setupFixedSizeItems(10, 35);
+        mockState.props.contentContainerMinSize = 861.667;
+        mockState.props.contentInset = { bottom: 86, left: 0, right: 0, top: 116 };
+        mockState.scrollLength = 874;
+        mockState.scroll = 73.667;
+        calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+        expect(mockState.startNoBuffer).toBe(2);
+        expect(mockState.idsInView[0]).toBe("item_2");
+    });
+
+    it.each(["ios", "android"])("keeps native RTL rows mounted inside a container minimum (%s)", (platform) => {
+        const previousOS = Platform.OS;
+        Platform.OS = platform as typeof Platform.OS;
+        try {
+            setupFixedSizeItems(100, 35);
+            mockState.props.horizontal = true;
+            mockState.props.rtl = true;
+            mockState.props.contentContainerMinSize = 5000;
+            mockState.props.contentInset = { bottom: 0, left: 86, right: 0, top: 0 };
+            mockState.scrollLength = 600;
+            mockState.scroll = 4400;
+            mockCtx.values.set("numContainers", 28);
+
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+
+            const slot = mockState.containerItemKeys.get("item_90")!;
+            expect(slot).toBeDefined();
+            expect(mockCtx.values.get(`containerPosition${slot}`)).toBe(315);
+            expect(mockState.idsInView).toContain("item_90");
+            expect(mockState.scroll).toBe(4400);
+        } finally {
+            Platform.OS = previousOS;
+        }
+    });
+
     it("preserves grouped fractional rounding and the pending adjustment for mounted rows", () => {
         setupFixedSizeItems(30, 10);
         mockState.scroll = 100.1;

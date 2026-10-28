@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Fix: Scrolling, end thresholds and `maintainVisibleContentPosition` share one physical content size, including `contentContainerStyle` minimum sizes.
+    - Before: `scrollToOffset` included `minHeight`/`minWidth`, but `scrollToEnd`, initial placement, end thresholds and MVCP clamps used the row content only. On native, list-owned `anchoredEndSpace` counted only the larger of itself and the bottom inset.
+    - Now: these paths use the content plus in-container end space, raised to the minimum size. Native vertical and horizontal LTR insets extend that minimum, and their list-owned anchored end space adds to the content inset; horizontal RTL retains its prior overlapping inset convention. `isAtEnd`, `isNearEnd` and `onEndReached` measure from the end of the minimum size. Item targets still align to rows, while explicit raw offset requests preserve native zero for short inset content. Native horizontal RTL offset and end targets retain their prior inset coordinate basis while accounting for the minimum width. Snap offsets and native RTL row virtualization retain their prior item extent. On vertical and horizontal LTR lists, list-owned end space keeps its anchor offset when a native end inset changes, unless the container minimum itself prevents that alignment.
+    - When: lists with a `contentContainerStyle` `minHeight` or `minWidth`, or with `anchoredEndSpace` and a native bottom inset.
+    - Why: the native scroll range includes that space, so other paths clamped short of the real end or bounced.
 - Fix: Container measurements are applied only to the item the container currently holds.
     - Before: after data changes, a container's measurement could arrive with a stale item index and overwrite another item's size, misplacing rows.
     - Now: native, web and batched measurements are checked against the current key index and retried after the parent's layout effects refresh it. Data changes before the first viewport also invalidate cached positions so measurement retries settle on current keys.

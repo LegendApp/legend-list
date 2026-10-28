@@ -1,6 +1,7 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scrollTo } from "@/core/scrollTo";
@@ -30,6 +31,9 @@ export function dispatchInitialScroll(
 
     scrollTo(ctx, {
         animated: false,
+        clampToContentContainerMinSize:
+            ctx.state.initialScrollSession?.kind === "offset" ||
+            isEndOfContentTarget(target, ctx.state.props.data.length),
         forceScroll,
         index: index !== undefined && index >= 0 ? index : undefined,
         isInitialScroll: true,
@@ -71,8 +75,12 @@ export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: Scr
     }
 
     const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
-    const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
-    return clampScrollOffset(ctx, resolvedOffset, initialScroll);
+    const target = {
+        ...initialScroll,
+        clampToContentContainerMinSize: isEndOfContentTarget(initialScroll, state.props.data.length),
+    };
+    const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, target);
+    return clampScrollOffset(ctx, resolvedOffset, target);
 }
 
 function getAdvanceableInitialScrollState(

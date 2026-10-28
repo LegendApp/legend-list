@@ -1,7 +1,8 @@
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
+import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import type { ScrollIndexWithOffsetPosition } from "@/types.base";
+import type { ScrollTarget } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 
@@ -20,7 +21,7 @@ export function getViewPositionOffset(
 export function calculateOffsetWithOffsetPosition(
     ctx: StateContext,
     offsetParam: number,
-    params: Partial<ScrollIndexWithOffsetPosition>,
+    params: Partial<ScrollTarget>,
 ) {
     const state = ctx.state;
     const { index, viewOffset, viewPosition, viewPositionFallback } = params;
@@ -58,6 +59,11 @@ export function calculateOffsetWithOffsetPosition(
         // Aligns the item itself. End-of-content targets carry padding and footer
         // in viewOffset (see endOfContentTarget.ts); adding the footer here would
         // count it twice and shift top/center alignment of the last item.
+    }
+
+    // End-of-content targets include blank space imposed by the container minimum.
+    if (index !== undefined && params.clampToContentContainerMinSize) {
+        offset += getContentSize(ctx) - getContentSize(ctx, false);
     }
 
     return offset;

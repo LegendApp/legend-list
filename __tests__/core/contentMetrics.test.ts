@@ -34,6 +34,35 @@ describe("updateContentMetrics", () => {
         });
     }
 
+    it.each([
+        { adjustment: 0, anchored: 0, bottom: 86, expected: 947.667, minimum: 861.667, os: "ios" },
+        { adjustment: 0, anchored: 200, bottom: 0, expected: 1000, minimum: 1000, os: "ios" },
+        { adjustment: 0, anchored: 200, bottom: 86, expected: 1086, minimum: 1000, os: "ios" },
+        { adjustment: 86, anchored: 0, bottom: 0, expected: 700, minimum: 700, os: "web" },
+        { adjustment: 300, anchored: 250, bottom: 0, expected: 700, minimum: 700, os: "web" },
+        { adjustment: 400, anchored: 250, bottom: 0, expected: 750, minimum: 700, os: "web" },
+    ] as const)(
+        "matches the physical minimum and end space: %j",
+        ({ os, minimum, bottom, anchored, adjustment, expected }) => {
+            Platform.OS = os;
+            const ctx = createMockContext(
+                { anchoredEndSpaceSize: anchored, totalSize: 350 },
+                {
+                    props: {
+                        anchoredEndSpace: anchored ? { anchorIndex: 0 } : undefined,
+                        contentContainerMinSize: minimum,
+                        contentInset: { bottom, left: 0, right: 0, top: 0 },
+                        contentInsetEndAdjustment: adjustment,
+                    },
+                    scrollLength: 600,
+                },
+            );
+            expect(getContentSize(ctx)).toBeCloseTo(expected, 6);
+            expect(clampScrollOffset(ctx, Infinity)).toBeCloseTo(expected - 600, 6);
+            expect(createImperativeHandle(ctx).getState().contentLength).toBeCloseTo(expected, 6);
+        },
+    );
+
     for (const change of ["header", "footer", "row"] as const) {
         it(`rechecks end pagination after ${change} shrink without a scroll`, () => {
             const onEndReached = mock(() => {});
