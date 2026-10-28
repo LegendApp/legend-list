@@ -60,17 +60,17 @@ describe("reached edges lifecycle", () => {
         });
 
         it(`allows a gesture to reverse toward ${edge} before delivering a callback`, () => {
-            const { ctx, start, end } = scenario(566, 474, "both", 0.1);
-            const position = (offset: number) => (edge === "start" ? offset : 92 - offset);
+            const { ctx, start, end } = scenario(1000, 474, "both", 0.1);
+            const position = (offset: number) => (edge === "start" ? offset : 526 - offset);
             ctx.state.scroll = position(0);
             setDidLayout(ctx);
             prepareReachedEdgeForNextUserScroll(ctx);
-            updateScroll(ctx, position(20), true, { fromNativeScrollEvent: true });
+            updateScroll(ctx, position(100), true, { fromNativeScrollEvent: true });
             const calls = edge === "start" ? start : end;
             expect(calls).toEqual([0]);
-            updateScroll(ctx, position(10), true, { fromNativeScrollEvent: true });
+            updateScroll(ctx, position(40), true, { fromNativeScrollEvent: true });
             updateScroll(ctx, position(0), true, { fromNativeScrollEvent: true });
-            expect(calls).toEqual([0, 10]);
+            expect(calls).toEqual([0, 40]);
             expect(edge === "start" ? end : start).toEqual([]);
         });
     }
@@ -109,16 +109,16 @@ describe("reached edges lifecycle", () => {
         });
     }
 
-    it("recovers after a failed short gesture when a later gesture starts inside the end window", () => {
+    it("keeps the end latched when a later gesture starts inside the end window", () => {
         const { ctx, end } = scenario(566, 474, "both", 0.1);
         setDidLayout(ctx);
         prepareReachedEdgeForNextUserScroll(ctx);
         updateScroll(ctx, 20, true, { fromNativeScrollEvent: true });
         updateScroll(ctx, 80, true, { fromNativeScrollEvent: true });
-        // A separate gesture must be eligible even if a prior gesture was suppressed.
+        // The first gesture already delivered this content length at distance 12.
         prepareReachedEdgeForNextUserScroll(ctx);
         updateScroll(ctx, 92, true, { fromNativeScrollEvent: true });
-        expect(end.at(-1)).toBe(0);
+        expect(end).toEqual([12]);
     });
 
     for (const horizontal of [false, true]) {
@@ -154,7 +154,7 @@ describe("reached edges lifecycle", () => {
     });
 
     it("does not let MVCP adjustment events consume prepared gesture eligibility", () => {
-        const { ctx, start, end } = scenario();
+        const { ctx, start, end } = scenario(566, 474, "both", 0.1);
         setDidLayout(ctx);
         prepareReachedEdgeForNextUserScroll(ctx);
         ctx.state.lastScrollAdjustForHistory = 0;
@@ -162,20 +162,20 @@ describe("reached edges lifecycle", () => {
         updateScroll(ctx, 20, true, { fromNativeScrollEvent: true });
         expect(ctx.state.edgeReachedGate).toBe("prepared");
         expect(start).toHaveLength(1);
+        expect(end).toHaveLength(0);
+        updateScroll(ctx, 80, true, { fromNativeScrollEvent: true });
         expect(end).toHaveLength(1);
-        updateScroll(ctx, 21, true, { fromNativeScrollEvent: true });
-        expect(end).toHaveLength(2);
     });
 
     it("keeps a closed gate through direction reversal after notification", () => {
-        const { ctx, start, end } = scenario();
+        const { ctx, start, end } = scenario(566, 474, "both", 0.1);
         setDidLayout(ctx);
         prepareReachedEdgeForNextUserScroll(ctx);
-        updateScroll(ctx, 20, true, { fromNativeScrollEvent: true });
+        updateScroll(ctx, 80, true, { fromNativeScrollEvent: true });
         updateScroll(ctx, 10, true, { fromNativeScrollEvent: true });
-        updateScroll(ctx, 30, true, { fromNativeScrollEvent: true });
+        updateScroll(ctx, 80, true, { fromNativeScrollEvent: true });
         expect(start).toHaveLength(1);
-        expect(end).toHaveLength(2);
+        expect(end).toHaveLength(1);
     });
 
     it("does not redispatch recursively when a callback synchronously rechecks thresholds", () => {
@@ -205,22 +205,23 @@ describe("reached edges lifecycle", () => {
         });
 
         it(`does not consume prepared ${edge} intent for same-offset or programmatic events`, () => {
-            const { ctx, start, end } = scenario();
-            ctx.state.scroll = 40;
+            const { ctx, start, end } = scenario(566, 474, "both", 0.1);
+            const initialScroll = edge === "end" ? 0 : 92;
+            ctx.state.scroll = initialScroll;
             setDidLayout(ctx);
             prepareReachedEdgeForNextUserScroll(ctx);
-            updateScroll(ctx, 40, true, { fromNativeScrollEvent: true });
-            updateScroll(ctx, 41, true);
+            updateScroll(ctx, initialScroll, true, { fromNativeScrollEvent: true });
+            updateScroll(ctx, edge === "end" ? 1 : 91, true);
+            expect(start).toHaveLength(edge === "start" ? 0 : 1);
+            expect(end).toHaveLength(edge === "end" ? 0 : 1);
+            expect(ctx.state.edgeReachedGate).toBe("prepared");
+            updateScroll(ctx, edge === "end" ? 92 : 0, true, { fromNativeScrollEvent: true });
             expect(start).toHaveLength(1);
             expect(end).toHaveLength(1);
-            expect(ctx.state.edgeReachedGate).toBe("prepared");
-            updateScroll(ctx, edge === "end" ? 42 : 39, true, { fromNativeScrollEvent: true });
-            expect(start).toHaveLength(edge === "start" ? 2 : 1);
-            expect(end).toHaveLength(edge === "end" ? 2 : 1);
         });
 
-        it(`uses the latest ${edge} callback on the next gesture without notifying just for replacement`, () => {
-            const { ctx, start, end } = scenario();
+        it(`uses the latest ${edge} callback for changed data without notifying just for replacement`, () => {
+            const { ctx, start, end } = scenario(566, 474, edge);
             setDidLayout(ctx);
             const latest: number[] = [];
             if (edge === "start")
@@ -230,9 +231,15 @@ describe("reached edges lifecycle", () => {
             expect(latest).toEqual([]);
             prepareReachedEdgeForNextUserScroll(ctx);
             checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? -1 : 1));
-            expect(latest).toEqual([edge === "start" ? 0 : 92]);
-            expect(start).toEqual([0]);
-            expect(end).toEqual([92]);
+            expect(latest).toEqual([]);
+            ctx.state.totalSize += 15;
+            checkThresholds(ctx);
+            expect(latest).toEqual([]);
+            ctx.state.props.data = [...ctx.state.props.data, { id: 15 }];
+            checkThresholds(ctx);
+            expect(latest).toEqual([edge === "start" ? 0 : 107]);
+            expect(start).toEqual(edge === "start" ? [0] : []);
+            expect(end).toEqual(edge === "end" ? [92] : []);
         });
     }
     for (const edge of ["start", "end"] as const) {
@@ -320,7 +327,8 @@ describe("reached edges lifecycle", () => {
                 setDidLayout(ctx);
                 checkThresholds(ctx);
                 checkThresholds(ctx);
-                expect(start).toEqual(callbacks === "start" || callbacks === "both" ? [0] : []);
+                // Empty data dispatches neither edge.
+                expect(start).toEqual(size > 0 && (callbacks === "start" || callbacks === "both") ? [0] : []);
                 expect(end).toEqual(
                     size > 0 && size <= 711 && (callbacks === "end" || callbacks === "both") ? [size - 474] : [],
                 );
@@ -361,7 +369,7 @@ describe("reached edges lifecycle", () => {
             expect(calls).toEqual([edge === "start" ? 0 : 92]);
         });
 
-        it(`only rearms ${edge} on repeated explicit gestures with overlapping windows`, () => {
+        it(`keeps ${edge} latched across repeated explicit gestures with overlapping windows`, () => {
             const { ctx, start, end } = scenario();
             setDidLayout(ctx);
             for (let i = 0; i < 3; i++) {
@@ -371,8 +379,8 @@ describe("reached edges lifecycle", () => {
                 checkThresholds(ctx);
                 checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? -1 : 1));
             }
-            expect(start).toHaveLength(edge === "start" ? 4 : 1);
-            expect(end).toHaveLength(edge === "end" ? 4 : 1);
+            expect(start).toHaveLength(1);
+            expect(end).toHaveLength(1);
         });
     }
 
@@ -388,7 +396,7 @@ describe("reached edges lifecycle", () => {
     });
 
     for (const change of ["append", "prepend", "shrink", "resize", "inset"] as const) {
-        it(`does not duplicate a delivered event after ${change} within overlapping windows`, () => {
+        it(`reports ${change} once only if data length changes within overlapping windows`, () => {
             const { ctx, start, end } = scenario();
             setDidLayout(ctx);
             if (change === "append" || change === "prepend") {
@@ -403,8 +411,9 @@ describe("reached edges lifecycle", () => {
             else ctx.state.props.contentInset = { bottom: 100, left: 0, right: 0, top: 0 };
             checkThresholds(ctx);
             checkThresholds(ctx);
-            expect(start).toEqual([0]);
-            expect(end).toEqual([92]);
+            const dataChanged = change === "append" || change === "prepend";
+            expect(start).toEqual(dataChanged ? [0, change === "prepend" ? 50 : 0] : [0]);
+            expect(end).toEqual(dataChanged ? [92, change === "append" ? 142 : 92] : [92]);
         });
     }
 

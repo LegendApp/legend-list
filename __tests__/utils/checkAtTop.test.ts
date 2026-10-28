@@ -1,11 +1,100 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import "../setup";
 
+import { Platform } from "../../src/platform/Platform";
 import { checkAtTop } from "../../src/utils/checkAtTop";
 import { beginReachedEdgeUserScroll, prepareReachedEdgeForNextUserScroll } from "../../src/utils/edgeReachedGate";
 import { createMockContext } from "../__mocks__/createMockContext";
 
+const originalPlatform = Platform.OS;
+
 describe("checkAtTop", () => {
+    afterEach(() => {
+        Platform.OS = originalPlatform;
+    });
+
+    it.each([
+        { name: "prop", props: { contentInset: { bottom: 0, left: 0, right: 0, top: 96 } } },
+        {
+            name: "native",
+            nativeContentInset: { bottom: 0, left: 0, right: 0, top: 96 },
+            props: { contentInset: undefined },
+        },
+        {
+            contentInsetOverride: { bottom: 0, left: 0, right: 0, top: 96 },
+            name: "override",
+            props: { contentInset: { bottom: 0, left: 0, right: 0, top: 20 } },
+        },
+    ])("measures the start threshold from the resting $name inset offset", (testCase) => {
+        Platform.OS = "ios";
+        const calls: number[] = [];
+        const ctx = createMockContext(
+            {},
+            {
+                contentInsetOverride: testCase.contentInsetOverride,
+                nativeContentInset: testCase.nativeContentInset,
+                props: {
+                    data: [{ id: 1 }],
+                    ...testCase.props,
+                    onStartReached: ({ distanceFromStart }) => calls.push(distanceFromStart),
+                    onStartReachedThreshold: 0.1,
+                },
+                queuedInitialLayout: true,
+                scroll: -96,
+                scrollLength: 300,
+                totalSize: 1000,
+            },
+        );
+
+        checkAtTop(ctx);
+        expect(calls).toEqual([0]);
+        expect(ctx.values.get("isAtStart")).toBe(true);
+        expect(ctx.values.get("isNearStart")).toBe(true);
+
+        ctx.state.scroll = -60; // 36px from the start, outside the 30px threshold but inside its 39px hysteresis band.
+        ctx.state.totalSize = 1100;
+        checkAtTop(ctx);
+        expect(ctx.state.isStartReached).toBe(false);
+        expect(ctx.state.startReachedSnapshot).toMatchObject({ data: ctx.state.props.data, dataLength: 1 });
+        expect(ctx.values.get("isAtStart")).toBe(false);
+        expect(ctx.values.get("isNearStart")).toBe(false);
+
+        ctx.state.scroll = 0; // Native zero is already 96px from the resting start.
+        checkAtTop(ctx);
+        expect(ctx.values.get("isNearStart")).toBe(false);
+        expect(ctx.state.startReachedSnapshot).toBeUndefined();
+        ctx.state.scroll = -76;
+        checkAtTop(ctx);
+        expect(calls).toEqual([0, 20]);
+    });
+
+    it.each([
+        { horizontal: false, os: "android" },
+        { horizontal: false, os: "web" },
+        { horizontal: true, os: "ios" },
+    ] as const)("keeps native zero as the start on $os (horizontal: $horizontal)", ({ horizontal, os }) => {
+        Platform.OS = os;
+        const calls: number[] = [];
+        const ctx = createMockContext(
+            {},
+            {
+                props: {
+                    contentInset: { bottom: 0, left: 0, right: 0, top: 96 },
+                    data: [{ id: 1 }],
+                    horizontal,
+                    onStartReached: ({ distanceFromStart }) => calls.push(distanceFromStart),
+                    onStartReachedThreshold: 0.1,
+                },
+                queuedInitialLayout: true,
+                scroll: 0,
+                scrollLength: 300,
+            },
+        );
+        checkAtTop(ctx);
+        expect(calls).toEqual([0]);
+        expect(ctx.values.get("isAtStart")).toBe(true);
+    });
+
     it("returns early when state is null or undefined", () => {
         expect(() => checkAtTop(null as any)).not.toThrow();
         expect(() => checkAtTop(undefined as any)).not.toThrow();
@@ -48,6 +137,7 @@ describe("checkAtTop", () => {
                 initialScroll: { index: 5, viewPosition: 1 },
                 isStartReached: null,
                 props: {
+                    data: [{ id: 1 }],
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2,
                 },
@@ -99,6 +189,7 @@ describe("checkAtTop", () => {
             {
                 isStartReached: null,
                 props: {
+                    data: [{ id: 1 }],
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
@@ -133,6 +224,7 @@ describe("checkAtTop", () => {
             {
                 isStartReached: null,
                 props: {
+                    data: [{ id: 1 }],
                     onStartReached: () => {},
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
@@ -166,7 +258,7 @@ describe("checkAtTop", () => {
         expect(ctx.values.get("isNearStart")).toBe(false);
     });
 
-    it("does not re-fire inside threshold for same data epoch context changes", () => {
+    it("fires again inside threshold when the data length changes", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const ctx = createMockContext(
             {},
@@ -195,62 +287,22 @@ describe("checkAtTop", () => {
         expect(calls).toEqual([{ distanceFromStart: 20 }]);
         calls.length = 0;
 
-        // Content size/data length change inside the same data epoch -> no re-fire
+        // A content size change alone, such as a re-measure or header toggle, does not re-fire.
         state.totalSize = 800;
-        state.props.data = [{ id: 1 }, { id: 2 }];
-        state.scroll = 30;
+        state.scroll = 25;
         checkAtTop(ctx);
-
         expect(calls).toEqual([]);
-        expect(state.startReachedSnapshot).toMatchObject({
-            contentSize: 800,
-            dataLength: 2,
-        });
-    });
 
-    it("does not re-fire inside threshold after data changes", () => {
-        const calls: Array<{ distanceFromStart: number }> = [];
-        const ctx = createMockContext(
-            {},
-            {
-                isStartReached: null,
-                props: {
-                    data: [{ id: 1 }],
-                    onStartReached: (payload) => calls.push(payload),
-                    onStartReachedThreshold: 0.2, // threshold = 60
-                },
-                queuedInitialLayout: true,
-                scroll: 200,
-                scrollLength: 300,
-                totalSize: 600,
-            },
-        );
-        const state = ctx.state;
-
-        // Outside threshold: establish eligibility
-        checkAtTop(ctx);
-        expect(state.isStartReached).toBe(false);
-
-        // Enter threshold: trigger
-        state.scroll = 20;
-        checkAtTop(ctx);
-        expect(calls).toEqual([{ distanceFromStart: 20 }]);
-
-        // Data changes while still inside threshold.
-        state.dataChangeEpoch += 1;
-        state.totalSize = 800;
+        // A data length change produces another callback.
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 30;
         checkAtTop(ctx);
-        expect(calls).toEqual([{ distanceFromStart: 20 }]);
 
-        // More checks in same epoch should not re-fire.
-        state.scroll = 10;
-        checkAtTop(ctx);
-        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(calls).toEqual([{ distanceFromStart: 30 }]);
+        expect(state.startReachedSnapshot).toMatchObject({ data: state.props.data, dataLength: 2 });
     });
 
-    it("re-arms inside the hysteresis band when a new user scroll begins toward start", () => {
+    it("keeps the last content snapshot when a new gesture begins inside the threshold", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const ctx = createMockContext(
             {},
@@ -279,15 +331,15 @@ describe("checkAtTop", () => {
         state.props.data = [{ id: 10 }, { id: 1 }];
         state.scroll = 30;
         checkAtTop(ctx);
-        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 30 }]);
 
         prepareReachedEdgeForNextUserScroll(ctx);
 
-        // A new user gesture toward start can trigger the edge again.
+        // A new gesture alone cannot re-fire unchanged content.
         const allowedEdge = beginReachedEdgeUserScroll(ctx, -20);
         state.scroll = 10;
         checkAtTop(ctx, allowedEdge);
-        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 10 }]);
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 30 }]);
     });
 
     it("fires after leaving and re-entering the threshold window", () => {
@@ -297,6 +349,7 @@ describe("checkAtTop", () => {
             {
                 isStartReached: null,
                 props: {
+                    data: [{ id: 1 }],
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2, // threshold = 60
                 },
@@ -325,9 +378,7 @@ describe("checkAtTop", () => {
         expect(state.isStartReached).toBe(true);
         expect(calls).toEqual([{ distanceFromStart: 0 }, { distanceFromStart: 20 }]);
         expect(state.startReachedSnapshot).toMatchObject({
-            atThreshold: false,
             dataLength: state.props.data.length,
-            scrollPosition: 20,
         });
     });
 });

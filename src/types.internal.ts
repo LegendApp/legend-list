@@ -65,10 +65,9 @@ export interface MaintainScrollAtEndNormalized {
 }
 
 export interface ThresholdSnapshot {
-    scrollPosition: number;
-    contentSize?: number;
+    contentSize: number;
+    data: readonly unknown[];
     dataLength?: number;
-    atThreshold: boolean;
 }
 
 export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import "../setup";
 
+import { Platform } from "../../src/platform/Platform";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
 import { checkAtTop } from "../../src/utils/checkAtTop";
 import { checkThresholds } from "../../src/utils/checkThresholds";
@@ -11,7 +12,56 @@ import {
 } from "../../src/utils/edgeReachedGate";
 import { createMockContext } from "../__mocks__/createMockContext";
 
+const originalPlatform = Platform.OS;
+
 describe("reached edge gate", () => {
+    afterEach(() => {
+        Platform.OS = originalPlatform;
+    });
+
+    it.each([
+        [-120, "closed"],
+        [-65, "closed"],
+        [-30, undefined],
+    ] as const)("uses distance from the inset start to rearm at native offset %i", (scroll, expected) => {
+        Platform.OS = "ios";
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                edgeReachedGate: "closed",
+                props: {
+                    contentInset: { bottom: 0, left: 0, right: 0, top: 120 },
+                    onEndReachedThreshold: 0.2,
+                    onStartReachedThreshold: 0.2,
+                },
+                scroll,
+                scrollLength: 300,
+            },
+        );
+        resetSharedEdgeGateIfOutsideHysteresis(ctx);
+        if (expected === undefined) expect(ctx.state.edgeReachedGate).toBeUndefined();
+        else expect(ctx.state.edgeReachedGate).toBe(expected);
+    });
+
+    it("keeps the gate closed at the natural start with a top inset", () => {
+        Platform.OS = "ios";
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                edgeReachedGate: "closed",
+                props: {
+                    contentInset: { bottom: 0, left: 0, right: 0, top: 200 },
+                    onEndReachedThreshold: 0.1,
+                    onStartReachedThreshold: 0.1,
+                },
+                scroll: -200,
+                scrollLength: 800,
+            },
+        );
+        resetSharedEdgeGateIfOutsideHysteresis(ctx);
+        expect(ctx.state.edgeReachedGate).toBe("closed");
+    });
+
     it("rearms after scrolling away from the end within a large end inset", () => {
         const ctx = createMockContext(
             { totalSize: 1000 },
@@ -32,7 +82,7 @@ describe("reached edge gate", () => {
         expect(ctx.state.edgeReachedGate).toBeUndefined();
     });
 
-    it("blocks a residual end scroll after a programmatic reach and rearms for the next gesture", () => {
+    it("keeps the end content snapshot across residual scrolls and new gestures", () => {
         const calls: number[] = [];
         const ctx = createMockContext(
             { footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 },
@@ -64,10 +114,10 @@ describe("reached edge gate", () => {
         ctx.state.scroll = 652;
         checkAtBottom(ctx, nextGestureAllowedEdge);
         expect(nextGestureAllowedEdge).toBe("end");
-        expect(calls).toEqual([50, 48]);
+        expect(calls).toEqual([50]);
     });
 
-    it("blocks a residual start scroll after a programmatic reach and rearms for the next gesture", () => {
+    it("keeps the start content snapshot across residual scrolls and new gestures", () => {
         const calls: number[] = [];
         const ctx = createMockContext(
             {},
@@ -100,7 +150,7 @@ describe("reached edge gate", () => {
         ctx.state.scroll = 48;
         checkAtTop(ctx, nextGestureAllowedEdge);
         expect(nextGestureAllowedEdge).toBe("start");
-        expect(calls).toEqual([50, 48]);
+        expect(calls).toEqual([50]);
     });
 
     it("clears the gate after leaving both hysteresis regions", () => {
@@ -110,6 +160,7 @@ describe("reached edge gate", () => {
             {
                 isEndReached: false,
                 props: {
+                    data: [{ id: 1 }],
                     onEndReached: ({ distanceFromEnd }) => calls.push(distanceFromEnd),
                     onEndReachedThreshold: 0.2,
                     onStartReachedThreshold: 0.2,
@@ -130,7 +181,7 @@ describe("reached edge gate", () => {
         expect(calls).toEqual([50, 50]);
     });
 
-    it("keeps short-content edge callbacks latched until an explicit new gesture", () => {
+    it("keeps unchanged short-content edge callbacks latched across new gestures", () => {
         const startCalls: number[] = [];
         const endCalls: number[] = [];
         const ctx = createMockContext(
@@ -161,7 +212,7 @@ describe("reached edge gate", () => {
         const allowedEdge = beginReachedEdgeUserScroll(ctx, 1);
         checkThresholds(ctx, allowedEdge);
         expect(allowedEdge).toBe("end");
-        expect(endCalls).toHaveLength(2);
+        expect(endCalls).toHaveLength(1);
         expect(startCalls).toHaveLength(1);
     });
 });

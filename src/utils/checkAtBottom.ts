@@ -56,22 +56,17 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
                 onEndReachedThreshold! * scrollLength,
                 state.isEndReached,
                 state.endReachedSnapshot,
-                {
-                    contentSize,
-                    dataLength: state.props.data?.length,
-                    scrollPosition: scroll,
-                },
+                { contentSize, data: state.props.data, dataLength: state.props.data.length },
                 (distance) => {
-                    let dispatched = false;
                     if (
                         state.props.onEndReached &&
                         canDispatchReachedEdge(ctx, "end", allowedEdge, allowGateCreatedInCurrentCheck)
                     ) {
-                        markReachedEdge(ctx);
+                        markReachedEdge(ctx, "end");
                         state.props.onEndReached({ distanceFromEnd: distance });
-                        dispatched = true;
+                        return true;
                     }
-                    return dispatched;
+                    return false;
                 },
                 (snapshot) => {
                     state.endReachedSnapshot = snapshot;

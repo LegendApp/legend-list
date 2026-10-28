@@ -63,12 +63,6 @@ export function checkResetContainers(
         state.pendingEndMeasurements = undefined;
     }
 
-    // Reset the endReached flag if new data has been added and we didn't
-    // just maintain the scroll at end
-    if (!didMaintainScrollAtEnd && previousData && dataProp.length > previousData.length) {
-        state.isEndReached = false;
-    }
-
     if (!didMaintainScrollAtEnd) {
         checkThresholds(ctx);
     }

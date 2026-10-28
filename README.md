@@ -113,6 +113,10 @@ export default LegendListExample
 
 ---
 
+### Paging at reached edges
+
+Inside their thresholds, `onEndReached` and `onStartReached` fire again when the data length changes, or when a new data array arrives and the content size differs from the size at the last callback. A same-length empty page does not trigger another callback if the content size returns to that saved size, including when a loading footer appears and is then removed. A new array with the same length and content size, such as one derived on every render, does not re-arm an edge, and row measurements and loading footer changes alone do not re-arm an already reached edge within its hysteresis band. Empty data fires neither callback.
+
 ### Native scroll offsets and top insets
 
 `scrollToOffset({ offset })` and `initialScrollOffset` use raw native scroll offsets, like React Native's `ScrollView`. With a vertical iOS `contentInset.top` of `T`, the resting start is `-T`: use `scrollToOffset({ offset: -T })` or `initialScrollOffset={-T}` to request it. An explicit `0` still requests native offset `0`, subject to the reachable content bounds. Omitting the initial target starts at `-T`.

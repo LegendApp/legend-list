@@ -1,8 +1,10 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
+import { getContentSize } from "@/state/getContentSize";
 import { type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import {
     canDispatchReachedEdge,
+    getDistanceFromStart,
     markReachedEdge,
     type ReachedEdge,
     resetSharedEdgeGateIfOutsideHysteresis,
@@ -15,60 +17,38 @@ export function checkAtTop(ctx: StateContext, allowedEdge?: ReachedEdge, allowGa
         return;
     }
     const {
-        isStartReached,
         props: { data, onStartReachedThreshold },
-        scroll,
         scrollLength,
-        startReachedSnapshot,
-        totalSize,
     } = state;
 
-    const dataLength = data.length;
     const threshold = onStartReachedThreshold! * scrollLength;
+    const distanceFromStart = getDistanceFromStart(ctx);
     resetSharedEdgeGateIfOutsideHysteresis(ctx);
 
-    // If data changes and pushes us back outside the start window, immediately
-    // clear the start latch so a fast return to the top can trigger again.
-    if (
-        isStartReached &&
-        threshold > 0 &&
-        scroll > threshold &&
-        startReachedSnapshot &&
-        (startReachedSnapshot.contentSize !== totalSize || startReachedSnapshot.dataLength !== dataLength)
-    ) {
-        state.isStartReached = false;
-        state.startReachedSnapshot = undefined;
-    }
-
-    set$(ctx, "isAtStart", scroll <= EDGE_POSITION_EPSILON);
-    set$(ctx, "isNearStart", scroll <= threshold);
+    set$(ctx, "isAtStart", distanceFromStart <= EDGE_POSITION_EPSILON);
+    set$(ctx, "isNearStart", distanceFromStart <= threshold);
 
     const shouldSkipThresholdChecks =
         !state.queuedInitialLayout || hasActiveInitialScroll(state) || !!state.scrollingTo;
 
     if (!shouldSkipThresholdChecks) {
         state.isStartReached = checkThreshold(
-            scroll,
+            distanceFromStart,
             false,
             threshold,
             state.isStartReached,
-            startReachedSnapshot,
-            {
-                contentSize: totalSize,
-                dataLength,
-                scrollPosition: scroll,
-            },
+            state.startReachedSnapshot,
+            { contentSize: getContentSize(ctx), data, dataLength: data.length },
             (distance) => {
-                let dispatched = false;
                 if (
                     state.props.onStartReached &&
                     canDispatchReachedEdge(ctx, "start", allowedEdge, allowGateCreatedInCurrentCheck)
                 ) {
-                    markReachedEdge(ctx);
+                    markReachedEdge(ctx, "start");
                     state.props.onStartReached({ distanceFromStart: distance });
-                    dispatched = true;
+                    return true;
                 }
-                return dispatched;
+                return false;
             },
             (snapshot) => {
                 state.startReachedSnapshot = snapshot;

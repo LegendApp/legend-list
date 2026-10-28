@@ -252,6 +252,7 @@ describe("checkAtBottom", () => {
             initialScroll: { index: 5, viewPosition: 1 },
             isEndReached: null,
             props: {
+                data: [{ id: 1 }],
                 onEndReached: (payload) => calls.push(payload),
                 onEndReachedThreshold: 0.2,
             },
@@ -328,6 +329,7 @@ describe("checkAtBottom", () => {
         const state = createMockState({
             isEndReached: null,
             props: {
+                data: [{ id: 1 }],
                 onEndReached: (payload) => calls.push(payload),
                 onEndReachedThreshold: 0.2, // threshold = 60
             },
@@ -355,9 +357,8 @@ describe("checkAtBottom", () => {
         expect(ctx.values.get("isNearEnd")).toBe(true);
         expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
         expect(state.endReachedSnapshot).toMatchObject({
-            atThreshold: false,
+            data: state.props.data,
             dataLength: state.props.data.length,
-            scrollPosition: 650,
         });
     });
 
@@ -368,6 +369,7 @@ describe("checkAtBottom", () => {
             isEndReached: null,
             props: {
                 contentInset: { bottom: 100, left: 0, right: 0, top: 0 },
+                data: [{ id: 1 }],
                 onEndReached: (payload) => calls.push(payload),
                 onEndReachedThreshold: 0.2, // threshold = 60
             },
@@ -406,6 +408,7 @@ describe("checkAtBottom", () => {
         const state = createMockState({
             isEndReached: null,
             props: {
+                data: [{ id: 1 }],
                 onEndReached: () => {},
                 onEndReachedThreshold: 0.2, // threshold = 60
             },
@@ -439,7 +442,7 @@ describe("checkAtBottom", () => {
         expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
     });
 
-    it("does not re-fire inside threshold when content/data changes", () => {
+    it("fires again inside threshold only when the data length changes", () => {
         const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
         const calls: Array<{ distanceFromEnd: number }> = [];
         const state = createMockState({
@@ -466,17 +469,20 @@ describe("checkAtBottom", () => {
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
         calls.length = 0;
 
-        // Change content size and data length inside window -> no re-fire
+        // A re-measure that changes content size alone inside the window does not re-fire
+        ctx.values.set("totalSize", 1200);
+        state.scroll = 850; // distanceFromEnd = 50
+        checkAtBottom(ctx);
+        expect(calls).toEqual([]);
+
+        // A data length change inside the window -> one new callback
         ctx.values.set("totalSize", 1400);
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 1100; // distanceFromEnd = 0 (inside)
         checkAtBottom(ctx);
 
-        expect(calls).toEqual([]);
-        expect(state.endReachedSnapshot).toMatchObject({
-            contentSize: 1400,
-            dataLength: 2,
-        });
+        expect(calls).toEqual([{ distanceFromEnd: 0 }]);
+        expect(state.endReachedSnapshot).toMatchObject({ data: state.props.data, dataLength: 2 });
     });
 
     it("does not re-fire inside threshold when a conditional footer is removed", () => {
@@ -509,10 +515,7 @@ describe("checkAtBottom", () => {
         checkAtBottom(ctx);
 
         expect(calls).toEqual([]);
-        expect(state.endReachedSnapshot).toMatchObject({
-            contentSize: 1000,
-            dataLength: 1,
-        });
+        expect(state.endReachedSnapshot).toMatchObject({ data: state.props.data, dataLength: 1 });
     });
 
     it("keeps the maintain threshold active far from the end only while following", () => {

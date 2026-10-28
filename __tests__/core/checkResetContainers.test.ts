@@ -110,7 +110,7 @@ describe("checkResetContainers", () => {
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalled();
     });
 
-    it("resets end reached state and boundary checks when maintainScrollAtEnd is disabled", () => {
+    it("checks boundaries without resetting the last dispatched edge when maintainScrollAtEnd is disabled", () => {
         const previousData = state.props.data;
         const newData = [...previousData, { id: "item-3", value: "C" }];
         state.previousData = previousData;
@@ -123,7 +123,7 @@ describe("checkResetContainers", () => {
             doMVCP: true,
         });
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
-        expect(state.isEndReached).toBe(false);
+        expect(state.isEndReached).toBe(true);
         expect(checkThresholdsSpy).toHaveBeenCalledWith(ctx);
         expect(state.previousData).toBeUndefined();
     });
