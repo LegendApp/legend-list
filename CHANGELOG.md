@@ -25,6 +25,11 @@
     - Now: the stop write includes a cancelable wheel's delta and cancels its native scroll. Non-cancelable wheels keep their native movement without adding it again. Deferred scroll adjustments commit from that same wheel destination, including while a replacement request waits for layout. The wheel listener is non-passive only while a list scroll is active, so idle wheel scrolling stays passive.
     - When: web lists receiving wheel or trackpad input during an animated list scroll.
     - Why: browsers disagree on whether such a wheel still scrolls, and a non-passive wheel listener on every list delays scrolling.
+- Fix: Lists keep the visible anchor current while rows change size inside the rendered window.
+    - Before: scrolling inside the cached render window refreshed the visible range only for viewability callbacks or `onFirstVisibleItemChanged`, so `maintainVisibleContentPosition` could anchor to a row that had scrolled away while streamed rows grew.
+    - Now: the visible range is refreshed on every scroll inside the cached window.
+    - When: lists with `maintainVisibleContentPosition` whose rows grow while visible, such as streamed chat messages.
+    - Why: the anchor must be a row that is currently visible.
 - Fix: Container measurements are applied only to the item the container currently holds.
     - Before: after data changes, a container's measurement could arrive with a stale item index and overwrite another item's size, misplacing rows.
     - Now: native, web and batched measurements are checked against the current key index and retried after the parent's layout effects refresh it. Data changes before the first viewport also invalidate cached positions so measurement retries settle on current keys.

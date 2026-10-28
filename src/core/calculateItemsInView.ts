@@ -230,36 +230,9 @@ function maybeEmitFirstVisibleItemChanged(state: InternalState, index: number | 
     onFirstVisibleItemChanged({ index, item: state.props.data[index], key });
 }
 
-function findFirstVisibleIndexInCachedRange(ctx: StateContext, scroll: number) {
-    const state = ctx.state;
-    const {
-        endBuffered,
-        idCache,
-        positions,
-        props: { data },
-        sizes,
-        startBuffered,
-    } = state;
-
-    if (startBuffered === null || endBuffered === null || startBuffered < 0 || endBuffered < startBuffered) {
-        return null;
-    }
-
-    for (let i = startBuffered; i <= endBuffered && i < data.length; i++) {
-        const id = idCache[i] ?? getId(state, i);
-        const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-        const top = positions[i]!;
-        if (top + size > scroll) {
-            return i;
-        }
-    }
-
-    return null;
-}
-
-function updateViewabilityForCachedRange(
+function updateVisibleRangeForCachedRange(
     ctx: StateContext,
-    viewabilityConfigCallbackPairs: NonNullable<InternalState["viewabilityConfigCallbackPairs"]>,
+    viewabilityConfigCallbackPairs: InternalState["viewabilityConfigCallbackPairs"],
     scrollLength: number,
     scroll: number,
     scrollBottom: number,
@@ -294,16 +267,16 @@ function updateViewabilityForCachedRange(
         }
     }
 
-    Object.assign(state, {
-        endNoBuffer: visibleRange.endNoBuffer,
-        firstFullyOnScreenIndex: visibleRange.firstFullyOnScreenIndex,
+    Object.assign(state, visibleRange, {
         idsInView: getIdsInVisibleRange(state, visibleRange),
-        startNoBuffer: visibleRange.startNoBuffer,
     });
 
     maybeEmitFirstVisibleItemChanged(state, visibleRange.startNoBuffer);
 
-    if (state.props.hasExternalScroll || (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null)) {
+    if (
+        viewabilityConfigCallbackPairs &&
+        (state.props.hasExternalScroll || (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null))
+    ) {
         updateViewableItems(
             state,
             ctx,
@@ -494,17 +467,13 @@ export function calculateItemsInView(
             ) {
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
-                    if (viewabilityConfigCallbackPairs) {
-                        updateViewabilityForCachedRange(
-                            ctx,
-                            viewabilityConfigCallbackPairs,
-                            scrollLength,
-                            scroll,
-                            scrollBottom,
-                        );
-                    } else if (state.props.onFirstVisibleItemChanged) {
-                        maybeEmitFirstVisibleItemChanged(state, findFirstVisibleIndexInCachedRange(ctx, scroll));
-                    }
+                    updateVisibleRangeForCachedRange(
+                        ctx,
+                        viewabilityConfigCallbackPairs,
+                        scrollLength,
+                        scroll,
+                        scrollBottom,
+                    );
                     stickyState?.finishCalculateItemsInView?.();
                     return;
                 }
@@ -675,14 +644,11 @@ export function calculateItemsInView(
             }
         }
 
-        Object.assign(state, {
+        Object.assign(state, visibleRange, {
             endBuffered,
-            endNoBuffer: visibleRange.endNoBuffer,
-            firstFullyOnScreenIndex: visibleRange.firstFullyOnScreenIndex,
             idsInView: getIdsInVisibleRange(state, visibleRange),
             startBuffered,
             startBufferedId,
-            startNoBuffer: visibleRange.startNoBuffer,
         });
 
         // Precompute the scroll that will be needed for the range to change

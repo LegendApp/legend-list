@@ -1,6 +1,7 @@
 import { Platform } from "@/platform/Platform";
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
+import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
 import { scrollTo } from "../../src/core/scrollTo";
@@ -1112,6 +1113,42 @@ describe("calculateItemsInView", () => {
                 });
             } finally {
                 updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("keeps the reader anchor current inside a cached range while a streamed row grows", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                setupFixedSizeItems(3, 100);
+                mockState.props.getFixedItemSize = undefined;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.scrollLength = 500;
+                mockState.sizes.set("item_1", 3000);
+                mockState.sizesKnown.set("item_1", 3000);
+                setLayoutValue(mockState, "positions", "item_2", 3100);
+                mockState.totalSize = 3200;
+                mockCtx.values.set("totalSize", 3200);
+                mockState.scroll = 2700;
+                calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                expect(mockState.idsInView).toEqual(["item_2"]);
+
+                interruptUserScroll(mockCtx, -950);
+                mockState.scroll = 1750;
+                mockState.scrollForNextCalculateItemsInView = { bottom: 4000, top: -1000 };
+                calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                for (let i = 0; i < 3; i++) {
+                    const maintain = mvcpModule.prepareMVCP(mockCtx, false, "item-size")!;
+                    mockState.positions[2]! += 125;
+                    mockState.totalSize += 125;
+                    mockCtx.values.set("totalSize", mockState.totalSize);
+                    maintain();
+                    expect(mockState.scroll).toBe(1750);
+                }
+            } finally {
+                Platform.OS = prevPlatform;
             }
         });
 
@@ -2541,6 +2578,8 @@ describe("calculateItemsInView", () => {
                 bottom: 2000,
                 top: -1000,
             };
+            mockState.startBuffered = 0;
+            mockState.endBuffered = 2;
             mockState.idsInView = ["cached"];
             mockCtx.values.set("activeStickyIndex", 0);
             mockState.scroll = 150; // Should activate sticky index 1
@@ -2552,7 +2591,7 @@ describe("calculateItemsInView", () => {
                 index: 1,
                 item: mockState.props.data[1],
             });
-            expect(mockState.idsInView).toEqual(["cached"]);
+            expect(mockState.idsInView).toEqual(["item_2"]);
         });
 
         it("should not call onStickyHeaderChange when the sticky index remains the same", () => {
