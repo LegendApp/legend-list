@@ -21,6 +21,7 @@ import { OPTIMIZATION_HOME_ENTRIES, OPTIMIZATION_ROUTE_SLUG } from "~/screens/ex
 import { ProductShelfExample } from "~/screens/examples/ProductShelfExample";
 import { ReanimatedSharedValuesExample } from "~/screens/examples/ReanimatedSharedValuesExample";
 import { SectionedDirectoryExample } from "~/screens/examples/SectionedDirectoryExample";
+import { TranslucentChatExample } from "~/screens/examples/TranslucentChatExample";
 import { VideoFeedExample } from "~/screens/examples/VideoFeedExample";
 import { VisibilityExample } from "~/screens/examples/VisibilityExample";
 import AccurateScrollToFixture from "~/screens/fixtures/accurate-scrollto";
@@ -120,14 +121,24 @@ const exampleComponents = {
     "video-feed": VideoFeedExample,
 } satisfies Record<ExampleSlug, ScreenComponent>;
 
-export const EXAMPLE_ROUTES: ExampleRouteDefinition[] = CURATED_EXAMPLES.map((example) => ({
-    component: exampleComponents[example.slug],
-    description: example.description,
-    group: example.group,
-    kind: "example",
-    slug: example.slug,
-    title: example.title,
-}));
+export const EXAMPLE_ROUTES: ExampleRouteDefinition[] = [
+    ...CURATED_EXAMPLES.map((example) => ({
+        component: exampleComponents[example.slug],
+        description: example.description,
+        group: example.group,
+        kind: "example" as const,
+        slug: example.slug,
+        title: example.title,
+    })),
+    {
+        component: TranslucentChatExample,
+        description: "Streaming AI chat beneath a translucent header, with iOS top insets and an overlay composer.",
+        group: "Messaging",
+        kind: "example",
+        slug: "translucent-chat",
+        title: "Translucent AI Chat",
+    },
+];
 
 const COMPARISON_ROUTE: RouteDefinition = {
     component: ComparisonsExample,
