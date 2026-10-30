@@ -130,7 +130,7 @@ const DISMISS_TIMEOUT_MS = 2000;
 
 // Settles once, never rejects, and leaves no timer behind.
 function dismissKeyboard() {
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timer: ReturnType<typeof setTimeout> | number | undefined;
     const timeout = new Promise<void>((resolve) => {
         timer = setTimeout(resolve, DISMISS_TIMEOUT_MS);
     });
