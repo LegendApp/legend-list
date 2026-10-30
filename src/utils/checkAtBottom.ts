@@ -56,7 +56,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
                 onEndReachedThreshold! * scrollLength,
                 state.isEndReached,
                 state.endReachedSnapshot,
-                { contentSize, data: state.props.data, dataLength: state.props.data.length },
+                { contentSize, data: state.props.data, dataLength: state.props.data.length, scroll },
                 (distance) => {
                     if (
                         state.props.onEndReached &&

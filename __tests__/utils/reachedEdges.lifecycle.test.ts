@@ -109,6 +109,95 @@ describe("reached edges lifecycle", () => {
         });
     }
 
+    for (const edge of ["start", "end"] as const) {
+        it(`retains ${edge} data admission after motion inside hysteresis and idle layout`, () => {
+            const { ctx, start, end } = scenario(2168, 480, edge, 0.1);
+            if (edge === "start") ctx.state.scroll = 30;
+            setDidLayout(ctx);
+            updateScroll(ctx, edge === "start" ? 30 : 1658, true, { fromNativeScrollEvent: true });
+            const calls = edge === "start" ? start : end;
+            expect(calls).toEqual([30]);
+
+            updateScroll(ctx, edge === "start" ? 53 : 1635, true, { fromNativeScrollEvent: true });
+            expect(calls).toEqual([30]);
+            if (edge === "start") ctx.state.scrollLength = 100;
+            else ctx.values.set("footerSize", 216);
+            checkThresholds(ctx);
+            expect(calls).toEqual([30]);
+
+            ctx.state.props.data = ctx.state.props.data.slice(0, -1);
+            ctx.state.totalSize -= 40;
+            if (edge === "start") ctx.state.scrollLength = 600;
+            else ctx.values.set("footerSize", 0);
+            checkThresholds(ctx);
+            expect(calls).toEqual([30, edge === "start" ? 53 : 13]);
+        });
+    }
+
+    for (const [replaceData, residualScroll] of [
+        [false, 0],
+        [false, 10],
+        [true, 0],
+        [true, 10],
+    ] as const) {
+        it(`keeps stationary layout from retrying the start (new array: ${replaceData}, residual: ${residualScroll})`, () => {
+            const { ctx, start } = scenario(2168, 480, "start", 0.1);
+            ctx.state.scroll = 30;
+            setDidLayout(ctx);
+            checkThresholds(ctx);
+            expect(start).toEqual([30]);
+            updateScroll(ctx, 30 - residualScroll, true, { fromNativeScrollEvent: true });
+            expect(start).toEqual([30]);
+
+            for (let pass = 0; pass < 3; pass++) {
+                ctx.state.scrollLength = 100;
+                checkThresholds(ctx);
+                if (replaceData) ctx.state.props.data = [...ctx.state.props.data];
+                ctx.state.scrollLength = 480;
+                checkThresholds(ctx);
+                expect(start).toEqual([30]);
+            }
+
+            prepareReachedEdgeForNextUserScroll(ctx);
+            updateScroll(ctx, 8, true, { fromNativeScrollEvent: true });
+            expect(start).toEqual([30, 8]);
+            ctx.state.props.data = [...ctx.state.props.data, { id: 99 }];
+            ctx.state.totalSize += 16;
+            checkThresholds(ctx);
+            expect(start).toEqual([30, 8, 8]);
+        });
+
+        it(`keeps a loading footer from retrying an empty page while idle (new array: ${replaceData}, residual: ${residualScroll})`, () => {
+            const { ctx, end } = scenario(2168, 480, "end", 0.1);
+            setDidLayout(ctx);
+            updateScroll(ctx, 1658, true, { fromNativeScrollEvent: true });
+            expect(end).toEqual([30]);
+            updateScroll(ctx, 1658 + residualScroll, true, { fromNativeScrollEvent: true });
+            expect(end).toEqual([30]);
+
+            for (let page = 0; page < 3; page++) {
+                ctx.values.set("footerSize", 216);
+                checkThresholds(ctx);
+                if (replaceData) ctx.state.props.data = [...ctx.state.props.data];
+                ctx.values.set("footerSize", 0);
+                checkThresholds(ctx);
+                checkThresholds(ctx);
+                expect(end).toEqual([30]);
+            }
+
+            prepareReachedEdgeForNextUserScroll(ctx);
+            updateScroll(ctx, 1680, true, { fromNativeScrollEvent: true });
+            expect(end).toEqual([30, 8]);
+            checkThresholds(ctx);
+            expect(end).toEqual([30, 8]);
+
+            ctx.state.props.data = [...ctx.state.props.data, { id: 99 }];
+            ctx.state.totalSize += 16;
+            checkThresholds(ctx);
+            expect(end).toEqual([30, 8, 24]);
+        });
+    }
+
     it("retries the end when a later gesture starts inside the end window", () => {
         const { ctx, end } = scenario(566, 474, "both", 0.1);
         setDidLayout(ctx);

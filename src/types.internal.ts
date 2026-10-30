@@ -65,6 +65,7 @@ export interface MaintainScrollAtEndNormalized {
 }
 
 export interface ThresholdSnapshot {
+    scroll: number;
     contentSize: number;
     data: readonly unknown[];
     dataLength?: number;
@@ -203,6 +204,7 @@ export interface InternalState {
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     edgeReachedGate?: "closed" | "prepared" | "consumed-start" | "consumed-end";
+    edgeReachedGateScroll?: number;
     endBuffered: number;
     endNoBuffer: number;
     endReachedSnapshot: ThresholdSnapshot | undefined;

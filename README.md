@@ -119,7 +119,7 @@ Inside their thresholds, `onEndReached` and `onStartReached` fire again when the
 
 A new user gesture toward an edge can retry unchanged data inside its threshold. If the current array already received a callback for changed content, that delivery counts toward the next gesture; a later gesture can retry it. Keep the data reference stable between updates to preserve that duplicate-callback protection.
 
-Row measurements and loading footer changes alone do not re-arm an already reached edge within its hysteresis band. Empty data fires neither callback.
+While the scroll offset stays unchanged, row measurements, loading footers and other layout changes do not re-arm an already reached edge, even if they temporarily move it outside its hysteresis band. Scroll-offset changes, including MVCP compensation and native clamping, retain the existing distance-based reset behavior. Empty data fires neither callback.
 
 ### Native scroll offsets and top insets
 

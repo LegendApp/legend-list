@@ -12,9 +12,11 @@ export function getDistanceFromStart(ctx: StateContext) {
 
 export function resetSharedEdgeGateIfOutsideHysteresis(ctx: StateContext) {
     const state = ctx.state;
-    if (!state.edgeReachedGate) {
+    // Layout changes alone do not mean the reader left a delivered edge.
+    if (!state.edgeReachedGate || state.edgeReachedGateScroll === state.scroll) {
         return;
     }
+    state.edgeReachedGateScroll = state.scroll;
 
     const contentSize = getContentSize(ctx);
     const endDistance = contentSize - state.scroll - state.scrollLength;
@@ -52,6 +54,7 @@ export function canDispatchReachedEdge(
 export function markReachedEdge(ctx: StateContext, edge: ReachedEdge) {
     const state = ctx.state;
     state.edgeReachedGate = "closed";
+    state.edgeReachedGateScroll = state.scroll;
     // Publish admission before user callbacks can synchronously recheck thresholds.
     const snapshotKey = edge === "start" ? "startReachedSnapshot" : "endReachedSnapshot";
     const snapshot = getThresholdSnapshot(ctx);
@@ -61,7 +64,7 @@ export function markReachedEdge(ctx: StateContext, edge: ReachedEdge) {
 
 function getThresholdSnapshot(ctx: StateContext): ThresholdSnapshot {
     const { data } = ctx.state.props;
-    return { contentSize: getContentSize(ctx), data, dataLength: data.length };
+    return { contentSize: getContentSize(ctx), data, dataLength: data.length, scroll: ctx.state.scroll };
 }
 
 export function prepareReachedEdgeForNextUserScroll(ctx: StateContext) {

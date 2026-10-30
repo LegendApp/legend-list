@@ -11,7 +11,7 @@ export function isOutsideThresholdHysteresis(distance: number, atThreshold: bool
 }
 
 // A new length re-arms an edge. A new array of the same length re-arms it only with a content size
-// change, so an empty page with a loading footer pages again but a new array on every render does not.
+// change. Replacing an array without measured content progress does not re-arm it.
 export function didThresholdDataChange(snapshot: ThresholdSnapshot | undefined, context: ThresholdSnapshot) {
     return (
         !!snapshot &&
@@ -20,8 +20,7 @@ export function didThresholdDataChange(snapshot: ThresholdSnapshot | undefined, 
     );
 }
 
-// Dispatch once per data change inside an edge threshold. Keep the last delivered data in
-// its hysteresis band so layout-only exits cannot lose a later data re-arm or loop a footer.
+// Dispatch once per qualifying data change and retain delivery across stationary layout changes.
 export const checkThreshold = (
     distance: number,
     atThreshold: boolean,
@@ -38,10 +37,14 @@ export const checkThreshold = (
     // We treat the boundary as reached either when the caller explicitly says so (`atThreshold`)
     // or when the measured distance sits inside the user-provided `threshold` window.
     const within = context.dataLength !== 0 && (atThreshold || (threshold > 0 && absDistance <= threshold));
+    const didScroll = snapshot?.scroll !== context.scroll;
+    // Observe motion inside the hysteresis band before a later layout-only exit.
+    if (snapshot) snapshot.scroll = context.scroll;
 
     if (!within) {
         if (
-            (context.dataLength === 0 || isOutsideThresholdHysteresis(distance, atThreshold, threshold)) &&
+            (context.dataLength === 0 ||
+                (didScroll && isOutsideThresholdHysteresis(distance, atThreshold, threshold))) &&
             (wasReached || snapshot)
         ) {
             setSnapshot(undefined);

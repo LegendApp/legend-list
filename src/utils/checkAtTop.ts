@@ -38,7 +38,7 @@ export function checkAtTop(ctx: StateContext, allowedEdge?: ReachedEdge, allowGa
             threshold,
             state.isStartReached,
             state.startReachedSnapshot,
-            { contentSize: getContentSize(ctx), data, dataLength: data.length },
+            { contentSize: getContentSize(ctx), data, dataLength: data.length, scroll: state.scroll },
             (distance) => {
                 if (
                     state.props.onStartReached &&

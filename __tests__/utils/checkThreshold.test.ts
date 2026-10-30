@@ -7,8 +7,10 @@ import { checkThreshold } from "../../src/utils/checkThreshold";
 const data = [0, 1, 2, 3, 4];
 const baseContext = (overrides: Partial<{ dataLength?: number }> = {}) =>
     ({
+        contentSize: 500,
         data,
         dataLength: 5,
+        scroll: 0,
         ...overrides,
     }) as const;
 
