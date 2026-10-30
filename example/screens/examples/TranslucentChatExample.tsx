@@ -1,5 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
+import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
@@ -45,6 +45,9 @@ const IDEAS = [
 const keyExtractor = (message: Message) => message.id;
 const getItemType = (message: Message) => message.role;
 const ChatList = Platform.OS === "web" ? LegendList : KeyboardAwareLegendList;
+const HAS_GLASS = isGlassEffectAPIAvailable() && isLiquidGlassAvailable();
+const GlassSurface = HAS_GLASS ? GlassView : View;
+const GLASS_PROPS = HAS_GLASS ? { glassEffectStyle: "regular" as const, isInteractive: true } : {};
 
 export function TranslucentChatExample() {
     return (
@@ -190,15 +193,18 @@ function Chat() {
                 )}
                 style={styles.list}
             />
-            <View
+            <GlassSurface
+                {...GLASS_PROPS}
                 onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
-                style={[styles.header, { borderColor: colors.border, paddingTop: insets.top }]}
+                style={[
+                    styles.header,
+                    {
+                        borderColor: HAS_GLASS ? "transparent" : colors.border,
+                        paddingTop: insets.top,
+                    },
+                    !HAS_GLASS && { backgroundColor: colors.surface },
+                ]}
             >
-                {Platform.OS === "ios" ? (
-                    <BlurView intensity={80} style={StyleSheet.absoluteFill} tint={dark ? "dark" : "light"} />
-                ) : (
-                    <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
-                )}
                 <View style={styles.toolbar}>
                     <Pressable
                         accessibilityLabel="Back to examples"
@@ -222,13 +228,13 @@ function Chat() {
                         onPress={loadHistory}
                         style={styles.history}
                     >
-                        <MaterialIcons color={historyLoaded ? colors.muted : colors.accent} name="history" size={23} />
+                        <MaterialIcons color={historyLoaded ? colors.muted : colors.text} name="history" size={23} />
                         <Text style={[styles.historyLabel, { color: colors.muted }]}>
                             {historyLoaded ? "Loaded" : "History"}
                         </Text>
                     </Pressable>
                 </View>
-            </View>
+            </GlassSurface>
             <KeyboardStickyView offset={{ closed: 0, opened: bottom }} style={styles.overlay}>
                 <View
                     onLayout={(event) => {
@@ -238,7 +244,13 @@ function Chat() {
                     ref={composerRef}
                     style={[styles.composer, { paddingBottom: bottom }]}
                 >
-                    <View style={[styles.inputRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <GlassSurface
+                        {...GLASS_PROPS}
+                        style={[
+                            styles.inputRow,
+                            !HAS_GLASS && { backgroundColor: colors.surface, borderColor: colors.border },
+                        ]}
+                    >
                         <TextInput
                             accessibilityLabel="Message"
                             multiline
@@ -260,7 +272,7 @@ function Chat() {
                         >
                             <MaterialIcons color="#FFFFFF" name="arrow-upward" size={22} />
                         </Pressable>
-                    </View>
+                    </GlassSurface>
                 </View>
             </KeyboardStickyView>
         </View>
@@ -269,20 +281,20 @@ function Chat() {
 
 const palettes = {
     dark: {
-        accent: "#577D68",
-        background: "#151B19",
-        border: "#35423B",
-        muted: "#A4B4AB",
-        surface: "#242E29",
-        text: "#EDF3EE",
+        accent: "#3A3A3C",
+        background: "#000000",
+        border: "#38383A",
+        muted: "#98989D",
+        surface: "#1C1C1E",
+        text: "#F2F2F7",
     },
     light: {
-        accent: "#38634F",
-        background: "#F6F5F0",
-        border: "#DDDFD5",
-        muted: "#69796F",
+        accent: "#1C1C1E",
+        background: "#F2F2F7",
+        border: "#D1D1D6",
+        muted: "#6E6E73",
         surface: "#FFFFFF",
-        text: "#24392F",
+        text: "#1C1C1E",
     },
 };
 
@@ -304,7 +316,14 @@ const styles = StyleSheet.create({
     history: { alignItems: "center", gap: 2, minWidth: 44 },
     historyLabel: { fontSize: 10 },
     input: { flex: 1, fontSize: 16, maxHeight: 120, minHeight: 44, paddingHorizontal: 12, paddingVertical: 12 },
-    inputRow: { alignItems: "flex-end", borderRadius: 26, borderWidth: 1, flexDirection: "row", padding: 5 },
+    inputRow: {
+        alignItems: "flex-end",
+        borderColor: "transparent",
+        borderRadius: 26,
+        borderWidth: 1,
+        flexDirection: "row",
+        padding: 5,
+    },
     list: { flex: 1 },
     message: { marginBottom: 18, maxWidth: "90%" },
     messageText: { fontSize: 16, lineHeight: 24 },
