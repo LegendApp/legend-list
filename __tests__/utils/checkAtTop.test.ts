@@ -302,7 +302,7 @@ describe("checkAtTop", () => {
         expect(state.startReachedSnapshot).toMatchObject({ data: state.props.data, dataLength: 2 });
     });
 
-    it("keeps the last content snapshot when a new gesture begins inside the threshold", () => {
+    it("retries unchanged content when a new gesture begins inside the threshold", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const ctx = createMockContext(
             {},
@@ -335,11 +335,16 @@ describe("checkAtTop", () => {
 
         prepareReachedEdgeForNextUserScroll(ctx);
 
-        // A new gesture alone cannot re-fire unchanged content.
+        // The prepend was already delivered, so the next gesture does not duplicate it.
         const allowedEdge = beginReachedEdgeUserScroll(ctx, -20);
         state.scroll = 10;
         checkAtTop(ctx, allowedEdge);
         expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 30 }]);
+
+        // A later gesture can still retry the same array.
+        prepareReachedEdgeForNextUserScroll(ctx);
+        checkAtTop(ctx, beginReachedEdgeUserScroll(ctx, -10));
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 30 }, { distanceFromStart: 10 }]);
     });
 
     it("fires after leaving and re-entering the threshold window", () => {

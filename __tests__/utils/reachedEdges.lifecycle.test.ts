@@ -109,7 +109,7 @@ describe("reached edges lifecycle", () => {
         });
     }
 
-    it("keeps the end latched when a later gesture starts inside the end window", () => {
+    it("retries the end when a later gesture starts inside the end window", () => {
         const { ctx, end } = scenario(566, 474, "both", 0.1);
         setDidLayout(ctx);
         prepareReachedEdgeForNextUserScroll(ctx);
@@ -118,8 +118,69 @@ describe("reached edges lifecycle", () => {
         // The first gesture already delivered this content length at distance 12.
         prepareReachedEdgeForNextUserScroll(ctx);
         updateScroll(ctx, 92, true, { fromNativeScrollEvent: true });
-        expect(end).toEqual([12]);
+        expect(end).toEqual([12, 0]);
     });
+
+    for (const edge of ["start", "end"] as const) {
+        for (const response of [false, true]) {
+            it(`consumes a ${edge} data re-arm unless a later empty response arrived (${response})`, () => {
+                const { ctx, start, end } = scenario(128, 800, edge);
+                const calls = edge === "start" ? start : end;
+                const delta = edge === "start" ? -1 : 1;
+                setDidLayout(ctx);
+                ctx.state.props.data = [...ctx.state.props.data, { id: 99 }];
+                checkThresholds(ctx);
+                expect(calls).toHaveLength(2);
+                if (response) ctx.state.props.data = [...ctx.state.props.data];
+                prepareReachedEdgeForNextUserScroll(ctx);
+                checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, delta));
+                checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, delta));
+                expect(calls).toHaveLength(response ? 3 : 2);
+                prepareReachedEdgeForNextUserScroll(ctx);
+                checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, delta));
+                checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, delta));
+                expect(calls).toHaveLength(response ? 4 : 3);
+            });
+        }
+    }
+
+    for (const edge of ["start", "end"] as const) {
+        it(`can reverse after consuming the ${edge} data re-arm`, () => {
+            const { ctx, start, end } = scenario(128, 800, "both");
+            setDidLayout(ctx);
+            ctx.state.props.data = [...ctx.state.props.data, { id: 99 }];
+            checkThresholds(ctx);
+            prepareReachedEdgeForNextUserScroll(ctx);
+            checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? -1 : 1));
+            checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? -1 : 1));
+            expect([start.length, end.length]).toEqual([2, 2]);
+            // The opposite edge also has a delivered data re-arm to consume.
+            checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? 1 : -1));
+            expect([start.length, end.length]).toEqual([2, 2]);
+            checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? -1 : 1));
+            expect([start.length, end.length]).toEqual([2, 2]);
+            // A subsequent gesture can retry either edge.
+            prepareReachedEdgeForNextUserScroll(ctx);
+            checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? 1 : -1));
+            expect([start.length, end.length]).toEqual(edge === "start" ? [2, 3] : [3, 2]);
+        });
+    }
+
+    for (const edge of ["start", "end"] as const) {
+        it(`retains opposite-edge retry after consuming ${edge}`, () => {
+            const { ctx, start, end } = scenario(128, 800, "both");
+            setDidLayout(ctx);
+            ctx.state.props.data = [...ctx.state.props.data, { id: 99 }];
+            checkThresholds(ctx);
+            prepareReachedEdgeForNextUserScroll(ctx);
+            checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? 1 : -1));
+            prepareReachedEdgeForNextUserScroll(ctx);
+            checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? -1 : 1));
+            expect([start.length, end.length]).toEqual([2, 2]);
+            checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? 1 : -1));
+            expect([start.length, end.length]).toEqual(edge === "start" ? [2, 3] : [3, 2]);
+        });
+    }
 
     for (const horizontal of [false, true]) {
         it(`accounts for headers, footers, padding, and insets (horizontal: ${horizontal})`, () => {
@@ -220,7 +281,7 @@ describe("reached edges lifecycle", () => {
             expect(end).toHaveLength(1);
         });
 
-        it(`uses the latest ${edge} callback for changed data without notifying just for replacement`, () => {
+        it(`uses the latest ${edge} callback for gestures and changed data, not replacement alone`, () => {
             const { ctx, start, end } = scenario(566, 474, edge);
             setDidLayout(ctx);
             const latest: number[] = [];
@@ -231,13 +292,13 @@ describe("reached edges lifecycle", () => {
             expect(latest).toEqual([]);
             prepareReachedEdgeForNextUserScroll(ctx);
             checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? -1 : 1));
-            expect(latest).toEqual([]);
+            expect(latest).toEqual([edge === "start" ? 0 : 92]);
             ctx.state.totalSize += 15;
             checkThresholds(ctx);
-            expect(latest).toEqual([]);
+            expect(latest).toEqual([edge === "start" ? 0 : 92]);
             ctx.state.props.data = [...ctx.state.props.data, { id: 15 }];
             checkThresholds(ctx);
-            expect(latest).toEqual([edge === "start" ? 0 : 107]);
+            expect(latest).toEqual([edge === "start" ? 0 : 92, edge === "start" ? 0 : 107]);
             expect(start).toEqual(edge === "start" ? [0] : []);
             expect(end).toEqual(edge === "end" ? [92] : []);
         });
@@ -369,7 +430,7 @@ describe("reached edges lifecycle", () => {
             expect(calls).toEqual([edge === "start" ? 0 : 92]);
         });
 
-        it(`keeps ${edge} latched across repeated explicit gestures with overlapping windows`, () => {
+        it(`retries only ${edge} once per explicit gesture with overlapping windows`, () => {
             const { ctx, start, end } = scenario();
             setDidLayout(ctx);
             for (let i = 0; i < 3; i++) {
@@ -379,8 +440,8 @@ describe("reached edges lifecycle", () => {
                 checkThresholds(ctx);
                 checkThresholds(ctx, beginReachedEdgeUserScroll(ctx, edge === "start" ? -1 : 1));
             }
-            expect(start).toHaveLength(1);
-            expect(end).toHaveLength(1);
+            expect(start).toHaveLength(edge === "start" ? 4 : 1);
+            expect(end).toHaveLength(edge === "end" ? 4 : 1);
         });
     }
 

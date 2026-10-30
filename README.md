@@ -115,7 +115,11 @@ export default LegendListExample
 
 ### Paging at reached edges
 
-Inside their thresholds, `onEndReached` and `onStartReached` fire again when the data length changes, or when a new data array arrives and the content size differs from the size at the last callback. A same-length empty page does not trigger another callback if the content size returns to that saved size, including when a loading footer appears and is then removed. A new array with the same length and content size, such as one derived on every render, does not re-arm an edge, and row measurements and loading footer changes alone do not re-arm an already reached edge within its hysteresis band. Empty data fires neither callback.
+Inside their thresholds, `onEndReached` and `onStartReached` fire again when the data length changes, or when a new data array arrives and the content size differs from the size at the last callback. A new array with the same length and content size does not re-arm an edge. An empty page that leaves both unchanged does not automatically request another page.
+
+A new user gesture toward an edge can retry unchanged data inside its threshold. If the current array already received a callback for changed content, that delivery counts toward the next gesture; a later gesture can retry it. Keep the data reference stable between updates to preserve that duplicate-callback protection.
+
+Row measurements and loading footer changes alone do not re-arm an already reached edge within its hysteresis band. Empty data fires neither callback.
 
 ### Native scroll offsets and top insets
 

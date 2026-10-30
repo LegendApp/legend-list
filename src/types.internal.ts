@@ -68,6 +68,7 @@ export interface ThresholdSnapshot {
     contentSize: number;
     data: readonly unknown[];
     dataLength?: number;
+    didRearmForData?: boolean;
 }
 
 export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";
@@ -201,7 +202,7 @@ export interface InternalState {
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
-    edgeReachedGate?: "closed" | "prepared";
+    edgeReachedGate?: "closed" | "prepared" | "consumed-start" | "consumed-end";
     endBuffered: number;
     endNoBuffer: number;
     endReachedSnapshot: ThresholdSnapshot | undefined;

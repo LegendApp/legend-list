@@ -1,6 +1,7 @@
 import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import type { ThresholdSnapshot } from "@/types.internal";
 import { didThresholdDataChange, isOutsideThresholdHysteresis } from "@/utils/checkThreshold";
 
 export type ReachedEdge = "end" | "start";
@@ -52,10 +53,13 @@ export function markReachedEdge(ctx: StateContext, edge: ReachedEdge) {
     const state = ctx.state;
     state.edgeReachedGate = "closed";
     // Publish admission before user callbacks can synchronously recheck thresholds.
-    state[edge === "start" ? "startReachedSnapshot" : "endReachedSnapshot"] = getThresholdSnapshot(ctx);
+    const snapshotKey = edge === "start" ? "startReachedSnapshot" : "endReachedSnapshot";
+    const snapshot = getThresholdSnapshot(ctx);
+    snapshot.didRearmForData = didThresholdDataChange(state[snapshotKey], snapshot);
+    state[snapshotKey] = snapshot;
 }
 
-function getThresholdSnapshot(ctx: StateContext) {
+function getThresholdSnapshot(ctx: StateContext): ThresholdSnapshot {
     const { data } = ctx.state.props;
     return { contentSize: getContentSize(ctx), data, dataLength: data.length };
 }
@@ -68,11 +72,26 @@ export function prepareReachedEdgeForNextUserScroll(ctx: StateContext) {
 
 export function beginReachedEdgeUserScroll(ctx: StateContext, scrollDelta: number): ReachedEdge | undefined {
     const state = ctx.state;
-    if (state.edgeReachedGate !== "prepared") {
+    const allowedEdge = scrollDelta < 0 ? "start" : "end";
+    if (
+        state.edgeReachedGate !== "prepared" &&
+        state.edgeReachedGate !== (allowedEdge === "start" ? "consumed-end" : "consumed-start")
+    ) {
         return undefined;
     }
 
+    const snapshotKey = allowedEdge === "start" ? "startReachedSnapshot" : "endReachedSnapshot";
+    const snapshot = state[snapshotKey];
+    if (snapshot?.didRearmForData && snapshot.data === state.props.data) {
+        // New content was already delivered without waiting for this gesture.
+        // Consume that delivery once, then let a later gesture retry unchanged data.
+        snapshot.didRearmForData = false;
+        state.edgeReachedGate = state.edgeReachedGate === "prepared" ? `consumed-${allowedEdge}` : "closed";
+        return undefined;
+    }
+    state[allowedEdge === "start" ? "isStartReached" : "isEndReached"] = false;
+    state[snapshotKey] = undefined;
     // Keep the gesture eligible until a callback dispatch closes the gate via
     // markReachedEdge. The first event may still be outside the target window.
-    return scrollDelta < 0 ? "start" : "end";
+    return allowedEdge;
 }

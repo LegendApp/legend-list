@@ -82,7 +82,7 @@ describe("reached edge gate", () => {
         expect(ctx.state.edgeReachedGate).toBeUndefined();
     });
 
-    it("keeps the end content snapshot across residual scrolls and new gestures", () => {
+    it("retries the end only on a new gesture", () => {
         const calls: number[] = [];
         const ctx = createMockContext(
             { footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 },
@@ -114,10 +114,10 @@ describe("reached edge gate", () => {
         ctx.state.scroll = 652;
         checkAtBottom(ctx, nextGestureAllowedEdge);
         expect(nextGestureAllowedEdge).toBe("end");
-        expect(calls).toEqual([50]);
+        expect(calls).toEqual([50, 48]);
     });
 
-    it("keeps the start content snapshot across residual scrolls and new gestures", () => {
+    it("retries the start only on a new gesture", () => {
         const calls: number[] = [];
         const ctx = createMockContext(
             {},
@@ -150,7 +150,7 @@ describe("reached edge gate", () => {
         ctx.state.scroll = 48;
         checkAtTop(ctx, nextGestureAllowedEdge);
         expect(nextGestureAllowedEdge).toBe("start");
-        expect(calls).toEqual([50]);
+        expect(calls).toEqual([50, 48]);
     });
 
     it("clears the gate after leaving both hysteresis regions", () => {
@@ -181,7 +181,7 @@ describe("reached edge gate", () => {
         expect(calls).toEqual([50, 50]);
     });
 
-    it("keeps unchanged short-content edge callbacks latched across new gestures", () => {
+    it("retries only the targeted short-content edge on a new gesture", () => {
         const startCalls: number[] = [];
         const endCalls: number[] = [];
         const ctx = createMockContext(
@@ -212,7 +212,7 @@ describe("reached edge gate", () => {
         const allowedEdge = beginReachedEdgeUserScroll(ctx, 1);
         checkThresholds(ctx, allowedEdge);
         expect(allowedEdge).toBe("end");
-        expect(endCalls).toHaveLength(1);
+        expect(endCalls).toHaveLength(2);
         expect(startCalls).toHaveLength(1);
     });
 });
