@@ -572,8 +572,51 @@ describe("immediate end scroll with frozen keyboard close", () => {
     }
 });
 
-describe("keyboard open at the end", () => {
+describe("keyboard movement at the end", () => {
     for (const platform of ["ios", "android"]) {
+        it(`${platform}: leaves an unfrozen keyboard close to the controller and resumes following afterward`, async () => {
+            const harness = await mount(platform, shared(false), 0, 0, 300, {
+                following: true,
+                maintain: true,
+                start: 1240,
+            });
+            try {
+                for (let i = 0; i < 4; i++) {
+                    harness.frame();
+                    harness.nativeFrame(1520);
+                    await new Promise((resolve) => setTimeout(resolve, 0));
+                }
+                expect(harness.ctx!.state.maintainingScrollAtEnd).toBeUndefined();
+                harness.nativeCommands.length = 0;
+                emit("onStart", 0);
+                if (platform === "ios") expect(controller.contentOffsetY.value).toBe(1240);
+                emit("onMove", 150);
+                for (let i = 0; i < 4; i++) {
+                    harness.frame();
+                    await new Promise((resolve) => setTimeout(resolve, 0));
+                }
+                expect(harness.nativeCommands).toEqual([]);
+                emit("onMove", 0);
+                emit("onEnd", 0);
+                for (let i = 0; i < 4; i++) {
+                    harness.frame();
+                    harness.nativeFrame(1240);
+                    await new Promise((resolve) => setTimeout(resolve, 0));
+                }
+                harness.nativeCommands.length = 0;
+                harness.composer.value = 60;
+                flush();
+                for (let i = 0; i < 4; i++) {
+                    harness.frame();
+                    await new Promise((resolve) => setTimeout(resolve, 0));
+                }
+                expect(harness.nativeCommands).toEqual([{ animated: false, x: 0, y: 1260 }]);
+            } finally {
+                harness.ctx!.state.scheduledWork.dispose();
+                harness.unmount();
+            }
+        });
+
         it(`${platform}: leaves the opening lift to the controller without an end-follow scroll`, async () => {
             const freeze = shared(false);
             const harness = await mount(platform, freeze, 0, 0, 300, {

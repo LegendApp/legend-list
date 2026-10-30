@@ -325,14 +325,17 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
             // Frozen controller padding still includes the keyboard when the composer changes.
             if (endScrollFreeze?.value === "animated") {
                 list?.reportContentInsetForScrollInternal?.({ ...insets, bottom: getEndInset() });
-            } else if (keyboardTarget.value > 0 && list?.reportContentInsetForScrollInternal) {
-                // The controller lifts the content as the keyboard opens; end-follow would fight it.
+            } else if (
+                (keyboardTarget.value > 0 || keyboard.value.height > 0) &&
+                list?.reportContentInsetForScrollInternal
+            ) {
+                // The controller owns keyboard movement in both directions; end-follow would fight it.
                 list.reportContentInsetForScrollInternal(insets);
             } else {
                 list?.reportContentInset(insets);
             }
         },
-        [endScrollFreeze, getEndInset, keyboardTarget],
+        [endScrollFreeze, getEndInset, keyboard, keyboardTarget],
     );
     const reportClosingInset = useCallback((bottom: number) => {
         refLegendList.current?.reportContentInset({ ...reportedInsets.current, bottom });

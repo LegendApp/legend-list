@@ -244,11 +244,6 @@ function Chat() {
                             <MaterialIcons color="#FFFFFF" name="arrow-upward" size={22} />
                         </Pressable>
                     </View>
-                    <Text accessibilityLiveRegion="polite" style={[styles.caption, { color: colors.muted }]}>
-                        {streaming
-                            ? "Putting a few ideas together…"
-                            : "A little inspiration. No reservations required."}
-                    </Text>
                 </View>
             </KeyboardStickyView>
         </View>
@@ -278,7 +273,6 @@ const styles = StyleSheet.create({
     assistantMessage: { alignSelf: "flex-start" },
     back: { justifyContent: "center", minHeight: 44, width: 28 },
     bubble: { borderRadius: 22, paddingHorizontal: 18, paddingVertical: 14 },
-    caption: { fontSize: 11, paddingTop: 10, textAlign: "center" },
     composer: { paddingHorizontal: 16, paddingTop: 12 },
     content: { paddingHorizontal: 20, paddingTop: 16 },
     header: {
