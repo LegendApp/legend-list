@@ -1,12 +1,16 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Stack, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardAwareLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard";
+import {
+    KeyboardAwareLegendList,
+    useKeyboardChatComposerInset,
+    useKeyboardScrollToEnd,
+} from "@legendapp/list/keyboard";
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { useColorScheme } from "~/hooks/useColorScheme";
 
@@ -38,7 +42,6 @@ const IDEAS = [
         "One good coffee, a walk around the block, and an hour with a book is enough. Leave a little space between things. You do not need to fill the day for it to be a good one.",
     ],
 ] as const;
-const FOLLOW_END = { animated: false, on: { dataChange: true, itemLayout: true, layout: true } } as const;
 const keyExtractor = (message: Message) => message.id;
 const getItemType = (message: Message) => message.role;
 const ChatList = Platform.OS === "web" ? LegendList : KeyboardAwareLegendList;
@@ -63,14 +66,20 @@ function Chat() {
     const [composerHeight, setComposerHeight] = useState(92);
     const [listHeight, setListHeight] = useState(windowHeight);
     const [messages, setMessages] = useState(INITIAL_MESSAGES);
+    const [anchorIndex, setAnchorIndex] = useState<number | undefined>(undefined);
     const [input, setInput] = useState("");
     const [streaming, setStreaming] = useState(false);
     const [historyLoaded, setHistoryLoaded] = useState(false);
     const listRef = useRef<LegendListRef | null>(null);
+    const { freeze, scrollMessageToEnd } = useKeyboardScrollToEnd({ listRef });
     const composerRef = useRef<View>(null);
     const nextId = useRef(0);
     const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
     const { contentInsetEndAdjustment, onComposerLayout } = useKeyboardChatComposerInset(listRef, composerRef, 92);
+    const anchoredEndSpace = useMemo(
+        () => (anchorIndex === undefined ? undefined : { anchorIndex, anchorOffset: headerHeight + 16 }),
+        [anchorIndex, headerHeight],
+    );
 
     const attachList = useCallback(
         (list: LegendListRef | null) => {
@@ -92,12 +101,13 @@ function Chat() {
         let count = 0;
         setInput("");
         setStreaming(true);
+        setAnchorIndex(messages.length);
         setMessages((current) => [
             ...current,
             { id: `user-${id}`, role: "user", text },
             { id: replyId, role: "assistant", text: "…" },
         ]);
-        void listRef.current?.scrollToEnd({ animated: true });
+        void scrollMessageToEnd({ animated: true, closeKeyboard: Platform.OS !== "web" });
         timer.current = setInterval(() => {
             count += 3;
             const partial = words.slice(0, count).join(" ");
@@ -120,6 +130,7 @@ function Chat() {
             ];
         }).flat();
         setHistoryLoaded(true);
+        setAnchorIndex((current) => (current === undefined ? undefined : current + history.length));
         setMessages((current) => [...history, ...current]);
     };
 
@@ -132,6 +143,7 @@ function Chat() {
                     automaticallyAdjustsScrollIndicatorInsets: false,
                     contentInsetAdjustmentBehavior: "never" as const,
                     contentInsetEndAdjustment,
+                    freeze,
                     keyboardDismissMode: "interactive" as const,
                     keyboardLiftBehavior: "whenAtEnd" as const,
                     keyboardOffset: bottom,
@@ -139,6 +151,7 @@ function Chat() {
                     scrollIndicatorInsets: { top: headerHeight },
                 })}
                 alignItemsAtEnd
+                anchoredEndSpace={anchoredEndSpace}
                 contentContainerStyle={[
                     styles.content,
                     {
@@ -153,7 +166,6 @@ function Chat() {
                 getItemType={getItemType}
                 initialScrollAtEnd
                 keyExtractor={keyExtractor}
-                maintainScrollAtEnd={FOLLOW_END}
                 maintainVisibleContentPosition
                 onLayout={(event) => setListHeight(event.nativeEvent.layout.height)}
                 ref={attachList}
