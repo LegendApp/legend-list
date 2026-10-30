@@ -132,7 +132,8 @@ export const EXAMPLE_ROUTES: ExampleRouteDefinition[] = [
     })),
     {
         component: TranslucentChatExample,
-        description: "Streaming AI chat beneath a translucent header, with iOS top insets and an overlay composer.",
+        description:
+            "Streaming AI chat beneath a translucent header, with an overlay composer that follows the keyboard.",
         group: "Messaging",
         kind: "example",
         slug: "translucent-chat",

@@ -2,7 +2,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -54,12 +54,14 @@ export function TranslucentChatExample() {
 function Chat() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { height: windowHeight } = useWindowDimensions();
     const dark = useColorScheme() === "dark";
     const colors = dark ? palettes.dark : palettes.light;
     const bottom = Math.max(insets.bottom, 12);
     // The header reports its real height after mount, replacing this first-render estimate.
     const [headerHeight, setHeaderHeight] = useState(insets.top + 44);
     const [composerHeight, setComposerHeight] = useState(92);
+    const [listHeight, setListHeight] = useState(windowHeight);
     const [messages, setMessages] = useState(INITIAL_MESSAGES);
     const [input, setInput] = useState("");
     const [streaming, setStreaming] = useState(false);
@@ -128,7 +130,6 @@ function Chat() {
                 {...(Platform.OS !== "web" && {
                     applyWorkaroundForContentInsetHitTestBug: true,
                     automaticallyAdjustsScrollIndicatorInsets: false,
-                    contentInset: Platform.OS === "ios" ? { top: headerHeight } : undefined,
                     contentInsetAdjustmentBehavior: "never" as const,
                     contentInsetEndAdjustment,
                     keyboardDismissMode: "interactive" as const,
@@ -140,7 +141,10 @@ function Chat() {
                 alignItemsAtEnd
                 contentContainerStyle={[
                     styles.content,
-                    Platform.OS !== "ios" && { paddingTop: headerHeight + 16 },
+                    {
+                        minHeight: Math.max(0, listHeight - (Platform.OS === "web" ? 0 : composerHeight)),
+                        paddingTop: headerHeight + 16,
+                    },
                     Platform.OS === "web" && { paddingBottom: composerHeight },
                 ]}
                 data={messages}
@@ -151,6 +155,7 @@ function Chat() {
                 keyExtractor={keyExtractor}
                 maintainScrollAtEnd={FOLLOW_END}
                 maintainVisibleContentPosition
+                onLayout={(event) => setListHeight(event.nativeEvent.layout.height)}
                 ref={attachList}
                 renderItem={({ item }) => (
                     <View style={[styles.message, item.role === "user" ? styles.userMessage : styles.assistantMessage]}>
@@ -216,7 +221,7 @@ function Chat() {
                 <View
                     onLayout={(event) => {
                         onComposerLayout(event);
-                        if (Platform.OS === "web") setComposerHeight(event.nativeEvent.layout.height);
+                        setComposerHeight(event.nativeEvent.layout.height);
                     }}
                     ref={composerRef}
                     style={[styles.composer, { paddingBottom: bottom }]}
@@ -274,7 +279,7 @@ const styles = StyleSheet.create({
     back: { justifyContent: "center", minHeight: 44, width: 28 },
     bubble: { borderRadius: 22, paddingHorizontal: 18, paddingVertical: 14 },
     composer: { paddingHorizontal: 16, paddingTop: 12 },
-    content: { paddingHorizontal: 20, paddingTop: 16 },
+    content: { paddingHorizontal: 20 },
     header: {
         borderBottomWidth: StyleSheet.hairlineWidth,
         left: 0,
