@@ -441,8 +441,10 @@ export function calculateItemsInView(
             // An external owner's negative offset is preceding content, not native bounce.
             const overscrollBeforeContent = state.props.hasExternalScroll ? 0 : Math.max(0, -nativeScrollState);
             scrollBottom = Math.max(scrollStart, scroll + scrollLength + overscrollBeforeContent);
+            // Spend the top buffer above the first item or under the header below the viewport.
+            const unusedTopBuffer = state.props.hasExternalScroll ? 0 : Math.max(0, scrollBufferTop - scroll);
             scrollTopBuffered = scrollStart - scrollBufferTop + projectedBufferAdjustment;
-            scrollBottomBuffered = scrollBottom + scrollBufferBottom + projectedBufferAdjustment;
+            scrollBottomBuffered = scrollBottom + scrollBufferBottom + unusedTopBuffer + projectedBufferAdjustment;
         };
         updateScrollRange();
 

@@ -1,5 +1,6 @@
 ## Unreleased
 
+- Performance: Render rows the first scroll reveals near the top ahead of time by spending unused top buffer below the viewport.
 - Fix: `KeyboardAwareLegendList` leaves keyboard dismissal scrolling to the keyboard controller, avoiding an instant end-follow jump while the keyboard closes.
 - Fix: `onEndReached` and `onStartReached` fire again inside their threshold when the data length changes, or a new array arrives with a content size different from the size at the last callback. Stationary layout-only changes and empty data do not re-arm them.
     - Before: after firing, an edge stayed latched until the reader scrolled 30% beyond its threshold or, for the end only, until data grew. A new qualifying gesture could also retry the same length. A short list could stop loading older pages at the start or stop paging after a removal.
