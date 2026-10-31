@@ -46,6 +46,9 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         set$(ctx, "numContainers", numContainers);
         set$(ctx, "numContainersPooled", getInitialContainerPoolSize(data.length, numContainers));
 
+        const didDataChangeBeforeAllocation = state.didDataChangeBeforeAllocation;
+        state.didDataChangeBeforeAllocation = false;
+
         if (!IsNewArchitecture || state.lastLayout) {
             if (state.initialScroll) {
                 requestAnimationFrame(() => {
@@ -57,7 +60,11 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
                 // discard that work when layout first supplies a viewport, unless data
                 // or columns changed while allocation was waiting for layout.
                 const reuseInitialPositions =
-                    !state.didLoad && state.positionsAreCurrent && !state.didDataChange && !state.didColumnsChange;
+                    !state.didLoad &&
+                    state.positionsAreCurrent &&
+                    !state.didDataChange &&
+                    !didDataChangeBeforeAllocation &&
+                    !state.didColumnsChange;
                 calculateItemsInView(ctx, { dataChanged: !reuseInitialPositions, doMVCP: true });
             }
         }
