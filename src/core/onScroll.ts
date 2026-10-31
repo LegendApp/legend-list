@@ -161,6 +161,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         state.accessibilityScrollEvent = undefined;
     }
 
+    const previousNativeScroll = state.lastNativeScroll;
     state.lastNativeScroll = newScroll;
     state.lastNativeScrollTime = Date.now();
     if (state.scheduledWork.has("appScrollRearm")) armAppScrollRearm(ctx);
@@ -194,7 +195,11 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     const hadPreservedEndAnchorCorrection = !!state.preservedEndAnchorCorrection;
     state.scrollPending = newScroll;
 
-    updateScroll(ctx, newScroll, insetChanged, { fromNativeScrollEvent: true, nativeGeometryChanged });
+    updateScroll(ctx, newScroll, insetChanged, {
+        fromNativeScrollEvent: true,
+        nativeGeometryChanged,
+        previousNativeScroll,
+    });
     trackInitialScrollNativeProgress(state, newScroll);
     // Rows measured at the new offset can start a correction; it must not pull back a scroll the list didn't make.
     clearFinishedBootstrapInitialScrollTargetIfMovedAway(

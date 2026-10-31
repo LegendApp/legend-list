@@ -3,6 +3,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { ScrollTarget } from "@/types.internal";
@@ -61,7 +62,10 @@ export class ScrollAdjustHandler {
 
                 // If we have a scroll target with an index, recalculate the correct
                 // position based on where the target item is NOW, not just add pendingAdjust
-                if (scrollTarget?.index !== undefined) {
+                const maintainedEnd = scrollTarget && getMaintainedWebEndOffset(this.ctx, scrollTarget);
+                if (maintainedEnd !== undefined) {
+                    targetScroll = maintainedEnd;
+                } else if (scrollTarget?.index !== undefined) {
                     // Get the target item's current position
                     const currentOffset = calculateOffsetForIndex(this.ctx, scrollTarget.index);
                     // Apply viewOffset and viewPosition to get the final scroll position

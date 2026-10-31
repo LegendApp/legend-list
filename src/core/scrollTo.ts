@@ -2,6 +2,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
+import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { updateScroll } from "@/core/updateScroll";
@@ -162,7 +163,8 @@ export function scrollTo(
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
     const shouldPreserveRawInitialOffsetRequest = !!isInitialScroll && state.initialScrollSession?.kind === "offset";
-    const targetOffset = clampScrollOffset(ctx, requestedOffset, scrollTarget);
+    const targetOffset =
+        getMaintainedWebEndOffset(ctx, scrollTarget) ?? clampScrollOffset(ctx, requestedOffset, scrollTarget);
     const offset = shouldPreserveRawInitialOffsetRequest ? requestedOffset : targetOffset;
 
     // Disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset

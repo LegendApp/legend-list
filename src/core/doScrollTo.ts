@@ -4,6 +4,7 @@ import { cancelScroll } from "@/core/cancelScroll";
 import { checkFinishedScrollFallback, getCurrentTargetOffset } from "@/core/checkFinishedScroll";
 import { type DoScrollToParams, getNativeScrollPoint } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { isWebScrollAwayFromEnd } from "@/core/updateScroll";
 import type { StateContext } from "@/state/state";
 import type { LegendListScrollerRef } from "@/types.internal";
 import { clampScrollIndex } from "@/utils/clampScrollIndex";
@@ -63,6 +64,15 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     state.scheduledWork.frame(() => {
         if (targetToken === state.scrollingTo) {
             const currentOffset = readOffset();
+            const comparable = Math.min(
+                state.scroll,
+                state.lastNativeScroll ?? currentOffset,
+                scroller.getMaxScrollOffset?.() ?? state.scroll,
+            );
+            if (isWebScrollAwayFromEnd(ctx, currentOffset, comparable, state.lastNativeScroll)) {
+                ctx.interruptUserScroll!();
+                return;
+            }
             const targetOffset = targetToken ? getCurrentTargetOffset(ctx, targetToken) : offset;
             const landingOffset = Math.max(
                 0,

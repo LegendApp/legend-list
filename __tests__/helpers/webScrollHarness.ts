@@ -169,7 +169,8 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
     const hooks: { ignoreAnimatedScrolls: boolean; onScrollEvent?: (offset: number) => void } = {
         ignoreAnimatedScrolls: false,
     };
-    const getMaxOffset = () => Math.max(0, getContentSize(ctx) - state.scrollLength);
+    let committedContentSize: number | undefined;
+    const getMaxOffset = () => Math.max(0, (committedContentSize ?? getContentSize(ctx)) - state.scrollLength);
     const clamp = (value: number) => Math.max(0, Math.min(value, getMaxOffset()));
 
     // Each supported RTL conversion is its own inverse.
@@ -185,8 +186,8 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
             nativeEvent: {
                 contentOffset: { x: horizontal ? convertOffset(offset) : 0, y: horizontal ? 0 : offset },
                 contentSize: {
-                    height: horizontal ? 400 : getContentSize(ctx),
-                    width: horizontal ? getContentSize(ctx) : 400,
+                    height: horizontal ? 400 : (committedContentSize ?? getContentSize(ctx)),
+                    width: horizontal ? (committedContentSize ?? getContentSize(ctx)) : 400,
                 },
                 layoutMeasurement: {
                     height: horizontal ? 400 : state.scrollLength,
@@ -221,6 +222,10 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
     const ref: LegendListRef = createImperativeHandle(ctx);
 
     const browser = {
+        /** Commits DOM geometry independently of the modeled row measurements. */
+        commitContentSize(size: number) {
+            committedContentSize = size;
+        },
         /** Pending smooth-scroll destination, or undefined when the browser is idle. */
         get destination() {
             return destination;

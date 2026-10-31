@@ -174,6 +174,67 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).not.toHaveBeenCalled();
         });
 
+        for (const maintaining of [undefined, "pending-animated", "animated"] as const) {
+            for (const withinThreshold of [true, false]) {
+                it(`leaves web animated end following in charge (${maintaining}, threshold: ${withinThreshold})`, () => {
+                    withWebPlatform(() => {
+                        mockState.props.maintainScrollAtEnd = {
+                            animated: true,
+                            onDataChange: true,
+                            onFooterLayout: false,
+                            onItemLayout: true,
+                            onLayout: true,
+                        };
+                        mockState.maintainingScrollAtEnd = maintaining;
+                        mockCtx.values.set("isFollowingEnd", true);
+                        mockCtx.values.set("isWithinMaintainScrollAtEndThreshold", withinThreshold);
+
+                        const restore = expectAdjustFunction(prepareMVCP(mockCtx, false, "item-size"));
+                        setLayoutValue(mockState, "positions", "item-1", 150);
+                        restore();
+                        expect(requestAdjustSpy).not.toHaveBeenCalled();
+
+                        // The reader interrupts following; later growth preserves their visible anchor.
+                        mockCtx.interruptUserScroll!();
+                        const restoreAway = expectAdjustFunction(prepareMVCP(mockCtx, false, "item-size"));
+                        setLayoutValue(mockState, "positions", "item-1", 200);
+                        restoreAway();
+                        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, "item-size");
+                    });
+                });
+            }
+        }
+
+        for (const trigger of ["disabled data", "append-only prepend", "disabled item layout"] as const) {
+            it(`preserves the web anchor when animated end following excludes ${trigger}`, () => {
+                withWebPlatform(() => {
+                    mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                    mockState.props.maintainScrollAtEnd = {
+                        animated: true,
+                        onDataChange: trigger === "append-only prepend" ? "append" : false,
+                        onFooterLayout: false,
+                        onItemLayout: false,
+                        onLayout: false,
+                    };
+                    mockState.props.maintainScrollAtEnd!.onDataChange =
+                        trigger === "append-only prepend" ? "append" : false;
+                    mockState.props.maintainScrollAtEnd!.onItemLayout = false;
+                    mockState.previousData = mockState.props.data;
+                    mockCtx.values.set("isFollowingEnd", true);
+                    mockCtx.values.set("isWithinMaintainScrollAtEndThreshold", false);
+
+                    const dataChanged = trigger !== "disabled item layout";
+                    const restore = expectAdjustFunction(
+                        prepareMVCP(mockCtx, dataChanged, dataChanged ? undefined : "item-size"),
+                    );
+                    setLayoutValue(mockState, "positions", "item-1", 150);
+                    restore();
+
+                    expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, dataChanged ? "data" : "item-size");
+                });
+            });
+        }
+
         it("should still adjust while an instant maintainScrollAtEnd is pending at the end", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
             mockState.maintainingScrollAtEnd = "pending-instant";

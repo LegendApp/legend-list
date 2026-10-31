@@ -14,11 +14,38 @@ import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
+// Settling alone does not own browser motion. List writes update state.scroll;
+// an external jump reverses below that offset, the previous observation, and
+// any active end target. Clamps and movement toward our own target stay owned.
+export function isWebScrollAwayFromEnd(
+    ctx: StateContext,
+    newScroll: number,
+    previousComparableScroll: number,
+    previousNativeScroll: number | undefined,
+) {
+    const { state } = ctx;
+    const { scrollingTo } = state;
+    return (
+        Platform.OS === "web" &&
+        newScroll < previousComparableScroll - 1 &&
+        !state.pendingNativeMVCPAdjust &&
+        (!scrollingTo ||
+            ((scrollingTo.isInitialScroll || scrollingTo.isScrollToEnd) &&
+                newScroll < (scrollingTo.targetOffset ?? scrollingTo.offset) - 1)) &&
+        ((!hasActiveInitialScroll(state) && !scrollingTo) || newScroll < (previousNativeScroll ?? newScroll) - 1)
+    );
+}
+
 export function updateScroll(
     ctx: StateContext,
     newScroll: number,
     forceUpdate?: boolean,
-    options?: { fromNativeScrollEvent?: boolean; markHasScrolled?: boolean; nativeGeometryChanged?: boolean },
+    options?: {
+        fromNativeScrollEvent?: boolean;
+        markHasScrolled?: boolean;
+        nativeGeometryChanged?: boolean;
+        previousNativeScroll?: number;
+    },
 ) {
     const state = ctx.state;
     const { ignoreScrollFromMVCP, lastScrollAdjustForHistory, scrollAdjustHandler, scrollHistory, scrollingTo } = state;
@@ -91,11 +118,12 @@ export function updateScroll(
         state.scrollBufferDirection = newScroll > prevScroll ? 1 : -1;
     }
     const didCancelMaintainScrollAtEnd =
-        isUserScrollEvent &&
         !!(state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd || peek$(ctx, "isFollowingEnd")) &&
         (Platform.OS === "web"
-            ? newScroll < previousComparableScroll - 1
-            : !options?.nativeGeometryChanged &&
+            ? !!options?.fromNativeScrollEvent &&
+              isWebScrollAwayFromEnd(ctx, newScroll, previousComparableScroll, options.previousNativeScroll)
+            : isUserScrollEvent &&
+              !options?.nativeGeometryChanged &&
               !state.maintainingScrollAtEnd &&
               !state.pendingMaintainScrollAtEnd &&
               !state.isDragging &&

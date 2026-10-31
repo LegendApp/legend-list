@@ -1,6 +1,7 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { getViewPositionOffset } from "@/core/calculateOffsetWithOffsetPosition";
 import { getContentInsetTop, getScrollRangeEnd } from "@/core/clampScrollOffset";
+import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
@@ -429,7 +430,8 @@ export function prepareMVCP(
                 (scrollingToViewPosition > 0 || scrollingTo.viewPositionFallback)
             ) {
                 const targetIndex = scrollingTo.index!;
-                const newSize = getItemSize(ctx, targetId!, targetIndex, state.props.data[targetIndex]);
+                // Position rebuilding can retarget an end request after targetId was captured.
+                const newSize = getItemSize(ctx, getId(state, targetIndex), targetIndex, state.props.data[targetIndex]);
                 const prevSize = scrollingTo.itemSize;
                 if (prevSize !== undefined && newSize !== prevSize) {
                     if (scrollingTo.viewPositionFallback) {
@@ -488,9 +490,22 @@ export function prepareMVCP(
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
                 const shouldSkipAdjustForMaintainedEnd =
-                    (state.maintainingScrollAtEnd === "pending-animated" ||
+                    ((state.maintainingScrollAtEnd === "pending-animated" ||
                         state.maintainingScrollAtEnd === "animated") &&
-                    peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
+                        peek$(ctx, "isWithinMaintainScrollAtEndThreshold")) ||
+                    // Web following retains ownership between animation requests, even when
+                    // streaming growth moves the end beyond the threshold before the next frame.
+                    (isWeb &&
+                        props.maintainScrollAtEnd?.animated &&
+                        (state.pendingMaintainScrollAtEnd ||
+                            (dataChanged
+                                ? shouldMaintainScrollAtEndOnDataChange(state)
+                                : adjustmentSource === "item-size" && props.maintainScrollAtEnd.onItemLayout)) &&
+                        state.didFinishInitialScroll &&
+                        !state.endFollowInterrupted &&
+                        peek$(ctx, "isFollowingEnd") &&
+                        (!state.scrollingTo || state.scrollingTo.isScrollToEnd) &&
+                        !ctx.scrollRequestTracker?.isWaitingToRun());
 
                 if (!shouldSkipAdjustForMaintainedEnd) {
                     requestAdjust(ctx, positionDiff, dataChanged && mvcpData ? "data" : adjustmentSource);

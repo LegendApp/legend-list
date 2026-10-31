@@ -95,8 +95,6 @@ function mergeItemSizeUpdateResult(result: ItemSizeUpdateResult, next: ItemSizeU
 function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     const state = ctx.state;
     if (result.shouldMaintainScrollAtEnd && Platform.OS === "web") {
-        // Let React commit the geometry, then give maintenance ownership
-        // before the preserved correction (including for animated follows).
         queueMicrotask(() => doMaintainScrollAtEnd(ctx, { immediate: true }));
     }
     if (result.needsRecalculate) {
@@ -172,6 +170,12 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
             const nextResult = applyItemSize(ctx, measurement.itemKey, measurement.size, metadata);
             mergeItemSizeUpdateResult(result, nextResult);
         }
+    }
+
+    // Total-size subscribers can commit synchronously, hiding a browser end clamp.
+    // Capture it before publishing; the follow microtask uses the committed geometry.
+    if (result.shouldMaintainScrollAtEnd && Platform.OS === "web") {
+        doMaintainScrollAtEnd(ctx, { prepareOnly: true });
     }
 
     // Publish the batch total before recalculating scroll positions. If the total is unchanged,

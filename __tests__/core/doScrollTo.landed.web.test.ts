@@ -5,6 +5,7 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { scrollToEnd } from "@/core/scrollToEnd";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { Platform } from "@/platform/Platform";
+import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import {
     createWebScrollHarness,
@@ -298,6 +299,62 @@ describe("animated web scrolls resolve only once landed", () => {
             expect(scroll.value).toBeUndefined();
             expect(h.browser.offset).toBe(12000);
         });
+    });
+
+    for (const mode of ["vertical", "horizontal", "negative RTL", "inverted RTL"] as const) {
+        for (const committedSize of [10000, 10300, 9700]) {
+            it(`lands animated end following on committed DOM geometry (${mode}, ${committedSize})`, async () => {
+                const h = setup({
+                    horizontal: mode !== "vertical",
+                    horizontalRTLScrollType:
+                        mode === "negative RTL" ? "negative" : mode === "inverted RTL" ? "inverted" : undefined,
+                    rtl: mode.endsWith("RTL"),
+                });
+                h.state.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
+                h.state.didContainersLayout = true;
+                h.state.didFinishInitialScroll = true;
+                h.ctx.scrollToEnd = (options) => scrollToEnd(h.ctx, options);
+                h.browser.moveTo(9500);
+                h.ctx.values.set("isFollowingEnd", true);
+
+                // Matched geometry is the small-fixture case. Real content can commit
+                // beyond or below the modeled end while an animated follow is running.
+                expect(doMaintainScrollAtEnd(h.ctx)).toBe(true);
+                h.clock.tick();
+                h.browser.commitContentSize(committedSize);
+                for (let frame = 0; frame < 100; frame++) {
+                    h.browser.step(100);
+                    h.clock.tick();
+                    await flushMicrotasks();
+                }
+                expect(h.browser.offset).toBe(committedSize - h.state.scrollLength);
+                expect(h.ctx.values.get("isFollowingEnd")).toBe(true);
+                expect(h.state.scrollingTo).toBeUndefined();
+            });
+        }
+    }
+
+    it.each(["wheel", "touchstart"])("keeps %s interruption while committed end geometry grows", async (input) => {
+        const h = setup();
+        h.state.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
+        h.state.didContainersLayout = true;
+        h.state.didFinishInitialScroll = true;
+        h.ctx.scrollToEnd = (options) => scrollToEnd(h.ctx, options);
+        h.browser.moveTo(9500);
+        h.ctx.values.set("isFollowingEnd", true);
+        h.browser.commitContentSize(10300);
+        doMaintainScrollAtEnd(h.ctx);
+        h.clock.tick();
+        h.browser.step(100);
+        h.browser.interruptByUser(input);
+        const interruptedAt = h.browser.offset;
+        h.browser.commitContentSize(10600);
+        expect(doMaintainScrollAtEnd(h.ctx)).toBe(false);
+        h.clock.advance(1000);
+        await flushMicrotasks();
+        expect(h.browser.offset).toBe(interruptedAt);
+        expect(h.ctx.values.get("isFollowingEnd")).toBe(false);
+        expect(h.state.scrollingTo).toBeUndefined();
     });
 
     it("retries an instant request when DOM content catches up before verification", async () => {

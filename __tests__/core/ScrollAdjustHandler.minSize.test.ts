@@ -48,3 +48,41 @@ describe("ScrollAdjustHandler content container minimum size", () => {
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 });
+
+it("keeps the committed web end when an animated follow releases deferred adjustments", async () => {
+    platform.Platform.OS = "web";
+    const { ScrollAdjustHandler } = await import("../../src/core/ScrollAdjustHandler?web-end-commit");
+    const ctx = createMockContext(
+        {},
+        {
+            didContainersLayout: true,
+            didFinishInitialScroll: true,
+            maintainingScrollAtEnd: "animated",
+            props: { data: [0], estimatedItemSize: 100, maintainScrollAtEnd: { animated: true } },
+            scroll: 900,
+            scrollingTo: {
+                animated: true,
+                clampToContentContainerMinSize: true,
+                index: 0,
+                isScrollToEnd: true,
+                offset: 0,
+                viewPosition: 1,
+            },
+            scrollLength: 500,
+            totalSize: 1400,
+        },
+    );
+    ctx.state.idCache[0] = "item_0";
+    ctx.state.positions[0] = 0;
+    ctx.state.sizes.set("item_0", 1400);
+    ctx.state.refScroller.current = { getMaxScrollOffset: () => 938 } as any;
+    const handler = new ScrollAdjustHandler(ctx);
+    ctx.state.scrollAdjustHandler = handler;
+    handler.requestAdjust(-43);
+    expect(ctx.values.get("scrollAdjustPending")).toBe(-43);
+    ctx.state.scroll = 938;
+    handler.commitPendingAdjust(ctx.state.scrollingTo);
+    expect(ctx.state.scroll).toBe(938);
+    expect(handler.getAdjust()).toBe(0);
+    expect(ctx.values.get("scrollAdjustPending")).toBe(0);
+});

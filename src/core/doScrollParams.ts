@@ -1,3 +1,4 @@
+import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { toNativeHorizontalOffset } from "@/utils/rtl";
@@ -16,12 +17,18 @@ export interface DoScrollToParams {
 
 export function getNativeScrollPoint(ctx: StateContext, offset: number, horizontal = ctx.state.props.horizontal) {
     const { state } = ctx;
+    const committedMax =
+        horizontal && Platform.OS === "web" && state.maintainingScrollAtEnd
+            ? state.refScroller.current?.getMaxScrollOffset?.()
+            : undefined;
     return horizontal
         ? {
               x: toNativeHorizontalOffset(
                   state,
                   offset,
-                  Math.max(getContentSize(ctx), state.props.contentContainerMinSize ?? 0),
+                  committedMax !== undefined
+                      ? committedMax + state.scrollLength
+                      : Math.max(getContentSize(ctx), state.props.contentContainerMinSize ?? 0),
               ),
               y: 0,
           }

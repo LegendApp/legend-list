@@ -3,8 +3,9 @@ import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getCurrentTargetOffset } from "@/core/getCurrentTargetOffset";
+import { getObservedScrollOffset } from "@/core/observedScroll";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
-import { updateScroll } from "@/core/updateScroll";
+import { isWebScrollAwayFromEnd, updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
@@ -26,9 +27,22 @@ export function reissueClampedNativeEndScroll(ctx: StateContext) {
     }
 }
 
-export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?: boolean }) {
+export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?: boolean; prepareOnly?: boolean }) {
     const state = ctx.state;
     if (state.isUnmounted) return false;
+    // A measurement may beat the browser's scroll event after scrollIntoView.
+    if (Platform.OS === "web") {
+        const observed = getObservedScrollOffset(ctx);
+        const comparable = Math.min(
+            state.scroll,
+            state.lastNativeScroll ?? observed,
+            state.refScroller.current?.getMaxScrollOffset?.() ?? state.scroll,
+        );
+        if (isWebScrollAwayFromEnd(ctx, observed, comparable, state.lastNativeScroll)) {
+            ctx.interruptUserScroll!();
+            return false;
+        }
+    }
     // Measurements can arrive after drag start canceled the previous follow.
     // Suspend following during a drag or while a shared owner is scrolled outside this list.
     if (
@@ -90,7 +104,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
     }
     set$(ctx, "isFollowingEnd", true);
 
-    if (!state.scrollingTo) {
+    if (!state.scrollingTo || Platform.OS === "web") {
         const scroller = state.refScroller.current;
         const nativeMax = scroller?.getMaxScrollOffset?.();
         const observed = scroller?.getCurrentScrollOffset?.();
@@ -108,6 +122,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
             updateScroll(ctx, observed, true, { markHasScrolled: false });
         }
     }
+    if (options?.prepareOnly) return true;
 
     const anchorIndex = state.props.anchoredEndSpace?.anchorIndex;
     const dataLength = state.props.data.length;
