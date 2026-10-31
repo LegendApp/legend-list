@@ -100,10 +100,11 @@ export const Container = typedMemo(function Container<ItemT>({
     const positionComponentInternal = ctx.state.props.positionComponentInternal;
     const stickyPositionComponentInternal = ctx.state.props.stickyPositionComponentInternal;
 
-    const [column = 0, span = 1, data, numColumns = 1, extraData, isSticky] = useArr$([
+    const [column = 0, span = 1, data, itemIndex, numColumns = 1, extraData, isSticky] = useArr$([
         `containerColumn${id}`,
         `containerSpan${id}`,
         `containerItemData${id}`,
+        `containerItemIndex${id}`,
         "numColumns",
         "extraData",
         `containerSticky${id}`,
@@ -150,10 +151,34 @@ export const Container = typedMemo(function Container<ItemT>({
         ],
     );
 
-    const renderedItemInfo = useMemo(
-        () => (itemKey !== undefined ? getRenderedItem(itemKey, id) : null),
+    // Cache the read flag with its render, so learning that the index was read
+    // does not itself invalidate the row on the next layout-only commit.
+    const renderCache = useMemo(
+        () => ({ readsIndex: false, value: undefined as ReturnType<GetRenderedItem> | undefined }),
         [itemKey, data, extraData],
     );
+    const cached = renderCache.value;
+    const getItemType = ctx.state.props.getItemType;
+    // A new index changes the output only if renderItem read it or the item's type changes.
+    if (
+        cached === undefined ||
+        (cached &&
+            cached.index !== itemIndex &&
+            (renderCache.readsIndex ||
+                (!!getItemType &&
+                    cached.type !== undefined &&
+                    itemIndex !== undefined &&
+                    (getItemType(cached.item, itemIndex) ?? "") !== cached.type)))
+    ) {
+        renderCache.readsIndex = false;
+        renderCache.value =
+            itemKey !== undefined
+                ? getRenderedItem(itemKey, id, () => {
+                      renderCache.readsIndex = true;
+                  })
+                : null;
+    }
+    const renderedItemInfo = renderCache.value;
     const { renderedItem } = renderedItemInfo || {};
 
     const contextValue = useMemo<ContextContainerType>(() => {

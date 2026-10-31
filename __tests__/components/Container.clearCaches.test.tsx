@@ -116,7 +116,7 @@ describe("Container clearCaches measurement", () => {
             );
         });
 
-        expect(getRenderedItem).toHaveBeenCalledWith("a", 7);
+        expect(getRenderedItem).toHaveBeenCalledWith("a", 7, expect.any(Function));
 
         await act(async () => {
             renderer!.unmount();

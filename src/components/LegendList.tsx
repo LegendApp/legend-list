@@ -995,7 +995,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const fns = useMemo(
         () => ({
-            getRenderedItem: (key: string, containerId: number) => getRenderedItem(ctx, key, containerId),
+            getRenderedItem: (key: string, containerId: number, onReadIndex?: () => void) =>
+                getRenderedItem(ctx, key, containerId, onReadIndex),
             onMomentumScrollBegin: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
                 state.isMomentumScrolling = true;
                 set$(ctx, "isScrollActive", true);

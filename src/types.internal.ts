@@ -398,8 +398,17 @@ export interface ViewableRange<T> {
     startBuffered: number;
 }
 
-export type GetRenderedItemResult<ItemT> = { index: number; item: ItemT; renderedItem: React.ReactNode };
-export type GetRenderedItem = (key: string, containerId: number) => GetRenderedItemResult<any> | null;
+export type GetRenderedItemResult<ItemT> = {
+    index: number;
+    item: ItemT;
+    renderedItem: React.ReactNode;
+    type?: string;
+};
+export type GetRenderedItem = (
+    key: string,
+    containerId: number,
+    onReadIndex?: () => void,
+) => GetRenderedItemResult<any> | null;
 
 // biome-ignore lint/complexity/noBannedTypes: This is correct
 export type TypedForwardRef = <T, P = {}>(

@@ -410,6 +410,7 @@ describe("getRenderedItem", () => {
                 index: 1,
                 item: previousData[1],
                 renderedItem: "existing-1",
+                type: "existing",
             });
             expect(renderItem).toHaveBeenCalledWith({
                 data: previousData,
