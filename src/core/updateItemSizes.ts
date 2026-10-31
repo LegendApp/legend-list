@@ -2,6 +2,7 @@ import { schedulePreservedEndAnchorCorrection } from "@/core/bootstrapInitialScr
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { advanceCurrentInitialScrollSession } from "@/core/initialScroll";
 import { setSize } from "@/core/setSize";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
@@ -116,6 +117,15 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     if (result.didChange) {
         maybeUpdateAnchoredEndSpace(ctx);
         checkThresholds(ctx);
+        // Size MVCP is what moves an in-flight initial scroll's target as rows measure. Without it,
+        // re-aim an index target at its measured offset, or the scroll lands on its estimate.
+        if (
+            state.scrollingTo?.isInitialScroll &&
+            state.initialScrollSession?.kind !== "offset" &&
+            !state.props.maintainVisibleContentPosition.size
+        ) {
+            advanceCurrentInitialScrollSession(ctx);
+        }
     }
     if (result.shouldMaintainScrollAtEnd && Platform.OS !== "web") {
         doMaintainScrollAtEnd(ctx, { immediate: true });
