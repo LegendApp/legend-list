@@ -13,6 +13,7 @@ import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCaches
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
+import { resetInitialRenderState, setInitialRenderState } from "../../src/utils/setInitialRenderState";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("initialScrollLifecycle", () => {
@@ -165,6 +166,68 @@ describe("initialScrollLifecycle", () => {
                 expect(ctx.state.initialScrollSession?.bootstrap?.scroll).toBe(expected);
             });
         }
+    }
+
+    for (const offset of [-116, 0, 250]) {
+        it(`reveals fresh data already at offset ${offset} without a native scroll event`, () => {
+            advanceCurrentInitialScrollSessionSpy.mockRestore();
+            checkFinishedScrollSpy.mockRestore();
+            Platform.OS = "ios";
+            const data = Array.from({ length: 30 }, (_, index) => ({ id: `item-${index}` }));
+            const ctx = createMockContext(
+                { readyToRender: true },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    hasHadNonEmptyData: true,
+                    hasScrolled: true,
+                    initialScrollSession: { kind: "offset", previousDataLength: 30 },
+                    lastNativeScroll: offset,
+                    props: { contentInset: { top: 116 }, data },
+                    queuedInitialLayout: true,
+                    scroll: offset,
+                    scrollLength: 874,
+                    scrollPending: offset,
+                },
+            );
+            const scrollTo = mock(() => {});
+            ctx.state.refScroller.current = { getScrollableNode: () => ({}), scrollTo } as any;
+            const changeData = (nextData: typeof data, didStartFreshData: boolean) => {
+                ctx.state.props.data = nextData;
+                handleInitialScrollDataChange(ctx, {
+                    dataLength: nextData.length,
+                    didDataChange: true,
+                    didStartFreshData,
+                    initialScrollAtEnd: false,
+                    latestInitialScroll: { contentOffset: offset, index: 0, viewOffset: 0 },
+                    latestInitialScrollSessionKind: "offset",
+                    stylePaddingEnd: 0,
+                    useBootstrapInitialScroll: false,
+                });
+            };
+
+            try {
+                changeData([], false);
+                resetInitialRenderState(ctx, { resetInitialScroll: true, resetLayout: true });
+                changeData(data, true);
+                expect(ctx.values.get("readyToRender")).toBe(false);
+                expect(ctx.state.scrollingTo).toBeUndefined();
+
+                ctx.state.queuedInitialLayout = true;
+                setInitialRenderState(ctx, { didLayout: true });
+                handleInitialScrollLayoutReady(ctx);
+                for (const callback of rafCallbacks.splice(0)) callback(16);
+
+                expect(ctx.state.didFinishInitialScroll).toBe(true);
+                expect(ctx.values.get("readyToRender")).toBe(true);
+                expect(ctx.state.initialScroll).toBeUndefined();
+                expect(ctx.state.scrollingTo).toBeUndefined();
+                expect(ctx.state.scroll).toBe(offset);
+                expect(scrollTo).not.toHaveBeenCalled();
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
     }
 
     it("replays finished offset-only initial scrolls when data arrives after an empty mount", () => {

@@ -238,7 +238,7 @@ describe("initialScroll", () => {
         );
     });
 
-    it("skips forced offset-session scrolls when already sitting on the desired target", () => {
+    it("finishes aligned offset sessions within epsilon and preserves the target while empty", () => {
         const ctx = createMockContext(
             { totalSize: 1000 },
             {
@@ -251,14 +251,53 @@ describe("initialScroll", () => {
                     kind: "offset",
                     previousDataLength: 0,
                 } as StateContext["state"]["initialScrollSession"],
-                scroll: 220,
+                scroll: 220.5,
                 scrollLength: 300,
-                scrollPending: 220,
+                scrollPending: 220.5,
             },
         );
 
         expect(advanceCurrentInitialScrollSession(ctx, { forceScroll: true })).toBe(false);
         expect(scrollToSpy).not.toHaveBeenCalled();
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+        expect(ctx.state.initialScroll?.contentOffset).toBe(220);
+        expect(ctx.state.scroll).toBe(220.5);
+    });
+
+    it("dispatches an aligned cached offset when the observed offset has not reached it", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                initialScroll: { contentOffset: 220, index: 0 },
+                initialScrollSession: { kind: "offset" },
+                lastNativeScroll: 0,
+                scroll: 220,
+                scrollPending: 220,
+            },
+        );
+
+        expect(advanceCurrentInitialScrollSession(ctx, { forceScroll: true })).toBe(true);
+        expect(scrollToSpy).toHaveBeenCalled();
+        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
+    });
+
+    it("leaves an aligned active offset scroll in charge of completion", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                initialScroll: { contentOffset: 220, index: 0 },
+                initialScrollSession: { kind: "offset" },
+                scroll: 220,
+                scrollingTo: { isInitialScroll: true, offset: 220 },
+                scrollPending: 220,
+            },
+        );
+        const target = ctx.state.scrollingTo;
+
+        expect(advanceCurrentInitialScrollSession(ctx, { forceScroll: true })).toBe(false);
+        expect(scrollToSpy).not.toHaveBeenCalled();
+        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
+        expect(ctx.state.scrollingTo).toBe(target);
     });
 
     it("resets didFinishInitialScroll only when requested while preserving the session kind", () => {

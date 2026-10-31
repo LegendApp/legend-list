@@ -2,6 +2,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
+import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scrollTo } from "@/core/scrollTo";
@@ -184,7 +185,19 @@ function advanceOffsetInitialScroll(
     const isAlreadyAtDesiredInitialTarget =
         Math.abs(state.scroll - resolvedOffset) <= 1 && Math.abs(state.scrollPending - resolvedOffset) <= 1;
 
-    if (options?.forceScroll && isAlreadyAtDesiredInitialTarget) {
+    if (
+        options?.forceScroll &&
+        isAlreadyAtDesiredInitialTarget &&
+        Math.abs(getObservedScrollOffset(ctx) - resolvedOffset) <= 1
+    ) {
+        if (!state.scrollingTo) {
+            // No native event or active scroll will complete an already aligned session.
+            finishInitialScroll(ctx, {
+                preserveTarget: state.props.data.length === 0,
+                recalculateItems: true,
+                syncObservedOffset: true,
+            });
+        }
         return false;
     }
 
