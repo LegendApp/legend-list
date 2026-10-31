@@ -1,91 +1,22 @@
-## Unreleased
+## 3.7.1
 
-- Performance: Render rows the first scroll reveals near the top ahead of time by spending unused top buffer below the viewport.
-- Fix: `KeyboardAwareLegendList` leaves keyboard dismissal scrolling to the keyboard controller, avoiding an instant end-follow jump while the keyboard closes.
-- Fix: `onEndReached` and `onStartReached` fire again inside their threshold when the data length changes, or a new array arrives with a content size different from the size at the last callback. Stationary layout-only changes and empty data do not re-arm them.
-    - Before: after firing, an edge stayed latched until the reader scrolled 30% beyond its threshold or, for the end only, until data grew. A new qualifying gesture could also retry the same length. A short list could stop loading older pages at the start or stop paging after a removal.
-    - Now: inside its threshold, an edge fires again when the data length changes, or when a new data array arrives and the content size differs from the size at the last callback. A same-length empty page does not trigger another callback if the content size returns to that saved size, including when a loading footer appears and is then removed. A new user gesture toward that edge can retry unchanged data. If the current data array already received a callback for changed content, that delivery counts toward the next gesture; a later gesture can retry the same array. A new array with the same length and content size, such as one derived on every render, does not re-arm the edge, so callbacks that only set state do not loop. Synchronous data updates inside a callback preserve the latest delivered data. Without a new gesture, the existing shared 30% hysteresis still gates re-entry. End-following chats can also get a new end callback after data changes and following settles. While the scroll offset stays unchanged, row re-measures, image loads, header or footer toggles and inset changes do not re-fire an edge that already fired, even if they cross the 30% hysteresis band; a re-measure that first brings an edge inside its threshold fires it once. Clearing data to `[]` fires neither edge, and refilling starts fresh.
-    - When: lists that stay inside a threshold, such as short lists, chats loading older pages with `maintainVisibleContentPosition`, and loading footers or headers.
-    - Why: qualifying data and content size changes re-arm short lists, while stationary layout-only changes cannot loop loading requests. In particular, a loading footer that crosses the hysteresis band and is removed without data progress no longer repeatedly requests empty pages. Actual scroll-offset changes retain the existing distance-based re-entry behavior. Empty data has no first or last item to page from.
-    - Known limitation: on iOS Legacy, a footer temporarily crossing the threshold can still suppress a subsequent append callback. This also occurs on 3.7.0.
-- Fix: Vertical iOS lists with `contentInset.top` treat `-contentInset.top` as the start.
-    - Before: the start was native offset `0`, so initial placement, index and end targets, `alignItemsAtEnd` padding, `isAtStart`, `onStartReachedThreshold` and `onStartReached` distances were off by the inset. A short list's `scrollToEnd` landed below the start, and an idle list stayed where it was when the inset changed.
-    - Now: without an initial target, the list rests at `-contentInset.top`. Index and end targets, start thresholds and `onStartReached` distances are measured from that resting start, and a list resting at its start follows a changed top inset. `scrollToOffset` and `initialScrollOffset` stay raw native offsets like React Native's `ScrollView`: explicit `0` requests native zero. A `contentContainerStyle.paddingTop` change compensates only for overscroll past the resting start.
-    - When: vertical iOS lists with a nonzero `contentInset.top`, such as lists under a translucent header.
-    - Why: UIKit rests a scroll view with a top inset at `-contentInset.top`.
-- Fix: Scrolling, end thresholds and `maintainVisibleContentPosition` share one physical content size, including `contentContainerStyle` minimum sizes.
-    - Before: `scrollToOffset` included `minHeight`/`minWidth`, but `scrollToEnd`, initial placement, end thresholds and MVCP clamps used the row content only. On native, list-owned `anchoredEndSpace` counted only the larger of itself and the bottom inset.
-    - Now: these paths use the content plus in-container end space, raised to the minimum size. Native vertical and horizontal LTR insets extend that minimum, and their list-owned anchored end space adds to the content inset; horizontal RTL retains its prior overlapping inset convention. `isAtEnd`, `isNearEnd` and `onEndReached` measure from the end of the minimum size. Item targets still align to rows, while explicit raw offset requests preserve native zero for short inset content. Native horizontal RTL offset and end targets retain their prior inset coordinate basis while accounting for the minimum width. Snap offsets and native RTL row virtualization retain their prior item extent. On vertical and horizontal LTR lists, list-owned end space keeps its anchor offset when a native end inset changes, unless the container minimum itself prevents that alignment.
-    - When: lists with a `contentContainerStyle` `minHeight` or `minWidth`, or with `anchoredEndSpace` and a native bottom inset.
-    - Why: the native scroll range includes that space, so other paths clamped short of the real end or bounced.
-- Fix: Native end following stays at the end while rows measure and the viewport resizes.
-    - Before: an instant `scrollToEnd` or end follow kept the end offset it started with, so settling measurements or a content-size change while the native scroll view clamped could leave it short. Android could count its shrink clamp twice, and changing `maintainScrollAtEndThreshold` waited for the next scroll to apply.
-    - Now: explicit instant end requests wait for native progress before completing, active end requests retarget as measurements settle, clamped native end requests are reissued when the native content size changes unless a replacement request is waiting, a replacement that needs no scroll releases the old instant target, Android's shrink clamp is counted once, and threshold prop changes refresh end following right away.
-    - When: iOS and Android lists using `maintainScrollAtEnd` or `scrollToEnd({ animated: false })`, especially across keyboard, rotation and other viewport changes.
-    - Why: the end moves while rows measure and the viewport changes, so a request fixed to its first target lands short.
-- Fix: On web, a wheel that interrupts an animated list scroll applies its delta exactly once.
-    - Before: interrupting an animated `scrollTo`, `scrollToEnd` or end follow stopped at the pre-wheel offset. Chromium lost the wheel, which near the end could let following re-arm, while WebKit and Firefox applied it natively.
-    - Now: the stop write includes a cancelable wheel's delta and cancels its native scroll. Non-cancelable wheels keep their native movement without adding it again. Deferred scroll adjustments commit from that same wheel destination, including while a replacement request waits for layout. The wheel listener is non-passive only while a list scroll is active, so idle wheel scrolling stays passive.
-    - When: web lists receiving wheel or trackpad input during an animated list scroll.
-    - Why: browsers disagree on whether such a wheel still scrolls, and a non-passive wheel listener on every list delays scrolling.
-- Fix: Lists keep the visible anchor current while rows change size inside the rendered window.
-    - Before: scrolling inside the cached render window refreshed the visible range only for viewability callbacks or `onFirstVisibleItemChanged`, so `maintainVisibleContentPosition` could anchor to a row that had scrolled away while streamed rows grew.
-    - Now: the visible range is refreshed on every scroll inside the cached window.
-    - When: lists with `maintainVisibleContentPosition` whose rows grow while visible, such as streamed chat messages.
-    - Why: the anchor must be a row that is currently visible.
-- Fix: Container measurements are applied only to the item the container currently holds.
-    - Before: after data changes, a container's measurement could arrive with a stale item index and overwrite another item's size, misplacing rows.
-    - Now: native, web and batched measurements are checked against the current key index and retried after the parent's layout effects refresh it. Data changes before the first viewport also invalidate cached positions so measurement retries settle on current keys.
-    - When: inserts, removals, reorders or recycling while containers are measuring.
-    - Why: a size must belong to the row that was measured.
+- Fix: Loading callbacks respond reliably to data changes and new scroll gestures.
+- Fix: Lists preserve scroll positions as rows, insets, and viewport sizes change.
+- Fix: iOS lists with `contentInset.top` now rest at and measure from the inset start.
+- Fix: Keyboard dismissal and interrupted scrolling no longer cause jumps or doubled movement.
+- Fix: Rows stay correctly positioned after items are inserted, removed, or reordered.
+- Perf: Lists prepare more rows before the first scroll.
 
 ## 3.7.0
 
-- Fix: List ref methods `scrollToIndex`, `scrollToOffset`, `scrollToItem`, `scrollToKey`, `scrollToEnd`, `scrollIndexIntoView`, and `scrollItemIntoView` resolve their promises once the scroll lands, or when it is interrupted by user input, canceled or replaced, or cannot reach its target (including removed targets, dataset replacement, and unmounting), instead of resolving early or never.
-
-    Suspense/Activity hide counts as unmounting for scroll requests. Requests made through a captured ref while hidden resolve without scrolling and are not replayed on reveal.
-
-    `scrollToIndex` and `scrollToOffset` clamp out-of-range targets and resolve once landed. Index-based navigation and `scrollToEnd` on empty data resolve without scrolling, including when a header or footer is present.
-
-- Types: new required members on `LegendListRef` / state since 3.6.0. These stay required, and code that implements or mocks these types must add them:
-
-    - `LegendListRef` (native and web): `cancelScroll`, `scrollToKey`, `anchorVisibleContent`.
-    - `LegendListState`: `distanceFromEnd`, `isFollowingEnd`. `dataKey` is added as optional.
-    - `SectionListRef`: `cancelScroll`, `scrollToKey`, `anchorVisibleContent` (inherited from `LegendListRef`). Key-based methods use the flattened keys `${sectionKey}:item:${itemKey}`, `${sectionKey}:header`, `${sectionKey}:footer`, `${sectionKey}:separator:${itemIndex}`, and `${sectionKey}:section-separator`, where `sectionKey` is the section's key or `section-${sectionIndex}`.
-    - `LegendListMetrics`, the `onMetricsChange` payload: unchanged from 3.6.0, still `headerSize` and `footerSize`. Scroll position and end-distance fields added during the cycle were removed before release.
-
-    `getState().listen` accepts the new `isFollowingEnd` key. `distanceFromEnd` is not a listen key; read `getState().distanceFromEnd`, which is computed on demand. 3.6.0-shaped `listen` implementations remain assignable.
-
-- Feat: Add ref methods `cancelScroll` to stop queued and active scrolling, `scrollToKey` to navigate by stable item key through prepends, and `anchorVisibleContent` to capture an item's key and viewport offset and hold it through layout changes (the first visible item by default). Pass `{ key }` to choose an item, or use `anchorVisibleContent({ hold: false })` for a snapshot without side effects. Returns `undefined` before initial placement, during dataset replacement, or if no item is found; at the end while following, it returns the anchor without interrupting end following.
-- Feat: Add `viewportMargin: { start, end }` to `scrollIndexIntoView` to keep space clear at the start and end of the viewport along the scroll axis.
-- Feat: Add `itemOffset` and `itemLength` to `scrollIndexIntoView` and `scrollItemIntoView` to reveal a region inside an item within `viewportMargin` on vertical and horizontal lists.
-- Feat: Expose `distanceFromEnd`, `isFollowingEnd`, and `dataKey` through `getState()`, and accept `isFollowingEnd` in `getState().listen`.
-- Feat: Add boolean `maintainScrollAtEnd.on.dataAppend` to follow only additions that preserve existing item keys in order; `on.dataChange` remains a boolean option for all data changes.
-- Feat: `onUserScroll` fires once per accepted real user gesture (native drag with its momentum, web touch/wheel gesture, scroll key press, scrollbar input, or iOS status-bar tap), never for library or list-ref scrolls, and remains `@experimental` with heuristic wheel grouping and gaps in native pointer/wheel-only and web overlay scrollbar detection.
-- Fix: With a native screen reader enabled, unowned accessibility scrolling toward the start releases end following and reports `onUserScroll` once per burst; assistive input during library animations or just after `cancelScroll()` can be missed, and scrolls bypassing the list (such as native-ref commands or Reanimated `scrollTo` worklets) cannot be distinguished from accessibility input, so call `cancelScroll()` on the JS thread before that navigation.
-- Fix: Leftover trackpad momentum no longer cancels scroll commands; a new wheel gesture can interrupt them, while upward wheel motion releases automatic end following as in 3.6.0 and downward motion never does.
-- Fix: iOS status-bar taps release end following and settle an interrupted list scroll.
-- Fix: Native scrolls outside list-owned commands release end following when they move beyond its threshold, and appends while reading earlier rows leave no pending end measurements.
-- Fix: Pausing `maintainScrollAtEnd` retains end intent for resuming; `isFollowingEnd` continues to report that intent while paused.
-- Fix: Item-layout end following responds to every nonzero size change when its trigger is enabled.
-- Fix: End thresholds (`isAtEnd`, `onEndReached`, and `maintainScrollAtEnd`) count trailing content and keyboard insets once. With a trailing inset, they now activate closer to the physical end instead of firing early by the inset amount.
-- Fix: Row measurements and header/footer size changes recheck `onStartReached` and `onEndReached` thresholds, so pagination callbacks can fire without a scroll when layout brings an edge within its threshold.
-- Fix: Animated end following stays aligned through short-list growth, footer and viewport changes, late row measurements, and native drag-to-momentum handoffs. #563 #568
-- Fix: Automatic native end following waits for a drag and its momentum to settle, then catches up near the end using the configured threshold.
-- Fix: Keyed scroll targets survive prepends and same-key item updates, cached dataset switches restart initial placement, and fixed-size updates and cache clearing preserve the reader's anchor.
-- Fix: `scrollToOffset` can reach `contentContainerStyle` minimum sizes, horizontal RTL web lists use the scroll owner's direction for offsets, and horizontal RTL scroll-offset conversion keeps numeric `minWidth` in the physical content extent.
-- Fix: When `getFixedItemSize` is set, changing `extraData` invalidates all fixed sizes and repositions the data.
-- Fix: Inline `onMetricsChange` callbacks no longer cause repeated metrics emissions.
-- Fix: End following rearms when a scroll or gesture settles within `maintainScrollAtEndThreshold`, so new content resumes following after `scrollToIndex`/`scrollToOffset` or a small nudge that stays near the end.
-- Fix: When `getFixedItemSize` starts returning sizes for rows that were already measured, their stale measurements are dropped and the fixed sizes are applied, including rows reordered in the same render.
-- Fix: Web lists follow the end in one painted frame when every row grows after a mount or `dataKey` switch, instead of clamping against the stale content extent and catching up a frame late.
-- Fix: On Fabric, the native content extent commits in the same render pass as row positions, so shrinking content cannot briefly leave rows mispositioned.
-- Fix: `scrollMessageToEnd({ closeKeyboard: true })` starts scrolling right away and eases to the closed end in one motion while the keyboard closes, dismissing it once, including back-to-back and mixed animated and non-animated sends.
-- Fix: `AnimatedLegendList` `itemLayoutAnimation` no longer animates rows while scrolling, during list scroll commands, or after layout adjustments, and skips the transition when a container switches items even without `recycleItems`.
-- Fix: Keyboard occlusion is excluded from viewability calculations, horizontal viewability uses the correct start padding including RTL, native content insets are counted only where applied, and `KeyboardAwareLegendList` keeps the static `contentInset` prop out of Android keyboard inset reports so it is not counted twice.
-- Fix: `scrollMessageToEnd({ closeKeyboard: true })` freezes keyboard tracking before the keyboard starts closing, so the list scrolls to the end in one motion instead of first moving back with the closing keyboard. A rejected scroll or a keyboard close that never settles no longer leaves `freeze` set. #557
-- Fix: Animated scrolls that start past the end of the content ease back into range instead of snapping.
-- Perf: With `recycleItems` enabled, reuse warm offscreen rows before empty containers, and skip key extraction for unchanged append prefixes.
+- Feat: `LegendListRef` gains `cancelScroll`, `scrollToKey`, `anchorVisibleContent`; state gains `distanceFromEnd`, `isFollowingEnd`.
+- Feat: Expose end-following state and allow following only newly appended items.
+- Feat: `onUserScroll` reports user scroll gestures.
+- Fix: Scroll promises resolve reliably when scrolling finishes or is interrupted.
+- Fix: Lists follow new content smoothly and respect users scrolling away from the end. #563 #568
+- Fix: Scrolling to the end while closing the keyboard moves smoothly in one motion. #557
+- Fix: Row sizing and layout changes preserve visible content and improve viewability accuracy.
+- Perf: Recycled lists reuse rows more efficiently and process appended data faster.
 
 ## 3.6.0
 
