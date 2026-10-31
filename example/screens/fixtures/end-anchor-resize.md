@@ -52,6 +52,6 @@ or device, especially for native event ordering and animation.
 - React DOM fixture: three compositor captures each with footer 0, 16, and 80
   kept the green marker at y=608 through resize. Repeated resize, history
   preservation, and returning to end passed for all three sizes, without page
-  errors. This uses the temporary Humand diagnostic runner, not a new CI suite.
+  errors. This uses the temporary diagnostic runner, not a new CI suite.
 - Native transient frames were not captured like the browser compositor frames;
   native evidence above is interaction, settled geometry, and screenshot evidence.
