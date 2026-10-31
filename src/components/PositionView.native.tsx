@@ -70,6 +70,18 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     return <Animated.View ref={refView} style={[style, position]} {...rest} />;
 });
 
+// Effectively unbounded travel for the last sticky header, which nothing pushes out.
+const MAX_STICKY_DISTANCE = 1e7;
+
+function clampAtZero(value: Animated.AnimatedSubtraction<number>) {
+    return value.interpolate({
+        extrapolateLeft: "clamp",
+        extrapolateRight: "extend",
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+    });
+}
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewSticky = typedMemo(function PositionViewSticky({
     id,
@@ -113,44 +125,51 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         [ctx.state, itemIndex, itemKey, _totalSize],
     );
 
-    // Sticky headers follow scroll visually; keep this on transform.
-    const transform = React.useMemo(() => {
-        if (animatedScrollY) {
-            const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
-            const stickyStart = position + headerSize + stylePaddingTop + alignItemsAtEndPadding - stickyConfigOffset;
-            let nextStickyPosition: number | ReturnType<Animated.Value["interpolate"]>;
+    const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
+    const stickyStart = position + headerSize + stylePaddingTop + alignItemsAtEndPadding - stickyConfigOffset;
+    // How far the header may travel once pinned before the next sticky header has pushed it out.
+    const maxStickyDistance = pushLimit !== undefined ? pushLimit - position : MAX_STICKY_DISTANCE;
 
-            if (pushLimit !== undefined) {
-                if (pushLimit <= position) {
-                    nextStickyPosition = pushLimit;
-                } else {
-                    nextStickyPosition = animatedScrollY.interpolate({
-                        extrapolateLeft: "clamp",
-                        extrapolateRight: "clamp",
-                        inputRange: [stickyStart, stickyStart + (pushLimit - position)],
-                        outputRange: [position, pushLimit],
-                    });
-                }
-            } else {
-                nextStickyPosition = animatedScrollY.interpolate({
-                    extrapolateLeft: "clamp",
-                    extrapolateRight: "extend",
-                    inputRange: [stickyStart, stickyStart + 5000],
-                    outputRange: [position, position + 5000],
-                });
-            }
-
-            return horizontal ? [{ translateX: nextStickyPosition }] : [{ translateY: nextStickyPosition }];
+    // Sticky headers follow scroll visually; keep this on transform. The native-driven graph is built
+    // once and position changes are fed in with setValue. Swapping in a new interpolation instead is
+    // not applied by the native driver until the next scroll event, so a header moved by a data change
+    // stayed where it was until the user scrolled.
+    const stickyTranslate = React.useMemo(() => {
+        if (!animatedScrollY) {
+            return undefined;
         }
-    }, [
-        alignItemsAtEndPadding,
-        animatedScrollY,
-        headerSize,
-        position,
-        pushLimit,
-        stylePaddingTop,
-        stickyHeaderConfig?.offset,
-    ]);
+        const position$ = new Animated.Value(position);
+        const stickyStart$ = new Animated.Value(stickyStart);
+        const maxStickyDistance$ = new Animated.Value(maxStickyDistance);
+        const scrolledPastStart = clampAtZero(Animated.subtract(animatedScrollY, stickyStart$));
+        // min(a, b) = b - max(b - a, 0)
+        const stickyDistance = Animated.subtract(
+            maxStickyDistance$,
+            clampAtZero(Animated.subtract(maxStickyDistance$, scrolledPastStart)),
+        );
+        return {
+            maxStickyDistance$,
+            position$,
+            stickyStart$,
+            translate: Animated.add(position$, stickyDistance),
+        };
+    }, [animatedScrollY]);
+
+    React.useLayoutEffect(() => {
+        if (stickyTranslate) {
+            stickyTranslate.position$.setValue(position);
+            stickyTranslate.stickyStart$.setValue(stickyStart);
+            stickyTranslate.maxStickyDistance$.setValue(maxStickyDistance);
+        }
+    }, [maxStickyDistance, position, stickyStart, stickyTranslate]);
+
+    const transform = React.useMemo(() => {
+        if (stickyTranslate) {
+            return horizontal
+                ? [{ translateX: stickyTranslate.translate }]
+                : [{ translateY: stickyTranslate.translate }];
+        }
+    }, [horizontal, stickyTranslate]);
 
     const viewStyle = React.useMemo(
         () => [style, { zIndex: itemIndex + 1000 }, { transform }],
