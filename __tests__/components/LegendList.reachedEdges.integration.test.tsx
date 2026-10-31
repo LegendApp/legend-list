@@ -505,6 +505,46 @@ describe("mounted grid reached callbacks", () => {
 });
 
 describe("empty list reached callbacks", () => {
+    it("re-pages once when delivered rows become empty inside padded content", async () => {
+        const { LegendList } = await import("../../src/components/LegendList");
+        let scrollProps: any;
+        const ScrollSurface = React.forwardRef(function EmptyPageScrollSurface(
+            props: any,
+            forwardedRef: React.Ref<any>,
+        ) {
+            scrollProps = props;
+            React.useImperativeHandle(forwardedRef, () => ({ measure: () => {}, scrollTo: () => {} }));
+            return <>{props.children}</>;
+        });
+        let calls = 0;
+        const list = (data: { id: string }[]) => (
+            <LegendList
+                contentContainerStyle={{ paddingTop: 8 }}
+                data={data}
+                getFixedItemSize={() => 60}
+                keyExtractor={(item: { id: string }) => item.id}
+                onEndReached={() => calls++}
+                renderItem={({ item }: { item: { id: string } }) => <Text>{item.id}</Text>}
+                renderScrollComponent={(props: any) => <ScrollSurface {...props} />}
+            />
+        );
+        const rendered = render(list([{ id: "0" }, { id: "1" }]));
+        await flushFrames();
+        act(() => scrollProps.onLayout({ nativeEvent: { layout: { height: 800, width: 300, x: 0, y: 0 } } }));
+        await flushFrames();
+        expect(calls).toBe(1);
+
+        rendered.rerender(list([]));
+        await flushFrames();
+        expect(calls).toBe(2);
+        for (let pass = 0; pass < 3; pass++) {
+            rendered.rerender(list([]));
+            await flushFrames();
+            expect(calls).toBe(2);
+        }
+        rendered.unmount();
+    });
+
     it("fires neither edge while empty, then delivers the start edge when rows arrive", async () => {
         const { LegendList } = await import("../../src/components/LegendList");
         let scrollProps: any;

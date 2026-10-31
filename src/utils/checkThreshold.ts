@@ -30,13 +30,16 @@ export const checkThreshold = (
     context: ThresholdSnapshot,
     onReached: (dist: number) => boolean,
     setSnapshot: (snap: ThresholdSnapshot | undefined) => void,
+    allowEmptyDataChange = false,
 ) => {
     // Distance from the edge in absolute terms.
     // Positive values mean we are away from the edge, negative values can happen when content shrinks.
     const absDistance = Math.abs(distance);
     // We treat the boundary as reached either when the caller explicitly says so (`atThreshold`)
     // or when the measured distance sits inside the user-provided `threshold` window.
-    const within = context.dataLength !== 0 && (atThreshold || (threshold > 0 && absDistance <= threshold));
+    const within =
+        (context.dataLength !== 0 || allowEmptyDataChange) &&
+        (atThreshold || (threshold > 0 && absDistance <= threshold));
     const didScroll = snapshot?.scroll !== context.scroll;
     // Observe motion inside the hysteresis band before a later layout-only exit.
     if (snapshot) snapshot.scroll = context.scroll;
