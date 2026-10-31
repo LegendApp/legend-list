@@ -170,6 +170,11 @@ export function updateItemPositions(
             // issues with items that are much taller than screen size
             // So we add a buffer before breaking
             breakAt = i + itemsPerRow + 10;
+            if (Platform.OS === "web") {
+                // Pinned rows stay mounted beyond the visible window and need current positions.
+                const pinnedIndices = state.props.alwaysRenderIndicesArr;
+                breakAt = Math.max(breakAt, pinnedIndices[pinnedIndices.length - 1] ?? -1);
+            }
         }
 
         // Inline the map get calls to avoid the overhead of the function call

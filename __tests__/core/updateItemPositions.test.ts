@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { Platform } from "@/platform/Platform";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { setSize } from "../../src/core/setSize";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
@@ -42,6 +43,27 @@ describe("updateItemPositions", () => {
             },
         );
         mockState = mockCtx.state;
+    });
+
+    it.each(["web", "ios"] as const)("keeps pinned positions current during optimized layout on %s", (platform) => {
+        Platform.OS = platform;
+        mockState.props.data = Array.from({ length: 200 }, (_, index) => ({ id: `row-${index}` }));
+        mockState.props.estimatedItemSize = 100;
+        mockState.props.alwaysRenderIndicesArr = [80, 150];
+        updateItemPositions(mockCtx, true);
+        setSize(mockCtx, "row-0", 200);
+
+        updateItemPositions(mockCtx, false, {
+            doMVCP: false,
+            optimizeForVisibleWindow: true,
+            scrollBottomBuffered: 100,
+            startIndex: 0,
+        });
+
+        expect(mockState.positions[80]).toBe(platform === "web" ? 8100 : 8000);
+        expect(mockState.positions[150]).toBe(platform === "web" ? 15100 : 15000);
+        expect(mockState.positions[199]).toBe(19900);
+        expect(mockState.positionsAreCurrent).toBe(false);
     });
 
     it("starts at zero when an empty visible range has no buffered start", () => {
