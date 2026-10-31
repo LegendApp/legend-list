@@ -1,3 +1,4 @@
+import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
 
@@ -46,6 +47,9 @@ export function findAvailableContainers(
     const hasItemTypes = !!getItemType;
     const shouldAvoidAssignedContainerReuse = state.props.recycleItems && !!state.props.positionComponentInternal;
     const pendingRemovalSet = pendingRemoval.length > 0 ? new Set(pendingRemoval) : undefined;
+    // Recycling a focused web row would move focus onto another item and force the DOM sort
+    // to carry every other row past it, so keep that row mounted while its item exists.
+    const focusedContainerIndex = Platform.OS === "web" ? getFocusedContainerIndex(ctx) : undefined;
 
     const requests = new Array<RequestedContainer>(numNeeded);
     const normalRequests: RequestedContainer[] = [];
@@ -76,7 +80,12 @@ export function findAvailableContainers(
     for (let containerIndex = 0; containerIndex < numContainers; containerIndex++) {
         const key = peek$(ctx, `containerItemKey${containerIndex}`);
         const isPendingRemoval = !!pendingRemovalSet?.has(containerIndex);
-        const isProtected = !!key && !!protectedKeys?.has(key) && state.indexByKey.has(key);
+        const isProtected =
+            (!!key && !!protectedKeys?.has(key) && state.indexByKey.has(key)) ||
+            (containerIndex === focusedContainerIndex &&
+                !isPendingRemoval &&
+                key !== undefined &&
+                state.indexByKey.has(key));
 
         if (isProtected) {
             continue;
@@ -269,6 +278,20 @@ function reorderPoolAssignments(
             for (let i = 0; i < requests.length; i++) {
                 allocations[requests[i].order].containerIndex = containerIndices[i];
             }
+        }
+    }
+}
+
+function getFocusedContainerIndex(ctx: StateContext) {
+    let focused: Element | null | undefined;
+    for (const [containerIndex, viewRef] of ctx.viewRefs) {
+        const element = viewRef.current as HTMLElement | null;
+        if (element) {
+            if (focused === undefined) {
+                focused = (element.getRootNode() as Document | ShadowRoot).activeElement;
+                if (!focused || !element.parentNode?.contains(focused)) return undefined;
+            }
+            if (element.contains(focused)) return containerIndex;
         }
     }
 }

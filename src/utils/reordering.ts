@@ -1,3 +1,21 @@
+import { peek$, type StateContext } from "@/state/state";
+
+export function sortContainerElements(ctx: StateContext) {
+    let parent: HTMLDivElement | null = null;
+    const indexByElement = new Map<HTMLElement, number>();
+    for (const [containerId, viewRef] of ctx.viewRefs) {
+        const element = viewRef.current as HTMLElement | null;
+        const index = peek$(ctx, `containerItemIndex${containerId}`);
+        if (element && index !== undefined) {
+            parent ??= element.parentElement as HTMLDivElement | null;
+            indexByElement.set(element, index);
+        }
+    }
+    if (parent) {
+        sortDOMElements(parent, indexByElement);
+    }
+}
+
 export function sortDOMElements(container: HTMLDivElement, indexByElement: Map<HTMLElement, number>) {
     const elements = Array.from(container.children) as HTMLElement[];
     if (elements.length <= 1) return elements;
@@ -29,22 +47,40 @@ export function sortDOMElements(container: HTMLDivElement, indexByElement: Map<H
     // This represents elements already in correct relative order
     const currentPositions = elements.map((el) => targetPositions.get(el));
     const lis = findLIS(currentPositions);
+    if (lis.length === elements.length) return;
 
     // Mark elements in LIS as stable (don't move them)
-    const stableIndices = new Set(lis);
+    const stableElements = new Set(lis.map((index) => elements[index]));
+    // insertBefore can blur a focused row, so restore it after moving.
+    const focusRoot = container.getRootNode() as Document | ShadowRoot;
+    const focused = focusRoot.activeElement as HTMLElement | null;
+    // Moving a focused row can scroll Chromium's editing caret, including inside a shadow host.
+    // Keep that row stationary, preserving focus without firing blur/focus handlers.
+    if (focused && focused !== container.ownerDocument.body) {
+        const focusedIndex = elements.findIndex((element) => element.contains(focused));
+        if (focusedIndex >= 0) {
+            const focusedTarget = currentPositions[focusedIndex];
+            for (const index of lis) {
+                if (
+                    (index < focusedIndex && currentPositions[index] > focusedTarget) ||
+                    (index > focusedIndex && currentPositions[index] < focusedTarget)
+                ) {
+                    stableElements.delete(elements[index]);
+                }
+            }
+            stableElements.add(elements[focusedIndex]);
+        }
+    }
 
     // Move only elements not in the stable sequence
     for (let targetPos = 0; targetPos < items.length; targetPos++) {
         const element = items[targetPos][0];
-        const currentPos = elements.indexOf(element);
-
-        if (!stableIndices.has(currentPos)) {
+        if (!stableElements.has(element)) {
             // Find where to insert this element
             let nextStableElement = null;
             for (let i = targetPos + 1; i < items.length; i++) {
                 const nextEl = items[i][0];
-                const nextCurrentPos = elements.indexOf(nextEl);
-                if (stableIndices.has(nextCurrentPos)) {
+                if (stableElements.has(nextEl)) {
                     nextStableElement = nextEl;
                     break;
                 }
@@ -59,6 +95,10 @@ export function sortDOMElements(container: HTMLDivElement, indexByElement: Map<H
                 container.appendChild(element);
             }
         }
+    }
+
+    if (focused && focused !== focusRoot.activeElement && focused.isConnected) {
+        focused.focus({ preventScroll: true });
     }
 }
 

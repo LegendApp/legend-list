@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { Platform } from "@/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { findAvailableContainers } from "../../src/utils/findAvailableContainers";
@@ -340,6 +341,45 @@ describe("findAvailableContainers", () => {
             expect(resultIndices).not.toContain(0);
             expect(resultIndices).not.toContain(1);
             expect(resultIndices).toEqual([2, 3]);
+        });
+        it("keeps a focused web row mounted until its item is removed", () => {
+            Platform.OS = "web";
+            ctx.values.set("numContainers", 3);
+            // An empty string is a valid key, so the focused row uses one.
+            for (const [containerIndex, key] of ["item0", "item1", ""].entries()) {
+                ctx.values.set(`containerItemKey${containerIndex}`, key);
+                mockState.indexByKey.set(key, key ? Number(key.slice(4)) : 20);
+            }
+            const focused = {};
+            const outside = {};
+            const root = { activeElement: focused as unknown };
+            const parentNode = { contains: (node: unknown) => node === focused };
+            for (const containerIndex of [0, 1, 2]) {
+                ctx.viewRefs.set(containerIndex, {
+                    current: {
+                        contains: (node: unknown) => containerIndex === 2 && node === focused,
+                        getRootNode: () => root,
+                        parentNode,
+                    },
+                } as unknown as StateContext["viewRefs"] extends Map<number, infer Ref> ? Ref : never);
+            }
+            const reused = (pendingRemoval: number[] = []) =>
+                containerIndices(findAvailableContainers(ctx, [5], 5, 10, pendingRemoval));
+
+            // The focused row is the farthest candidate, so it is reused once it is no longer protected.
+            expect(reused()).toEqual([0]);
+            expect(reused([2])).toEqual([2]);
+
+            root.activeElement = outside;
+            expect(reused()).toEqual([2]);
+
+            // Native refs are not DOM elements, so the lookup must not run there.
+            Platform.OS = "ios";
+            root.activeElement = focused;
+            for (const containerIndex of [0, 1, 2]) {
+                ctx.viewRefs.set(containerIndex, { current: {} } as never);
+            }
+            expect(reused()).toEqual([2]);
         });
     });
 

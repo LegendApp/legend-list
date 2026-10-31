@@ -875,6 +875,7 @@ export function calculateItemsInView(
 
         const pendingRemovalSet = pendingRemoval.length > 0 ? new Set(pendingRemoval) : undefined;
         let didChangePositions = false;
+        let didChangeIndex = false;
         // Update top positions of all containers
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
@@ -908,6 +909,7 @@ export function calculateItemsInView(
             } else {
                 const itemIndex = indexByKey.get(itemKey);
                 if (itemIndex !== undefined) {
+                    didChangeIndex ||= peek$(ctx, `containerItemIndex${i}`) !== itemIndex;
                     didChangePositions =
                         syncMountedContainer(ctx, i, itemIndex, {
                             scrollAdjustPending,
@@ -919,6 +921,9 @@ export function calculateItemsInView(
 
         if (changedContainerIds && (IsNewArchitecture || Platform.OS === "web")) {
             scheduleContainerLayout(ctx, changedContainerIds);
+        } else if (Platform.OS === "web" && didChangeIndex) {
+            // Retained rows changed order; wake the coordinator to sort DOM order without remeasuring.
+            set$(ctx, "containerLayoutEpoch", (peek$(ctx, "containerLayoutEpoch") ?? 0) + 1);
         }
 
         if (Platform.OS === "web" && didChangePositions) {

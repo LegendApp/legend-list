@@ -96,6 +96,7 @@ describe("measureContainersInLayoutEffect web", () => {
             ctx.viewRefs.set(containerId, {
                 current: {
                     getBoundingClientRect: () => ({ height: data.find((item) => item.id === key)!.height, width: 320 }),
+                    getRootNode: () => ({ activeElement: null }),
                 },
             } as any);
         }
@@ -292,6 +293,7 @@ describe("measureContainersInLayoutEffect web", () => {
                                 invalidate();
                                 return { height: 122, width: 320 };
                             },
+                            getRootNode: () => ({ activeElement: null }),
                         },
                     } as any);
                 } else if (!afterMeasurement) {
@@ -343,6 +345,7 @@ describe("measureContainersInLayoutEffect web", () => {
                     state.didFinishInitialScroll = false;
                     return { height: 122, width: 320 };
                 },
+                getRootNode: () => ({ activeElement: null }),
             },
         } as any);
         try {
