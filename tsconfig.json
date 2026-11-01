@@ -53,6 +53,9 @@
             ],
             "@legendapp/list/reanimated": [
                 "./src/integrations/reanimated"
+            ],
+            "@legendapp/list/infinite": [
+                "./src/integrations/infinite"
             ]
         },
         "resolveJsonModule": true,
