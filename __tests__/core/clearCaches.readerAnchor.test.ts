@@ -5,6 +5,7 @@ import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { rearmEndFollowIfSettled } from "../../src/core/finishMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { restoreItemSizeEstimates, saveItemSizeEstimates } from "../../src/core/itemSizeCache";
 import { prepareMVCP } from "../../src/core/mvcp";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
@@ -242,4 +243,34 @@ describe("size-cache invalidation reader anchoring", () => {
             ctx.state.scheduledWork.dispose();
         });
     }
+});
+
+it("keeps a full cache clear invalidated after the reopened data changes", () => {
+    const data = [{ id: "a" }, { id: "b" }];
+    const keyExtractor = (item: { id: string }) => item.id;
+    const renderItem = () => null;
+    const context = (items: typeof data) =>
+        createMockContext(
+            {},
+            {
+                indexByKey: new Map(items.map((item, index) => [item.id, index])),
+                lastLayout: { height: 200, width: 320, x: 0, y: 0 },
+                props: { data: items, estimatedItemSize: 50, keyExtractor, renderItem },
+            },
+        );
+    const measured = context(data);
+    measured.state.sizesKnown.set("b", 400);
+    saveItemSizeEstimates(measured, keyExtractor);
+    const reopened = context([...data]);
+    restoreItemSizeEstimates(reopened, 320, keyExtractor);
+    expect(reopened.state.sizes.get("b")).toBe(400);
+
+    createImperativeHandle(reopened).clearCaches({ mode: "full" });
+    reopened.state.props.data = [...data, { id: "c" }];
+    restoreItemSizeEstimates(reopened, 320, keyExtractor);
+    expect(reopened.state.sizes.has("b")).toBe(false);
+    // The original array and extractor aliases must not resurrect the discarded snapshot either.
+    const again = context(data);
+    restoreItemSizeEstimates(again, 320, keyExtractor);
+    expect(again.state.sizes.size).toBe(0);
 });

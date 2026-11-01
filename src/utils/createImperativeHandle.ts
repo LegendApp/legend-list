@@ -8,6 +8,7 @@ import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { armAppScrollRearm, interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
+import { clearItemSizeEstimates } from "@/core/itemSizeCache";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { getScrollRequestTracker, type ScrollRequestRun } from "@/core/scrollRequestTracker";
@@ -224,6 +225,7 @@ export function createImperativeHandle(
                 };
             }
         }
+        clearItemSizeEstimates(ctx);
         // Keep rendered sizes as estimates so native content cannot collapse before remeasurement.
         state.sizesKnown.clear();
         invalidateFixedItemSizes(state);

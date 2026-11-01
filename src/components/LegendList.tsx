@@ -38,6 +38,7 @@ import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
+import { restoreItemSizeEstimates, saveItemSizeEstimates } from "@/core/itemSizeCache";
 import { onScroll } from "@/core/onScroll";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
@@ -373,6 +374,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasExternalScroll = useWindowScrollResolved || scrollElementResolved !== undefined;
 
     const refState = useRef<InternalState | undefined>(undefined);
+    const sizeCacheOwnerRef = useRef<object | undefined>(undefined);
+    // Separator measurements depend on tail membership; keep them instance-local.
+    sizeCacheOwnerRef.current = props.ItemSeparatorComponent ? undefined : (keyExtractorProp ?? dataProp);
     const hasOverrideItemLayout = !!overrideItemLayout;
     const prevHasOverrideItemLayout = useRef(hasOverrideItemLayout);
 
@@ -636,6 +640,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal) {
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
+        restoreItemSizeEstimates(ctx, estimatedListSize?.[horizontal ? "height" : "width"], sizeCacheOwnerRef.current);
         updateItemPositions(ctx, /*dataChanged*/ true);
     }
 
@@ -656,6 +661,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.isUnmounted = false;
         if (state.userScrollContentSize !== undefined || state.isMomentumScrolling) armUserScrollSettle(ctx);
         return () => {
+            saveItemSizeEstimates(ctx, sizeCacheOwnerRef.current);
             state.isUnmounted = true;
             state.maintainingScrollAtEnd = undefined;
             state.pendingMaintainScrollAtEnd = false;
@@ -705,6 +711,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 resetInitialScroll: !!initialScrollProp,
                 resetLayout: true,
             });
+        }
+        if (didDataChange) {
+            restoreItemSizeEstimates(
+                ctx,
+                state.lastLayout?.[horizontal ? "height" : "width"] ??
+                    estimatedListSize?.[horizontal ? "height" : "width"],
+                sizeCacheOwnerRef.current,
+            );
         }
         handleInitialScrollDataChange(ctx, {
             dataLength: dataProp.length,
