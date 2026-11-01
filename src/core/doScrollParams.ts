@@ -1,3 +1,4 @@
+import { getCommittedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -18,9 +19,7 @@ export interface DoScrollToParams {
 export function getNativeScrollPoint(ctx: StateContext, offset: number, horizontal = ctx.state.props.horizontal) {
     const { state } = ctx;
     const committedMax =
-        horizontal && Platform.OS === "web" && state.maintainingScrollAtEnd
-            ? state.refScroller.current?.getMaxScrollOffset?.()
-            : undefined;
+        horizontal && Platform.OS === "web" && state.maintainingScrollAtEnd ? getCommittedWebEndOffset(ctx) : undefined;
     return horizontal
         ? {
               x: toNativeHorizontalOffset(

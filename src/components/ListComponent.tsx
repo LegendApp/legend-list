@@ -264,7 +264,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             ScrollComponent={snapToIndices ? ScrollComponent : (undefined as any)}
             style={autoOtherAxisStyle ? [autoOtherAxisStyle, style] : style}
         >
-            <ScrollAdjust />
+            {Platform.OS !== "web" && <ScrollAdjust />}
             {ListHeaderComponent && (
                 <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
                     {getComponent(ListHeaderComponent)}
@@ -288,6 +288,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     {getComponent(ListFooterComponent)}
                 </LayoutView>
             )}
+            {Platform.OS === "web" && <ScrollAdjust />}
             {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>
     );

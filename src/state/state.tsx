@@ -167,6 +167,7 @@ export interface StateContext {
     state: InternalState;
     scrollAxisGap: number;
     scrollRequestTracker?: ScrollRequestTracker;
+    clearTemporaryScrollAdjust?: () => void;
     // Late-bound by LegendList so lower-level scroll modules can call back up without import cycles.
     doMaintainScrollAtEnd?: () => boolean;
     doScrollTo?: (params: DoScrollToParams) => void;

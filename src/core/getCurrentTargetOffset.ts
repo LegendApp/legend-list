@@ -14,6 +14,12 @@ export function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: Activ
     );
 }
 
+export function getCommittedWebEndOffset(ctx: StateContext) {
+    // The adjustment spacer extends browser range for one frame; it is not committed content.
+    ctx.clearTemporaryScrollAdjust?.();
+    return ctx.state.refScroller.current?.getMaxScrollOffset?.();
+}
+
 export function getMaintainedWebEndOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     // Automatic web end following owns the content end, including geometry that
     // React committed before the modeled sizes caught up. Initial placement and
@@ -25,7 +31,7 @@ export function getMaintainedWebEndOffset(ctx: StateContext, scrollingTo: Active
         scrollingTo.clampToContentContainerMinSize &&
         isEndAlignedLastItemTarget(ctx, scrollingTo)
     ) {
-        return ctx.state.refScroller.current?.getMaxScrollOffset?.();
+        return getCommittedWebEndOffset(ctx);
     }
 }
 

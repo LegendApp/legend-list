@@ -49,7 +49,7 @@ describe("ScrollAdjustHandler content container minimum size", () => {
     });
 });
 
-it("keeps the committed web end when an animated follow releases deferred adjustments", async () => {
+it.each([0, 200])("commits the web end (%ipx temporary range)", async (temporarySize) => {
     platform.Platform.OS = "web";
     const { ScrollAdjustHandler } = await import("../../src/core/ScrollAdjustHandler?web-end-commit");
     const ctx = createMockContext(
@@ -75,7 +75,11 @@ it("keeps the committed web end when an animated follow releases deferred adjust
     ctx.state.idCache[0] = "item_0";
     ctx.state.positions[0] = 0;
     ctx.state.sizes.set("item_0", 1400);
-    ctx.state.refScroller.current = { getMaxScrollOffset: () => 938 } as any;
+    let temporaryRange = temporarySize;
+    ctx.clearTemporaryScrollAdjust = () => {
+        temporaryRange = 0;
+    };
+    ctx.state.refScroller.current = { getMaxScrollOffset: () => 938 + temporaryRange } as any;
     const handler = new ScrollAdjustHandler(ctx);
     ctx.state.scrollAdjustHandler = handler;
     handler.requestAdjust(-43);
