@@ -31,8 +31,10 @@ export interface ScrollEventTargetLike {
 }
 
 export interface ScrollableNodeLike {
+    scrollHeight?: number;
     scrollLeft?: number;
     scrollTop?: number;
+    scrollWidth?: number;
 }
 
 export interface LegendListScrollerRef {

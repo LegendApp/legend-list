@@ -29,6 +29,7 @@ import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
 import RecycleImagePriorityExample from "./RecycleImagePriorityExample";
 import ScrollPromiseLandedExample from "./ScrollPromiseLandedExample";
 import SnapToIndicesExample from "./SnapToIndicesExample";
+import StaleViewportInstantScrollExample from "./StaleViewportInstantScrollExample";
 import WindowScrollExample from "./WindowScrollExample";
 
 export type FixtureRoute = {
@@ -92,6 +93,14 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "scroll-promise-landed",
         title: "Scroll Promise Landed",
+    },
+    {
+        description:
+            "Grows a short list's viewport and scrolls to the end before ResizeObserver reports it; checks state.scroll and viewability match the DOM.",
+        element: () => <StaleViewportInstantScrollExample />,
+        group: "Scroll & Position",
+        path: "stale-viewport-instant-scroll",
+        title: "Stale Viewport Instant Scroll",
     },
     {
         description: "Stress-tests scrollTo accuracy deep into a very large dataset.",

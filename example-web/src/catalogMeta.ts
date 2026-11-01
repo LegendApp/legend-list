@@ -50,6 +50,12 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 title: "Scroll Promise Landed",
             },
             {
+                description:
+                    "Checks scroll state and viewability after a scroll lands before a viewport resize is observed.",
+                slug: "stale-viewport-instant-scroll",
+                title: "Stale Viewport Instant Scroll",
+            },
+            {
                 description: "Appends new rows while keeping the viewport stable at the end.",
                 slug: "add-to-end",
                 title: "Add to the End",

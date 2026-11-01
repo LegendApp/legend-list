@@ -4,6 +4,7 @@ import { cancelScroll } from "@/core/cancelScroll";
 import { checkFinishedScrollFallback, getCurrentTargetOffset } from "@/core/checkFinishedScroll";
 import { type DoScrollToParams, getNativeScrollPoint } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import type { LegendListScrollerRef } from "@/types.internal";
 import { clampScrollIndex } from "@/utils/clampScrollIndex";
@@ -54,7 +55,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
             return;
         }
     } else {
-        state.scroll = offset;
+        state.scroll = getInstantLandingOffset(ctx, offset, isHorizontal, readOffset);
     }
 
     const offsetAfterInstantScroll = isAnimated ? undefined : readOffset();
@@ -62,6 +63,10 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const targetToken = state.scrollingTo;
     state.scheduledWork.frame(() => {
         if (targetToken === state.scrollingTo) {
+            if (!isAnimated) {
+                // Content committed since the scroll may now pin the DOM short of the recorded offset.
+                state.scroll = getInstantLandingOffset(ctx, state.scroll, isHorizontal, readOffset);
+            }
             const currentOffset = readOffset();
             const targetOffset = targetToken ? getCurrentTargetOffset(ctx, targetToken) : offset;
             const landingOffset = Math.max(
@@ -100,6 +105,40 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
             }
         }
     }, "platformScrollCompletion");
+}
+
+/**
+ * Where an instant scroll actually landed. The DOM clamps a request past its end without a
+ * scroll event, e.g. when the viewport grew before its ResizeObserver reported it, so
+ * `offset` alone would leave state.scroll beyond what is on screen.
+ * @returns the observed DOM offset when the DOM sits at its end short of `offset` while holding
+ * all measured content; otherwise `offset`, keeping a target that pending content may reach.
+ */
+function getInstantLandingOffset(
+    ctx: StateContext,
+    offset: number,
+    isHorizontal: boolean,
+    readOffset: () => number,
+): number {
+    const state = ctx.state;
+    const scroller = state.refScroller.current;
+    if (!scroller || state.props.hasExternalScroll) {
+        return offset;
+    }
+    const maxOffset = scroller.getMaxScrollOffset?.();
+    if (maxOffset === undefined || !(offset > maxOffset + EDGE_POSITION_EPSILON)) {
+        return offset;
+    }
+    const observed = readOffset();
+    if (!Number.isFinite(observed) || Math.abs(observed - maxOffset) > EDGE_POSITION_EPSILON) {
+        return offset;
+    }
+    const node = scroller.getScrollableNode();
+    const domContentSize = isHorizontal ? node?.scrollWidth : node?.scrollHeight;
+    if (domContentSize === undefined || domContentSize < getContentSize(ctx) - EDGE_POSITION_EPSILON) {
+        return offset;
+    }
+    return observed;
 }
 
 function retryLanding(
