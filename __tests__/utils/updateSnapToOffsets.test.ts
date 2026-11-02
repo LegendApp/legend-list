@@ -1,12 +1,79 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { onScroll } from "../../src/core/onScroll";
+import { syncMountedContainer } from "../../src/core/syncMountedContainer";
+import { updateItemPositions } from "../../src/core/updateItemPositions";
+import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import * as stateModule from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { updateSnapToOffsets } from "../../src/utils/updateSnapToOffsets";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { setLayoutValue } from "../helpers/layoutArrays";
+
+describe("native RTL snap minimums", () => {
+    it.each([
+        { expectedOffset: 151, expectedScroll: 249, inset: 86, itemSize: 95, platform: "ios" },
+        { expectedOffset: 65, expectedScroll: 335, inset: 0, itemSize: 95, platform: "ios" },
+        { expectedOffset: 65, expectedScroll: 335, inset: 86, itemSize: 95, platform: "android" },
+        { expectedOffset: 0, expectedScroll: 400, inset: 86, itemSize: 35, platform: "ios" },
+        { expectedOffset: 0, expectedScroll: 400, inset: 86, itemSize: 35, platform: "android" },
+    ] as const)(
+        "preserves baseline snap geometry on $platform with inset $inset and item size $itemSize",
+        ({ platform, inset, itemSize, expectedOffset, expectedScroll }) => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = platform;
+            const ctx = createMockContext(
+                { numColumns: 1, otherAxisSize: 100, readyToRender: true },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    horizontalRTLScrollType: "inverted",
+                    props: {
+                        contentContainerMinSize: 1000,
+                        contentInset: { bottom: 0, left: inset, right: 0, top: 0 },
+                        data: Array.from({ length: 10 }, (_, id) => ({ id: String(id) })),
+                        estimatedItemSize: itemSize,
+                        getFixedItemSize: () => itemSize,
+                        horizontal: true,
+                        keyExtractor: (item: { id: string }) => item.id,
+                        rtl: true,
+                        snapToIndices: [3],
+                    },
+                    queuedInitialLayout: true,
+                    scrollLength: 600,
+                },
+            );
+            try {
+                updateItemPositions(ctx, true);
+                expect(ctx.state.positions[3]).toBe(3 * itemSize);
+                ctx.values.set("containerItemData0", ctx.state.props.data[3]);
+                syncMountedContainer(ctx, 0, 3);
+                const emitted = ctx.values.get("snapToOffsets") as number[];
+                const nativeOffset = Math.min(400, Math.max(0, emitted[0]));
+                // Per-list RTL still places this row layer at zero in an LTR native layout.
+                const rowStart = (ctx.values.get("containerPosition0") as number) - nativeOffset;
+                const visibleWidth = Math.max(0, Math.min(600, rowStart + itemSize) - Math.max(0, rowStart));
+                expect(visibleWidth).toBe(itemSize);
+                expect(emitted).toEqual([expectedOffset]);
+                onScroll(ctx, {
+                    nativeEvent: {
+                        contentInset: { bottom: 0, left: platform === "ios" ? inset : 0, right: 0, top: 0 },
+                        contentOffset: { x: nativeOffset, y: 0 },
+                        contentSize: { height: 100, width: 1000 },
+                        layoutMeasurement: { height: 100, width: 600 },
+                    },
+                } as any);
+                // Preserve baseline readback; logical index agreement alone cannot prove row visibility.
+                expect(ctx.state.scroll).toBe(expectedScroll);
+            } finally {
+                Platform.OS = previousPlatform;
+                ctx.state.scheduledWork.dispose();
+            }
+        },
+    );
+});
 
 describe("updateSnapToOffsets", () => {
     let mockCtx: StateContext;
@@ -102,6 +169,37 @@ describe("updateSnapToOffsets", () => {
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, -250, -600]);
         });
+
+        it.each([
+            { expected: 0, header: 0, itemSize: 35, mode: "negative" },
+            { expected: 0, header: 0, itemSize: 35, mode: "normal" },
+            { expected: -285, header: 0, itemSize: 95, mode: "negative" },
+            { expected: 285, header: 0, itemSize: 95, mode: "normal" },
+            { expected: -105, header: 400, itemSize: 35, mode: "negative" },
+            { expected: 105, header: 400, itemSize: 35, mode: "normal" },
+        ] as const)(
+            "preserves web snap extent with $mode offsets, item size $itemSize and header $header",
+            ({ expected, header, itemSize, mode }) => {
+                const previousPlatform = Platform.OS;
+                Platform.OS = "web";
+                mockState.horizontalRTLScrollType = mode;
+                mockState.scrollLength = 600;
+                mockState.positions = Array.from({ length: 10 }, (_, index) => index * itemSize);
+                mockState.props.data = Array.from({ length: 10 }, (_, index) => ({ id: `item_${index}` }));
+                mockState.props.snapToIndices = [3];
+                mockState.props.contentContainerMinSize = 1000;
+                mockState.props.contentInsetEndAdjustment = 86;
+                mockCtx.values.set("headerSize", header);
+                mockCtx.values.set("totalSize", itemSize * 10);
+                try {
+                    updateSnapToOffsets(mockCtx);
+
+                    expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [expected]);
+                } finally {
+                    Platform.OS = previousPlatform;
+                }
+            },
+        );
     });
 
     describe("position mapping", () => {

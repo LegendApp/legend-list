@@ -1,21 +1,28 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
-import type * as React from "react";
+import * as React from "react";
 import { Text } from "react-native";
 
+import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
+import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
+import { updateScroll } from "../../src/core/updateScroll";
 import { Platform } from "../../src/platform/Platform";
-import { type StateContext, set$ } from "../../src/state/state";
-import type { InternalState } from "../../src/types.internal";
+import { peek$, type StateContext, set$ } from "../../src/state/state";
+import type { InternalState, LegendListInternalRef } from "../../src/types.internal";
 import { setDidLayout } from "../../src/utils/setDidLayout";
+import { skipLayoutInvariants } from "../helpers/layoutInvariantHarness";
 import { act, render } from "../helpers/testingLibrary";
+import { installFakeClock } from "../helpers/webScrollHarness";
 
 let lastListProps: any;
 let WebContainers: React.ComponentType<any> | undefined;
 let renderWebContainersInListComponent = false;
 const handlerInstances: ScrollAdjustHandler[] = [];
+const layoutEvent = { nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } } };
 
 function registerLegendListBootstrapMocks() {
     mock.module("@/components/ListComponent", () => ({
@@ -59,6 +66,9 @@ function registerLegendListBootstrapMocks() {
                 }
                 getAdjust() {
                     return this.appliedAdjust;
+                }
+                getUnsupersededPendingAdjust() {
+                    return this.pendingAdjust;
                 }
                 commitPendingAdjust() {}
             },
@@ -115,14 +125,7 @@ function trackAssignedStateValue<T extends object, K extends keyof T>(object: T,
 }
 
 async function getStateFromRender() {
-    for (let i = 0; i < 5; i++) {
-        const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
-        if (handler) {
-            return (handler as any).context.state;
-        }
-        await flushAsync();
-    }
-    throw new Error("scrollAdjustHandler not found after retries");
+    return (await getContextFromRender()).state;
 }
 
 async function getContextFromRender() {
@@ -187,6 +190,605 @@ afterEach(() => {
 });
 
 describe("LegendList bootstrap initial scroll", () => {
+    it.each(["before layout", "native seed", "initial request"])(
+        "retargets the resting start inset during %s",
+        async (stage) => {
+            const { LegendList } = await import("../../src/components/LegendList?pending-resting-inset");
+            const data = Array.from({ length: 43 }, (_, id) => ({ id }));
+            const list = (top: number) => (
+                <LegendList
+                    contentInset={{ bottom: 0, left: 0, right: 0, top }}
+                    data={data}
+                    getFixedItemSize={() => 80}
+                    renderItem={() => null}
+                />
+            );
+            const rendered = render(list(62));
+            const ctx = await getContextFromRender();
+            const state = ctx.state;
+            const writes = installRecordingScroller(state);
+            expect(state.didFinishInitialScroll).not.toBe(true);
+            expect(resolveInitialScrollOffset(ctx, state.initialScroll!)).toBe(-62);
+            if (stage === "native seed") act(() => updateScroll(ctx, -62, true, { fromNativeScrollEvent: true }));
+            if (stage === "initial request") {
+                act(() => lastListProps.onLayout(layoutEvent));
+                expect(state.scrollingTo?.isInitialScroll).toBe(true);
+            }
+
+            rendered.rerender(list(116));
+            expect(resolveInitialScrollOffset(ctx, state.initialScroll!)).toBe(-116);
+            act(() => lastListProps.onLayout(layoutEvent));
+            await flushAsync();
+            expect(writes.at(-1)?.y).toBe(-116);
+            act(() => updateScroll(ctx, -116, true, { fromNativeScrollEvent: true }));
+            expect(state.scroll).toBe(-116);
+            expect(peek$(ctx, "isAtStart")).toBe(true);
+            rendered.unmount();
+        },
+    );
+
+    it.each([0, -62, 120])(
+        "preserves an explicit raw initial offset %s across a mount inset change",
+        async (offset) => {
+            const { LegendList } = await import("../../src/components/LegendList?pending-explicit-inset");
+            const data = Array.from({ length: 43 }, (_, id) => ({ id }));
+            const list = (top: number) => (
+                <LegendList
+                    contentInset={{ bottom: 0, left: 0, right: 0, top }}
+                    data={data}
+                    getFixedItemSize={() => 80}
+                    initialScrollOffset={offset}
+                    renderItem={() => null}
+                />
+            );
+            const rendered = render(list(62));
+            const ctx = await getContextFromRender();
+            const writes = installRecordingScroller(ctx.state);
+            rendered.rerender(list(116));
+            act(() => lastListProps.onLayout(layoutEvent));
+            await flushAsync();
+            expect(writes.every(({ y }) => y === offset)).toBe(true);
+            expect(ctx.state.scroll).toBe(offset);
+            rendered.unmount();
+        },
+    );
+
+    it("resumes end following when a suspended list reappears with appended data", async () => {
+        Platform.OS = "web";
+        const { LegendList } = await import("../../src/components/LegendList?end-follow-reappear");
+        const clock = installFakeClock();
+        const pending = new Promise<void>(() => {});
+        const data = Array.from({ length: 20 }, (_, index) => ({ id: `item_${index}` }));
+        function Suspend({ hidden }: { hidden: boolean }) {
+            if (hidden) throw pending;
+            return null;
+        }
+        const list = (hidden: boolean, items = data) => (
+            <React.Suspense fallback={null}>
+                <LegendList
+                    data={items}
+                    estimatedItemSize={100}
+                    estimatedListSize={{ height: 200, width: 320 }}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    maintainScrollAtEnd={{ animated: true, on: { dataChange: true } }}
+                    renderItem={() => <Text>Row</Text>}
+                />
+                <Suspend hidden={hidden} />
+            </React.Suspense>
+        );
+        let rendered: ReturnType<typeof render> | undefined;
+        try {
+            rendered = render(list(false));
+            const ctx = await getContextFromRender();
+            act(() => clock.advance(1600));
+            seedMeasuredLayout(ctx.state, data.length, 100);
+            ctx.state.didFinishInitialScroll = true;
+            ctx.state.didContainersLayout = true;
+            ctx.state.queuedInitialLayout = true;
+            ctx.state.totalSize = 2000;
+            ctx.state.scroll = ctx.state.scrollPending = 1800;
+            // ListComponent is mocked, so no rendered containers can service recalculation.
+            ctx.state.triggerCalculateItemsInView = () => {};
+            set$(ctx, "isFollowingEnd", true);
+            const scrollTo = mock(() => {});
+            ctx.state.refScroller.current = {
+                getScrollableNode: () => ({}),
+                measure() {},
+                scrollTo,
+            } as any;
+
+            rendered.rerender(list(true));
+            expect(ctx.state.isUnmounted).toBe(true);
+            const appended = [...data, { id: "item_20" }];
+            rendered.rerender(list(true, appended));
+            rendered.rerender(list(false, appended));
+
+            expect(await getContextFromRender()).toBe(ctx);
+            expect(ctx.state.isUnmounted).toBe(false);
+            expect(peek$(ctx, "isFollowingEnd")).toBe(true);
+            expect(ctx.state.maintainingScrollAtEnd).toBe("pending-animated");
+            expect(ctx.state.pendingEndMeasurements).toEqual(new Set(["item_20"]));
+            act(() => clock.tick());
+            expect(scrollTo).toHaveBeenLastCalledWith({ animated: true, x: 0, y: 1900 });
+            act(() => finishScrollTo(ctx));
+            await act(async () => {
+                await Promise.resolve();
+            });
+        } finally {
+            rendered?.unmount();
+            clock.restore();
+        }
+    });
+
+    for (const active of [false, true]) {
+        for (const strictMode of [false, true]) {
+            it(`cancels automatic end following on unmount (active: ${active}, StrictMode: ${strictMode})`, async () => {
+                Platform.OS = "web";
+                const { LegendList } = await import("../../src/components/LegendList?end-follow-unmount");
+                const clock = installFakeClock();
+                const requestFrame = globalThis.requestAnimationFrame;
+                let unmounted = false;
+                let drainedFrames = 0;
+                const scheduleFrame = mock((callback: FrameRequestCallback) =>
+                    requestFrame((time) => {
+                        if (unmounted) drainedFrames++;
+                        callback(time);
+                    }),
+                );
+                globalThis.requestAnimationFrame = scheduleFrame;
+                const data = Array.from({ length: 20 }, (_, index) => ({ id: `item_${index}` }));
+                let setups = 0;
+                function MountObserver() {
+                    React.useLayoutEffect(() => {
+                        setups++;
+                    }, []);
+                    return null;
+                }
+                const list = (
+                    <>
+                        <LegendList
+                            data={data}
+                            estimatedItemSize={100}
+                            estimatedListSize={{ height: 200, width: 320 }}
+                            keyExtractor={(item: { id: string }) => item.id}
+                            maintainScrollAtEnd={{ animated: true }}
+                            renderItem={() => <Text>Row</Text>}
+                        />
+                        <MountObserver />
+                    </>
+                );
+                const queueFollow = (ctx: StateContext) => {
+                    seedMeasuredLayout(ctx.state, data.length, 100);
+                    ctx.state.didFinishInitialScroll = true;
+                    ctx.state.didContainersLayout = true;
+                    ctx.state.queuedInitialLayout = true;
+                    ctx.state.totalSize = 2000;
+                    ctx.state.scroll = ctx.state.scrollPending = 1700;
+                    ctx.state.scrollingTo = undefined;
+                    // ListComponent is mocked, so no rendered containers can service recalculation.
+                    ctx.state.triggerCalculateItemsInView = () => {};
+                    set$(ctx, "isFollowingEnd", true);
+                    const scrollTo = mock(() => {});
+                    ctx.state.refScroller.current = {
+                        getCurrentScrollOffset: () => 1700,
+                        getScrollableNode: () => ({}),
+                        getScrollEventTarget: () => ({
+                            addEventListener() {},
+                            onscrollend: null,
+                            removeEventListener() {},
+                        }),
+                        scrollTo,
+                    } as any;
+                    act(() => {
+                        expect(doMaintainScrollAtEnd(ctx)).toBe(true);
+                    });
+                    expect(ctx.state.maintainingScrollAtEnd).toBe("pending-animated");
+                    return scrollTo;
+                };
+                let rendered: ReturnType<typeof render> | undefined;
+                try {
+                    rendered = render(strictMode ? <React.StrictMode>{list}</React.StrictMode> : list);
+                    const ctx = await getContextFromRender();
+                    act(() => clock.advance(1600));
+                    const scrollTo = queueFollow(ctx);
+                    const request = spyOn(getScrollRequestTracker(ctx), "runNowIfIdle");
+                    expect(setups).toBe(strictMode ? 2 : 1);
+                    if (active) {
+                        act(() => clock.tick());
+                        expect(ctx.state.scrollingTo).toBeDefined();
+                        expect(ctx.state.pendingScrollResolve).toBeDefined();
+                        act(() => {
+                            doMaintainScrollAtEnd(ctx);
+                        });
+                        expect(ctx.state.pendingMaintainScrollAtEnd).toBe(true);
+                    }
+                    rendered.unmount();
+                    unmounted = true;
+                    ctx.state.refScroller.current = null;
+                    const framesBefore = scheduleFrame.mock.calls.length;
+                    const scrollsBefore = scrollTo.mock.calls.length;
+                    const requestsBefore = request.mock.calls.length;
+                    await act(async () => {
+                        await Promise.resolve();
+                    });
+                    act(() => clock.advance(1600));
+                    await act(async () => {
+                        await Promise.resolve();
+                    });
+                    expect(scheduleFrame.mock.calls.length - framesBefore).toBe(0);
+                    expect(drainedFrames).toBe(0);
+                    expect(request.mock.calls.length).toBe(requestsBefore);
+                    expect(scrollTo.mock.calls.length).toBe(scrollsBefore);
+                    expect(ctx.state.scrollingTo).toBeUndefined();
+                    expect(ctx.state.pendingScrollResolve).toBeUndefined();
+                    expect(ctx.state.maintainingScrollAtEnd).toBeUndefined();
+                    expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+                    act(() => {
+                        updateItemSizesBatch(ctx, [{ itemKey: "item_19", size: { height: 150, width: 320 } }]);
+                    });
+                    expect(ctx.state.sizesKnown.get("item_19")).toBe(150);
+                    expect(doMaintainScrollAtEnd(ctx)).toBe(false);
+                    expect(scheduleFrame.mock.calls.length).toBe(framesBefore);
+                    expect(request.mock.calls.length).toBe(requestsBefore);
+                    expect(ctx.state.maintainingScrollAtEnd).toBeUndefined();
+                    if (strictMode) {
+                        unmounted = false;
+                        rendered = render(<React.StrictMode>{list}</React.StrictMode>);
+                        const remounted = await getContextFromRender();
+                        const remountedScrollTo = queueFollow(remounted);
+                        expect(setups).toBe(4);
+                        expect(remounted.state.isUnmounted).toBe(false);
+                        act(() => clock.tick());
+                        expect(remountedScrollTo).toHaveBeenCalled();
+                        expect(remounted.state.scrollingTo?.isScrollToEnd).toBe(true);
+                        act(() => finishScrollTo(remounted));
+                        await act(async () => {
+                            await Promise.resolve();
+                        });
+                        expect(remounted.state.pendingScrollResolve).toBeUndefined();
+                        expect(remounted.state.maintainingScrollAtEnd).toBeUndefined();
+                    }
+                } finally {
+                    rendered?.unmount();
+                    clock.restore();
+                }
+            });
+        }
+    }
+
+    for (const strictMode of [false, true]) {
+        it(`stops terminal bootstrap completion on unmount${strictMode ? " and completes on a fresh StrictMode mount" : ""}`, async () => {
+            Platform.OS = "web";
+            const { LegendList } = await import("../../src/components/LegendList?terminal-bootstrap-unmount");
+            const clock = installFakeClock();
+            const requestFrame = globalThis.requestAnimationFrame;
+            const scheduleFrame = mock((callback: FrameRequestCallback) => requestFrame(callback));
+            globalThis.requestAnimationFrame = scheduleFrame;
+            const onReady = mock(() => {});
+            const onLoad = mock(() => {});
+            const data = Array.from({ length: 20 }, (_, index) => ({ id: `item_${index}` }));
+            let setups = 0;
+            function MountObserver() {
+                React.useLayoutEffect(() => {
+                    setups++;
+                }, []);
+                return null;
+            }
+            const list = (
+                <>
+                    <LegendList
+                        data={data}
+                        estimatedItemSize={100}
+                        estimatedListSize={{ height: 200, width: 320 }}
+                        initialScrollIndex={5}
+                        keyExtractor={(item: { id: string }) => item.id}
+                        onLoad={onLoad}
+                        onReady={onReady}
+                        renderItem={() => <Text>Row</Text>}
+                    />
+                    <MountObserver />
+                </>
+            );
+            const reachCompletionFrame = (ctx: StateContext) => {
+                act(() => setDidLayout(ctx));
+                seedMeasuredLayout(ctx.state, data.length, 100);
+                let offset = 0;
+                const scrollTo = mock(({ y }: { y: number }) => {
+                    offset = y;
+                });
+                ctx.state.refScroller.current = {
+                    getCurrentScrollOffset: () => offset,
+                    getScrollableNode: () => ({}),
+                    scrollTo,
+                } as any;
+                act(() => {
+                    ctx.state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                    ctx.state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                });
+                expect(scrollTo).toHaveBeenCalled();
+                expect(offset).toBe(500);
+                expect(ctx.state.scrollingTo?.waitForInitialScrollCompletionFrame).toBe(true);
+                act(() => finishScrollTo(ctx));
+                expect(getBootstrapSession(ctx.state)).toBeUndefined();
+                expect(ctx.state.didContainersLayout).toBe(true);
+                expect(ctx.state.didFinishInitialScroll).toBeFalsy();
+            };
+            let rendered: ReturnType<typeof render> | undefined;
+            try {
+                rendered = render(strictMode ? <React.StrictMode>{list}</React.StrictMode> : list);
+                const ctx = await getContextFromRender();
+                reachCompletionFrame(ctx);
+                expect(setups).toBe(strictMode ? 2 : 1);
+                expect(onReady).not.toHaveBeenCalled();
+                expect(onLoad).not.toHaveBeenCalled();
+                rendered.unmount();
+                expect(ctx.state.isUnmounted).toBe(true);
+                ctx.state.refScroller.current = null;
+                const framesBefore = scheduleFrame.mock.calls.length;
+                act(() => clock.advance(1600));
+                expect(onReady).not.toHaveBeenCalled();
+                expect(onLoad).not.toHaveBeenCalled();
+                expect(ctx.state.didFinishInitialScroll).toBeFalsy();
+                expect(scheduleFrame.mock.calls.length).toBe(framesBefore);
+                if (strictMode) {
+                    rendered = render(<React.StrictMode>{list}</React.StrictMode>);
+                    const remountedContext = await getContextFromRender();
+                    reachCompletionFrame(remountedContext);
+                    act(() => clock.advance(1600));
+                    expect(setups).toBe(4);
+                    expect(remountedContext.state.isUnmounted).toBe(false);
+                    expect(remountedContext.state.didFinishInitialScroll).toBe(true);
+                    expect(onReady).toHaveBeenCalledTimes(1);
+                    expect(onLoad).toHaveBeenCalledTimes(1);
+                }
+            } finally {
+                rendered?.unmount();
+                clock.restore();
+            }
+        });
+    }
+
+    for (const strictMode of [false, true]) {
+        it(`stops early bootstrap work on unmount${strictMode ? " after surviving StrictMode replay" : ""}`, async () => {
+            const { LegendList } = await import("../../src/components/LegendList?early-bootstrap-unmount");
+            const clock = installFakeClock();
+            const requestFrame = globalThis.requestAnimationFrame;
+            const scheduleFrame = mock((callback: FrameRequestCallback) => requestFrame(callback));
+            globalThis.requestAnimationFrame = scheduleFrame;
+            const onReady = mock(() => {});
+            const onLoad = mock(() => {});
+            const data = Array.from({ length: 20 }, (_, index) => ({ id: `item_${index}` }));
+            let setups = 0;
+            function MountObserver() {
+                React.useLayoutEffect(() => {
+                    setups++;
+                }, []);
+                return null;
+            }
+            const list = (
+                <>
+                    <LegendList
+                        data={data}
+                        estimatedItemSize={100}
+                        estimatedListSize={{ height: 200, width: 320 }}
+                        initialScrollIndex={5}
+                        keyExtractor={(item: { id: string }) => item.id}
+                        onLoad={onLoad}
+                        onReady={onReady}
+                        renderItem={() => <Text>Row</Text>}
+                    />
+                    <MountObserver />
+                </>
+            );
+            let rendered: ReturnType<typeof render> | undefined;
+            try {
+                rendered = render(strictMode ? <React.StrictMode>{list}</React.StrictMode> : list);
+                const ctx = await getContextFromRender();
+                const state = ctx.state;
+                act(() => setDidLayout(ctx));
+                expect(getBootstrapSession(state)).toBeDefined();
+                expect(onReady).not.toHaveBeenCalled();
+                expect(onLoad).not.toHaveBeenCalled();
+                if (strictMode) {
+                    expect(setups).toBe(2);
+                    expect(state.isUnmounted).toBe(false);
+                    act(() => clock.advance(16));
+                    expect(getBootstrapSession(state).mountFrameCount).toBeGreaterThan(0);
+                }
+                rendered.unmount();
+                expect(state.isUnmounted).toBe(true);
+                // The mocked ListComponent does not detach its scroller ref on unmount.
+                state.refScroller.current = null;
+                const framesBefore = scheduleFrame.mock.calls.length;
+                const readyBefore = onReady.mock.calls.length;
+                const loadBefore = onLoad.mock.calls.length;
+                act(() => clock.advance(1600));
+                expect(scheduleFrame.mock.calls.length).toBe(framesBefore);
+                expect(onReady).toHaveBeenCalledTimes(readyBefore);
+                expect(onLoad).toHaveBeenCalledTimes(loadBefore);
+                if (strictMode) {
+                    rendered = render(<React.StrictMode>{list}</React.StrictMode>);
+                    const remountedContext = await getContextFromRender();
+                    const remountedState = remountedContext.state;
+                    act(() => setDidLayout(remountedContext));
+                    seedMeasuredLayout(remountedState, data.length, 100);
+                    remountedState.refScroller.current = { getCurrentScrollOffset: () => 500 } as any;
+                    act(() => {
+                        remountedState.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                        remountedState.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                    });
+                    expect(remountedState.didFinishInitialScroll).toBe(true);
+                    expect(onReady).toHaveBeenCalledTimes(1);
+                    expect(onLoad).toHaveBeenCalledTimes(1);
+                }
+            } finally {
+                rendered?.unmount();
+                clock.restore();
+            }
+        });
+    }
+
+    for (const strictMode of [false, true]) {
+        it(`stops preserved measurement corrections on unmount${strictMode ? " after surviving StrictMode replay" : ""}`, async () => {
+            Platform.OS = "web";
+            const { LegendList } = await import("../../src/components/LegendList?preserved-correction-unmount");
+            const clock = installFakeClock();
+            const requestFrame = globalThis.requestAnimationFrame;
+            const scheduleFrame = mock((callback: FrameRequestCallback) => requestFrame(callback));
+            globalThis.requestAnimationFrame = scheduleFrame;
+            const data = Array.from({ length: 20 }, (_, index) => ({ id: `item_${index}` }));
+            let ctx: StateContext;
+            let setups = 0;
+            let observedOffset = 1800;
+            let maxOffset = 1800;
+            const scrollOffsets: number[] = [];
+            let firstCorrection: InternalState["preservedEndAnchorCorrection"];
+            let correctionAfterReplay: InternalState["preservedEndAnchorCorrection"];
+            let targetAfterReplay: InternalState["initialScroll"];
+
+            function Measurement() {
+                React.useEffect(() => {
+                    ctx = (lastListProps.scrollAdjustHandler as any).context;
+                    const state = ctx.state;
+                    setups++;
+                    if (setups === 1) {
+                        seedMeasuredLayout(state, data.length, 100);
+                        state.totalSize = 2000;
+                        state.scroll = state.scrollPending = 1800;
+                        state.didFinishInitialScroll = true;
+                        state.didContainersLayout = true;
+                        state.queuedInitialLayout = true;
+                        state.startBuffered = 1;
+                        state.endBuffered = 19;
+                        state.scrollingTo = undefined;
+                        state.initialScroll = { index: 19, viewPosition: 1 };
+                        state.initialScrollSession = { kind: "bootstrap", previousDataLength: data.length };
+                        set$(ctx, "totalSize", 2000);
+                    } else {
+                        correctionAfterReplay = state.preservedEndAnchorCorrection;
+                        targetAfterReplay = state.initialScroll;
+                    }
+                    state.refScroller.current = {
+                        getCurrentScrollOffset: () => observedOffset,
+                        getMaxScrollOffset: () => maxOffset,
+                        getScrollableNode: () => ({}),
+                        measure: () => {},
+                        scrollTo: ({ y = 0 }: { y?: number }) => {
+                            observedOffset = Math.min(y, maxOffset);
+                            scrollOffsets.push(observedOffset);
+                        },
+                    } as any;
+                    updateItemSizesBatch(ctx, [{ itemKey: "item_19", size: { height: 200, width: 320 } }]);
+                    firstCorrection ??= state.preservedEndAnchorCorrection;
+                }, []);
+                return null;
+            }
+
+            const list = (
+                <>
+                    <LegendList
+                        data={data}
+                        estimatedItemSize={100}
+                        estimatedListSize={{ height: 200, width: 320 }}
+                        initialScrollAtEnd
+                        keyExtractor={(item: { id: string }) => item.id}
+                        maintainVisibleContentPosition={false}
+                        renderItem={() => <Text>Row</Text>}
+                    />
+                    <Measurement />
+                </>
+            );
+            let rendered: ReturnType<typeof render> | undefined;
+            try {
+                rendered = render(strictMode ? <React.StrictMode>{list}</React.StrictMode> : list);
+                expect(firstCorrection).toBeDefined();
+                expect(ctx!.state.preservedEndAnchorCorrection).toBeDefined();
+                if (strictMode) {
+                    expect(setups).toBe(2);
+                    expect(correctionAfterReplay).toBe(firstCorrection);
+                    expect(targetAfterReplay).toMatchObject({ index: 19, viewPosition: 1 });
+                    expect(ctx!.state.preservedEndAnchorCorrection).toBe(firstCorrection);
+                    maxOffset = resolveInitialScrollOffset(ctx!, ctx!.state.initialScroll!);
+                    await Promise.resolve();
+                    act(() => clock.advance(64));
+                    expect(scrollOffsets.length).toBeGreaterThan(0);
+                    expect(observedOffset).toBe(maxOffset);
+                    expect(ctx!.state.preservedEndAnchorCorrection).toBeUndefined();
+                    // Start another clamped correction so final unmount also has pending work.
+                    updateItemSizesBatch(ctx!, [{ itemKey: "item_19", size: { height: 400, width: 320 } }]);
+                    expect(ctx!.state.preservedEndAnchorCorrection).toBeDefined();
+                }
+                rendered.unmount();
+                expect(ctx!.state.isUnmounted).toBe(true);
+                ctx!.state.refScroller.current = null;
+                const framesBefore = scheduleFrame.mock.calls.length;
+                const callsBefore = scrollOffsets.length;
+                await Promise.resolve();
+                act(() => clock.advance(1600));
+                expect(scheduleFrame.mock.calls.length).toBe(framesBefore);
+                expect(scrollOffsets).toHaveLength(callsBefore);
+                expect(ctx!.state.preservedEndAnchorCorrection).toBeUndefined();
+
+                // An old-architecture measurement can arrive after cleanup has run.
+                updateItemSizesBatch(ctx!, [{ itemKey: "item_19", size: { height: 500, width: 320 } }]);
+                const framesAfterMeasurement = scheduleFrame.mock.calls.length;
+                expect(framesAfterMeasurement).toBe(framesBefore);
+                await Promise.resolve();
+                act(() => clock.advance(1600));
+                expect(scheduleFrame.mock.calls.length).toBe(framesAfterMeasurement);
+                expect(scrollOffsets).toHaveLength(callsBefore);
+                expect(ctx!.state.preservedEndAnchorCorrection).toBeUndefined();
+            } finally {
+                rendered?.unmount();
+                clock.restore();
+            }
+        });
+    }
+
+    for (const platform of ["web", "ios", "android"] as const) {
+        it(`settles every captured-ref scroll after unmount on ${platform}`, async () => {
+            Platform.OS = platform;
+            const { LegendList } = await import("../../src/components/LegendList?captured-ref-unmount");
+            const data = [{ id: "row-0" }, { id: "row-1" }];
+            const ref = { current: null as LegendListInternalRef | null };
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    estimatedListSize={{ height: 100, width: 320 }}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    ref={ref}
+                    renderItem={() => <Text>Row</Text>}
+                />,
+            );
+            const state = await getStateFromRender();
+            const capturedRef = ref.current!;
+            const scrollToCalls = installRecordingScroller(state);
+            rendered.unmount();
+            state.refScroller.current = null;
+            const requests = [
+                () => capturedRef.scrollToOffset({ offset: 100 }),
+                () => capturedRef.scrollToIndex({ index: 1 }),
+                () => capturedRef.scrollToItem({ item: data[1] }),
+                () => capturedRef.scrollToKey({ key: "row-1" }),
+                () => capturedRef.scrollIndexIntoView({ index: 1 }),
+                () => capturedRef.scrollItemIntoView({ item: data[1] }),
+                () => capturedRef.scrollToEnd(),
+            ];
+            for (const request of requests) {
+                const results: unknown[] = [];
+                void request().then((result) => results.push(result));
+                await flushAsync();
+                expect(results).toEqual([undefined]);
+                expect(state.pendingScrollResolve).toBeUndefined();
+                expect(state.pendingScrollToEnd).toBeUndefined();
+                expect(state.scrollingTo).toBeUndefined();
+                expect(state.scheduledWork.has("imperativeScrollReady")).toBe(false);
+            }
+            expect(scrollToCalls).toHaveLength(0);
+        });
+    }
+
     it("seeds a cached dataKey return from incoming positions instead of the outgoing dataset", async () => {
         Platform.OS = "web";
         const { LegendList } = await import("../../src/components/LegendList?bootstrap-cached-data-key-return");
@@ -428,6 +1030,8 @@ describe("LegendList bootstrap initial scroll", () => {
     });
 
     it("keeps the web layer painted but noninteractive during a fresh dataKey layout reset", async () => {
+        // Marks layout complete with setDidLayout and never allocates rows.
+        skipLayoutInvariants();
         const previousPlatform = Platform.OS;
         Platform.OS = "web";
         WebContainers = (await import("../../src/components/Containers?fresh-data-web-containers")).Containers;

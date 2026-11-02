@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { Platform } from "../../src/platform/Platform";
 import { useArr$ } from "../../src/state/state";
 import type { LegendListRef } from "../../src/types.base";
+import { skipLayoutInvariants } from "../helpers/layoutInvariantHarness";
 import TestRenderer, { act } from "../helpers/testRenderer";
+import { installFakeClock } from "../helpers/webScrollHarness";
 import { registerBaseModuleMocks } from "../setup";
 
 const layoutEvent = {
@@ -94,6 +96,7 @@ function expectScrollCallsContain(scrollCalls: number[], expected: number) {
 function createScrollHarness() {
     const scrollCalls: number[] = [];
     let lastProps: any;
+    let lastScrollOptions: { animated?: boolean; x?: number; y?: number } | undefined;
 
     const ScrollHarness = React.forwardRef(function ScrollHarnessComponent(props: any, ref: React.Ref<any>) {
         const currentOffsetRef = React.useRef(0);
@@ -108,7 +111,9 @@ function createScrollHarness() {
                 getScrollEventTarget: () => null,
                 getScrollResponder: () => null,
                 measure: (cb: (x: number, y: number, width: number, height: number) => void) => cb(0, 0, 320, 200),
-                scrollTo: ({ x = 0, y = 0 }: { x?: number; y?: number }) => {
+                scrollTo: (options: { animated?: boolean; x?: number; y?: number }) => {
+                    lastScrollOptions = options;
+                    const { x = 0, y = 0 } = options;
                     const next = props.horizontal ? x : y;
                     currentOffsetRef.current = next ?? 0;
                     scrollCalls.push(currentOffsetRef.current);
@@ -123,6 +128,7 @@ function createScrollHarness() {
 
     return {
         getLastProps: () => lastProps,
+        getLastScrollOptions: () => lastScrollOptions,
         ScrollHarness,
         scrollCalls,
     };
@@ -192,7 +198,7 @@ async function renderInitialScrollScenario(options: {
 }) {
     const previousPlatform = Platform.OS;
     Platform.OS = options.platform ?? "ios";
-    const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
+    const { ScrollHarness, getLastProps, getLastScrollOptions, scrollCalls } = createScrollHarness();
     const { LegendList } = await loadLegendList(options.importKey);
     const ref = React.createRef<LegendListRef>();
 
@@ -226,11 +232,15 @@ async function renderInitialScrollScenario(options: {
         await flushFrames(12);
     };
 
-    const rerender = async (data: Array<{ id: string; label: string }>, legendListProps = options.legendListProps) => {
+    const rerender = async (
+        data: Array<{ id: string; label: string }>,
+        legendListProps = options.legendListProps,
+        frames = 12,
+    ) => {
         await act(async () => {
             renderer!.update(renderList(data, legendListProps));
         });
-        await flushFrames(12);
+        await flushFrames(frames);
     };
 
     const cleanup = async () => {
@@ -242,6 +252,7 @@ async function renderInitialScrollScenario(options: {
         cleanup,
         fireLayout,
         getLastProps,
+        getLastScrollOptions,
         ref,
         renderer: renderer!,
         rerender,
@@ -261,6 +272,86 @@ afterEach(() => {
 });
 
 describe("LegendList initial scroll integration", () => {
+    for (const platform of ["ios", "android", "web"] as const) {
+        it(`follows an append during the final initial dispatch after a shrink on ${platform}`, async () => {
+            // Known gap: the append re-arms bootstrap from offset 0, so rows 0-2 render
+            // while the view is still at 1300 until the bootstrap pass runs.
+            skipLayoutInvariants();
+            const scenario = await renderInitialScrollScenario({
+                data: createItems(18),
+                importKey: `append-during-initial-dispatch-${platform}`,
+                legendListProps: {
+                    initialScrollAtEnd: true,
+                    maintainScrollAtEnd: { animated: true, on: { dataAppend: true } },
+                },
+                platform,
+            });
+            await scenario.fireLayout();
+            expectScrollClose(scenario.ref, 1600);
+            const clock = installFakeClock();
+            try {
+                // A shrink is not owned by append-only maintenance, so bootstrap
+                // rearms the preserved target and dispatches a new initial scroll.
+                const callsBeforeShrink = scenario.scrollCalls.length;
+                await scenario.rerender(createItems(15), undefined, 0);
+                for (let frame = 0; frame < 10 && scenario.scrollCalls.length === callsBeforeShrink; frame++) {
+                    await act(async () => clock.tick());
+                }
+                expect(scenario.scrollCalls.length).toBeGreaterThan(callsBeforeShrink);
+                expect(scenario.getLastScrollOptions()).toMatchObject({ animated: false, y: 1300 });
+
+                // Append before delivering the final initial scroll's onScroll.
+                await scenario.rerender(createItems(21), undefined, 0);
+                await act(async () => {
+                    scenario.getLastProps().onScroll({ nativeEvent: { contentOffset: { x: 0, y: 1300 } } });
+                    clock.advance(1200);
+                });
+                expect(scenario.getLastScrollOptions()).toMatchObject({ animated: true, y: 1900 });
+                await act(async () => {
+                    scenario.getLastProps().onScroll({ nativeEvent: { contentOffset: { x: 0, y: 1900 } } });
+                });
+                expectScrollClose(scenario.ref, 1900);
+                expectRenderedWindow(scenario.renderer, { present: ["Item 20"] });
+            } finally {
+                clock.restore();
+                await scenario.cleanup();
+            }
+        });
+
+        it(`follows overlapping appends after initial end scrolling on ${platform}`, async () => {
+            const scenario = await renderInitialScrollScenario({
+                data: createItems(18),
+                importKey: `rapid-append-${platform}`,
+                legendListProps: { initialScrollAtEnd: true, maintainScrollAtEnd: { animated: true } },
+                platform,
+            });
+            await scenario.fireLayout();
+            expectScrollClose(scenario.ref, 1600);
+            const clock = installFakeClock();
+            try {
+                for (const count of [21, 24, 27, 30]) {
+                    await scenario.rerender(createItems(count), undefined, 0);
+                    await act(async () => {
+                        clock.tick();
+                    });
+                }
+                await act(async () => {
+                    clock.advance(1200);
+                });
+                expectScrollCallsContain(scenario.scrollCalls, 2800);
+                expect(scenario.getLastScrollOptions()?.animated).toBe(true);
+                await act(async () => {
+                    scenario.getLastProps().onScroll({ nativeEvent: { contentOffset: { x: 0, y: 2800 } } });
+                });
+                expectScrollClose(scenario.ref, 2800);
+                expectRenderedWindow(scenario.renderer, { present: ["Item 29"] });
+            } finally {
+                clock.restore();
+                await scenario.cleanup();
+            }
+        });
+    }
+
     it("renders the expected window for fixed-size initialScrollIndex", async () => {
         const data = createItems(10);
         const scenario = await renderInitialScrollScenario({

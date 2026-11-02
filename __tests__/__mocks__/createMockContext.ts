@@ -1,5 +1,9 @@
 import "../setup"; // Import global test setup
 
+import { interruptUserScroll } from "../../src/core/cancelScroll";
+import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
+import { doScrollTo } from "../../src/core/doScrollTo";
+import { scrollTo } from "../../src/core/scrollTo";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockState, DEFAULT_CONTENT_INSET } from "./createMockState";
@@ -98,7 +102,7 @@ export function createMockContext(
         },
     });
 
-    return {
+    const ctx: StateContext = {
         animatedScrollY,
         columnWrapperStyle: undefined,
         containerLayoutTriggers: new Map() as StateContext["containerLayoutTriggers"],
@@ -124,4 +128,10 @@ export function createMockContext(
         values,
         viewRefs: new Map() as StateContext["viewRefs"],
     };
+    // Mirror the late-bound commands LegendList installs.
+    ctx.doMaintainScrollAtEnd = () => doMaintainScrollAtEnd(ctx);
+    ctx.doScrollTo = (params) => doScrollTo(ctx, params);
+    ctx.interruptUserScroll = () => interruptUserScroll(ctx);
+    ctx.scrollTo = (params) => scrollTo(ctx, params);
+    return ctx;
 }

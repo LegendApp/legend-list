@@ -32,7 +32,6 @@ export type {
     LegendListMetrics,
     LegendListRecyclingState,
     LegendListRenderItemProps,
-    LegendListScrollResult,
     MaintainScrollAtEndOnOptions,
     MaintainScrollAtEndOptions,
     MaintainVisibleContentPositionConfig,
@@ -82,7 +81,9 @@ export type LegendListRef = Omit<
     LegendListRefBase,
     "getAnimatableRef" | "getNativeScrollRef" | "getScrollResponder" | "reportContentInset"
 > & {
+    /** Call cancelScroll() before scrolling it directly so end following and list scrolling stop first. */
     getAnimatableRef(): React.ElementRef<typeof ScrollViewComponent>;
+    /** Call cancelScroll() before scrolling it directly so end following and list scrolling stop first. */
     getNativeScrollRef(): React.ElementRef<typeof ScrollViewComponent>;
     getScrollResponder(): ScrollResponderMixin;
     reportContentInset(inset?: Partial<Insets> | null): void;

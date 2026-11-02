@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import { getDistanceFromEnd, getObservedScrollOffset } from "../../src/core/emitMetrics";
+import { getObservedScrollOffset } from "../../src/core/observedScroll";
+import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("getObservedScrollOffset", () => {
@@ -22,7 +23,7 @@ describe("getObservedScrollOffset", () => {
     it("converts a raw negative RTL DOM offset into the logical offset", () => {
         const ctx = createObservedContext(-350, { horizontal: true, rtl: true });
         expect(getObservedScrollOffset(ctx)).toBe(350);
-        expect(getDistanceFromEnd(ctx)).toBe(350);
+        expect(createImperativeHandle(ctx).getState().distanceFromEnd).toBe(350);
     });
 
     it("uses the known RTL convention without reclassifying it", () => {

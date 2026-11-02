@@ -1,3 +1,23 @@
+## 3.7.1
+
+- Fix: Loading callbacks respond reliably to data changes and new scroll gestures.
+- Fix: Lists preserve scroll positions as rows, insets, and viewport sizes change.
+- Fix: iOS lists with `contentInset.top` now rest at and measure from the inset start.
+- Fix: Keyboard dismissal and interrupted scrolling no longer cause jumps or doubled movement.
+- Fix: Rows stay correctly positioned after items are inserted, removed, or reordered.
+- Perf: Lists prepare more rows before the first scroll.
+
+## 3.7.0
+
+- Feat: `LegendListRef` gains `cancelScroll`, `scrollToKey`, `anchorVisibleContent`; state gains `distanceFromEnd`, `isFollowingEnd`.
+- Feat: Expose end-following state and allow following only newly appended items.
+- Feat: `onUserScroll` reports user scroll gestures.
+- Fix: Scroll promises resolve reliably when scrolling finishes or is interrupted.
+- Fix: Lists follow new content smoothly and respect users scrolling away from the end. #563 #568
+- Fix: Scrolling to the end while closing the keyboard moves smoothly in one motion. #557
+- Fix: Row sizing and layout changes preserve visible content and improve viewability accuracy.
+- Perf: Recycled lists reuse rows more efficiently and process appended data faster.
+
 ## 3.6.0
 
 - Feat: Add `viewPositionFallback` to align oversized items to the start or end of the viewport during initial or programmatic scrolling, while keeping `viewPosition` alignment for items that fit.

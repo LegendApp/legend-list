@@ -1,22 +1,11 @@
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
-import { type ItemSizeMeasurement, updateItemSizes, updateItemSizesBatch } from "@/core/updateItemSizes";
+import {
+    type ItemSizeMeasurement,
+    isContainerItemCurrent,
+    updateItemSizes,
+    updateItemSizesBatch,
+} from "@/core/updateItemSizes";
 import { peek$, type StateContext, set$ } from "@/state/state";
-
-function resolveFixedItemSize(ctx: StateContext, containerId: number, itemKey: string) {
-    const state = ctx.state;
-    const { data, getFixedItemSize } = state.props;
-    const index = state.indexByKey.get(itemKey);
-    let fixedItemSize: number | undefined;
-
-    if (data && getFixedItemSize && index !== undefined) {
-        const itemData = data[index];
-        if (itemData !== undefined) {
-            fixedItemSize = resolveContainerItemMetadata(state, containerId, index, itemData)?.fixedItemSize;
-        }
-    }
-
-    return fixedItemSize;
-}
 
 function resolveSkippedAnchorReset(ctx: StateContext, itemKey: string) {
     const state = ctx.state;
@@ -61,7 +50,13 @@ export function measureContainersInLayoutEffect(
             // prevents an older same-key callback from overwriting a newer measurement.
             const generation = (state.containerItemGenerations[containerId] ?? 0) + 1;
             state.containerItemGenerations[containerId] = generation;
-            const fixedItemSize = resolveFixedItemSize(ctx, containerId, itemKey);
+            if (!isContainerItemCurrent(ctx, containerId, itemKey)) continue;
+            const index = state.indexByKey.get(itemKey)!;
+            const itemData = state.props.data[index];
+            const fixedItemSize =
+                state.props.getFixedItemSize && itemData !== undefined
+                    ? resolveContainerItemMetadata(state, containerId, index, itemData)?.fixedItemSize
+                    : undefined;
             // sizesKnown includes the list's scroll-axis gap, while the fixed-size
             // callback describes only the item itself.
             const canSkipMeasurement =

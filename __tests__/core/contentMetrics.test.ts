@@ -1,13 +1,108 @@
-import { describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import { clampScrollOffset } from "../../src/core/clampScrollOffset";
 import { setContentInsetOverride, setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
 import { updateContentMetricsState } from "../../src/core/updateContentMetricsState";
+import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { Platform } from "../../src/platform/Platform";
 import { getContentSize } from "../../src/state/getContentSize";
+import { peek$ } from "../../src/state/state";
+import { checkThresholds } from "../../src/utils/checkThresholds";
+import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("updateContentMetrics", () => {
+    for (const os of ["ios", "android", "web"] as const) {
+        it(`counts native prop insets in content length and clamping only on ios (${os})`, () => {
+            const previous = Platform.OS;
+            Platform.OS = os;
+            try {
+                const ctx = createMockContext(
+                    { totalSize: 1000 },
+                    {
+                        lastLayout: { height: 500, width: 300, x: 0, y: 0 },
+                        props: { contentInset: { bottom: 100 } },
+                        scrollLength: 500,
+                    },
+                );
+                const length = os === "ios" ? 1100 : 1000;
+                expect(getContentSize(ctx)).toBe(length);
+                expect(createImperativeHandle(ctx).getState().contentLength).toBe(length);
+                expect(clampScrollOffset(ctx, 9999)).toBe(length - 500);
+            } finally {
+                Platform.OS = previous;
+            }
+        });
+    }
+
+    it.each([
+        { adjustment: 0, anchored: 0, bottom: 86, expected: 947.667, minimum: 861.667, os: "ios" },
+        { adjustment: 0, anchored: 200, bottom: 0, expected: 1000, minimum: 1000, os: "ios" },
+        { adjustment: 0, anchored: 200, bottom: 86, expected: 1086, minimum: 1000, os: "ios" },
+        { adjustment: 86, anchored: 0, bottom: 0, expected: 700, minimum: 700, os: "web" },
+        { adjustment: 300, anchored: 250, bottom: 0, expected: 700, minimum: 700, os: "web" },
+        { adjustment: 400, anchored: 250, bottom: 0, expected: 750, minimum: 700, os: "web" },
+    ] as const)(
+        "matches the physical minimum and end space: %j",
+        ({ os, minimum, bottom, anchored, adjustment, expected }) => {
+            Platform.OS = os;
+            const ctx = createMockContext(
+                { anchoredEndSpaceSize: anchored, totalSize: 350 },
+                {
+                    props: {
+                        anchoredEndSpace: anchored ? { anchorIndex: 0 } : undefined,
+                        contentContainerMinSize: minimum,
+                        contentInset: { bottom, left: 0, right: 0, top: 0 },
+                        contentInsetEndAdjustment: adjustment,
+                    },
+                    scrollLength: 600,
+                },
+            );
+            expect(getContentSize(ctx)).toBeCloseTo(expected, 6);
+            expect(clampScrollOffset(ctx, Infinity)).toBeCloseTo(expected - 600, 6);
+            expect(createImperativeHandle(ctx).getState().contentLength).toBeCloseTo(expected, 6);
+        },
+    );
+
+    for (const change of ["header", "footer", "row"] as const) {
+        it(`rechecks end pagination after ${change} shrink without a scroll`, () => {
+            const onEndReached = mock(() => {});
+            const ctx = createMockContext(
+                { footerSize: 100, headerSize: 100, totalSize: 1000 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    positions: [0],
+                    props: {
+                        data: [0],
+                        maintainVisibleContentPosition: { data: false, size: false },
+                        onEndReached,
+                        onEndReachedThreshold: 1,
+                    },
+                    queuedInitialLayout: true,
+                    scroll: 100,
+                    scrollLength: 500,
+                    sizes: new Map([["item_0", 1000]]),
+                    sizesKnown: new Map([["item_0", 1000]]),
+                },
+            );
+            checkThresholds(ctx);
+            expect(onEndReached).not.toHaveBeenCalled();
+            const shrink = () => {
+                if (change === "header") setHeaderSize(ctx, 0);
+                else if (change === "footer") setFooterSize(ctx, 0);
+                else updateItemSizesBatch(ctx, [{ itemKey: "item_0", size: { height: 900, width: 300 } }]);
+            };
+            shrink();
+            expect(onEndReached).toHaveBeenCalledTimes(1);
+            expect(onEndReached).toHaveBeenCalledWith({ distanceFromEnd: 500 });
+            expect(ctx.state.scroll).toBe(100);
+            shrink();
+            expect(onEndReached).toHaveBeenCalledTimes(1);
+            ctx.state.scheduledWork.dispose();
+        });
+    }
+
     it("counts padding on the active scroll axis", () => {
         const ctx = createMockContext(
             {
@@ -87,6 +182,107 @@ describe("updateContentMetrics", () => {
         expect(ctx.values.get("alignItemsAtEndPadding")).toBe(0);
         expect(getContentSize(ctx)).toBe(801);
         expect(clampScrollOffset(ctx, 999)).toBe(137);
+    });
+
+    for (const top of [0, 116]) {
+        for (const totalSize of [84, 1000]) {
+            it(`keeps the iOS scroll range for alignItemsAtEnd within the content (top ${top}, size ${totalSize})`, () => {
+                const previous = Platform.OS;
+                Platform.OS = "ios";
+                try {
+                    const ctx = createMockContext(
+                        { totalSize },
+                        {
+                            props: {
+                                alignItemsAtEnd: true,
+                                alignItemsAtEndPaddingEnabled: true,
+                                contentInset: { bottom: 0, left: 0, right: 0, top },
+                                data: [1],
+                            },
+                            scrollLength: 664,
+                            totalSize,
+                        },
+                    );
+
+                    updateContentMetricsState(ctx);
+
+                    const isShort = totalSize < 664;
+                    expect(ctx.values.get("alignItemsAtEndPadding")).toBe(isShort ? 664 - totalSize - top : 0);
+                    expect(getContentSize(ctx)).toBe(isShort ? 664 - top : totalSize);
+                    // Scroll-to-top rests just below the inset, and a short list has no range past it.
+                    expect(clampScrollOffset(ctx, -999)).toBe(0 - top);
+                    expect(clampScrollOffset(ctx, 999)).toBe(isShort ? 0 - top : totalSize - 664);
+                } finally {
+                    Platform.OS = previous;
+                }
+            });
+        }
+    }
+
+    for (const platform of ["ios", "android", "web"] as const) {
+        for (const bottom of [0, 40, 120]) {
+            it(`${platform} recomputes short-list range through growth and bottom inset ${bottom}`, () => {
+                Platform.OS = platform;
+                const ctx = createMockContext(
+                    {},
+                    {
+                        lastLayout: { height: 400, width: 320, x: 0, y: 0 },
+                        props: {
+                            alignItemsAtEnd: true,
+                            alignItemsAtEndPaddingEnabled: true,
+                            contentInset: { bottom, left: 0, right: 0, top: 96 },
+                            data: [1, 2],
+                        },
+                        scrollLength: 400,
+                        totalSize: 160,
+                    },
+                );
+                for (const [size, expectedPadding, expectedEnd] of platform === "ios"
+                    ? [
+                          [160, 144 - bottom, -96],
+                          [400, 0, bottom],
+                          [480, 0, 80 + bottom],
+                          [160, 144 - bottom, -96],
+                      ]
+                    : [
+                          [160, 240, 0],
+                          [400, 0, 0],
+                          [480, 0, 80],
+                          [160, 240, 0],
+                      ]) {
+                    ctx.state.totalSize = size;
+                    updateContentMetricsState(ctx);
+                    expect(peek$(ctx, "alignItemsAtEndPadding")).toBe(expectedPadding);
+                    expect(clampScrollOffset(ctx, 9999)).toBe(expectedEnd);
+                    expect(clampScrollOffset(ctx, -9999)).toBe(platform === "ios" ? -96 : 0);
+                }
+                ctx.state.scheduledWork.dispose();
+            });
+        }
+    }
+
+    it("deducts headers, footers, both insets and padding before end-aligning short iOS content", () => {
+        Platform.OS = "ios";
+        const ctx = createMockContext(
+            { footerSize: 20, headerSize: 64, stylePaddingTop: 12 },
+            {
+                props: {
+                    alignItemsAtEndPaddingEnabled: true,
+                    contentInset: { bottom: 40, left: 0, right: 0, top: 96 },
+                    data: [1, 2],
+                    stylePaddingBottom: 8,
+                    stylePaddingTop: 12,
+                },
+                scrollLength: 400,
+                totalSize: 80,
+            },
+        );
+        updateContentMetricsState(ctx);
+        expect(peek$(ctx, "alignItemsAtEndPadding")).toBe(80);
+        expect(getContentSize(ctx)).toBe(304);
+        expect(clampScrollOffset(ctx, -999)).toBe(-96);
+        expect(clampScrollOffset(ctx, 999)).toBe(-96);
+        ctx.state.scheduledWork.dispose();
     });
 
     it("does not add leading padding when alignItemsAtEnd padding is disabled", () => {

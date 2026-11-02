@@ -44,6 +44,25 @@ describe("initialScroll", () => {
         expect(result).toBe(220);
     });
 
+    it("resolves an initial end target beyond minHeight plus the bottom inset", () => {
+        const ctx = createMockContext(
+            { totalSize: 350 },
+            {
+                positions: [0],
+                props: {
+                    contentContainerMinSize: 861.667,
+                    contentInset: { bottom: 86, left: 0, right: 0, top: 116 },
+                    data: ["a"],
+                    getFixedItemSize: () => 350,
+                },
+                scrollLength: 874,
+                sizesKnown: new Map([["item_0", 350]]),
+            },
+        );
+        const target = { index: 0, preserveForBottomPadding: true, viewPosition: 1 as const };
+        expect(resolveInitialScrollOffset(ctx, target)).toBeCloseTo(73.667, 6);
+    });
+
     it("resolves measured sessions from index math and clamps to the tail", () => {
         const ctx = createMockContext(
             { totalSize: 1000 },

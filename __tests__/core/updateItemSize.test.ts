@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
+import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
@@ -337,7 +338,7 @@ describe("item size update functions", () => {
                     Platform.OS = platform;
                     mockState.isWithinMaintainScrollAtEndThreshold = true;
                     mockState.isDragging = true;
-                    doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
+                    interruptMaintainScrollAtEnd(mockCtx);
 
                     updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
 
@@ -359,15 +360,16 @@ describe("item size update functions", () => {
 
             it.each(["web", "ios", "android"] as const)(
                 "rearms end following when a drag is released within the threshold on %s",
-                (platform) => {
+                async (platform) => {
                     Platform.OS = platform;
                     mockState.isWithinMaintainScrollAtEndThreshold = true;
                     mockState.isDragging = true;
-                    doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
+                    interruptMaintainScrollAtEnd(mockCtx);
                     mockState.scroll = 380;
                     mockState.isDragging = false;
 
                     updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+                    await Promise.resolve();
                     rafCallback?.(0);
 
                     expect(mockState.endFollowInterrupted).toBe(false);
@@ -377,21 +379,23 @@ describe("item size update functions", () => {
 
             it.each(["web", "ios", "android"] as const)(
                 "cancels a first-measurement follow when the user scrolls away on %s",
-                (platform) => {
+                async (platform) => {
                     Platform.OS = platform;
                     mockState.isWithinMaintainScrollAtEndThreshold = true;
 
                     updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
+                    await Promise.resolve();
 
                     const isWeb = platform === "web";
                     expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(isWeb ? 0 : 1);
                     expect(mockState.maintainingScrollAtEnd).toBe(isWeb ? "instant" : "pending-instant");
                     expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(isWeb ? 1 : 0);
 
-                    doMaintainScrollAtEndModule.interruptMaintainScrollAtEnd(mockCtx);
+                    interruptMaintainScrollAtEnd(mockCtx);
                     mockState.scroll = 100;
                     mockState.isWithinMaintainScrollAtEndThreshold = false;
                     updateItemAndFlush(mockCtx, "item_0", { height: 180, width: 400 });
+                    await Promise.resolve();
                     rafCallback?.(0);
 
                     expect(runTrackedScrollToEnd).toHaveBeenCalledTimes(isWeb ? 1 : 0);
@@ -585,6 +589,54 @@ describe("item size update functions", () => {
                 Platform.OS = prevPlatform;
             }
         });
+
+        it.each(["isFollowingEnd", "isWithinMaintainScrollAtEndThreshold"] as const)(
+            "recalculates positions with the published total under an anchor lock when %s drives the end follow",
+            (endFollowKey) => {
+                const prevPlatform = Platform.OS;
+                Platform.OS = "web";
+                try {
+                    const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                        () => undefined as any,
+                    );
+                    const maintainSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+                        () => true,
+                    );
+                    const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((_cb: any) => 1);
+                    try {
+                        mockState.props.maintainScrollAtEnd = {
+                            animated: false,
+                            onDataChange: true,
+                            onFooterLayout: true,
+                            onItemLayout: true,
+                            onLayout: true,
+                        };
+                        mockState.mvcpAnchorLock = {
+                            expiresAt: Date.now() + 1000,
+                            id: "item_0",
+                            position: 0,
+                            quietPasses: 0,
+                        };
+                        mockCtx.values.set(endFollowKey, true);
+                        mockState.sizesKnown.set("item_0", 100);
+                        mockState.sizes.set("item_0", 100);
+
+                        updateItemAndFlush(mockCtx, "item_0", { height: 60, width: 400 });
+
+                        // The end follow scrolls to the new total, so positions must commit with it.
+                        expect(calculateSpy).toHaveBeenCalledTimes(1);
+                        expect(rafSpy).not.toHaveBeenCalled();
+                        expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
+                    } finally {
+                        rafSpy.mockRestore();
+                        maintainSpy.mockRestore();
+                        calculateSpy.mockRestore();
+                    }
+                } finally {
+                    Platform.OS = prevPlatform;
+                }
+            },
+        );
 
         it("cancels queued mvcp recalculate and runs immediately when anchor lock clears", () => {
             const prevPlatform = Platform.OS;

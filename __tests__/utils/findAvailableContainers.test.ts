@@ -196,6 +196,37 @@ describe("findAvailableContainers", () => {
         }
     });
 
+    for (const typed of [false, true]) {
+        it(`reuses a warm same-type offscreen row before an empty slot (typed=${typed})`, () => {
+            ctx.values.set("numContainers", 3);
+            ctx.values.set("containerItemKey0", "item0");
+            ctx.values.set("containerItemKey1", "item2");
+            mockState.indexByKey.set("item0", 0);
+            mockState.indexByKey.set("item2", 2);
+            mockState.props.recycleItems = true;
+            if (typed) {
+                mockState.props.getItemType = () => "row";
+                setContainerItemType(0, "row");
+                setContainerItemType(1, "row");
+            }
+            const result = findAvailableContainers(ctx, [4], 1, 4, []);
+            expect(result[0].containerIndex).toBe(0);
+        });
+    }
+
+    it("keeps nearby offscreen rows mounted when recycling is disabled", () => {
+        ctx.values.set("numContainers", 3);
+        ctx.values.set("containerItemKey0", "item0");
+        ctx.values.set("containerItemKey1", "item2");
+        mockState.indexByKey.set("item0", 0);
+        mockState.indexByKey.set("item2", 2);
+        mockState.props.recycleItems = false;
+
+        const result = findAvailableContainers(ctx, [4], 1, 4, []);
+
+        expect(result[0].containerIndex).toBe(2);
+    });
+
     describe("when there are unallocated containers", () => {
         it("should return unallocated containers first", () => {
             // Setup container data via context
@@ -684,6 +715,7 @@ describe("findAvailableContainers", () => {
 
     describe("performance benchmarks", () => {
         it("should handle large container pools efficiently", () => {
+            mockState.props.recycleItems = true;
             const numContainers = 1000;
             ctx.values.set("numContainers", numContainers);
 
@@ -697,10 +729,10 @@ describe("findAvailableContainers", () => {
             const result = containerIndices(findAvailableContainers(ctx, neededItems(50), 0, 10, []));
             const duration = Date.now() - start;
 
-            // Should return 50 indices, starting with unallocated containers
+            // Reuse the 50 farthest warm containers before activating empty slots
             expect(result.length).toBe(50);
-            expect(result[0]).toBe(100); // First unallocated container
-            expect(result[49]).toBe(149);
+            expect(result[0]).toBe(50);
+            expect(result[49]).toBe(99);
             expect(duration).toBeLessThan(50); // Should complete quickly
         });
 

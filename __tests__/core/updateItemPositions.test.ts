@@ -44,6 +44,67 @@ describe("updateItemPositions", () => {
         mockState = mockCtx.state;
     });
 
+    it("starts at zero when an empty visible range has no buffered start", () => {
+        mockState.props.getFixedItemSize = () => 100;
+        const keyExtractor = spyOn(mockState.props, "keyExtractor");
+        updateItemPositions(mockCtx, false, { doMVCP: false, scrollBottomBuffered: 200, startIndex: -1 });
+        expect(keyExtractor.mock.calls.every(([, index]) => index >= 0)).toBe(true);
+        expect(mockState.positions).toEqual([0, 100, 200, 300, 400]);
+        expect(mockState.indexByKey.size).toBe(5);
+    });
+
+    it("remaps an active keyed target while rebuilding data without MVCP", () => {
+        mockState.props.getFixedItemSize = () => 100;
+        updateItemPositions(mockCtx, true);
+        mockState.scrollingTo = { animated: true, index: 1, key: "item2", offset: 100 };
+        mockState.props.data = [{ id: "new" }, ...mockState.props.data];
+        resetLayoutCachesForDataChange(mockState);
+        updateItemPositions(mockCtx, true, { doMVCP: false, startIndex: 0 });
+        expect(mockState.scrollingTo.index).toBe(2);
+        expect(mockState.indexByKey.get("item2")).toBe(2);
+    });
+
+    for (const targetKind of ["none", "offset", "end"] as const) {
+        it(`does not treat an undefined item key as a scroll target key (target: ${targetKind})`, () => {
+            mockState.props.data = [{}, { id: "valid" }];
+            mockState.props.keyExtractor = (item: any) => item.id;
+            mockState.props.estimatedItemSize = 100;
+            mockState.scrollingTo =
+                targetKind === "none"
+                    ? undefined
+                    : targetKind === "offset"
+                      ? { animated: true, offset: 50 }
+                      : { animated: true, index: 1, isScrollToEnd: true, offset: 100 };
+            const target = mockState.scrollingTo;
+            const previousIndex = target?.index;
+            const microtask = spyOn(mockState.scheduledWork, "microtask");
+
+            expect(() => updateItemPositions(mockCtx, true)).not.toThrow();
+
+            expect(mockState.positions).toEqual([0, 100]);
+            expect(mockState.scrollingTo).toBe(target);
+            expect(mockState.scrollingTo?.index).toBe(previousIndex);
+            expect(microtask).not.toHaveBeenCalled();
+        });
+    }
+
+    for (const replaced of [false, true]) {
+        it(`defers keyed redispatch and respects replacement targets (replaced: ${replaced})`, async () => {
+            mockState.props.getFixedItemSize = () => 100;
+            updateItemPositions(mockCtx, true);
+            mockState.scrollLength = 200;
+            mockState.scrollingTo = { animated: true, index: 1, key: "item2", offset: 100 };
+            mockState.props.data = [{ id: "new" }, ...mockState.props.data];
+            resetLayoutCachesForDataChange(mockState);
+            updateItemPositions(mockCtx, true, { doMVCP: false, startIndex: 0 });
+            expect(mockState.scrollingTo.index).toBe(2);
+            expect(mockState.scrollingTo.offset).toBe(100);
+            if (replaced) mockState.scrollingTo = { animated: true, index: 3, offset: 300 };
+            await Promise.resolve();
+            expect(mockState.scrollingTo.offset).toBe(replaced ? 300 : 200);
+        });
+    }
+
     describe("reusing completed single-column positions", () => {
         beforeEach(() => {
             mockState.props.estimatedItemSize = 100;

@@ -9,6 +9,7 @@ import { type StateContext, set$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
+import { invalidateHorizontalRTLScrollType } from "@/utils/rtl";
 
 export function handleLayout(
     ctx: StateContext,
@@ -16,6 +17,7 @@ export function handleLayout(
     setCanRender: (canRender: boolean) => void,
 ) {
     const state = ctx.state;
+    invalidateHorizontalRTLScrollType(state);
     const { maintainScrollAtEnd, useWindowScroll } = state.props;
     const scrollAxis = state.props.horizontal ? "width" : "height";
     const otherAxis = state.props.horizontal ? "height" : "width";

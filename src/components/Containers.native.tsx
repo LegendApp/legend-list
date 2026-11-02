@@ -11,9 +11,11 @@ import { useArr$, useStateContext } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 
-// Match PositionView: Fabric must commit content extent and row positions
-// together. Old architecture keeps both on the Animated update path.
-const useContentSize = IsNewArchitecture ? () => useArr$(["totalSize"])[0] : () => useValue$("totalSize");
+// Match PositionView: on Fabric the committed minimum holds a shrinking content
+// extent until row positions commit, while the Animated size grows it at once so
+// end space set outside React (anchored end space) never outruns the content.
+// Old architecture keeps both on the Animated update path.
+const useCommittedMinSize = IsNewArchitecture ? () => useArr$(["totalSize"])[0] : () => undefined;
 
 interface ContainersProps<ItemT> {
     freshDataTransitionEpoch: number;
@@ -37,9 +39,9 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     horizontal,
 }: ContainersLayerProps) {
     const ctx = useStateContext();
-    const SizeComponent = ctx.state.props.sizeComponentInternal;
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const size = useContentSize();
+    const size = useValue$("totalSize");
+    const minSize = useCommittedMinSize();
     const [readyToRender, numColumns, otherAxisSize = 0] = useArr$(["readyToRender", "numColumns", "otherAxisSize"]);
     const isVisible = useFreshDataTransitionVisibility(!!readyToRender, freshDataTransitionEpoch);
 
@@ -47,10 +49,11 @@ const ContainersLayer = typedMemo(function ContainersLayer({
         ? {
               height: otherAxisSize || "100%",
               minHeight: otherAxisSize,
+              minWidth: minSize,
               opacity: isVisible ? 1 : 0,
               width: size,
           }
-        : { height: size, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0 };
+        : { height: size, minHeight: minSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0 };
 
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
@@ -75,26 +78,9 @@ const ContainersLayer = typedMemo(function ContainersLayer({
         }
     }
 
-    const content = <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>;
-    if (SizeComponent) {
-        // SizeComponent owns the scroll-axis size.
-        if (horizontal) delete style.width;
-        else delete style.height;
-        return (
-            <SizeComponent
-                horizontal={horizontal}
-                pointerEvents={isVisible ? undefined : "none"}
-                signalName="totalSize"
-                style={style}
-            >
-                {content}
-            </SizeComponent>
-        );
-    }
-
     return (
         <Animated.View pointerEvents={isVisible ? undefined : "none"} style={style}>
-            {content}
+            <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>
         </Animated.View>
     );
 });

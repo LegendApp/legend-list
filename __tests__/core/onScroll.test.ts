@@ -5,7 +5,9 @@ import { I18nManager } from "react-native";
 
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { Platform } from "@/platform/Platform";
+import * as platformScroll from "../../src/core/doScrollTo";
 import { onScroll } from "../../src/core/onScroll";
+import { scrollTo } from "../../src/core/scrollTo";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -66,6 +68,42 @@ describe("onScroll", () => {
             expect(mockState.scroll).toBe(-216);
             expect(mockState.scrollPending).toBe(-216);
             expect(mockState.scrollingTo?.offset).toBe(300);
+        });
+
+        for (const animated of [false, true]) {
+            it(`${animated ? "lets an animated" : "clamps a nonanimated"} request return from past the end`, () => {
+                const commands: number[] = [];
+                const spy = spyOn(platformScroll, "doScrollTo").mockImplementation((_ctx, { offset }) => {
+                    commands.push(offset);
+                });
+                mockCtx.values.set("totalSize", 1000);
+                mockState.scrollingTo = { animated, offset: 900, targetOffset: 500 } as any;
+                mockScrollEvent.nativeEvent.contentOffset.y = 700;
+
+                onScroll(mockCtx, mockScrollEvent);
+                spy.mockRestore();
+
+                expect(commands).toEqual(animated ? [] : [500]);
+            });
+        }
+
+        it("does not re-issue an instant scroll for events from before it landed", () => {
+            const commands: number[] = [];
+            const spy = spyOn(platformScroll, "doScrollTo").mockImplementation((ctx, { animated, offset }) => {
+                commands.push(offset);
+                if (!animated) ctx.state.scroll = offset;
+            });
+            mockCtx.values.set("totalSize", 1000);
+            // A keyboard-close send targets the closed range while native still reports the open inset's range.
+            mockState.scroll = 576;
+            scrollTo(mockCtx, { animated: false, offset: 900 } as any);
+            mockScrollEvent.nativeEvent.contentOffset.y = 576;
+            onScroll(mockCtx, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
+            spy.mockRestore();
+
+            expect(commands).toEqual([500]);
+            expect(mockState.scroll).toBe(500);
         });
 
         it("should update scroll position for vertical scrolling", () => {

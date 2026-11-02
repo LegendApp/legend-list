@@ -58,14 +58,11 @@ describe("initialScrollLifecycle", () => {
             state.pendingScrollResolve = resolve;
             state.maintainingScrollAtEnd = "pending-instant";
             state.pendingMaintainScrollAtEnd = true;
-            state.didDeferMaintainScrollAtEndForMomentum = true;
-            state.momentumSuspendContentSize = 1000;
-            state.momentumSuspendCompensated = true;
+            state.userScrollContentSize = 1000;
             state.scheduledWork.register("platformScrollCompletion", cancelCompletion);
             state.endFollowInterrupted = true;
             state.visibleContentAnchor = { key: "reader", offset: 20 };
             state.pendingEndMeasurements = new Set(["tail"]);
-            state.scrollElementTarget = { element: {} as Element };
 
             handleInitialScrollDataChange(ctx, {
                 dataLength: 25,
@@ -80,15 +77,12 @@ describe("initialScrollLifecycle", () => {
 
             expect(state.scrollingTo).toBe(didStartFreshData ? undefined : oldTarget);
             expect(state.pendingMaintainScrollAtEnd).toBe(!didStartFreshData);
-            expect(state.didDeferMaintainScrollAtEndForMomentum).toBe(!didStartFreshData);
-            expect(state.momentumSuspendContentSize).toBe(didStartFreshData ? undefined : 1000);
-            expect(state.momentumSuspendCompensated).toBe(!didStartFreshData);
+            expect(state.userScrollContentSize).toBe(didStartFreshData ? undefined : 1000);
             expect(resolve).toHaveBeenCalledTimes(didStartFreshData ? 1 : 0);
             expect(cancelCompletion).toHaveBeenCalledTimes(didStartFreshData ? 1 : 0);
             expect(state.endFollowInterrupted).toBe(!didStartFreshData);
             expect(state.visibleContentAnchor).toEqual(didStartFreshData ? undefined : { key: "reader", offset: 20 });
             expect(state.pendingEndMeasurements).toEqual(didStartFreshData ? undefined : new Set(["tail"]));
-            expect(state.scrollElementTarget).toEqual(didStartFreshData ? undefined : { element: {} });
             expect(ctx.values.get("isFollowingEnd")).toBe(!didStartFreshData);
             // Releasing the old request must not leave scroll-gated transitions disabled.
             expect(ctx.values.get("isScrollActive")).toBe(!didStartFreshData);

@@ -2,7 +2,7 @@ import { type ReactElement, useEffect } from "react";
 
 import { Platform } from "@/platform/Platform";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
-import { listen$, peek$, useStateContext } from "@/state/state";
+import { listen$, peek$, type StateContext, useStateContext } from "@/state/state";
 import type { LegendListPropsBase } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
@@ -10,6 +10,10 @@ import { warnDevOnce } from "@/utils/helpers";
 const WEB_UNBOUNDED_HEIGHT_MIN_DATA_LENGTH = 100;
 const WEB_UNBOUNDED_HEIGHT_CONTAINER_RATIO = 0.9;
 const WEB_UNBOUNDED_HEIGHT_VIEWPORT_RATIO = 0.9;
+
+type DevHookGlobal = typeof globalThis & {
+    __LEGEND_LIST_DEV_HOOK__?: (ctx: StateContext) => (() => void) | undefined;
+};
 
 type LegendListDevProps<T> = LegendListPropsBase<T, LooseScrollViewProps> & {
     scrollElement?: HTMLElement | null;
@@ -30,6 +34,9 @@ function useDevChecksImpl(props: LegendListDevProps<any>) {
         useWindowScroll,
     } = props;
     const hasAnchoredEndSpace = !!anchoredEndSpace;
+
+    // Lets dev tooling (layout invariant checks in tests and example apps) observe mounted lists.
+    useEffect(() => (globalThis as DevHookGlobal).__LEGEND_LIST_DEV_HOOK__?.(ctx), [ctx]);
 
     useEffect(() => {
         if (hasAnchoredEndSpace && (numColumns ?? 1) > 1) {

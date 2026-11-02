@@ -2,6 +2,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
+import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -55,31 +56,6 @@ function syncInitialScrollNativeWatchdog(
     }
 }
 
-export function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
-    const state = ctx.state;
-    const dataLength = state.props.data.length;
-    let low = 0;
-    let high = dataLength - 1;
-    let match: number | undefined;
-
-    while (low <= high) {
-        const mid = Math.floor((low + high) / 2);
-        const top = state.positions[mid];
-        if (top === undefined) {
-            high = mid - 1;
-        } else {
-            if (top <= offset) {
-                match = mid;
-                low = mid + 1;
-            } else {
-                high = mid - 1;
-            }
-        }
-    }
-
-    return match;
-}
-
 function getItemBottom(ctx: StateContext, index: number) {
     const top = ctx.state.positions[index];
     if (top === undefined) {
@@ -90,6 +66,36 @@ function getItemBottom(ctx: StateContext, index: number) {
     return top + (Number.isFinite(itemSize) ? itemSize : 0);
 }
 
+export function findVisibleItemIndex(ctx: StateContext, viewportStart: number, viewportEnd: number) {
+    const state = ctx.state;
+    const dataLength = state.props.data.length;
+    let low = 0;
+    let high = dataLength - 1;
+    let match: number | undefined;
+
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const top = state.positions[mid];
+        if (top !== undefined && top <= viewportStart) {
+            match = mid;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    let index = match ?? 0;
+    // The last cell at this row's top may end above the viewport while a taller sibling remains visible.
+    while (index > 0 && state.positions[index - 1] === state.positions[index]) index--;
+    for (; index < state.props.data.length; index++) {
+        const top = state.positions[index];
+        if (top === undefined || top >= viewportEnd) break;
+        const bottom = getItemBottom(ctx, index)! - ctx.scrollAxisGap;
+        if (bottom > viewportStart && bottom > top) return index;
+    }
+    return undefined;
+}
+
 function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
@@ -97,25 +103,20 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
         return undefined;
     }
 
-    const viewportStart = Math.max(0, targetOffset);
-    const viewportEnd = Math.max(viewportStart, targetOffset + state.scrollLength);
+    // Use the same item-space conversion as calculateItemsInView.
+    const itemOffset = getItemSpaceOffset(ctx, targetOffset);
+    const viewportStart = Math.max(0, itemOffset);
+    const viewportEnd = Math.max(viewportStart, itemOffset + state.scrollLength);
     let start =
         targetIndex !== undefined
             ? Math.max(0, Math.min(dataLength - 1, targetIndex))
-            : findPositionIndexAtOrBeforeOffset(ctx, viewportStart);
+            : findVisibleItemIndex(ctx, viewportStart, viewportEnd);
     if (start === undefined) {
         return undefined;
     }
     if (targetIndex !== undefined && state.positions[start] === undefined) {
         return { end: start, start };
     }
-    if (targetIndex === undefined) {
-        const startBottom = getItemBottom(ctx, start);
-        if (startBottom === undefined || startBottom <= viewportStart) {
-            return undefined;
-        }
-    }
-
     while (start > 0) {
         const top = state.positions[start];
         if (top === undefined || top <= viewportStart || state.positions[start - 1] === undefined) {
@@ -143,29 +144,13 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
     return { end, start };
 }
 
-function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
-    const range = getTargetViewportRenderRange(ctx, targetOffset, targetIndex);
-    if (range) {
-        ctx.state.scrollTargetPinnedRange = range;
-        ctx.state.scrollForNextCalculateItemsInView = undefined;
-    } else {
-        ctx.state.scrollTargetPinnedRange = undefined;
-    }
-}
-
 export function scrollTo(
     ctx: StateContext,
     params: InternalScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean },
 ) {
     const state = ctx.state;
     const { noScrollingTo, forceScroll, ...scrollTarget } = params;
-    const {
-        animated,
-        isInitialScroll,
-        offset: scrollTargetOffset,
-        precomputedWithViewOffset,
-        waitForInitialScrollCompletionFrame,
-    } = scrollTarget;
+    const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
     const {
         props: { horizontal },
     } = state;
@@ -193,10 +178,12 @@ export function scrollTo(
             ...scrollTarget,
             ...(averageSizeSnapshot ? { averageSizeSnapshot } : {}),
             targetOffset,
-            waitForInitialScrollCompletionFrame,
         };
         if (!isInitialScroll) {
-            pinScrollTargetRenderRange(ctx, targetOffset, scrollTarget.index);
+            state.scrollTargetPinnedRange = getTargetViewportRenderRange(ctx, targetOffset, scrollTarget.index);
+            if (state.scrollTargetPinnedRange) {
+                state.scrollForNextCalculateItemsInView = undefined;
+            }
         }
     }
     // Animated requests have not moved yet. Layout can check completion before
@@ -225,6 +212,6 @@ export function scrollTo(
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });
     } else {
-        state.scroll = offset;
+        state.scroll = targetOffset;
     }
 }

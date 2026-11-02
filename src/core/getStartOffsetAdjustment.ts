@@ -9,3 +9,12 @@ export function getStartOffsetAdjustment(ctx: StateContext) {
 
     return stylePaddingStart + (peek$(ctx, "alignItemsAtEndPadding") || 0) + (peek$(ctx, "headerSize") || 0);
 }
+
+export function getItemSpaceOffset(
+    ctx: StateContext,
+    scrollOffset: number,
+    pending = peek$(ctx, "scrollAdjustPending") ?? 0,
+    startOffset = getStartOffsetAdjustment(ctx),
+) {
+    return Math.round(scrollOffset + (pending - startOffset));
+}

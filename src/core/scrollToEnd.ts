@@ -16,6 +16,7 @@ export function scrollToEnd(ctx: StateContext, options?: ScrollToEndOptions) {
     const footerSize = peek$(ctx, "footerSize") || 0;
     scrollToIndex(ctx, {
         ...options,
+        clampToContentContainerMinSize: true,
         index,
         viewOffset: getEndAlignedViewOffset(paddingBottom, footerSize) + (options?.viewOffset || 0),
         viewPosition: 1,

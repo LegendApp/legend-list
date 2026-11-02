@@ -31,36 +31,38 @@ function getHorizontalMaxOffset(
     state: Pick<InternalState, "scrollLength">,
     contentWidth: number | undefined,
 ): number | undefined {
-    if (
-        contentWidth === undefined ||
-        !Number.isFinite(contentWidth) ||
-        !Number.isFinite(state.scrollLength) ||
-        contentWidth <= state.scrollLength
-    ) {
-        return contentWidth !== undefined && Number.isFinite(contentWidth) && Number.isFinite(state.scrollLength)
-            ? 0
-            : undefined;
+    if (contentWidth === undefined || !Number.isFinite(contentWidth) || !Number.isFinite(state.scrollLength)) {
+        return undefined;
     }
 
     return Math.max(0, contentWidth - state.scrollLength);
 }
 
-function getDefaultHorizontalRTLScrollType(): HorizontalRTLScrollType {
-    return Platform.OS === "web" ? "normal" : "inverted";
+const webScrollTypes = new WeakMap<HTMLElement, HorizontalRTLScrollType>();
+
+type HorizontalRTLState = Pick<InternalState, "horizontalRTLScrollType"> & Partial<Pick<InternalState, "refScroller">>;
+
+export function getNativeHorizontalRTLScrollType(state: HorizontalRTLState | undefined): HorizontalRTLScrollType {
+    if (Platform.OS === "web") {
+        const owner = state?.refScroller?.current?.getScrollableNode?.() as HTMLElement | null | undefined;
+        // External and window owners can remain LTR even when the list renders RTL.
+        if (owner && typeof getComputedStyle === "function") {
+            let mode = webScrollTypes.get(owner);
+            if (!mode) {
+                mode = getComputedStyle(owner).direction === "ltr" ? "normal" : "negative";
+                webScrollTypes.set(owner, mode);
+            }
+            return mode;
+        }
+    }
+    return state?.horizontalRTLScrollType ?? (Platform.OS === "web" ? "negative" : "inverted");
 }
 
-function getNativeHorizontalRTLScrollType(
-    state: Pick<InternalState, "horizontalRTLScrollType"> | undefined,
-): HorizontalRTLScrollType {
-    return state?.horizontalRTLScrollType ?? getDefaultHorizontalRTLScrollType();
-}
-
-export function isRTLProps(props: RTLPropsLike | undefined): boolean {
-    return props?.rtl ?? !!I18nManager.isRTL;
-}
-
-export function isRTLList(state: Pick<InternalState, "props"> | undefined): boolean {
-    return isRTLProps(state?.props);
+export function invalidateHorizontalRTLScrollType(state: Pick<InternalState, "props"> & HorizontalRTLState) {
+    if (Platform.OS === "web" && isHorizontalRTL(state)) {
+        const owner = state.refScroller?.current?.getScrollableNode?.() as HTMLElement | null | undefined;
+        if (owner) webScrollTypes.delete(owner);
+    }
 }
 
 export function isHorizontalRTL(state: Pick<InternalState, "props"> | undefined): boolean {
@@ -68,7 +70,7 @@ export function isHorizontalRTL(state: Pick<InternalState, "props"> | undefined)
 }
 
 export function isHorizontalRTLProps(props: RTLPropsLike | undefined): boolean {
-    return !!props?.horizontal && isRTLProps(props);
+    return !!props?.horizontal && (props.rtl ?? !!I18nManager.isRTL);
 }
 
 export function getStylePaddingEnd(props: StylePaddingPropsLike | undefined): number {
@@ -76,13 +78,6 @@ export function getStylePaddingEnd(props: StylePaddingPropsLike | undefined): nu
         return props?.stylePaddingBottom || 0;
     }
     return (isHorizontalRTLProps(props) ? props.stylePaddingLeft : props.stylePaddingRight) || 0;
-}
-
-export function getLogicalHorizontalMaxOffset(
-    state: Pick<InternalState, "props" | "scrollLength">,
-    contentWidth: number | undefined,
-): number {
-    return getHorizontalMaxOffset(state, contentWidth) ?? 0;
 }
 
 export function getHorizontalInsetEnd(
@@ -96,7 +91,7 @@ export function getHorizontalInsetEnd(
 }
 
 export function toPhysicalHorizontalItemPosition(
-    state: Pick<InternalState, "props"> | undefined,
+    state: (Pick<InternalState, "props"> & HorizontalRTLState) | undefined,
     logicalPosition: number,
     itemSize: number,
     listSize: number | undefined,
@@ -105,11 +100,13 @@ export function toPhysicalHorizontalItemPosition(
         return logicalPosition;
     }
 
+    // LTR owners scroll in physical item order, including for RTL list content.
+    if (Platform.OS === "web" && getNativeHorizontalRTLScrollType(state) === "normal") return logicalPosition;
     return Math.max(0, listSize - logicalPosition - itemSize);
 }
 
 export function toNativeHorizontalOffset(
-    state: Pick<InternalState, "props" | "horizontalRTLScrollType" | "scrollLength"> | undefined,
+    state: (Pick<InternalState, "props" | "scrollLength"> & HorizontalRTLState) | undefined,
     logicalOffset: number,
     contentWidth: number | undefined,
 ): number {
@@ -134,16 +131,19 @@ export function toNativeHorizontalOffset(
     return clampedLogicalOffset;
 }
 
-/** Converts an observed DOM offset using the known RTL convention, without re-detecting it. */
+/** Converts an observed DOM offset using the scroll owner's RTL convention without changing state. */
 export function peekLogicalHorizontalOffset(
-    state: Pick<InternalState, "props" | "horizontalRTLScrollType">,
+    state: Pick<InternalState, "props"> & HorizontalRTLState,
     rawOffset: number,
     maxOffset: number | undefined,
 ): number {
     if (!isHorizontalRTL(state)) {
         return rawOffset;
     }
-    const mode = rawOffset < 0 ? "negative" : getNativeHorizontalRTLScrollType(state);
+    let mode = getNativeHorizontalRTLScrollType(state);
+    if (rawOffset < 0 && (Platform.OS !== "web" || mode !== "normal")) {
+        mode = "negative";
+    }
     if (mode === "negative") {
         return clampHorizontalOffset(-rawOffset, maxOffset);
     }
@@ -165,7 +165,13 @@ export function toLogicalHorizontalOffset(
 
     const maxOffset = getHorizontalMaxOffset(state, contentWidth);
 
-    if (rawOffset < 0) {
+    const mode = getNativeHorizontalRTLScrollType(state);
+    if (Platform.OS === "web" && mode === "normal") {
+        state.horizontalRTLScrollType = "normal";
+        return clampHorizontalOffset(rawOffset, maxOffset);
+    }
+
+    if (rawOffset < 0 || mode === "negative") {
         state.horizontalRTLScrollType = "negative";
         return clampHorizontalOffset(-rawOffset, maxOffset);
     }
@@ -190,9 +196,9 @@ export function toLogicalHorizontalOffset(
     }
 
     if (!state.hasScrolled) {
-        const defaultMode = getDefaultHorizontalRTLScrollType();
-        state.horizontalRTLScrollType = defaultMode;
-        return clampHorizontalOffset(defaultMode === "inverted" ? invertedOffset : normalOffset, maxOffset);
+        // Web owners and the negative convention return above, leaving the native default.
+        state.horizontalRTLScrollType = "inverted";
+        return clampHorizontalOffset(invertedOffset, maxOffset);
     }
 
     const referenceScroll = state.scroll;

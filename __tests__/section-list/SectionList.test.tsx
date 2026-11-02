@@ -83,6 +83,7 @@ describe("SectionList", () => {
 
         const { unmount } = render(
             <SectionList
+                keyExtractor={(item) => item}
                 ref={ref}
                 renderItem={({ item }) => <>{item}</>}
                 renderSectionHeader={({ section }) => <>{section.key}</>}
@@ -95,6 +96,7 @@ describe("SectionList", () => {
 
         const props = legendListProps[0];
         expect(props.stickyHeaderIndices).toEqual([0, 3]);
+        expect(props.data[4].key).toBe("two:item:c");
 
         ref.current?.scrollToLocation({ itemIndex: 0, sectionIndex: 1, viewOffset: 12, viewPosition: 0.5 });
         expect(scrollCalls[0]).toEqual({

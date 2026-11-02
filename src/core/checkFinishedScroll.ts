@@ -1,12 +1,16 @@
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { USER_MOMENTUM_STALL_TIMEOUT_MS } from "@/constants";
+import { cancelScroll } from "@/core/cancelScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getCurrentTargetOffset, isEndAlignedLastItemTarget } from "@/core/getCurrentTargetOffset";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
-import { clampScrollIndex } from "@/core/scrollToIndex";
+import { getObservedScrollOffset } from "@/core/observedScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+
+export { getCurrentTargetOffset };
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -32,30 +36,14 @@ export function checkFinishedScroll(ctx: StateContext, options?: { onlyIfAligned
     ctx.state.scheduledWork.frame(() => checkFinishedScrollFrame(ctx), "checkFinishedScrollFrame");
 }
 
-function hasScrollCompletionOwnership(
-    state: StateContext["state"],
-    options: { clampedTargetOffset: number; scrollingTo: ActiveScrollTarget },
-) {
-    const { clampedTargetOffset, scrollingTo } = options;
-    return (
-        !scrollingTo.isInitialScroll ||
-        state.hasScrolled ||
-        clampedTargetOffset <= INITIAL_SCROLL_COMPLETION_TARGET_EPSILON
-    );
-}
-
 function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
     return (
         !!scrollingTo?.isInitialScroll && initialScrollCompletion.didDispatchNativeScroll(state) && !state.hasScrolled
     );
 }
 
-function getInitialScrollWatchdogTargetOffset(state: StateContext["state"]) {
-    return initialScrollWatchdog.get(state)?.targetOffset;
-}
-
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
-    const targetOffset = getInitialScrollWatchdogTargetOffset(state);
+    const targetOffset = initialScrollWatchdog.get(state)?.targetOffset;
     return !state.didFinishInitialScroll && initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset);
 }
 
@@ -98,44 +86,34 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     );
 }
 
-function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    return scrollingTo.index === ctx.state.props.data.length - 1 && scrollingTo.viewPosition === 1;
-}
-
-export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    const index =
-        scrollingTo.index === undefined ? undefined : clampScrollIndex(scrollingTo.index, ctx.state.props.data.length);
-    // Web animated scrolls retarget until they land, so their completion follows rows that measure
-    // mid-scroll and content that grows enough to reach an offset clamped when the scroll started.
-    const isRetargetingWebScroll =
-        Platform.OS === "web" &&
-        (!!scrollingTo.animated || !!scrollingTo.landingRetries) &&
-        !scrollingTo.isInitialScroll;
-    const requestedTargetOffset =
-        index !== undefined && (isRetargetingWebScroll || isEndAlignedLastItemTarget(ctx, scrollingTo))
-            ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), { ...scrollingTo, index })
-            : isRetargetingWebScroll
-              ? calculateOffsetWithOffsetPosition(ctx, scrollingTo.offset, scrollingTo)
-              : (scrollingTo.targetOffset ??
-                clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo));
-
-    return clampScrollOffset(ctx, requestedTargetOffset, scrollingTo);
-}
-
 function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const { state } = ctx;
-    const scroll = state.scrollPending;
+    const isWebInitialScroll = Platform.OS === "web" && scrollingTo.isInitialScroll;
+    const scroll = isWebInitialScroll ? getObservedScrollOffset(ctx, state.scrollPending) : state.scrollPending;
     const adjust = state.scrollAdjustHandler.getAdjust();
     const clampedTargetOffset = getCurrentTargetOffset(ctx, scrollingTo);
     const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
     const diff1 = Math.abs(scroll - clampedTargetOffset);
     const adjustedTargetOffset = clampedTargetOffset + adjust;
     const diff2 = Math.abs(scroll - adjustedTargetOffset);
-    const canUseAdjustedCompletion = !scrollingTo.animated || Platform.OS === "ios";
+    const canUseAdjustedCompletion = !isWebInitialScroll && (!scrollingTo.animated || Platform.OS === "ios");
+    // Layout can predict the end before an explicit native command lands. Keep its
+    // owner until native catches up, so later measurements can correct the target.
+    const isWaitingForNativeEnd =
+        Platform.OS !== "web" &&
+        scrollingTo.isScrollToEnd &&
+        !state.maintainingScrollAtEnd &&
+        !scrollingTo.isInitialScroll &&
+        !scrollingTo.animated &&
+        state.lastNativeScroll !== undefined &&
+        state.lastNativeScroll < Math.min(clampedTargetOffset, adjustedTargetOffset) - 1;
 
     return {
         clampedTargetOffset,
-        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (canUseAdjustedCompletion && diff2 < 1)),
+        isAtResolvedTarget:
+            !isWaitingForNativeEnd &&
+            Math.abs(scroll - maxOffset) < 1 &&
+            (diff1 < 1 || (canUseAdjustedCompletion && diff2 < 1)),
     };
 }
 
@@ -156,21 +134,16 @@ function checkFinishedScrollFrame(ctx: StateContext) {
     if (
         !isPassingWebTarget &&
         completionState.isAtResolvedTarget &&
-        hasScrollCompletionOwnership(state, {
-            clampedTargetOffset: completionState.clampedTargetOffset,
-            scrollingTo,
-        })
+        (!scrollingTo.isInitialScroll ||
+            state.hasScrolled ||
+            completionState.clampedTargetOffset <= INITIAL_SCROLL_COMPLETION_TARGET_EPSILON)
     ) {
         finishScrollTo(ctx);
     }
 }
 
 function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
-    ctx.state.refScroller.current?.scrollTo({
-        animated,
-        x: ctx.state.props.horizontal ? offset : 0,
-        y: ctx.state.props.horizontal ? 0 : offset,
-    });
+    ctx.state.refScroller.current?.scrollTo({ animated, ...getNativeScrollPoint(ctx, offset) });
 }
 
 // In case checkFinishedScroll does not work correctly, set a maximum timeout
@@ -188,7 +161,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
         scrollingTo !== undefined ? shouldFinishInitialScrollWithoutNativeProgress(state, scrollingTo) : false;
     const slowTimeout =
         (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget && !canFinishInitialWithoutNativeProgress) ||
-        !state.didContainersLayout;
+        !state.didContainersLayout ||
+        // Allow native animations to deliver their first event after an idle period.
+        (Platform.OS !== "web" && !!scrollingTo?.animated);
     const initialDelay =
         shouldFinishInitialZeroTarget || canFinishInitialWithoutNativeProgress
             ? 0
@@ -208,11 +183,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
         if (isStillScrollingTo) {
             numChecks++;
             const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
-            const maxChecks = silentInitialDispatch
-                ? 5
-                : isNativeInitialPending
-                  ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS
-                  : 5;
+            const maxChecks = !silentInitialDispatch && isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
             const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
             const canFinishInitialScrollWithoutNativeProgress = shouldFinishInitialScrollWithoutNativeProgress(
                 state,
@@ -220,18 +191,13 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             );
             const completionState = getResolvedScrollCompletionState(ctx, isStillScrollingTo);
             const canFinishAfterSilentNativeDispatch =
-                Platform.OS === "android" &&
-                silentInitialDispatch &&
-                completionState.isAtResolvedTarget &&
-                numChecks >= 1;
+                Platform.OS === "android" && silentInitialDispatch && completionState.isAtResolvedTarget;
             const shouldRetrySilentInitialNativeScroll =
-                Platform.OS === "android" &&
-                canFinishAfterSilentNativeDispatch &&
-                !initialScrollCompletion.didRetrySilentInitialScroll(state);
+                canFinishAfterSilentNativeDispatch && !initialScrollCompletion.didRetrySilentInitialScroll(state);
             const shouldFinishAfterObservedScroll =
                 state.hasScrolled && (!isStillScrollingTo.isInitialScroll || completionState.isAtResolvedTarget);
             const shouldRetryUnalignedInitialScroll =
-                isStillScrollingTo.isInitialScroll && !completionState.isAtResolvedTarget && numChecks <= maxChecks;
+                isStillScrollingTo.isInitialScroll && !completionState.isAtResolvedTarget;
             const shouldRetryUnalignedEndScroll =
                 Platform.OS !== "web" &&
                 !isStillScrollingTo.isInitialScroll &&
@@ -245,14 +211,19 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             );
             const didMaintainProgress = isAnimatedMaintain && Math.abs(state.scrollPending - previousScroll) > 0.1;
             previousScroll = state.scrollPending;
-            if (didMaintainProgress && !completionState.isAtResolvedTarget) {
-                // A previous momentum-end event can schedule this check during the next coalesced animation.
-                // Keep its runway until native stops moving, rather than snapping to the latest measured end.
+            const isMovingNativeRequest =
+                Platform.OS !== "web" &&
+                !isStillScrollingTo.isInitialScroll &&
+                isStillScrollingTo.animated &&
+                Date.now() - (state.lastNativeScrollTime ?? 0) < USER_MOMENTUM_STALL_TIMEOUT_MS;
+            if ((didMaintainProgress || isMovingNativeRequest) && !completionState.isAtResolvedTarget) {
+                // A stale momentum-end event can arrive during an animation, including a native
+                // status-bar interruption whose sparse final frames precede onScrollToTop.
                 numChecks = 0;
                 scheduleFallbackCheck(100);
             } else if (shouldRetrySilentInitialNativeScroll) {
                 const targetOffset =
-                    getInitialScrollWatchdogTargetOffset(state) ?? isStillScrollingTo.targetOffset ?? 0;
+                    initialScrollWatchdog.get(state)?.targetOffset ?? isStillScrollingTo.targetOffset ?? 0;
                 const jiggleOffset =
                     targetOffset >= SILENT_INITIAL_SCROLL_TARGET_EPSILON
                         ? targetOffset - SILENT_INITIAL_SCROLL_TARGET_EPSILON
@@ -265,15 +236,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 );
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
             } else if (shouldRetryUnalignedEndScroll) {
-                const isMakingNativeProgress =
-                    !!isStillScrollingTo.animated && Date.now() - (state.lastNativeScrollTime ?? 0) < 100;
-                if (!isMakingNativeProgress) {
-                    scrollToFallbackOffset(
-                        ctx,
-                        completionState.clampedTargetOffset,
-                        isAnimatedMaintain || !!isStillScrollingTo.animated,
-                    );
-                }
+                scrollToFallbackOffset(ctx, completionState.clampedTargetOffset, !!isStillScrollingTo.animated);
                 scheduleFallbackCheck(100);
             } else if (
                 shouldFinishZeroTarget ||
@@ -282,15 +245,29 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 canFinishAfterSilentNativeDispatch ||
                 numChecks > maxChecks
             ) {
-                finishScrollTo(ctx);
-            } else if ((isNativeInitialPending || shouldRetryUnalignedInitialScroll) && numChecks <= maxChecks) {
-                const targetOffset =
-                    getInitialScrollWatchdogTargetOffset(state) ??
-                    isStillScrollingTo.targetOffset ??
-                    state.scrollPending;
-                scrollToFallbackOffset(ctx, targetOffset);
-                scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
+                if (
+                    Platform.OS !== "web" &&
+                    !isStillScrollingTo.isInitialScroll &&
+                    !(isStillScrollingTo.isScrollToEnd && state.maintainingScrollAtEnd) &&
+                    !ctx.scrollRequestTracker?.isWaitingToRun() &&
+                    !completionState.isAtResolvedTarget
+                ) {
+                    cancelScroll(ctx, false);
+                } else {
+                    finishScrollTo(ctx);
+                }
             } else {
+                if (isNativeInitialPending || shouldRetryUnalignedInitialScroll) {
+                    const watchdog = initialScrollWatchdog.get(state);
+                    const targetOffset =
+                        Platform.OS === "web"
+                            ? completionState.clampedTargetOffset
+                            : (watchdog?.targetOffset ?? isStillScrollingTo.targetOffset ?? state.scrollPending);
+                    if (Platform.OS === "web" && watchdog) {
+                        watchdog.targetOffset = targetOffset;
+                    }
+                    scrollToFallbackOffset(ctx, targetOffset);
+                }
                 scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
             }
         }

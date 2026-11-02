@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import { cancelScroll, interruptUserScroll } from "../../src/core/cancelScroll";
+import { setInitialScrollSession } from "../../src/core/initialScrollSession";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -56,6 +58,18 @@ describe("cancelScroll", () => {
         expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 100, y: 0 });
     });
 
+    it("stops a web wheel interruption at the offset the wheel reached", () => {
+        Platform.OS = "web";
+        const { ctx, scrollTo } = createScrollingContext(
+            { animated: true, offset: 900 },
+            { horizontal: true, rtl: true },
+        );
+        ctx.state.horizontalRTLScrollType = "inverted";
+        interruptUserScroll(ctx, -100);
+        // Logical 600 minus the wheel's 100 is logical 500, raw inverted 700 - 500.
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 200, y: 0 });
+    });
+
     it.each([
         ["inverted", 500, 900],
         [undefined, -350, 700],
@@ -72,6 +86,21 @@ describe("cancelScroll", () => {
         } as any;
         cancelScroll(ctx);
         expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: rawOffset, y: 0 });
+    });
+
+    it.each(["ios", "android"] as const)("uses the minWidth extent when cancelling %s RTL", (platform) => {
+        Platform.OS = platform;
+        const { ctx, scrollTo } = createScrollingContext(
+            { animated: true, offset: 1600 },
+            { contentContainerMinSize: 2000, data: [], horizontal: true, rtl: true },
+        );
+        ctx.values.set("totalSize", 300);
+        ctx.state.refScroller.current = { scrollTo } as any;
+        ctx.state.lastNativeScroll = ctx.state.scroll = ctx.state.scrollPending = 1400;
+        ctx.state.horizontalRTLScrollType = "inverted";
+        cancelScroll(ctx);
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 300, y: 0 });
+        ctx.state.scheduledWork.dispose();
     });
 
     it("syncs the observed offset inside the MVCP ignore window before committing deferred adjustments", () => {
@@ -109,6 +138,68 @@ describe("cancelScroll", () => {
             expect(ctx.state.scrollAdjustHandler.commitPendingAdjust).toHaveBeenCalledTimes(1);
         },
     );
+
+    it.each([false, true])(
+        "leaves isScrollActive matching the scroll owners after release (re-entrant: %p)",
+        (reentrant) => {
+            Platform.OS = "web";
+            const onScroll = mock(() => {
+                // A scroll started from the onScroll released by finishing the superseded initial scroll.
+                if (reentrant) {
+                    ctx.state.scrollingTo = { animated: true, offset: 500 } as any;
+                    ctx.state.visibleContentAnchor = { key: "item-1", offset: 0 };
+                }
+            });
+            const { ctx } = createScrollingContext(undefined, { onScroll });
+            ctx.values.set("isScrollActive", true);
+            ctx.state.initialScroll = { index: 0, viewOffset: 0 } as any;
+            setInitialScrollSession(ctx.state, { kind: "bootstrap" });
+            ctx.state.deferredPublicOnScrollEvent = { nativeEvent: { contentOffset: { x: 0, y: 0 } } } as any;
+
+            cancelScroll(ctx);
+
+            expect(onScroll).toHaveBeenCalledTimes(1);
+            expect(ctx.values.get("isScrollActive")).toBe(reentrant);
+            expect(!!ctx.state.visibleContentAnchor).toBe(reentrant);
+            ctx.state.scheduledWork.dispose();
+        },
+    );
+
+    it.each([
+        ["web", -80],
+        ["web", 0],
+        ["ios", 0],
+        ["android", 0],
+    ] as const)("releases a waiting replacement on %s user input %i", (platform, delta) => {
+        Platform.OS = platform;
+        const { ctx, scrollTo } = createScrollingContext({ animated: true, offset: 900 });
+        const resolve = mock(() => {});
+        const tracker = getScrollRequestTracker(ctx);
+        const token = tracker.start(resolve);
+        const commit = mock(() => {});
+        ctx.state.scrollAdjustHandler.commitPendingAdjust = commit;
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(tracker.isWaitingToRun()).toBe(true);
+        expect(scrollTo).not.toHaveBeenCalled();
+
+        expect(interruptUserScroll(ctx, delta)).toBe(platform === "web" && delta !== 0);
+
+        if (platform === "web") {
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+            expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: 100 + delta });
+        } else {
+            expect(scrollTo).not.toHaveBeenCalled();
+        }
+        expect(ctx.state.scroll).toBe(100 + delta);
+        expect(commit).toHaveBeenCalledTimes(1);
+        expect(resolve).toHaveBeenCalledTimes(1);
+        expect(tracker.isWaitingToRun()).toBe(false);
+        expect(tracker.isCurrent(token)).toBe(false);
+        tracker.runNow(token, resolve, () => {
+            throw new Error("cancelled replacement must not dispatch");
+        });
+        ctx.state.scheduledWork.dispose();
+    });
 
     it("commits adjustments deferred by the cancelled animation", () => {
         const { ctx } = createScrollingContext({ animated: true, offset: 900 });

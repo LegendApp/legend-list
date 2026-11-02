@@ -49,6 +49,12 @@ describe("getItemSize", () => {
         expect(result).toBe(65);
     });
 
+    it("prefers a known measurement over a rendered estimate when anchored", () => {
+        mockState.sizesKnown.set("item_0", 75);
+        mockState.sizes.set("item_0", 90);
+        expect(callGetItemSize("item_0", 0, { id: 0 }, false, true)).toBe(75);
+    });
+
     it("uses authoritative fixed size before a preferred rendered estimate", () => {
         mockState.sizes.set("item_0", 90);
         mockState.props.getFixedItemSize = () => 150;

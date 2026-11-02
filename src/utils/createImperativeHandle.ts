@@ -1,22 +1,24 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { cancelScroll } from "@/core/cancelScroll";
+import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
-import { doMaintainScrollAtEnd, interruptMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
-import { getDistanceFromEnd, getObservedScrollOffset } from "@/core/emitMetrics";
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
+import { armAppScrollRearm, interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
+import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
-import { scrollElementIntoView } from "@/core/scrollElementIntoView";
-import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
-import { findPositionIndexAtOrBeforeOffset, scrollTo } from "@/core/scrollTo";
+import { getScrollRequestTracker, type ScrollRequestRun } from "@/core/scrollRequestTracker";
+import { findVisibleItemIndex, scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { setContentInsetOverride } from "@/core/updateContentMetrics";
 import { updateItemSizes } from "@/core/updateItemSizes";
 import { updateScroll } from "@/core/updateScroll";
 import { updateViewableItems } from "@/core/viewability";
+import { isScreenReaderEnabled } from "@/platform/screenReader";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import {
@@ -28,7 +30,7 @@ import {
     type StateContext,
     set$,
 } from "@/state/state";
-import type { LegendListAverageItemSize, LegendListRef, LegendListScrollResult } from "@/types.base";
+import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
 import type { LegendListInternalRef, ScrollResolve } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { areKnownOrFixedItemSizesAvailable, getItemSizeAtIndex } from "@/utils/getItemSize";
@@ -75,7 +77,6 @@ export function createImperativeHandle(
     const isSettlingAfterDataChange = () =>
         !!state.didDataChange ||
         !!state.didColumnsChange ||
-        !!state.activeSizeAnimations?.size ||
         state.scheduledWork.has("mvcpRecalculate") ||
         state.ignoreScrollFromMVCP !== undefined;
 
@@ -97,7 +98,21 @@ export function createImperativeHandle(
         return areKnownOrFixedItemSizesAvailable(ctx, anchorIndex, dataLength - 1);
     };
 
-    const runWhenReady = (token: number, run: () => void, isReady: () => boolean) => {
+    const getIndexForKey = (key: string) => {
+        if (state.props.keyExtractor) return state.indexByKey.get(key);
+        const index = Number(key);
+        return Number.isInteger(index) && String(index) === key && index >= 0 && index < state.props.data.length
+            ? index
+            : undefined;
+    };
+
+    const runScrollRequest = (token: number, resolve: ScrollResolve, run: ScrollRequestRun, isReady: () => boolean) => {
+        const runNow = () => scrollRequestTracker.runNow(token, resolve, run);
+        if (!isSettlingAfterDataChange() && isReady()) {
+            runNow();
+            return;
+        }
+
         const startedAt = Date.now();
         let stableFrames = 0;
 
@@ -114,7 +129,7 @@ export function createImperativeHandle(
 
             const timedOut = Date.now() - startedAt >= IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS;
             if (stableFrames >= IMPERATIVE_SCROLL_SETTLE_STABLE_FRAMES || timedOut) {
-                run();
+                runNow();
                 return;
             }
 
@@ -124,17 +139,12 @@ export function createImperativeHandle(
         state.scheduledWork.frame(check, "imperativeScrollReady");
     };
 
-    const runScrollRequest = (token: number, resolve: ScrollResolve, run: () => boolean, isReady = () => true) => {
-        const runNow = () => scrollRequestTracker.runNow(token, resolve, run);
-
-        if (isSettlingAfterDataChange() || !isReady()) {
-            runWhenReady(token, runNow, isReady);
-        } else {
-            runNow();
-        }
-    };
-    const runScrollWithPromise = (run: () => boolean, isReady = () => true) =>
-        new Promise<LegendListScrollResult>((resolve) => {
+    const runScrollWithPromise = (run: ScrollRequestRun, isReady = () => true) =>
+        new Promise<void>((resolve) => {
+            if (state.isUnmounted) {
+                resolve();
+                return;
+            }
             const token = scrollRequestTracker.start(resolve);
 
             supersedeInitialScroll(ctx);
@@ -150,35 +160,45 @@ export function createImperativeHandle(
             if (scrollRequestTracker.isCurrent(pendingScroll.token)) {
                 runScrollRequest(
                     pendingScroll.token,
-                    pendingScroll.resolve,
-                    () => scrollToEnd(ctx, pendingScroll.options),
+                    state.pendingScrollResolve!,
+                    () => (state.props.data.length === 0 ? "unreachable" : scrollToEnd(ctx, pendingScroll.options)),
                     () => isScrollToIndexReady(state.props.data.length - 1, true),
                 );
             }
         }
     };
 
-    const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
-        if (state) {
-            const { index, viewportMargin, ...rest } = options;
-            if (index < 0 || index >= state.props.data.length) return false;
-            const observed = getObservedScrollOffset(ctx);
-            const position = calculateOffsetForIndex(ctx, index) + getStartOffsetAdjustment(ctx);
-            const size = (getItemSizeAtIndex(ctx, index) ?? 0) - ctx.scrollAxisGap;
-            const above = position < observed + (viewportMargin?.top ?? 0);
-            const below =
-                position + size >
-                observed + state.scrollLength - getContentInsetEnd(ctx) - (viewportMargin?.bottom ?? 0);
-            if (above || below) {
-                const viewPosition = above ? 0 : 1;
-                scrollToIndex(ctx, {
-                    ...rest,
-                    index,
-                    viewOffset: above ? (viewportMargin?.top ?? 0) : -(viewportMargin?.bottom ?? 0),
-                    viewPosition,
-                });
-                return true;
-            }
+    const scrollIndexIntoView = (
+        options: Parameters<LegendListRef["scrollIndexIntoView"]>[0],
+    ): boolean | "unreachable" => {
+        const { index, itemOffset, itemLength, viewportMargin, ...rest } = options;
+        if (index < 0 || index >= state.props.data.length) return "unreachable";
+        const hasRegion = itemOffset !== undefined || itemLength !== undefined;
+        const observed = getObservedScrollOffset(ctx);
+        const position = calculateOffsetForIndex(ctx, index) + getStartOffsetAdjustment(ctx) + (itemOffset ?? 0);
+        const size = hasRegion ? (itemLength ?? 0) : (getItemSizeAtIndex(ctx, index) ?? 0) - ctx.scrollAxisGap;
+        const insetTop = getContentInsetTop(ctx);
+        const viewportLength = state.scrollLength - insetTop - getContentInsetEnd(ctx);
+        const viewportStart = observed + insetTop + (viewportMargin?.start ?? 0);
+        const viewportEnd = observed + insetTop + viewportLength - (viewportMargin?.end ?? 0);
+        if (!hasRegion && position <= viewportStart && position + size >= viewportEnd) return false;
+        const above = position < viewportStart;
+        const below = position + size > viewportEnd;
+        if (above || below) {
+            const alignStart = above || size > viewportEnd - viewportStart;
+            scrollToIndex(ctx, {
+                ...rest,
+                index,
+                viewOffset: hasRegion
+                    ? (alignStart ? (viewportMargin?.start ?? 0) : viewportLength - (viewportMargin?.end ?? 0) - size) -
+                      (itemOffset ?? 0)
+                    : alignStart
+                      ? (viewportMargin?.start ?? 0)
+                      : -(viewportMargin?.end ?? 0),
+                viewPosition: hasRegion || alignStart ? 0 : 1,
+                viewPositionFallback: "start",
+            });
+            return true;
         }
         return false;
     };
@@ -194,11 +214,13 @@ export function createImperativeHandle(
             !state.scrollingTo &&
             !scrollRequestTracker.isWaitingToRun()
         ) {
-            const index = findPositionIndexAtOrBeforeOffset(ctx, state.scroll - getStartOffsetAdjustment(ctx));
-            if (index !== undefined && state.positions[index] !== undefined) {
+            const viewportStart = state.scroll - getStartOffsetAdjustment(ctx);
+            const index = findVisibleItemIndex(ctx, viewportStart, viewportStart + state.scrollLength);
+            if (index !== undefined) {
                 state.visibleContentAnchor = {
                     key: getId(state, index),
                     offset: state.scroll - state.positions[index]!,
+                    sizeOnly: true,
                 };
             }
         }
@@ -229,45 +251,54 @@ export function createImperativeHandle(
         state.triggerCalculateItemsInView?.({ doMVCP: mode === "sizes", forceFullItemPositions: true });
     };
 
+    const reportContentInset = (inset: Parameters<LegendListInternalRef["reportContentInset"]>[0], follow = true) => {
+        const didChange = setContentInsetOverride(ctx, inset);
+        updateScroll(ctx, state.scroll, true, { markHasScrolled: false });
+        if (didChange && follow) {
+            const didRetargetInitial = retargetActiveInitialScrollAtEnd(ctx);
+            if (!didRetargetInitial) doMaintainScrollAtEnd(ctx);
+        }
+    };
+
     return {
-        anchorVisibleContent: (key) => {
-            if (peek$(ctx, "isFollowingEnd") && peek$(ctx, "isAtEnd")) return;
-            const observed = getObservedScrollOffset(ctx);
-            updateScroll(ctx, observed, true, { markHasScrolled: false });
-            const index = state.indexByKey.get(key);
-            if (index !== undefined && state.positions[index] !== undefined) {
-                interruptMaintainScrollAtEnd(ctx);
-                state.visibleContentAnchor = { key, offset: state.scroll - state.positions[index]! };
-            }
-        },
-        cancelScroll: () => cancelScroll(ctx),
-        clearCaches,
-        flashScrollIndicators: () => refScroller.current!.flashScrollIndicators(),
-        getAnimatableRef: () => refScroller.current!.getNativeScrollRef?.() ?? refScroller.current!,
-        getNativeScrollRef: () => refScroller.current!,
-        getScrollAnchor: () => {
+        anchorVisibleContent: ({ key, hold = true } = {}) => {
             if (
                 !state.didFinishInitialScroll ||
                 state.freshDataTransitionEpoch !== state.handledFreshDataTransitionEpoch
             )
                 return undefined;
             const observed = getObservedScrollOffset(ctx);
-            const startAdjustment = getStartOffsetAdjustment(ctx);
-            const index = findPositionIndexAtOrBeforeOffset(ctx, observed - startAdjustment) ?? 0;
-            const key = state.props.data[index] === undefined ? undefined : getId(state, index);
-            return key === undefined
-                ? undefined
-                : { key, offset: observed - startAdjustment - calculateOffsetForIndex(ctx, index) };
+            const viewportStart = observed - getStartOffsetAdjustment(ctx);
+            const index =
+                key === undefined
+                    ? findVisibleItemIndex(ctx, viewportStart, viewportStart + state.scrollLength)
+                    : getIndexForKey(key);
+            if (index === undefined || state.positions[index] === undefined) return undefined;
+            const id = getId(state, index);
+            const offset = viewportStart - state.positions[index]!;
+            if (hold && !(peek$(ctx, "isFollowingEnd") && peek$(ctx, "isAtEnd"))) {
+                updateScroll(ctx, observed, true, { markHasScrolled: false });
+                interruptMaintainScrollAtEnd(ctx);
+                state.visibleContentAnchor = { key: id, offset: state.scroll - state.positions[index]! };
+            }
+            return { key: String(id), offset };
         },
+        cancelScroll: () => {
+            armAppScrollRearm(ctx);
+            cancelScroll(ctx);
+        },
+        clearCaches,
+        flashScrollIndicators: () => refScroller.current!.flashScrollIndicators(),
+        getAnimatableRef: () => refScroller.current!.getNativeScrollRef?.() ?? refScroller.current!,
+        getNativeScrollRef: () => refScroller.current!,
         getScrollableNode: () => refScroller.current!.getScrollableNode(),
         getScrollResponder: () => refScroller.current!.getScrollResponder(),
         getState: () => ({
             activeStickyIndex: peek$(ctx, "activeStickyIndex"),
             contentLength: getContentSize(ctx),
             data: state.props.data,
-            dataEpoch: state.freshDataTransitionEpoch,
             dataKey: state.props.dataKey,
-            distanceFromEnd: getDistanceFromEnd(ctx),
+            distanceFromEnd: Math.max(0, getContentSize(ctx) - getObservedScrollOffset(ctx) - state.scrollLength),
             elementAtIndex: (index: number) => ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
             end: state.endNoBuffer,
             endBuffered: state.endBuffered,
@@ -297,20 +328,16 @@ export function createImperativeHandle(
             start: state.startNoBuffer,
             startBuffered: state.startBuffered,
         }),
-        reportContentInset: (inset) => {
-            const didChange = setContentInsetOverride(ctx, inset);
-            updateScroll(ctx, state.scroll, true, { markHasScrolled: false });
-            if (didChange) {
-                const didRetargetInitial = retargetActiveInitialScrollAtEnd(ctx);
-                if (!didRetargetInitial) doMaintainScrollAtEnd(ctx);
-            }
-        },
+        reportContentInset,
+        reportContentInsetForScrollInternal: (inset) => reportContentInset(inset, false),
         reportViewabilityInsetEndInternal: (inset) => {
             const next = Number.isFinite(inset) ? Math.max(0, inset) : 0;
             if (next === (state.viewabilityInsetEnd ?? 0)) {
                 return;
             }
             state.viewabilityInsetEnd = next;
+            // The controller scrolls on the UI thread; retain ownership through trailing frames.
+            if (isScreenReaderEnabled()) armAppScrollRearm(ctx);
             if (state.viewabilityConfigCallbackPairs) {
                 // A keyboard can cover stationary content without a scroll event.
                 // Refresh viewability only; occlusion must not initiate scrolling.
@@ -326,34 +353,29 @@ export function createImperativeHandle(
                 );
             }
         },
-        scrollElementIntoView: ({ element, viewportMargin, animated, viewPosition }) => {
-            const target = { element, viewPosition, viewportMargin };
-            return runScrollWithPromise(() => {
-                state.scrollElementTarget = target;
-                return scrollElementIntoView(ctx, animated);
-            }).finally(() => {
-                if (state.scrollElementTarget === target) state.scrollElementTarget = undefined;
-            });
-        },
         scrollIndexIntoView: (options) => runScrollWithPromise(() => scrollIndexIntoView(options)),
         scrollItemIntoView: ({ item, ...props }) =>
             runScrollWithPromise(() => {
-                const data = state.props.data;
-                const index = data.indexOf(item);
+                const index = state.props.data.indexOf(item);
                 if (index !== -1) {
-                    scrollIndexIntoView({ index, ...props });
-                    return true;
+                    const result = scrollIndexIntoView({ index, ...props });
+                    if (result === true && state.scrollingTo && state.props.keyExtractor)
+                        state.scrollingTo.key = getId(state, index);
+                    return result;
                 }
-                return false;
+                return "unreachable";
             }),
         scrollToEnd: (options) =>
-            new Promise<LegendListScrollResult>((resolve) => {
+            new Promise<void>((resolve) => {
+                if (state.isUnmounted) {
+                    resolve();
+                    return;
+                }
                 const token = scrollRequestTracker.start(resolve);
                 state.endFollowInterrupted = false;
                 if (state.props.maintainScrollAtEnd) set$(ctx, "isFollowingEnd", true);
                 state.pendingScrollToEnd = {
                     options,
-                    resolve,
                     token,
                 };
 
@@ -363,42 +385,42 @@ export function createImperativeHandle(
                     state.runPendingScrollToEnd?.();
                 }
             }),
-        scrollToIndex: (params) => {
-            return runScrollWithPromise(
+        scrollToIndex: (params) =>
+            runScrollWithPromise(
                 () => {
+                    if (state.props.data.length === 0) return "unreachable";
                     scrollToIndex(ctx, params);
                     return true;
                 },
                 params.index >= 0 ? () => isScrollToIndexReady(params.index) : undefined,
-            );
-        },
+            ),
         scrollToItem: ({ item, ...props }) =>
             runScrollWithPromise(() => {
-                const data = state.props.data;
-                const index = data.indexOf(item);
+                const index = state.props.data.indexOf(item);
                 if (index !== -1) {
                     scrollToIndex(ctx, { index, ...props });
+                    if (state.scrollingTo && state.props.keyExtractor) state.scrollingTo.key = getId(state, index);
                     return true;
                 }
-                return false;
+                return "unreachable";
             }),
         scrollToKey: ({ key, ...params }) =>
             runScrollWithPromise(
                 () => {
-                    const index = state.indexByKey.get(key);
-                    if (index === undefined) return false;
+                    const index = getIndexForKey(key);
+                    if (index === undefined) return "unreachable";
                     scrollToIndex(ctx, { ...params, index });
-                    if (state.scrollingTo) state.scrollingTo.key = key;
+                    if (state.scrollingTo) state.scrollingTo.key = getId(state, index);
                     return true;
                 },
                 () => {
-                    const index = state.indexByKey.get(key);
+                    const index = getIndexForKey(key);
                     return index !== undefined && isScrollToIndexReady(index);
                 },
             ),
         scrollToOffset: (params) =>
             runScrollWithPromise(() => {
-                scrollTo(ctx, params);
+                scrollTo(ctx, { ...params, clampToContentContainerMinSize: true });
                 return true;
             }),
         setItemSize: (itemKey, size) => {

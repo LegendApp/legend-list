@@ -1,10 +1,14 @@
+import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { cancelScroll } from "@/core/cancelScroll";
+import { finishScrollTo } from "@/core/finishScrollTo";
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
+import { scrollTo } from "@/core/scrollTo";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { Platform } from "@/platform/Platform";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
-import { getItemSize } from "@/utils/getItemSize";
+import { getItemSize, getItemSizeAtIndex } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
@@ -47,7 +51,9 @@ export function updateItemPositions(
         props: { data, overrideItemLayout, snapToIndices },
         scrollingTo,
     } = state;
+    const previousTargetIndex = scrollingTo?.index;
     const dataLength = data!.length;
+    if (scrollingTo?.isScrollToEnd) scrollingTo.index = dataLength - 1;
     const numColumns = peek$(ctx, "numColumns") ?? 1;
     const hasColumns = numColumns > 1;
     // Range expansion does not change single-column positions. Reuse a completed
@@ -98,6 +104,8 @@ export function updateItemPositions(
     let currentRowTop = 0;
     let column = 1;
     let maxSizeInRow = 0;
+    // An empty render range uses -1 until the first items are allocated.
+    startIndex = Math.max(0, startIndex);
 
     if (dataChanged) {
         columnSpans.length = 0;
@@ -210,6 +218,7 @@ export function updateItemPositions(
         // Update indexByKey if needed
         if (needsIndexByKey) {
             indexByKey.set(id, i);
+            if (scrollingTo?.key !== undefined && scrollingTo.key === id) scrollingTo.index = i;
         }
 
         // Single-column fast path: skip column/span writes and row fit checks
@@ -242,6 +251,34 @@ export function updateItemPositions(
         if (startIndex <= (state.positionRecalculationStartIndex ?? -1)) {
             state.positionRecalculationStartIndex = undefined;
         }
+    }
+
+    const targetRemoved =
+        scrollingTo &&
+        ((scrollingTo.isScrollToEnd && dataLength === 0) ||
+            (scrollingTo.key !== undefined && !indexByKey.has(scrollingTo.key)) ||
+            (!scrollingTo.isInitialScroll &&
+                !scrollingTo.isScrollToEnd &&
+                scrollingTo.index !== undefined &&
+                scrollingTo.index >= dataLength));
+    if (targetRemoved) {
+        // An older target can disappear while a newer request waits for layout.
+        if (ctx.scrollRequestTracker?.isWaitingToRun()) finishScrollTo(ctx);
+        else cancelScroll(ctx);
+    } else if (
+        scrollingTo &&
+        (scrollingTo.isScrollToEnd || scrollingTo.key !== undefined) &&
+        scrollingTo.index !== previousTargetIndex
+    ) {
+        state.scheduledWork.microtask(() => {
+            if (state.scrollingTo !== scrollingTo) return;
+            const index = scrollingTo.index!;
+            scrollTo(ctx, {
+                ...scrollingTo,
+                itemSize: getItemSizeAtIndex(ctx, index),
+                offset: calculateOffsetForIndex(ctx, index),
+            });
+        }, "scrollTargetRetarget");
     }
 
     if (snapToIndices) {

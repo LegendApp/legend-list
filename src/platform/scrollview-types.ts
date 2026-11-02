@@ -45,11 +45,13 @@ export interface LooseScrollViewProps {
     contentOffset?: { x: number; y: number };
     horizontal?: boolean;
     maintainVisibleContentPosition?: { autoscrollToTopThreshold?: number; minIndexForVisible: number };
+    onContentSizeChange?: (width: number, height: number) => void;
     onLayout?: (event: LooseLayoutChangeEvent) => void;
     onMomentumScrollBegin?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onMomentumScrollEnd?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onScrollBeginDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+    onScrollToTop?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     refreshControl?: ReactElement | null;
     removeClippedSubviews?: boolean;

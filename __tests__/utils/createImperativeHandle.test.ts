@@ -4,7 +4,7 @@ import "../setup";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { cancelImperativeScroll } from "../../src/core/cancelImperativeScroll";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
-import { rearmEndFollowIfSettled } from "../../src/core/doMaintainScrollAtEnd";
+import { rearmEndFollowIfSettled } from "../../src/core/finishMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
@@ -14,6 +14,7 @@ import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { updateScroll } from "../../src/core/updateScroll";
 import { Platform } from "../../src/platform/Platform";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
+import { getId } from "../../src/utils/getId";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { countLayoutValues } from "../helpers/layoutArrays";
 
@@ -222,7 +223,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
             },
         );
 
-        expect(createImperativeHandle(ctx).getAnimatableRef()).toBe(nativeScrollRef);
+        expect(createImperativeHandle(ctx).getAnimatableRef().__nativeTag).toBe(7);
     });
 
     it("falls back to the scroller as the animatable ref", () => {
@@ -240,7 +241,8 @@ describe("createImperativeHandle.scrollToEnd", () => {
             },
         );
 
-        expect(createImperativeHandle(ctx).getAnimatableRef()).toBe(scroller);
+        const handle = createImperativeHandle(ctx);
+        expect(handle.getAnimatableRef()).toBe(handle.getNativeScrollRef());
     });
 
     it("does not mark synthetic content inset reports as scroll progress", () => {
@@ -524,14 +526,14 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 didContainersLayout: true,
                 idCache: ["item_0", "item_1"],
                 positions: [0, 50],
-                props: { data: [{ id: "a" }, { id: "b" }] },
+                props: { data: [{ id: "a" }, { id: "b" }], estimatedItemSize: 50 },
                 scroll: 60,
             },
         );
 
         createImperativeHandle(ctx).clearCaches();
 
-        expect(ctx.state.visibleContentAnchor).toEqual({ key: "item_1", offset: 10 });
+        expect(ctx.state.visibleContentAnchor).toEqual({ key: "item_1", offset: 10, sizeOnly: true });
     });
 
     it("returns a promise that resolves when finishScrollTo runs", async () => {
@@ -833,35 +835,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
                     index: 3,
                 }),
             );
-
-            await promise;
-        } finally {
-            restore();
-        }
-    });
-
-    it("waits for active size animations to finish before scrolling to an index", async () => {
-        const { flushRaf, restore } = installRafMock();
-
-        try {
-            const ctx = createMockContext({}, {
-                activeSizeAnimations: new Set(["totalSize"]),
-                props: { data: [1, 2, 3] },
-            } as any);
-
-            const handle = createImperativeHandle(ctx);
-            const promise = handle.scrollToIndex({ animated: false, index: 2 });
-
-            flushRaf();
-            flushRaf();
-            expect(ctx.scrollRequestTracker?.isWaitingToRun()).toBe(true);
-            expect(scrollToIndexSpy).not.toHaveBeenCalled();
-
-            ctx.state.activeSizeAnimations!.clear();
-            flushRaf();
-            flushRaf();
-            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
-            expect(ctx.scrollRequestTracker?.isWaitingToRun()).toBe(false);
 
             await promise;
         } finally {
@@ -1344,6 +1317,257 @@ describe("createImperativeHandle.scrollToEnd", () => {
     });
 });
 
+describe("createImperativeHandle visible anchors", () => {
+    const createKeyedList = (keyExtractor?: (item: string, index: number) => string) => {
+        const data = ["a", "b", "c"];
+        const ctx = createMockContext(
+            { totalSize: 300 },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                positions: [0, 100, 200],
+                props: { data, getFixedItemSize: () => 100, keyExtractor },
+                queuedInitialLayout: true,
+                scroll: 110,
+                scrollLength: 100,
+            },
+        );
+        ctx.state.indexByKey = new Map(data.map((_, index) => [getId(ctx.state, index), index]));
+        return ctx;
+    };
+
+    it("returns a string anchor key without a keyExtractor", () => {
+        const ctx = createKeyedList();
+        try {
+            expect(createImperativeHandle(ctx).anchorVisibleContent()).toEqual({ key: "1", offset: 10 });
+            expect(ctx.state.visibleContentAnchor).toEqual({ key: getId(ctx.state, 1), offset: 10 });
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    it("reads without changing an existing hold, observed scroll state, or end intent", () => {
+        const ctx = createKeyedList();
+        const existing = { key: "0", offset: 25 };
+        ctx.state.visibleContentAnchor = existing;
+        ctx.state.scroll = 0;
+        ctx.state.refScroller.current = { getCurrentScrollOffset: () => 110 } as any;
+        ctx.values.set("isFollowingEnd", true);
+        try {
+            const handle = createImperativeHandle(ctx);
+            expect(handle.anchorVisibleContent({ hold: false })).toEqual({ key: "1", offset: 10 });
+            expect(handle.anchorVisibleContent({ hold: false, key: "2" })).toEqual({ key: "2", offset: -90 });
+            expect(ctx.state.visibleContentAnchor).toBe(existing);
+            expect(ctx.state.scroll).toBe(0);
+            expect(ctx.state.scrollHistory).toEqual([]);
+            expect(ctx.state.endFollowInterrupted).toBeUndefined();
+            expect(ctx.values.get("isFollowingEnd")).toBe(true);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    for (const getter of [false, true]) {
+        it(`captures and holds the observed offset with a synchronous getter ${getter}`, () => {
+            const ctx = createKeyedList();
+            ctx.state.scroll = 0;
+            ctx.state.lastNativeScroll = 110;
+            if (getter) ctx.state.refScroller.current = { getCurrentScrollOffset: () => 125 } as any;
+            ctx.values.set("isFollowingEnd", true);
+            try {
+                const offset = getter ? 25 : 10;
+                expect(createImperativeHandle(ctx).anchorVisibleContent()).toEqual({ key: "1", offset });
+                expect(ctx.state.visibleContentAnchor).toEqual({ key: getId(ctx.state, 1), offset });
+                expect(ctx.state.scroll).toBe(100 + offset);
+                expect(ctx.state.hasScrolled).toBeUndefined();
+                expect(ctx.values.get("isFollowingEnd")).toBe(false);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+    }
+
+    it("returns the chosen item's offset and holds that item instead of the first visible item", () => {
+        const ctx = createKeyedList();
+        try {
+            expect(createImperativeHandle(ctx).anchorVisibleContent({ key: "2" })).toEqual({ key: "2", offset: -90 });
+            expect(ctx.state.visibleContentAnchor).toEqual({ key: getId(ctx.state, 2), offset: -90 });
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    it("returns a snapshot at the following end without replacing a hold or changing scroll state", () => {
+        const ctx = createKeyedList();
+        const existing = { key: "0", offset: 0 };
+        ctx.state.visibleContentAnchor = existing;
+        ctx.values.set("isFollowingEnd", true);
+        ctx.values.set("isAtEnd", true);
+        ctx.state.refScroller.current = { getCurrentScrollOffset: () => 125 } as any;
+        try {
+            expect(createImperativeHandle(ctx).anchorVisibleContent()).toEqual({ key: "1", offset: 25 });
+            expect(ctx.state.visibleContentAnchor).toBe(existing);
+            expect(ctx.state.scroll).toBe(110);
+            expect(ctx.values.get("isFollowingEnd")).toBe(true);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    for (const hold of [false, true]) {
+        for (const key of [undefined, "1"]) {
+            it(`waits for initial and fresh-data placement with hold ${hold} and key ${key}`, () => {
+                const ctx = createKeyedList();
+                ctx.values.set("isFollowingEnd", true);
+                const handle = createImperativeHandle(ctx);
+                try {
+                    ctx.state.didFinishInitialScroll = false;
+                    expect(handle.anchorVisibleContent({ hold, key })).toBeUndefined();
+                    expect(ctx.state.visibleContentAnchor).toBeUndefined();
+                    expect(ctx.values.get("isFollowingEnd")).toBe(true);
+                    ctx.state.didFinishInitialScroll = true;
+                    ctx.state.freshDataTransitionEpoch = 1;
+                    ctx.state.handledFreshDataTransitionEpoch = 0;
+                    expect(handle.anchorVisibleContent({ hold, key })).toBeUndefined();
+                    expect(ctx.state.visibleContentAnchor).toBeUndefined();
+                    expect(ctx.values.get("isFollowingEnd")).toBe(true);
+                    ctx.state.handledFreshDataTransitionEpoch = 1;
+                    expect(handle.anchorVisibleContent({ hold, key })).toEqual({ key: "1", offset: 10 });
+                    expect(ctx.state.visibleContentAnchor).toEqual(
+                        hold ? { key: getId(ctx.state, 1), offset: 10 } : undefined,
+                    );
+                    expect(ctx.values.get("isFollowingEnd")).toBe(!hold);
+                } finally {
+                    ctx.state.scheduledWork.dispose();
+                }
+            });
+        }
+    }
+
+    it("leaves an existing hold and scroll untouched when no positioned item can be captured", () => {
+        const ctx = createKeyedList();
+        const existing = { key: "0", offset: 25 };
+        ctx.state.visibleContentAnchor = existing;
+        ctx.values.set("isFollowingEnd", true);
+        try {
+            const handle = createImperativeHandle(ctx);
+            expect(handle.anchorVisibleContent({ key: "missing" })).toBeUndefined();
+            ctx.state.positions[1] = undefined;
+            expect(handle.anchorVisibleContent({ key: "1" })).toBeUndefined();
+            ctx.state.positions.length = 0;
+            expect(handle.anchorVisibleContent()).toBeUndefined();
+            expect(ctx.state.visibleContentAnchor).toBe(existing);
+            expect(ctx.state.scroll).toBe(110);
+            expect(ctx.values.get("isFollowingEnd")).toBe(true);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    for (const keyExtractor of [undefined, (_: string, index: number) => `0${index}`]) {
+        it(`resolves an anchor string through anchorVisibleContent ${keyExtractor ? "with" : "without"} a keyExtractor`, () => {
+            const ctx = createKeyedList(keyExtractor);
+            try {
+                const handle = createImperativeHandle(ctx);
+                const anchor = handle.anchorVisibleContent({ hold: false })!;
+                handle.anchorVisibleContent({ key: anchor.key });
+
+                expect(ctx.state.visibleContentAnchor).toEqual({ key: getId(ctx.state, 1), offset: anchor.offset });
+                expect(ctx.state.indexByKey.get(ctx.state.visibleContentAnchor!.key)).toBe(1);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+
+        it(`resolves an anchor string through scrollToKey ${keyExtractor ? "with" : "without"} a keyExtractor`, async () => {
+            const ctx = createKeyedList(keyExtractor);
+            try {
+                const handle = createImperativeHandle(ctx);
+                const anchor = handle.anchorVisibleContent({ hold: false })!;
+                ctx.state.scroll = 0;
+                const result = handle.scrollToKey({ animated: false, key: String(anchor.key) });
+
+                expect(ctx.state.scrollingTo?.index).toBe(1);
+                expect(ctx.state.scrollingTo?.key).toBe(getId(ctx.state, 1));
+                expect(ctx.state.indexByKey.get(ctx.state.scrollingTo!.key!)).toBe(1);
+                finishScrollTo(ctx);
+                expect(await result).toBeUndefined();
+            } finally {
+                cancelImperativeScroll(ctx.state);
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+    }
+
+    for (const capture of ["anchorVisibleContent", "clearCaches"] as const) {
+        it(`${capture} finds visible rows despite nonoccluding trailing space`, () => {
+            const data = Array.from({ length: 10 }, (_, index) => String(index));
+            const sizes = new Map(data.map((key) => [key, 100]));
+            const ctx = createMockContext(
+                { totalSize: 1000 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    positions: data.map((_, index) => index * 100),
+                    props: {
+                        contentInsetEndAdjustment: 1000,
+                        data,
+                        estimatedItemSize: 100,
+                        keyExtractor: (item: string) => item,
+                    },
+                    scroll: 100,
+                    scrollLength: 300,
+                    sizes: new Map(sizes),
+                    sizesKnown: new Map(sizes),
+                },
+            );
+            const handle = createImperativeHandle(ctx);
+            try {
+                if (capture === "clearCaches") {
+                    handle.clearCaches();
+                    expect(ctx.state.visibleContentAnchor).toEqual({ key: "1", offset: 0, sizeOnly: true });
+                } else {
+                    expect(handle.anchorVisibleContent()).toEqual({ key: "1", offset: 0 });
+                    expect(ctx.state.visibleContentAnchor).toEqual({ key: "1", offset: 0 });
+                }
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+
+        it(`${capture} selects an intersecting cell in a multi-column row`, () => {
+            const data = ["tall", "short", "nextTall", "nextShort"];
+            const sizes = new Map(data.map((key, index) => [key, index % 2 === 0 ? 300 : 50]));
+            const ctx = createMockContext(
+                { numColumns: 2, totalSize: 600 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    indexByKey: new Map(data.map((key, index) => [key, index])),
+                    positions: [0, 0, 300, 300],
+                    props: { data, keyExtractor: (item: string) => item, numColumns: 2 },
+                    scroll: 100,
+                    scrollLength: 420,
+                    sizes: new Map(sizes),
+                    sizesKnown: new Map(sizes),
+                },
+            );
+            const handle = createImperativeHandle(ctx);
+            try {
+                if (capture === "clearCaches") {
+                    handle.clearCaches();
+                    expect(ctx.state.visibleContentAnchor).toEqual({ key: "tall", offset: 100, sizeOnly: true });
+                } else {
+                    expect(handle.anchorVisibleContent()).toEqual({ key: "tall", offset: 100 });
+                    expect(ctx.state.visibleContentAnchor).toEqual({ key: "tall", offset: 100 });
+                }
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+    }
+});
+
 describe("createImperativeHandle.anchorVisibleContent", () => {
     const followingList = (isAtEnd: boolean) => {
         const ctx = createMockContext(
@@ -1363,7 +1587,7 @@ describe("createImperativeHandle.anchorVisibleContent", () => {
 
     it("keeps an explicit reader anchor near the end until the reader releases it", () => {
         const ctx = followingList(false);
-        createImperativeHandle(ctx).anchorVisibleContent("reader");
+        createImperativeHandle(ctx).anchorVisibleContent({ key: "reader" });
 
         expect(ctx.state.visibleContentAnchor).toEqual({ key: "reader", offset: 450 });
         expect(ctx.values.get("isFollowingEnd")).toBe(false);
@@ -1377,7 +1601,7 @@ describe("createImperativeHandle.anchorVisibleContent", () => {
 
     it("keeps following when disclosure begins at the actual end", () => {
         const ctx = followingList(true);
-        createImperativeHandle(ctx).anchorVisibleContent("reader");
+        createImperativeHandle(ctx).anchorVisibleContent({ key: "reader" });
         expect(ctx.state.visibleContentAnchor).toBeUndefined();
         expect(ctx.values.get("isFollowingEnd")).toBe(true);
     });
@@ -1429,7 +1653,7 @@ describe("createImperativeHandle.anchorVisibleContent", () => {
         };
 
         try {
-            createImperativeHandle(ctx).anchorVisibleContent("item_6");
+            createImperativeHandle(ctx).anchorVisibleContent({ key: "item_6" });
 
             grow("item_5", 160);
             grow("item_6", 140);
@@ -1454,7 +1678,7 @@ describe("createImperativeHandle.anchorVisibleContent", () => {
     it("resumes following when scrollToEnd releases the reader anchor", () => {
         const ctx = followingList(false);
         const handle = createImperativeHandle(ctx);
-        handle.anchorVisibleContent("reader");
+        handle.anchorVisibleContent({ key: "reader" });
 
         void handle.scrollToEnd({ animated: false });
 
@@ -1499,7 +1723,7 @@ describe("createImperativeHandle.scrollIndexIntoView", () => {
     };
 
     it("aligns a row below the observed viewport to the bottom margin", async () => {
-        await createList().scrollIndexIntoView({ animated: false, index: 15, viewportMargin: { bottom: 20 } });
+        await createList().scrollIndexIntoView({ animated: false, index: 15, viewportMargin: { end: 20 } });
 
         expect(scrollToIndexSpy).toHaveBeenCalledWith(
             expect.anything(),
@@ -1508,7 +1732,7 @@ describe("createImperativeHandle.scrollIndexIntoView", () => {
     });
 
     it("aligns a row hidden by the top margin to the top margin", async () => {
-        await createList().scrollIndexIntoView({ index: 10, viewportMargin: { top: 40 } });
+        await createList().scrollIndexIntoView({ index: 10, viewportMargin: { start: 40 } });
 
         expect(scrollToIndexSpy).toHaveBeenCalledWith(
             expect.anything(),
@@ -1532,5 +1756,171 @@ describe("createImperativeHandle.scrollIndexIntoView", () => {
             expect.anything(),
             expect.objectContaining({ index: 12, viewPosition: 1 }),
         );
+    });
+});
+
+describe("createImperativeHandle.scrollIndexIntoView oversized rows", () => {
+    for (const [itemSize, contentInsetBottom] of [
+        [480, 0],
+        [500, 0],
+        [600, 0],
+        [480, 50],
+    ] as const) {
+        it(`uses the top margin when a ${itemSize}px row exceeds the space inside margins with ${contentInsetBottom}px inset`, async () => {
+            const data = Array.from({ length: 30 }, (_, index) => index);
+            let observedOffset = 0;
+            const scrollTo = mock(({ y }: { y: number }) => {
+                observedOffset = y;
+            });
+            const ctx = createMockContext(
+                {},
+                {
+                    didFinishInitialScroll: true,
+                    positions: data.map((index) => index * 100 + (index > 10 ? itemSize - 100 : 0)),
+                    props: {
+                        contentInset: { bottom: contentInsetBottom, left: 0, right: 0, top: 0 },
+                        data,
+                        getFixedItemSize: (_, index) => (index === 10 ? itemSize : 100),
+                    },
+                    scrollLength: 500,
+                    totalSize: 3000 + itemSize - 100,
+                },
+            );
+            ctx.state.refScroller.current = {
+                getCurrentScrollOffset: () => observedOffset,
+                getScrollableNode: () => ({}),
+                scrollTo,
+            } as NonNullable<typeof ctx.state.refScroller.current>;
+
+            const pending = createImperativeHandle(ctx).scrollIndexIntoView({
+                animated: false,
+                index: 10,
+                viewportMargin: { end: 20, start: 10 },
+            });
+
+            expect(scrollTo).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 990 });
+            expect(ctx.state.positions[10]! - observedOffset).toBe(10);
+            finishScrollTo(ctx);
+            expect(await pending).toBeUndefined();
+        });
+    }
+});
+
+describe("createImperativeHandle inner-item regions", () => {
+    for (const platform of ["ios", "android", "web"] as const) {
+        for (const horizontal of [false, true]) {
+            for (const method of ["scrollIndexIntoView", "scrollItemIntoView"] as const) {
+                for (const [name, region, expectedOffset] of [
+                    ["above", { itemLength: 20, itemOffset: 0 }, 990],
+                    ["below", { itemLength: 40, itemOffset: 350 }, 1110],
+                    ["visible", { itemLength: 100, itemOffset: 50 }, undefined],
+                    ["at the margins", { itemLength: 270, itemOffset: 10 }, undefined],
+                    ["a point by default", { itemOffset: 350 }, 1070],
+                    ["at the item start by default", { itemLength: 20 }, 990],
+                    ["taller than the available space", { itemLength: 300, itemOffset: 50 }, 1040],
+                    ["covering the viewport", { itemLength: 600, itemOffset: 0 }, 990],
+                    ["the whole item by default", {}, undefined],
+                ] as const) {
+                    it(`${method} reveals ${name} on ${platform} (horizontal: ${horizontal})`, async () => {
+                        const originalPlatform = Platform.OS;
+                        Platform.OS = platform;
+                        const data = Array.from({ length: 30 }, (_, id) => ({ id }));
+                        let observedOffset = 1000;
+                        const scrollTo = mock(({ x, y }: { x: number; y: number }) => {
+                            observedOffset = horizontal ? x : y;
+                        });
+                        const ctx = createMockContext(
+                            {},
+                            {
+                                didFinishInitialScroll: true,
+                                positions: data.map((_, index) => index * 100 + (index > 10 ? 900 : 0)),
+                                props: {
+                                    data,
+                                    getFixedItemSize: (_, index) => (index === 10 ? 1000 : 100),
+                                    horizontal,
+                                },
+                                scrollLength: 300,
+                                totalSize: 3900,
+                            },
+                        );
+                        ctx.state.refScroller.current = {
+                            getCurrentScrollOffset: () => observedOffset,
+                            getScrollableNode: () => ({}),
+                            scrollTo,
+                        } as unknown as NonNullable<typeof ctx.state.refScroller.current>;
+                        try {
+                            const handle = createImperativeHandle(ctx);
+                            const options = { animated: false, ...region, viewportMargin: { end: 20, start: 10 } };
+                            const pending =
+                                method === "scrollIndexIntoView"
+                                    ? handle.scrollIndexIntoView({ ...options, index: 10 })
+                                    : handle.scrollItemIntoView({ ...options, item: data[10] });
+                            if (expectedOffset === undefined) {
+                                expect(scrollTo).not.toHaveBeenCalled();
+                            } else {
+                                expect(scrollTo).toHaveBeenLastCalledWith({
+                                    animated: false,
+                                    x: horizontal ? expectedOffset : 0,
+                                    y: horizontal ? 0 : expectedOffset,
+                                });
+                                finishScrollTo(ctx);
+                            }
+                            expect(await pending).toBeUndefined();
+                        } finally {
+                            ctx.state.scheduledWork.dispose();
+                            Platform.OS = originalPlatform;
+                        }
+                    });
+                }
+            }
+        }
+    }
+});
+
+describe("native scroll refs", () => {
+    it("returns the native instances unchanged", () => {
+        Platform.OS = "ios";
+        const ctx = createMockContext();
+        const responder = {};
+        const raw = { getScrollResponder: () => responder, scrollTo: () => {} };
+        ctx.state.refScroller.current = raw as any;
+        const handle = createImperativeHandle(ctx);
+        expect(handle.getNativeScrollRef()).toBe(raw);
+        expect(handle.getAnimatableRef()).toBe(raw);
+        expect(handle.getScrollResponder()).toBe(responder);
+    });
+});
+
+describe("createImperativeHandle.cancelScroll", () => {
+    it("holds following off during the external native command handoff", () => {
+        const platform = Platform.OS;
+        Platform.OS = "ios";
+        const ctx = createMockContext(
+            { isAtEnd: true, isFollowingEnd: true, isWithinMaintainScrollAtEndThreshold: true, totalSize: 1000 },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                props: { data: ["a"], maintainScrollAtEnd: { animated: true }, maintainScrollAtEndThreshold: 0.1 },
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 700,
+                        getMaxScrollOffset: () => 700,
+                        scrollTo: mock(() => {}),
+                    },
+                } as any,
+                scroll: 700,
+                scrollLength: 300,
+                scrollPending: 700,
+            },
+        );
+        try {
+            createImperativeHandle(ctx).cancelScroll();
+            expect(ctx.values.get("isFollowingEnd")).toBe(false);
+            expect(ctx.state.endFollowInterrupted).toBe(true);
+            expect(ctx.state.scheduledWork.has("appScrollRearm")).toBe(true);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+            Platform.OS = platform;
+        }
     });
 });

@@ -114,6 +114,32 @@ describe("viewPositionFallback", () => {
         ).toBe(1000);
     });
 
+    it("corrects iOS measurements within the viewport below the top inset", () => {
+        const originalPlatform = Platform.OS;
+        Platform.OS = "ios";
+        const ctx = context(100);
+        ctx.state.props.contentInset = { bottom: 0, left: 0, right: 0, top: 100 };
+        ctx.state.idCache = ["item_0", "item_1", "item_2"];
+        ctx.state.indexByKey = new Map(ctx.state.idCache.map((key, index) => [key, index]));
+        ctx.state.scrollingTo = {
+            index: 1,
+            itemSize: 100,
+            offset: 1000,
+            viewPosition: 0.5,
+            viewPositionFallback: "start",
+        };
+        const requested = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
+        try {
+            const adjust = prepareMVCP(ctx, false, "item-size");
+            ctx.state.sizesKnown.set("item_1", 1000);
+            adjust?.();
+            expect(requested).toHaveBeenCalledWith(ctx, 200, "item-size");
+        } finally {
+            requested.mockRestore();
+            Platform.OS = originalPlatform;
+        }
+    });
+
     it("re-evaluates initial alignment when the estimate or viewport changes", () => {
         const ctx = context(100);
         const target = { index: 1, viewPosition: 0.5, viewPositionFallback: "start" as const };

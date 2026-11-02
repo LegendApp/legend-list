@@ -1,7 +1,10 @@
 import type React from "react";
 
-import act from "@testing-library/react-native/build/act";
+import rawAct from "@testing-library/react-native/build/act";
 import { renderWithAct } from "@testing-library/react-native/build/render-act";
+import { withLayoutInvariants } from "./layoutInvariantHarness";
+
+const act = withLayoutInvariants(rawAct);
 
 type RenderResult = {
     rerender: (component: React.ReactElement) => void;

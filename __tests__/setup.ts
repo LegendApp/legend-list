@@ -1,6 +1,7 @@
 // Global test setup for Legend List tests
 import { afterEach, mock } from "bun:test";
 import { registerReanimatedModuleMock } from "./__mocks__/reanimated";
+import { installLayoutInvariantHarness, resetLayoutInvariantHarness } from "./helpers/layoutInvariantHarness";
 import { cleanupRenders } from "./helpers/testingLibrary";
 
 // Define React Native globals that the source code expects
@@ -87,6 +88,7 @@ export function registerBaseModuleMocks() {
 }
 
 registerBaseModuleMocks();
+installLayoutInvariantHarness();
 const nativeMocks = require("./__mocks__/react-native.ts");
 const defaultPlatform = { ...nativeMocks.Platform };
 const defaultI18nManager = { ...nativeMocks.I18nManager };
@@ -117,6 +119,7 @@ for (const moduleSpecifier of [
 // Global cleanup between tests to prevent contamination
 afterEach(() => {
     cleanupRenders();
+    resetLayoutInvariantHarness();
 
     for (const handle of pendingAnimationFrames) {
         originalClearTimeout(handle);

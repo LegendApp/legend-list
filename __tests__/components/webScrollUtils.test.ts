@@ -187,6 +187,47 @@ describe("scroll input ownership", () => {
             expect(ownsScrollInput(child, scroller, false)).toBe(false);
         });
     }
+    for (const horizontal of [false, true]) {
+        for (const direction of [-1, 1]) {
+            it(`chains from an exhausted ${horizontal ? "horizontal" : "vertical"} nested viewport in direction ${direction}`, () => {
+                const scroller = { nodeType: 1, parentElement: null } as any;
+                const nested = {
+                    clientHeight: 100,
+                    clientWidth: 100,
+                    nodeType: 1,
+                    parentElement: scroller,
+                    scrollHeight: 400,
+                    scrollLeft: direction > 0 ? 300 : 0,
+                    scrollTop: direction > 0 ? 300 : 0,
+                    scrollWidth: 400,
+                } as any;
+                globalThis.getComputedStyle = (() => ({
+                    overflowX: "auto",
+                    overflowY: "auto",
+                    overscrollBehavior: "auto",
+                })) as any;
+                expect(ownsScrollInput(nested, scroller, horizontal, direction)).toBe(true);
+                expect(ownsScrollInput(nested, scroller, horizontal, -direction)).toBe(false);
+                if (horizontal) {
+                    nested.scrollLeft = direction > 0 ? 0 : -300;
+                    globalThis.getComputedStyle = (() => ({
+                        direction: "rtl",
+                        overflowX: "auto",
+                        overscrollBehavior: "auto",
+                    })) as any;
+                    expect(ownsScrollInput(nested, scroller, true, direction)).toBe(true);
+                    expect(ownsScrollInput(nested, scroller, true, -direction)).toBe(false);
+                }
+
+                globalThis.getComputedStyle = (() => ({
+                    overflowX: "auto",
+                    overflowY: "auto",
+                    overscrollBehavior: "contain",
+                })) as any;
+                expect(ownsScrollInput(nested, scroller, horizontal, direction)).toBe(false);
+            });
+        }
+    }
     it("allows an ordinary row's gesture to reach its viewport", () => {
         const scroller = { nodeType: 1, parentElement: null } as any;
         const child = { clientHeight: 20, nodeType: 1, parentElement: scroller, scrollHeight: 20 } as any;

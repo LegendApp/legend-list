@@ -9,8 +9,14 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { configureReanimatedLogger, ReanimatedLogLevel } from "react-native-reanimated";
 import { enableFreeze } from "react-native-screens";
 
+import { startLayoutMonitor } from "@examples/layoutInvariants";
 import { Colors } from "~/constants/Colors";
 import { useColorScheme } from "~/hooks/useColorScheme";
+
+// Dev-only frame-by-frame layout checks: violations log as "[LLGAP] {json}" lines for drivers.
+if (__DEV__ && process.env.EXPO_PUBLIC_LEGEND_LIST_LAYOUT_CHECK) {
+    startLayoutMonitor();
+}
 
 LogBox.ignoreLogs(["FlashList v2 is only supported on new architecture"]);
 

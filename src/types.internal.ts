@@ -8,11 +8,9 @@ import type {
     AnchoredEndSpaceConfig,
     Insets,
     LayoutRectangle,
-    LegendListMetrics,
     LegendListPropsBase,
     LegendListRef,
     LegendListRenderItemProps,
-    LegendListScrollResult,
     NativeScrollEvent,
     NativeSyntheticEvent,
     ScrollIndexWithOffsetAndContentOffset,
@@ -67,19 +65,22 @@ export interface MaintainScrollAtEndNormalized {
 }
 
 export interface ThresholdSnapshot {
-    scrollPosition: number;
-    contentSize?: number;
+    scroll: number;
+    contentSize: number;
+    data: readonly unknown[];
     dataLength?: number;
-    atThreshold: boolean;
+    didRearmForData?: boolean;
 }
 
 export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";
 
-export type ScrollResolve = (result?: LegendListScrollResult) => void;
+export type ScrollResolve = () => void;
 
 export interface ScrollTarget {
     averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
+    /** Absolute and end targets include the contentContainerStyle minimum; item targets align to rows. */
+    clampToContentContainerMinSize?: boolean;
     index?: number;
     key?: string;
     isInitialScroll?: boolean;
@@ -104,7 +105,7 @@ type BootstrapInitialScrollSession = {
     visibleIndices?: readonly number[];
 };
 
-type InternalScrollTarget = ScrollTarget & {
+export type InternalScrollTarget = ScrollTarget & {
     isScrollToEnd?: boolean;
     /** Web retries reissued after an animated scroll settled short of its recomputed target. */
     landingRetries?: number;
@@ -170,10 +171,11 @@ export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export type AnchoredEndSpaceOwner = "list" | "scroll";
 
+// Internal bridge for integrations, not part of the public list ref contract.
 // Keyboard integrations report occlusion separately from scroll-range insets.
-// This is an internal bridge, not part of the public list ref contract.
 export interface LegendListInternalRef extends LegendListRef {
     reportViewabilityInsetEndInternal?: (inset: number) => void;
+    reportContentInsetForScrollInternal?: LegendListRef["reportContentInset"];
 }
 
 export interface InternalState {
@@ -201,7 +203,8 @@ export interface InternalState {
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
-    edgeReachedGate?: "closed" | "prepared";
+    edgeReachedGate?: "closed" | "prepared" | "consumed-start" | "consumed-end";
+    edgeReachedGateScroll?: number;
     endBuffered: number;
     endNoBuffer: number;
     endReachedSnapshot: ThresholdSnapshot | undefined;
@@ -223,34 +226,32 @@ export interface InternalState {
     isEndReached: boolean | null;
     isFirst?: boolean;
     isStartReached: boolean | null;
+    isUnmounted?: boolean;
     lastBatchingAction: number;
     lastLayout: LayoutRectangle | undefined;
     lastFirstVisibleItemCallback?: { index: number; key: string };
     lastNativeScroll?: number;
     lastNativeScrollTime?: number;
+    nativeScrollGeometry?: { content: number; length: number };
+    accessibilityScrollEvent?: {
+        scroll: number;
+        content: number;
+        length: number;
+        adjust: number;
+        time?: number;
+        blocked: boolean;
+        direction: number;
+    };
     lastScrollAdjustForHistory?: number;
     lastScrollDelta: number;
     loadStartTime: number;
     pendingEndMeasurements?: Set<string>;
     isMomentumScrolling?: boolean;
-    // Release provenance survives the handoff timeout and repeated native begins.
-    releasedFromUserDrag?: boolean;
-    didDeferMaintainScrollAtEndForMomentum?: boolean;
-    // Growth not already compensated by MVCP can retain the reader's end intent.
-    momentumSuspendContentSize?: number;
-    momentumSuspendCompensated?: boolean;
-    momentumStallFirstLateFireAt?: number;
-    activeSizeAnimations?: Set<string>;
-    resumeMaintainScrollAtEnd?: () => void;
+    // Content size at release while a user gesture awaits settlement.
+    userScrollContentSize?: number;
     layoutAdjustmentEpoch?: number;
-    lastMetrics?: LegendListMetrics;
     endFollowInterrupted?: boolean;
-    visibleContentAnchor?: { key: string; offset: number };
-    scrollElementTarget?: {
-        element: Element | Range;
-        viewportMargin?: { top?: number; bottom?: number };
-        viewPosition?: number;
-    };
+    visibleContentAnchor?: { key: string; offset: number; sizeOnly?: true };
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
     positionRecalculationStartIndex: number | undefined;
     mvcpAnchorLock?: {
@@ -274,7 +275,6 @@ export interface InternalState {
     pendingDataComparison?: PendingDataComparison;
     pendingScrollToEnd?: {
         options?: ScrollToEndOptions;
-        resolve: ScrollResolve;
         token: number;
     };
     pendingTotalSize?: number;
@@ -334,6 +334,7 @@ export interface InternalState {
         anchoredEndSpaceOwner: AnchoredEndSpaceOwner;
         alwaysRender: AlwaysRenderConfig | undefined;
         contentContainerAlignItems: ViewStyle["alignItems"] | undefined;
+        contentContainerMinSize?: number;
         alwaysRenderIndicesArr: number[];
         alwaysRenderIndicesSet: Set<number>;
         contentInset: Insets | undefined;
@@ -363,7 +364,6 @@ export interface InternalState {
         onMomentumScrollBegin: LegendListPropsInternal["onMomentumScrollBegin"];
         onMomentumScrollEnd: LegendListPropsInternal["onMomentumScrollEnd"];
         onMetricsChange: LegendListPropsInternal["onMetricsChange"];
-        trackScrollMetrics: LegendListPropsInternal["trackScrollMetrics"];
         onUserScroll: LegendListPropsInternal["onUserScroll"];
         onScroll: LegendListPropsInternal["onScroll"];
         onScrollBeginDrag: LegendListPropsInternal["onScrollBeginDrag"];
@@ -377,7 +377,6 @@ export interface InternalState {
         renderItem: LegendListPropsInternal["renderItem"];
         scrollBuffer?: number;
         snapToIndices: number[] | undefined;
-        sizeComponentInternal: React.ComponentType<any> | undefined;
         positionComponentInternal: React.ComponentType<any> | undefined;
         stickyPositionComponentInternal: React.ComponentType<any> | undefined;
         stickyHeaderIndicesArr: number[];

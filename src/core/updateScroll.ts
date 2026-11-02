@@ -1,11 +1,11 @@
+import { EDGE_POSITION_EPSILON } from "@/constants";
 import { updateAdaptiveRender } from "@/core/adaptiveRender";
-import { interruptUserScroll } from "@/core/cancelScroll";
-import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
-import { peek$, type StateContext } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { beginReachedEdgeUserScroll } from "@/utils/edgeReachedGate";
 import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
@@ -18,7 +18,7 @@ export function updateScroll(
     ctx: StateContext,
     newScroll: number,
     forceUpdate?: boolean,
-    options?: { fromNativeScrollEvent?: boolean; markHasScrolled?: boolean },
+    options?: { fromNativeScrollEvent?: boolean; markHasScrolled?: boolean; nativeGeometryChanged?: boolean },
 ) {
     const state = ctx.state;
     const { ignoreScrollFromMVCP, lastScrollAdjustForHistory, scrollAdjustHandler, scrollHistory, scrollingTo } = state;
@@ -72,9 +72,9 @@ export function updateScroll(
     state.scroll = newScroll;
     state.scrollTime = currentTime;
 
-    // Only web scroll events compare against the clamped previous offset.
+    // Only backward web scroll events need to distinguish a clamp from user scrolling.
     const previousComparableScroll =
-        Platform.OS === "web" && options?.fromNativeScrollEvent
+        Platform.OS === "web" && options?.fromNativeScrollEvent && newScroll < prevScroll
             ? Math.min(prevScroll, state.refScroller.current?.getMaxScrollOffset?.() ?? prevScroll)
             : prevScroll;
     const scrollDelta = Math.abs(newScroll - prevScroll);
@@ -90,22 +90,40 @@ export function updateScroll(
         // The first sample after a pause has zero velocity, but a fresh direction.
         state.scrollBufferDirection = newScroll > prevScroll ? 1 : -1;
     }
-    // Native measurement/MVCP events can arrive after scroll completion.
-    // Native user intent is handled by onScrollBeginDrag, not inferred from those offsets.
     const didCancelMaintainScrollAtEnd =
-        Platform.OS === "web" &&
         isUserScrollEvent &&
-        newScroll < previousComparableScroll - 1 &&
-        !!(state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd || peek$(ctx, "isFollowingEnd"));
+        !!(state.maintainingScrollAtEnd || state.pendingMaintainScrollAtEnd || peek$(ctx, "isFollowingEnd")) &&
+        (Platform.OS === "web"
+            ? newScroll < previousComparableScroll - 1
+            : !options?.nativeGeometryChanged &&
+              !state.maintainingScrollAtEnd &&
+              !state.pendingMaintainScrollAtEnd &&
+              !state.isDragging &&
+              state.userScrollContentSize === undefined &&
+              getContentSize(ctx) - newScroll - state.scrollLength >
+                  Math.max(
+                      EDGE_POSITION_EPSILON,
+                      (state.props.maintainScrollAtEndThreshold ?? 0) * state.scrollLength,
+                  ));
     if (didCancelMaintainScrollAtEnd) {
-        interruptUserScroll(ctx);
+        if (Platform.OS === "web") {
+            ctx.interruptUserScroll!();
+        } else {
+            // Native-ref and custom scroller commands have no list owner.
+            interruptMaintainScrollAtEnd(ctx);
+        }
     }
     if (isUserScrollEvent) {
-        if (Platform.OS === "web" && !didCancelMaintainScrollAtEnd) state.props.onUserScroll?.();
         state.visibleContentAnchor = undefined;
-        state.scrollElementTarget = undefined;
-        if (newScroll > prevScroll && getContentSize(ctx) - newScroll - state.scrollLength <= 1) {
+        if (
+            !state.isDragging &&
+            !state.isMomentumScrolling &&
+            state.userScrollContentSize === undefined &&
+            newScroll > prevScroll &&
+            getContentSize(ctx) - newScroll - state.scrollLength <= 1
+        ) {
             state.endFollowInterrupted = false;
+            if (state.props.maintainScrollAtEnd) set$(ctx, "isFollowingEnd", true);
         }
     }
     const allowedEdge = isUserScrollEvent ? beginReachedEdgeUserScroll(ctx, newScroll - prevScroll) : undefined;
@@ -168,7 +186,7 @@ export function updateScroll(
         // after that pending native adjust resolves so the list still ends up pinned to the tail.
         if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndAfterPendingSettle) {
             state.pendingMaintainScrollAtEnd = false;
-            doMaintainScrollAtEnd(ctx);
+            ctx.doMaintainScrollAtEnd!();
         }
 
         state.dataChangeNeedsScrollUpdate = false;

@@ -115,6 +115,7 @@ describe("createResizeObserver web", () => {
                     props: {
                         data: [{ id: itemKey }],
                         estimatedItemSize: 100,
+                        keyExtractor: (item) => item.id,
                         maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(false),
                     },
                     startBuffered: 0,

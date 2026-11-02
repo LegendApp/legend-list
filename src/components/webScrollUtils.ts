@@ -18,13 +18,18 @@ export function getScrollPosition(target: ExternalScrollTarget): ScrollPosition 
 }
 
 /** Position in the owner's scrollable content, excluding the owner's border. */
-export function getElementScrollPosition(element: HTMLElement | null, target: ExternalScrollTarget) {
+export function getElementScrollPosition(element: HTMLElement | null, target: ExternalScrollTarget, rtlStart = false) {
     const rect = element?.getBoundingClientRect();
     const scroll = getScrollPosition(target);
     const parent = target && !isWindowTarget(target) ? target : null;
     const parentRect = parent?.getBoundingClientRect();
+    // Negative RTL offsets start at the viewport's right edge, not the list's left edge.
+    const startAdjustment = rtlStart
+        ? (rect?.width ?? 0) -
+          (isWindowTarget(target) ? target.document.documentElement.clientWidth : (parent?.clientWidth ?? 0))
+        : 0;
     return {
-        left: (rect?.left ?? 0) - (parentRect?.left ?? 0) - (parent?.clientLeft ?? 0) + scroll.x,
+        left: (rect?.left ?? 0) - (parentRect?.left ?? 0) - (parent?.clientLeft ?? 0) + scroll.x + startAdjustment,
         top: (rect?.top ?? 0) - (parentRect?.top ?? 0) - (parent?.clientTop ?? 0) + scroll.y,
     };
 }
@@ -116,21 +121,21 @@ export function resolveExternalScrollOffset({
     };
 }
 
-export function ownsScrollInput(target: EventTarget | null, scroller: HTMLElement, horizontal: boolean) {
+export function ownsScrollInput(target: EventTarget | null, scroller: HTMLElement, horizontal: boolean, direction = 0) {
     let element = target as HTMLElement | null;
     if (element?.nodeType !== 1) element = element?.parentElement ?? null;
     while (element && element !== scroller) {
         const style = getComputedStyle(element);
         const overflow = horizontal ? style.overflowX : style.overflowY;
-        const size = horizontal
-            ? element.scrollWidth - element.clientWidth
-            : element.scrollHeight - element.clientHeight;
-        const overscroll = horizontal ? style.overscrollBehaviorX : style.overscrollBehaviorY;
-        if (
-            /auto|scroll|overlay/.test(overflow) &&
-            (size > 1 || /contain|none/.test(overscroll || style.overscrollBehavior))
-        )
-            return false;
+        if (/auto|scroll|overlay/.test(overflow)) {
+            const overscroll = horizontal ? style.overscrollBehaviorX : style.overscrollBehaviorY;
+            if (/contain|none/.test(overscroll || style.overscrollBehavior)) return false;
+            const size = horizontal
+                ? element.scrollWidth - element.clientWidth
+                : element.scrollHeight - element.clientHeight;
+            const offset = horizontal ? element.scrollLeft + (style.direction === "rtl" ? size : 0) : element.scrollTop;
+            if (size > 1 && (direction === 0 || (direction > 0 ? offset < size - 1 : offset > 1))) return false;
+        }
         element = element.parentElement;
     }
     return element === scroller;
