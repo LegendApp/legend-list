@@ -9,12 +9,21 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 
 /** Returns whether it stopped a running animation with an instant write. */
-export function cancelScroll(ctx: StateContext, stopAnimation = true, commitAdjust = true, inputDelta = 0) {
+export function cancelScroll(
+    ctx: StateContext,
+    stopAnimation = true,
+    commitAdjust = true,
+    inputDelta = 0,
+    cancelledAnimationOffset?: number,
+) {
     const { state } = ctx;
     // Without a native observation, scrollPending has not yet absorbed deferred adjustments.
-    const observed = getObservedScrollOffset(ctx, peek$(ctx, "scrollAdjustPending") ? state.scrollPending : undefined);
+    const observed =
+        cancelledAnimationOffset ??
+        getObservedScrollOffset(ctx, peek$(ctx, "scrollAdjustPending") ? state.scrollPending : undefined);
     // A superseded animation keeps running natively while its replacement waits to dispatch.
-    const wasAnimating = !!state.scrollingTo?.animated || !!ctx.scrollRequestTracker?.cancel();
+    const wasAnimating =
+        cancelledAnimationOffset !== undefined || !!state.scrollingTo?.animated || !!ctx.scrollRequestTracker?.cancel();
     const stopped = wasAnimating && stopAnimation;
     const stopOffset = stopped && inputDelta ? clampScrollOffset(ctx, observed + inputDelta) : observed;
     releaseScrollOwners(ctx, true);
@@ -63,13 +72,14 @@ function releaseScrollOwners(ctx: StateContext, supersedeInitial: boolean) {
 }
 
 /** Returns whether the stop write applied inputDelta, so the caller must cancel the native scroll. */
-export function interruptUserScroll(ctx: StateContext, inputDelta = 0) {
+export function interruptUserScroll(ctx: StateContext, inputDelta = 0, cancelledAnimationOffset?: number) {
     if (
+        cancelledAnimationOffset !== undefined ||
         ctx.state.scrollingTo ||
         ctx.scrollRequestTracker?.isWaitingToRun() ||
         (ctx.state.initialScroll && !ctx.state.didFinishInitialScroll)
     ) {
-        return cancelScroll(ctx, Platform.OS === "web", true, inputDelta) && inputDelta !== 0;
+        return cancelScroll(ctx, Platform.OS === "web", true, inputDelta, cancelledAnimationOffset) && inputDelta !== 0;
     }
     releaseScrollOwners(ctx, false);
     return false;

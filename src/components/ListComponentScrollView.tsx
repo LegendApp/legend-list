@@ -107,6 +107,7 @@ interface ExtraPropsFromRN {
 
 const SCROLLBAR_HIDDEN_STYLE_ID = "legend-list-scrollbar-axis-hidden-style";
 const SCROLL_END_FALLBACK_MS = 200;
+const WHEEL_PASSIVE_RESTORE_MS = 1000;
 const SCROLLBAR_HIDDEN_STYLE = `.${LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS}::-webkit-scrollbar:vertical{width:0;display:none;}.${LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS}::-webkit-scrollbar:horizontal{height:0;display:none;}`;
 
 function ensureScrollbarHiddenStyle() {
@@ -458,6 +459,14 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 (state.endFollowInterrupted && state.pendingScrollResolve)
             );
         };
+        const wheelAnimations = new WeakMap<Event, { explicit: boolean }>();
+        const captureWheel = (event: Event) => {
+            if (ctx.state.scrollingTo?.animated) {
+                wheelAnimations.set(event, {
+                    explicit: isExplicitNavigation(),
+                });
+            }
+        };
         const acceptInput = (
             event: Event,
             direction: number,
@@ -466,7 +475,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             isWheel = false,
         ) => {
             const state = ctx.state;
+            const captured = isWheel ? wheelAnimations.get(event) : undefined;
             if (
+                !captured &&
                 !state.props.onUserScroll &&
                 !state.props.maintainScrollAtEnd &&
                 !state.maintainingScrollAtEnd &&
@@ -477,7 +488,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             ) {
                 return false;
             }
-            const explicit = isExplicitNavigation();
+            const explicit = captured?.explicit ?? isExplicitNavigation();
             if (direction > 0 && !explicit && !(isNew && state.props.onUserScroll)) return false;
             const node = resolveScrollableNode(scrollRef.current, externalTarget);
             const maxOffset = getMaxScrollOffset();
@@ -498,12 +509,20 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 // (Chromium drops it, WebKit and Firefox apply it), so the stop write applies it and the native
                 // scroll is cancelled. A non-cancelable wheel still applies natively, so stop at the observed
                 // offset without adding its delta again.
-                if (
-                    (explicit ? !keepsExplicitOwner : direction <= 0) &&
-                    interruptUserScroll(ctx, isWheel && event.cancelable ? direction : 0) &&
-                    event.cancelable
-                )
-                    event.preventDefault();
+                if (explicit ? !keepsExplicitOwner : direction <= 0) {
+                    const delta = isWheel && event.cancelable ? direction : 0;
+                    // A descendant may cancel the animation before bubbling. Preserve its wheel delta,
+                    // but only after that descendant has had the opportunity to consume the event.
+                    const cancelledAnimationOffset =
+                        captured && !state.scrollingTo && !ctx.scrollRequestTracker?.isWaitingToRun()
+                            ? offset
+                            : undefined;
+                    const appliedDelta =
+                        cancelledAnimationOffset === undefined
+                            ? interruptUserScroll(ctx, delta)
+                            : interruptUserScroll(ctx, delta, cancelledAnimationOffset);
+                    if (appliedDelta && event.cancelable) event.preventDefault();
+                }
                 if (isNew) state.props.onUserScroll?.();
                 return true;
             }
@@ -613,16 +632,26 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             scrollbarPressOffset = undefined;
             if (offset !== undefined && getCurrentScrollOffset() === offset) rearmEndFollowIfSettled(ctx);
         };
-        // Only an active scroll can need preventDefault, so idle wheel scrolling stays passive.
         let wheelPassive: boolean | undefined;
+        let resetWheelTimer: ReturnType<typeof setTimeout> | undefined;
         const setWheelPassive = (passive: boolean) => {
             if (passive === wheelPassive) return;
             if (wheelPassive !== undefined) target.removeEventListener("wheel", onWheel);
             target.addEventListener("wheel", onWheel, { passive });
             wheelPassive = passive;
         };
+        target.addEventListener("wheel", captureWheel, { capture: true, passive: true });
         setWheelPassive(!peek$(ctx, "isScrollActive"));
-        const unlistenScrollActive = listen$(ctx, "isScrollActive", (active) => setWheelPassive(!active));
+        const unlistenScrollActive = listen$(ctx, "isScrollActive", (active) => {
+            clearTimeout(resetWheelTimer);
+            if (active) {
+                setWheelPassive(false);
+            } else if (!wheelPassive) {
+                // Changing the blocking wheel region repaints the scroller in Chromium. Keep it
+                // stable across back-to-back scrolls, then restore passive handling after idle.
+                resetWheelTimer = setTimeout(() => setWheelPassive(true), WHEEL_PASSIVE_RESTORE_MS);
+            }
+        });
         target.addEventListener("touchstart", onTouchStart, { passive: true });
         target.addEventListener("touchmove", onTouchMove, { passive: true });
         target.addEventListener("keydown", onKeyDown);
@@ -631,6 +660,8 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         target.addEventListener("pointercancel", onPointerRelease);
         return () => {
             unlistenScrollActive();
+            clearTimeout(resetWheelTimer);
+            target.removeEventListener("wheel", captureWheel, true);
             target.removeEventListener("wheel", onWheel);
             target.removeEventListener("touchstart", onTouchStart);
             target.removeEventListener("touchmove", onTouchMove);

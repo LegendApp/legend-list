@@ -70,6 +70,17 @@ describe("cancelScroll", () => {
         expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 200, y: 0 });
     });
 
+    it("applies the wheel delta captured before an application cancels the animation", () => {
+        Platform.OS = "web";
+        const { ctx, scrollTo } = createScrollingContext(undefined);
+        // The animation was active in capture, but an application listener already released it.
+        expect(interruptUserScroll(ctx, -40, 100)).toBe(true);
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: 60 });
+        expect(ctx.state.scroll).toBe(60);
+        expect(ctx.state.scrollPending).toBe(60);
+    });
+
     it.each([
         ["inverted", 500, 900],
         [undefined, -350, 700],

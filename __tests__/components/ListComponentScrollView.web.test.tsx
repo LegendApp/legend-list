@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, jest, mock, spyOn } from "bun:test";
 import "../setup";
 
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
@@ -967,10 +967,12 @@ describe("ListComponentScrollView (web)", () => {
         expect(scrollListeners.has("wheel")).toBe(false);
     });
 
-    it("keeps the wheel listener passive unless a scroll is active", async () => {
+    it("keeps wheel registration stable across scrolls, restores passive after idle, and cleans up", async () => {
         resetMocks();
+        jest.useFakeTimers();
+        const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation((_ctx, delta) => !!delta);
         const { ListComponentScrollView } = await import(
-            "../../src/components/ListComponentScrollView?web-wheel-passive"
+            "../../src/components/ListComponentScrollView?web-wheel-stable"
         );
         let renderer: TestRenderer.ReactTestRenderer | undefined;
         const wheelOptions = () =>
@@ -986,19 +988,103 @@ describe("ListComponentScrollView (web)", () => {
                 );
             });
             const wheel = scrollListeners.get("wheel");
-            expect(wheelOptions()).toEqual([{ passive: true }]);
-            // Only an active scroll can need preventDefault, to apply the wheel in its stop write.
-            set$(mockCtx, "isScrollActive", true);
+            expect(wheelOptions()).toEqual([{ capture: true, passive: true }, { passive: true }]);
+            maxOffset = 1000;
+            ownerScroll = 800;
+            const preventDefault = mock(() => {});
             set$(mockCtx, "isScrollActive", true);
             set$(mockCtx, "isScrollActive", false);
-            expect(wheelOptions()).toEqual([{ passive: true }, { passive: false }, { passive: true }]);
-            expect(removeEventListener.mock.calls.filter(([type]) => type === "wheel")).toHaveLength(2);
+            jest.advanceTimersByTime(999);
+            expect(wheelOptions()).toEqual([{ capture: true, passive: true }, { passive: true }, { passive: false }]);
+            set$(mockCtx, "isScrollActive", true);
+            jest.advanceTimersByTime(1000);
+            expect(wheelOptions()).toEqual([{ capture: true, passive: true }, { passive: true }, { passive: false }]);
+            for (let i = 0; i < 5; i++) {
+                mockCtx.state.maintainingScrollAtEnd = "animated";
+                set$(mockCtx, "isScrollActive", true);
+                wheel?.({ cancelable: true, deltaY: -40, preventDefault, timeStamp: i * 2000 } as any);
+                expect(interrupt).toHaveBeenLastCalledWith(mockCtx, -40);
+                set$(mockCtx, "isScrollActive", false);
+                jest.advanceTimersByTime(200);
+            }
+            expect(preventDefault).toHaveBeenCalledTimes(5);
+            expect(wheelOptions()).toHaveLength(3);
+            expect(removeEventListener.mock.calls.filter(([type]) => type === "wheel")).toHaveLength(1);
+            jest.advanceTimersByTime(799);
+            expect(wheelOptions()).toHaveLength(3);
+            jest.advanceTimersByTime(1);
+            expect(wheelOptions()).toEqual([
+                { capture: true, passive: true },
+                { passive: true },
+                { passive: false },
+                { passive: true },
+            ]);
             expect(scrollListeners.get("wheel")).toBe(wheel!);
+            set$(mockCtx, "isScrollActive", true);
+            expect(wheelOptions().at(-1)).toEqual({ passive: false });
+            set$(mockCtx, "isScrollActive", false);
         } finally {
             act(() => renderer?.unmount());
+            jest.runAllTimers();
+            jest.useRealTimers();
+            interrupt.mockRestore();
         }
+        expect(wheelOptions()).toHaveLength(5);
         expect(scrollListeners.has("wheel")).toBe(false);
         expect(mockCtx.listeners.get("isScrollActive")?.size ?? 0).toBe(0);
+    });
+
+    it("captures animation state without interrupting a wheel consumed by a descendant", async () => {
+        resetMocks();
+        maxOffset = 1000;
+        ownerScroll = 800;
+        const interrupt = spyOn(cancellationModule, "interruptUserScroll").mockImplementation(() => true);
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-wheel-descendant-owner"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView onLayout={() => {}} style={{}} useWindowScroll />,
+                );
+            });
+            const capture = addEventListener.mock.calls.find(
+                ([type, , options]: any) => type === "wheel" && options?.capture,
+            )?.[1];
+            const bubble = scrollListeners.get("wheel");
+            const event = {
+                cancelable: true,
+                defaultPrevented: false,
+                deltaY: -40,
+                preventDefault: mock(() => {}),
+                timeStamp: 1000,
+            };
+            mockCtx.state.scrollingTo = { animated: true, index: 50 };
+            capture?.(event as any);
+            expect(interrupt).not.toHaveBeenCalled();
+            event.defaultPrevented = true;
+            bubble?.(event as any);
+            expect(interrupt).not.toHaveBeenCalled();
+
+            const nextEvent = { ...event, defaultPrevented: false, timeStamp: 2000 };
+            capture?.(nextEvent as any);
+            set$(mockCtx, "isScrollActive", true);
+            // A descendant application listener cancels the request before the list's bubble listener.
+            mockCtx.state.scrollingTo = undefined;
+            ownerScroll = 600;
+            set$(mockCtx, "isScrollActive", false);
+            expect(addEventListener.mock.calls.filter(([type]) => type === "wheel").at(-1)?.[2]).toEqual({
+                passive: false,
+            });
+            mockCtx.state.pendingScrollResolve = undefined;
+            bubble?.(nextEvent as any);
+            expect(interrupt).toHaveBeenCalledWith(mockCtx, -40, 600);
+            expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        } finally {
+            act(() => renderer?.unmount());
+            interrupt.mockRestore();
+        }
     });
 
     it("leaves a non-cancelable wheel to native scrolling when it interrupts an animation", async () => {
@@ -2360,7 +2446,7 @@ it("distinguishes owned scrolls and overlay presses from accepted wheel input", 
     }
 });
 
-it("registers passive continuous input listeners and removes every input listener", async () => {
+it("registers passive touch listeners and removes every input listener", async () => {
     registerWebScrollMocks();
     resetMocks();
     const { ListComponentScrollView } = await import(
@@ -2374,7 +2460,7 @@ it("registers passive continuous input listeners and removes every input listene
             </ListComponentScrollView>,
         );
     });
-    for (const event of ["wheel", "touchstart", "touchmove"]) {
+    for (const event of ["touchstart", "touchmove"]) {
         expect(addEventListener).toHaveBeenCalledWith(event, expect.any(Function), { passive: true });
     }
     for (const event of ["keydown", "pointerdown", "pointerup", "pointercancel"]) {
@@ -2383,5 +2469,11 @@ it("registers passive continuous input listeners and removes every input listene
     }
     const registered = [...scrollListeners.entries()];
     act(() => renderer!.unmount());
-    for (const [event, listener] of registered) expect(removeEventListener).toHaveBeenCalledWith(event, listener);
+    for (const [event, listener] of registered) {
+        expect(removeEventListener).toHaveBeenCalledWith(event, listener);
+    }
+    const capture = addEventListener.mock.calls.find(
+        ([type, , options]: any) => type === "wheel" && options?.capture,
+    )?.[1];
+    expect(removeEventListener).toHaveBeenCalledWith("wheel", capture, true);
 });
