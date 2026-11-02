@@ -99,7 +99,9 @@ export default function ChatEndFollowExample() {
                             </div>
                         ) : undefined
                     }
-                    maintainScrollAtEnd={params.get("maintain") !== "false"}
+                    maintainScrollAtEnd={
+                        params.get("maintain") === "animated" ? { animated: true } : params.get("maintain") !== "false"
+                    }
                     maintainVisibleContentPosition
                     recycleItems
                     ref={ref}

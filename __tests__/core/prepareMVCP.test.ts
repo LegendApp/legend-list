@@ -308,7 +308,6 @@ describe("prepareMVCP", () => {
             withWebPlatform(() => {
                 mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
                 mockState.pendingScrollToEnd = {
-                    resolve: () => {},
                     token: 1,
                 };
                 mockState.mvcpAnchorLock = {
@@ -331,7 +330,6 @@ describe("prepareMVCP", () => {
         it("keeps native dataChanged adjustments while a scrollToEnd is pending", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
             mockState.pendingScrollToEnd = {
-                resolve: () => {},
                 token: 1,
             };
 
@@ -985,7 +983,7 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
         });
 
-        it("should handle switching between scroll targets", () => {
+        it("ignores a prepared adjustment after switching scroll targets", () => {
             // First preparation with scroll target
             setScrollingTo({ animated: true, index: 2, offset: 0 });
             const adjust1 = expectAdjustFunction(prepareMVCP(mockCtx));
@@ -998,15 +996,15 @@ describe("prepareMVCP", () => {
             setLayoutValue(mockState, "positions", "item-2", 300); // Original target
             setLayoutValue(mockState, "positions", "item-3", 500); // New target
 
-            adjust1(); // Should track item-2
-            adjust2(); // Should track item-3
+            adjust1();
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+            adjust2();
 
-            expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 50, undefined); // item-2: 300-250
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 50, undefined); // item-3: 500-450
+            expect(requestAdjustSpy).toHaveBeenCalledTimes(1);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined); // item-3: 500-450
         });
 
-        it("should handle changing from scrollingTo to visible items", () => {
+        it("ignores a prepared target adjustment after returning to visible items", () => {
             // First with scrollingTo
             setScrollingTo({ animated: true, index: 2, offset: 0 });
             const adjust1 = expectAdjustFunction(prepareMVCP(mockCtx));
@@ -1019,12 +1017,12 @@ describe("prepareMVCP", () => {
             setLayoutValue(mockState, "positions", "item-2", 300); // scroll target
             setLayoutValue(mockState, "positions", "item-1", 150); // first visible item
 
-            adjust1(); // Should track item-2
-            adjust2(); // Should track item-1
+            adjust1();
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+            adjust2();
 
-            expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 50, undefined); // item-2
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 50, undefined); // item-1
+            expect(requestAdjustSpy).toHaveBeenCalledTimes(1);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined); // item-1
         });
     });
 

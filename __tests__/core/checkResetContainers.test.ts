@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
@@ -48,7 +48,69 @@ describe("checkResetContainers", () => {
         checkThresholdsSpy.mockRestore();
     });
 
-    it("resets end reached state and boundary checks when maintainScrollAtEnd is disabled", () => {
+    it.each([false, true])("retains end measurements only while following or deferred (pending=%s)", (pending) => {
+        const previousData = state.props.data;
+        const data = [...previousData, { id: "item-3", value: "C" }];
+        state.previousData = previousData;
+        state.props.data = data;
+        state.props.maintainScrollAtEnd = { on: { dataChange: true } };
+        state.pendingEndMeasurements = new Set(["item-2", "removed-key"]);
+        doMaintainScrollAtEndSpy.mockImplementation(() => {
+            state.pendingMaintainScrollAtEnd = pending;
+            return false;
+        });
+
+        checkResetContainers(ctx, data);
+
+        expect(state.pendingEndMeasurements).toEqual(pending ? new Set(["item-2", "item-3"]) : undefined);
+    });
+
+    it("retains appended measurements after an immediate follow", () => {
+        const previousData = state.props.data;
+        const data = [...previousData, { id: "item-3", value: "C" }];
+        state.previousData = previousData;
+        state.props.data = data;
+        state.props.maintainScrollAtEnd = { on: { dataChange: true } };
+        doMaintainScrollAtEndSpy.mockReturnValue(true);
+        checkResetContainers(ctx, data);
+        expect(state.pendingEndMeasurements).toEqual(new Set(["item-3"]));
+    });
+
+    for (const [kind, ids, columns, follows] of [
+        ["references", ["item-1", "item-2", "item-3"], false, true],
+        ["immutable keys", ["item-1", "item-2", "item-3"], false, true],
+        ["reorder", ["item-2", "item-1", "item-3"], false, false],
+        ["truncate", ["item-1"], false, false],
+        ["replace", ["new", "item-2", "item-3"], false, false],
+        ["columns", ["item-1", "item-2", "item-3"], true, false],
+    ] as const) {
+        it(`follows only a strict key-preserving append (${kind})`, () => {
+            const previous = state.props.data;
+            const data = ids.map((id) =>
+                kind === "references" ? (previous.find((item) => item.id === id) ?? { id }) : { id },
+            );
+            state.previousData = previous;
+            state.props.data = data;
+            state.props.maintainScrollAtEnd = { on: { dataAppend: true } };
+            checkResetContainers(ctx, data, { didColumnsChange: columns });
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledTimes(follows ? 1 : 0);
+        });
+    }
+
+    it("skips key extraction for an unchanged reference prefix in append mode", () => {
+        const previousData = Array.from({ length: 5000 }, (_, id) => ({ id }));
+        const data = [...previousData, { id: 5000 }];
+        const keyExtractor = mock((item: { id: number }) => String(item.id));
+        state.previousData = previousData;
+        state.props.data = data;
+        state.props.keyExtractor = keyExtractor;
+        state.props.maintainScrollAtEnd = { on: { dataAppend: true, itemLayout: true } };
+        checkResetContainers(ctx, data);
+        expect(keyExtractor).not.toHaveBeenCalled();
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalled();
+    });
+
+    it("checks boundaries without resetting the last dispatched edge when maintainScrollAtEnd is disabled", () => {
         const previousData = state.props.data;
         const newData = [...previousData, { id: "item-3", value: "C" }];
         state.previousData = previousData;
@@ -61,7 +123,7 @@ describe("checkResetContainers", () => {
             doMVCP: true,
         });
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
-        expect(state.isEndReached).toBe(false);
+        expect(state.isEndReached).toBe(true);
         expect(checkThresholdsSpy).toHaveBeenCalledWith(ctx);
         expect(state.previousData).toBeUndefined();
     });

@@ -19,8 +19,10 @@ End following is disabled to isolate content clamping and MVCP.
 The original code updates an Animated content extent immediately while Fabric row
 positions wait for React. The regression asserts coherent geometry both before
 and after the commit, vertically and horizontally. The fix uses the same React
-subscription path for content extent as Fabric row positions. Old architecture
-retains its Animated path, covered in a separate test process.
+subscription path for content extent as Fabric row positions, keeping the Animated
+extent as a minimum so growth never waits for the commit (anchored end space
+shrinks outside React). Old architecture retains its Animated path, covered in
+a separate test process.
 
 This test proves the mismatched publication order. It does not measure the duration
 or visibility of a native frame.

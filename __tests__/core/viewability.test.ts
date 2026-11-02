@@ -97,6 +97,8 @@ describe("viewability system", () => {
 
         it("preserves the item percentage threshold when a tall row fills the remaining viewport", () => {
             const { token, items } = measure(1000, 335, { itemVisiblePercentThreshold: 50 });
+            expect(token.scrollSize).toBe(245);
+            expect(measure(1000, 0, { itemVisiblePercentThreshold: 50 }).token.scrollSize).toBe(580);
             expect(token.sizeVisible).toBe(245);
             expect(token.percentVisible).toBe(24.5);
             expect(token.percentOfScroller).toBe(100);
@@ -131,6 +133,48 @@ describe("viewability system", () => {
             expect(items).toHaveLength(1);
         });
     });
+
+    for (const rtl of [false, true]) {
+        it(`uses horizontal start padding for visible pixels (rtl=${rtl})`, () => {
+            const state = createMockState({
+                idCache: ["row"],
+                indexByKey: new Map([["row", 0]]),
+                positions: [0],
+                props: {
+                    data: ["row"],
+                    horizontal: true,
+                    keyExtractor: (item: string) => item,
+                    rtl,
+                    stylePaddingLeft: rtl ? 70 : 20,
+                    stylePaddingRight: rtl ? 20 : 70,
+                },
+                scroll: 0,
+                sizes: new Map([["row", 100]]),
+            });
+            const ctx = createMockContext({
+                alignItemsAtEndPadding: 10,
+                containerItemKey0: "row",
+                headerSize: 5,
+                numContainers: 1,
+                stylePaddingTop: 50,
+            });
+            ctx.state = state;
+
+            updateViewableItems(
+                state,
+                ctx,
+                [{ viewabilityConfig: { id: "horizontal", itemVisiblePercentThreshold: 60 } }],
+                100,
+                0,
+                0,
+            );
+
+            const token = ctx.mapViewabilityAmountValues.get(0)!;
+            expect(token.sizeVisible).toBe(65);
+            expect(token.percentVisible).toBe(65);
+            expect(token.isViewable).toBe(true);
+        });
+    }
 
     describe("setupViewability", () => {
         it("should return undefined when no viewability config provided", () => {

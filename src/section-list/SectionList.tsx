@@ -98,6 +98,14 @@ export type SectionListProps<ItemT, SectionT extends SectionBase<ItemT> = Sectio
     onViewableItemsChanged?: SectionListOnViewableItemsChanged<ItemT, SectionT>;
 };
 
+/**
+ * Key-based methods use flattened keys: `${sectionKey}:item:${itemKey}` for items,
+ * `${sectionKey}:header` and `${sectionKey}:footer` for section chrome,
+ * `${sectionKey}:separator:${itemIndex}` for item separators, and
+ * `${sectionKey}:section-separator` for section separators.
+ * `sectionKey` is the section's key, or `section-${sectionIndex}` when omitted; `itemKey` comes
+ * from the section or list keyExtractor. anchorVisibleContent accepts and returns these same keys.
+ */
 export type SectionListRef = LegendListRef & {
     scrollToLocation(params: SectionListScrollParams): void;
 };

@@ -4,9 +4,10 @@ import { Text } from "react-native";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { getContainerLayoutEffectScope } from "../../src/core/scheduleContainerLayout";
+import { Platform } from "../../src/platform/Platform";
 import { StateProvider, set$, useArr$, useStateContext } from "../../src/state/state";
 import { createMockState } from "../__mocks__/createMockState";
-import TestRenderer, { act } from "../helpers/testRenderer";
+import TestRenderer, { act, type ReactTestRenderer } from "../helpers/testRenderer";
 import { registerBaseModuleMocks } from "../setup";
 
 type TestItem = { id: string; label: string };
@@ -183,6 +184,72 @@ describe("Containers layout-effect measurement scheduling", () => {
 
         return { ctx: ctxReady!, renderer: renderer! };
     }
+
+    it("refreshes data changed before first layout without repeating stale measurements", async () => {
+        const originalPlatform = Platform.OS;
+        Platform.OS = "ios";
+        const { LegendList } = await import("../../src/components/LegendList?prelayout-measurement-retry");
+        let ctx: ReturnType<typeof useStateContext>;
+        let scrollProps: any;
+        let commits = 0;
+        const Surface = React.forwardRef((props: any, ref: React.Ref<any>) => {
+            ctx = useStateContext();
+            scrollProps = props;
+            React.useImperativeHandle(ref, () => ({ measure: () => {}, scrollTo: () => {} }));
+            return <>{props.children}</>;
+        });
+        let items = Array.from({ length: 10 }, (_, index) => ({ id: String(index) }));
+        const list = () => (
+            <React.Profiler
+                id="prelayout"
+                onRender={() => {
+                    if (++commits > 80) throw new Error("stale measurement retry did not settle");
+                }}
+            >
+                <LegendList
+                    data={items}
+                    estimatedItemSize={100}
+                    estimatedListSize={{ height: 0, width: 0 }}
+                    keyExtractor={(item) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }) => <Text>{item.id}</Text>}
+                    renderScrollComponent={(props) => <Surface {...props} />}
+                />
+            </React.Profiler>
+        );
+        let renderer: ReactTestRenderer;
+        await act(async () => {
+            renderer = TestRenderer.create(list());
+        });
+        try {
+            expect(ctx!.state.scrollLength).toBe(0);
+            items = [{ id: "inserted" }, ...items];
+            await act(async () => renderer!.update(list()));
+            items = items.slice(5);
+            await act(async () => renderer!.update(list()));
+            expect(ctx!.state.containerItemKeys.size).toBe(0);
+            await act(async () => {
+                scrollProps.onLayout({ nativeEvent: { layout: { height: 500, width: 320, x: 0, y: 0 } } });
+            });
+            expect([...ctx!.state.containerItemKeys.keys()].every((key) => items.some((item) => item.id === key))).toBe(
+                true,
+            );
+            expect(ctx!.state.containerItemKeys.size).toBeGreaterThan(0);
+            for (let frame = 0; frame < 4; frame++) {
+                await act(async () => {
+                    await new Promise((resolve) => requestAnimationFrame(resolve));
+                });
+            }
+            const settledCommits = commits;
+            await act(async () => {
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+            });
+            expect(commits).toBe(settledCommits);
+        } finally {
+            await act(async () => renderer!.unmount());
+            Platform.OS = originalPlatform;
+        }
+    });
 
     it("applies one coherent position recalculation for all containers committed together", async () => {
         const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});

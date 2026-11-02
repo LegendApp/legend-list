@@ -3,7 +3,9 @@ import "../setup";
 
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { scrollToEnd } from "@/core/scrollToEnd";
+import { updateItemPositions } from "@/core/updateItemPositions";
 import { Platform } from "@/platform/Platform";
+import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import {
     createWebScrollHarness,
     flushMicrotasks,
@@ -35,18 +37,13 @@ function stepUntil(h: WebScrollHarness, offset: number) {
     }
 }
 
-/** Offset that puts `index` at `viewPosition` within the viewport, clamped to the content. */
-function alignedOffset(h: WebScrollHarness, index: number, viewPosition = 0) {
+/** Offset that aligns the item's end with the viewport, clamped to the content. */
+function endAlignedOffset(h: WebScrollHarness, index: number) {
     const size = h.state.sizes.get(`item_${index}`)!;
-    return h.targetOffsetForIndex(index) === 0 && viewPosition === 0
-        ? 0
-        : Math.max(
-              0,
-              Math.min(
-                  h.state.positions[index]! - viewPosition * (h.state.scrollLength - size),
-                  h.ctx.state.totalSize - h.state.scrollLength,
-              ),
-          );
+    return Math.max(
+        0,
+        Math.min(h.state.positions[index]! - (h.state.scrollLength - size), h.state.totalSize - h.state.scrollLength),
+    );
 }
 
 beforeEach(() => {
@@ -59,6 +56,21 @@ afterEach(() => {
 });
 
 describe("animated web scrolls resolve only once landed", () => {
+    for (const mvcp of [false, { size: false }] as const) {
+        it(`verifies an instant index target after measurement with MVCP ${JSON.stringify(mvcp)}`, async () => {
+            const h = setup();
+            h.state.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(mvcp);
+            const result = trackScroll(h.ref.scrollToIndex({ animated: false, index: 50 }));
+            await flushMicrotasks();
+            h.measure({ 45: 400, 46: 400, 47: 400, 48: 400, 49: 400 });
+            await runUntilResolved(h, result);
+            expect(result.resolved).toBe(true);
+            expect(result.value).toBeUndefined();
+            expect(h.browser.offset).toBe(h.state.positions[50]!);
+            expect(h.browser.offset).toBe(6500);
+        });
+    }
+
     describe("late measurement", () => {
         it("does not resolve while passing a recomputed target on the way to the issued destination", async () => {
             const h = setup();
@@ -205,12 +217,12 @@ describe("animated web scrolls resolve only once landed", () => {
         it("tracks a variable-height target that measures late with viewPosition 1", async () => {
             const h = setup({ itemSize: (index) => 50 + (index % 5) * 30 });
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 40, viewPosition: 1 }));
-            const initialTarget = alignedOffset(h, 40, 1);
+            const initialTarget = endAlignedOffset(h, 40);
             expect(h.browser.destination).toBe(initialTarget);
 
             h.browser.step(600);
             h.measure({ 12: 400, 40: 320 });
-            const landed = alignedOffset(h, 40, 1);
+            const landed = endAlignedOffset(h, 40);
             expect(landed).not.toBe(initialTarget);
 
             await runUntilResolved(h, scroll);
@@ -288,6 +300,37 @@ describe("animated web scrolls resolve only once landed", () => {
         });
     });
 
+    it("retries an instant request when DOM content catches up before verification", async () => {
+        const h = setup();
+        const scroller = h.state.refScroller.current!;
+        const originalScrollTo = scroller.scrollTo;
+        scroller.scrollTo = (options) => {
+            originalScrollTo({ ...options, y: Math.min(options.y!, 3000) });
+            scroller.scrollTo = originalScrollTo;
+        };
+        const scroll = trackScroll(h.ref.scrollToOffset({ animated: false, offset: 5000 }));
+        expect(h.browser.offset).toBe(3000);
+
+        await runUntilResolved(h, scroll);
+        expect(scroll.resolved).toBe(true);
+        expect(scroll.value).toBeUndefined();
+        expect(h.browser.offset).toBe(5000);
+        expect(h.scrollToCalls).toHaveLength(2);
+        expect(h.scrollToCalls[1]).toEqual({ animated: false, y: 5000 });
+    });
+
+    it("reports unreachable for a first instant request rejected by mandatory snapping", async () => {
+        const h = setup();
+        const scroller = h.state.refScroller.current!;
+        const originalScrollTo = scroller.scrollTo;
+        scroller.scrollTo = (options) => originalScrollTo({ ...options, y: Math.round(options.y! / 1000) * 1000 });
+        const scroll = trackScroll(h.ref.scrollToOffset({ animated: false, offset: 1050 }));
+        await runUntilResolved(h, scroll);
+        expect(scroll.resolved).toBe(true);
+        expect(scroll.value).toBeUndefined();
+        expect(h.browser.offset).toBe(1000);
+    });
+
     describe("settling short of the target", () => {
         it("retries when the idle timer fires while the smooth scroll is stalled", async () => {
             const h = setup();
@@ -355,7 +398,7 @@ describe("animated web scrolls resolve only once landed", () => {
             h.clock.advance(3000);
             await flushMicrotasks();
 
-            expect(scroll.value).toEqual({ reason: "interrupted" });
+            expect(scroll.value).toBeUndefined();
             expect(h.scrollToCalls).toHaveLength(2);
         });
 
@@ -372,7 +415,7 @@ describe("animated web scrolls resolve only once landed", () => {
 
             h.browser.interruptByUser("touchstart");
             await flushMicrotasks();
-            expect(scroll.value).toEqual({ reason: "interrupted" });
+            expect(scroll.value).toBeUndefined();
             expect(h.state.pendingMaintainScrollAtEnd).toBe(false);
             expect(h.state.maintainingScrollAtEnd).toBeUndefined();
             expect(h.state.endFollowInterrupted).toBe(true);
@@ -393,7 +436,7 @@ describe("animated web scrolls resolve only once landed", () => {
                 h.measure({ 30: 300 });
                 h.browser.interruptByUser(input);
                 await flushMicrotasks();
-                expect(scroll.value).toEqual({ reason: "interrupted" });
+                expect(scroll.value).toBeUndefined();
                 expect(h.state.scrollingTo).toBeUndefined();
 
                 h.clock.advance(3000);
@@ -417,7 +460,7 @@ describe("animated web scrolls resolve only once landed", () => {
             const replacement = trackScroll(h.ref.scrollToOffset({ animated: true, offset: 2000 }));
             h.clock.tick();
             await flushMicrotasks();
-            expect(first.value).toEqual({ reason: "superseded" });
+            expect(first.value).toBeUndefined();
             expect(replacement.resolved).toBe(false);
             h.state.didDataChange = false;
             await runUntilResolved(h, replacement);
@@ -465,7 +508,7 @@ describe("animated web scrolls resolve only once landed", () => {
             h.browser.step(100);
             h.browser.interruptByUser();
             await flushMicrotasks();
-            expect(scroll.value).toEqual({ reason: "interrupted" });
+            expect(scroll.value).toBeUndefined();
             h.clock.advance(3000);
             expect(h.scrollToCalls).toHaveLength(3);
         });
@@ -481,7 +524,7 @@ describe("animated web scrolls resolve only once landed", () => {
 
             const second = trackScroll(h.ref.scrollToIndex({ animated: true, index: 10 }));
             await flushMicrotasks();
-            expect(first.value).toEqual({ reason: "superseded" });
+            expect(first.value).toBeUndefined();
 
             await runUntilResolved(h, second);
             expect(second.value).toBeUndefined();
@@ -490,6 +533,20 @@ describe("animated web scrolls resolve only once landed", () => {
     });
 
     describe("data changes during the scroll", () => {
+        it("settles an active end target when its data becomes empty", async () => {
+            const h = setup();
+            const scroll = trackScroll(h.ref.scrollToEnd({ animated: true }));
+            h.browser.step(400);
+            h.setData(0);
+            updateItemPositions(h.ctx, true);
+
+            await runUntilResolved(h, scroll);
+
+            expect(scroll.resolved).toBe(true);
+            expect(scroll.value).toBeUndefined();
+            expect(h.state.scrollingTo).toBeUndefined();
+        });
+
         it("retries against the clamped index and preserves alignment after data shrinks", async () => {
             const h = setup();
             const scroll = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50, viewOffset: 600 }));
@@ -778,7 +835,7 @@ for (const mode of ["vertical LTR", "horizontal LTR", "negative RTL", "inverted 
             const scroll = trackScroll(h.ref.scrollToOffset({ animated: true, offset: 1250 }));
             await runUntilResolved(h, scroll);
             expect(scroll.resolved).toBe(true);
-            expect(scroll.value).toEqual({ reason: "superseded" });
+            expect(scroll.value).toBeUndefined();
             expect(h.browser.offset).toBe(1000);
             expect(h.scrollToCalls).toHaveLength(3);
             h.clock.advance(5000);
@@ -794,7 +851,7 @@ for (const mode of ["vertical LTR", "horizontal LTR", "negative RTL", "inverted 
                 h.browser.interruptByUser(input);
                 await flushMicrotasks();
                 expect(scroll.resolved).toBe(true);
-                expect(scroll.value).toEqual({ reason: "interrupted" });
+                expect(scroll.value).toBeUndefined();
                 expect(h.browser.offset).toBe(1000);
                 expect(h.state.scrollingTo).toBeUndefined();
             });

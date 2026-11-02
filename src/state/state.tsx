@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
+import type { DoScrollToParams } from "@/core/doScrollParams";
 import type { ScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type { LooseView } from "@/platform/scrollview-types";
@@ -12,7 +13,7 @@ import type {
     ViewabilityCallback,
     ViewToken,
 } from "@/types.base";
-import type { InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
+import type { InternalScrollTarget, InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
 
 // This is an implementation of a simple state management system, inspired by Legend State.
 // It stores values and listeners in Maps, with peek$ and set$ functions to get and set values.
@@ -49,7 +50,6 @@ export type ListenerType =
     | "stylePaddingTop"
     | "totalSize"
     | "isFollowingEnd"
-    | "distanceFromEnd"
     | "isAtEnd"
     | "isAtStart"
     | "isNearEnd"
@@ -72,7 +72,6 @@ export type LegendListListenerType = Extract<
     | "footerSize"
     | "headerSize"
     | "isFollowingEnd"
-    | "distanceFromEnd"
     | "isAtEnd"
     | "isAtStart"
     | "isNearEnd"
@@ -101,7 +100,6 @@ export type ListenerTypeValueMap = {
     footerSize: number;
     headerSize: number;
     isFollowingEnd: boolean;
-    distanceFromEnd: number;
     isAtEnd: boolean;
     isAtStart: boolean;
     isNearEnd: boolean;
@@ -169,6 +167,11 @@ export interface StateContext {
     state: InternalState;
     scrollAxisGap: number;
     scrollRequestTracker?: ScrollRequestTracker;
+    // Late-bound by LegendList so lower-level scroll modules can call back up without import cycles.
+    doMaintainScrollAtEnd?: () => boolean;
+    doScrollTo?: (params: DoScrollToParams) => void;
+    interruptUserScroll?: () => void;
+    scrollTo?: (params: InternalScrollTarget) => void;
     scrollToEnd?: (options?: ScrollToEndOptions) => boolean;
     values: Map<ListenerType, any>;
     viewRefs: Map<number, React.RefObject<LooseView | null>>;

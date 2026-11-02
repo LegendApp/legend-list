@@ -4,7 +4,7 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { invalidateFixedItemSizes } from "../../src/core/containerItemMetadata";
-import { interruptMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
+import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
 import {
     batchItemSizeUpdates,
@@ -130,6 +130,7 @@ describe("updateItemSizes", () => {
             let resolve: (() => void) | undefined;
             for (const height of [518, 552, 579, 591, 580, 561, 535, 500]) {
                 updateItemSizes(mockCtx, { itemKey: "item_2", size: { height, width: 400 } });
+                await Promise.resolve();
                 expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
                 expect(mockState.scrollingTo?.isScrollToEnd).toBe(true);
                 resolve ??= mockState.pendingScrollResolve;
@@ -143,6 +144,7 @@ describe("updateItemSizes", () => {
             flushFrames();
             expect(mockState.scrollingTo).toBeUndefined();
             updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 520, width: 400 } });
+            await Promise.resolve();
             expect(mockState.totalSize - mockState.scrollLength - physicalScroll).toBe(0);
             const nextResolve = mockState.pendingScrollResolve;
             expect(nextResolve).toBeDefined();
@@ -154,6 +156,7 @@ describe("updateItemSizes", () => {
             physicalScroll = 800;
             mockState.scroll = 800;
             updateItemSizes(mockCtx, { itemKey: "item_2", size: { height: 550, width: 400 } });
+            await Promise.resolve();
             expect(physicalScroll).toBe(800);
             expect(mockState.scrollingTo).toBeUndefined();
             expect(mockState.pendingScrollResolve).toBeUndefined();
@@ -163,6 +166,75 @@ describe("updateItemSizes", () => {
             globalThis.cancelAnimationFrame = originalCAF;
         }
     });
+
+    for (const maintenance of [false, true, "animated"] as const) {
+        it(`follows web row growth with one scroll owner (maintainScrollAtEnd=${maintenance})`, async () => {
+            Platform.OS = "web";
+            const originalRAF = globalThis.requestAnimationFrame;
+            const frames: FrameRequestCallback[] = [];
+            globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+            let physicalScroll = 900;
+            let domSize = 1500;
+            mockState.scroll = 900;
+            mockState.scrollPending = 900;
+            mockCtx.values.set("totalSize", domSize);
+            mockState.props.maintainScrollAtEnd = maintenance
+                ? { animated: maintenance === "animated", onItemLayout: true }
+                : undefined;
+            mockCtx.values.set("isFollowingEnd", !!maintenance);
+            mockState.initialScroll = { index: 2, viewPosition: 1 };
+            mockState.initialScrollSession = { kind: "bootstrap", previousDataLength: 3 };
+            mockState.positions = [0, 500, 1000];
+            for (let index = 0; index < 3; index++) {
+                const key = `item_${index}`;
+                mockState.sizes.set(key, 500);
+                mockState.sizesKnown.set(key, 500);
+                assignContainer(index, key);
+            }
+            // React commits the published content extent after the observer delivery,
+            // before paint. Until then the DOM clamps to the old extent.
+            listen$(mockCtx, "totalSize", (value) =>
+                queueMicrotask(() => {
+                    domSize = value;
+                }),
+            );
+            const scrollTo = mock(({ y = 0 }: { y?: number; animated?: boolean }) => {
+                physicalScroll = Math.min(y, domSize - mockState.scrollLength);
+            });
+            mockState.refScroller.current = {
+                getCurrentScrollOffset: () => physicalScroll,
+                getMaxScrollOffset: () => domSize - mockState.scrollLength,
+                getScrollableNode: () => ({}),
+                scrollTo,
+            } as any;
+            mockCtx.scrollToEnd = (options) => scrollToEnd(mockCtx, options);
+            try {
+                updateItemSizesBatch(mockCtx, [
+                    { itemKey: "item_0", size: { height: 560, width: 400 } },
+                    { itemKey: "item_1", size: { height: 560, width: 400 } },
+                    { itemKey: "item_2", size: { height: 560, width: 400 } },
+                ]);
+                await Promise.resolve();
+                expect(domSize).toBe(1680);
+                expect(mockState.positions[2]).toBe(1120);
+                if (maintenance === "animated") {
+                    // The preserved target must yield before the smooth follow starts.
+                    expect(scrollTo).not.toHaveBeenCalled();
+                    expect(physicalScroll).toBe(900);
+                    for (const callback of frames.splice(0)) callback(0);
+                } else {
+                    // No animation frame has run: instant growth must paint at the true end.
+                    expect(physicalScroll).toBe(1080);
+                }
+                expect(scrollTo).toHaveBeenCalledTimes(1);
+                expect(scrollTo).toHaveBeenCalledWith({ animated: maintenance === "animated", x: 0, y: 1080 });
+            } finally {
+                mockState.isUnmounted = true;
+                mockState.scheduledWork.dispose();
+                globalThis.requestAnimationFrame = originalRAF;
+            }
+        });
+    }
 
     it("keeps append-only following idle during a measured item resize", () => {
         Platform.OS = "web";

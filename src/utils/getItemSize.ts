@@ -75,10 +75,8 @@ export function getItemSize(
         return sizeKnown;
     }
 
-    let size: number | undefined;
     const renderedSize = sizes.get(key);
-
-    size = getKnownOrFixedSize(ctx, key, index, data, resolved);
+    let size = getKnownOrFixedSize(ctx, key, index, data, resolved);
     if (size !== undefined) {
         setSize(ctx, key, size, notifyTotalSize);
         return size;

@@ -24,7 +24,7 @@ describe("Android item-resize end clamping", () => {
         const requestAdjust = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjust = prepareMVCP(ctx, false, "item-size");
-            ctx.state.positions[2] -= 50;
+            ctx.state.positions[2]! -= 50;
             ctx.state.totalSize -= 50;
             adjust?.();
 
@@ -67,7 +67,7 @@ describe("Android item-resize end clamping", () => {
         const ctx = createResizeContext(700);
         try {
             const adjust = prepareMVCP(ctx, true, "data");
-            ctx.state.positions[2] -= 50;
+            ctx.state.positions[2]! -= 50;
             ctx.state.totalSize -= 50;
             adjust?.();
 
@@ -85,7 +85,7 @@ describe("Android item-resize end clamping", () => {
             const requestAdjust = spyOn(requestAdjustModule, "requestAdjust");
             try {
                 const adjust = prepareMVCP(ctx, false, "item-size");
-                ctx.state.positions[2] -= 50;
+                ctx.state.positions[2]! -= 50;
                 ctx.state.totalSize -= 50;
                 adjust?.();
 

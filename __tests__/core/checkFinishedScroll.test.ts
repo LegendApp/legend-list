@@ -1,7 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { checkFinishedScroll, checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
+import { doScrollTo } from "../../src/core/doScrollTo.native";
+import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -47,6 +50,40 @@ describe("checkFinishedScrollFallback", () => {
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     });
 
+    it.each(["ios", "android"] as const)("keeps %s RTL end retries in native coordinates", (platform) => {
+        Platform.OS = platform;
+        const scrollTo = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                hasScrolled: true,
+                lastNativeScrollTime: 0,
+                positions: [0],
+                props: { data: ["row"], horizontal: true, rtl: true },
+                refScroller: { current: { scrollTo } } as any,
+                scroll: 400,
+                scrollingTo: {
+                    animated: true,
+                    index: 0,
+                    isScrollToEnd: true,
+                    offset: 0,
+                    targetOffset: 700,
+                    viewPosition: 1,
+                },
+                scrollLength: 300,
+                scrollPending: 400,
+                sizesKnown: new Map([["item_0", 1000]]),
+            },
+        );
+        ctx.state.horizontalRTLScrollType = "inverted";
+        doScrollTo(ctx, { animated: true, horizontal: true, offset: 700 });
+        flushTimers(1);
+        expect(scrollTo.mock.calls).toEqual([[{ animated: true, x: 0, y: 0 }], [{ animated: true, x: 0, y: 0 }]]);
+        ctx.state.scheduledWork.dispose();
+    });
+
     for (const hasRecentProgress of [false, true]) {
         it(`keeps an animated native end request smooth (recent progress: ${hasRecentProgress})`, () => {
             Platform.OS = "ios";
@@ -74,6 +111,58 @@ describe("checkFinishedScrollFallback", () => {
             expect(ctx.state.scrollingTo).toBeDefined();
         });
     }
+
+    it("keeps a moving explicit end request pending until the delayed native top event", () => {
+        Platform.OS = "ios";
+        const resolve = mock(() => {});
+        const scrollTo = mock(() => {});
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                hasScrolled: true,
+                pendingScrollResolve: resolve,
+                positions: [0],
+                props: { data: ["row"], getFixedItemSize: () => 1000 },
+                refScroller: { current: { scrollTo } } as any,
+                scroll: 400,
+                scrollingTo: {
+                    animated: true,
+                    index: 0,
+                    isScrollToEnd: true,
+                    offset: 0,
+                    targetOffset: 800,
+                    viewPosition: 1,
+                },
+                scrollLength: 200,
+                scrollPending: 400,
+            },
+        );
+        let now = 1000;
+        const date = spyOn(Date, "now").mockImplementation(() => now);
+        try {
+            checkFinishedScrollFallback(ctx);
+            // A status-bar animation reverses the request without an early JS interruption event.
+            for (const offset of [500, 600, 650, 600, 500, 400, 300, 200, 100]) {
+                now += 100;
+                ctx.state.lastNativeScrollTime = now;
+                ctx.state.scroll = ctx.state.scrollPending = offset;
+                flushTimers(1);
+                expect(resolve).not.toHaveBeenCalled();
+            }
+            // UIKit's deceleration has sparse final frames before onScrollToTop.
+            // Retrying here restarts the end animation just before that callback cancels ownership.
+            now += 100;
+            flushTimers(1);
+            expect(scrollTo).not.toHaveBeenCalled();
+            expect(resolve).not.toHaveBeenCalled();
+            interruptUserScroll(ctx);
+            expect(resolve).toHaveBeenCalledWith();
+        } finally {
+            date.mockRestore();
+        }
+    });
 
     it("waits longer on native initial non-zero scroll when no native scroll event is observed on Android", () => {
         Platform.OS = "android";
@@ -168,15 +257,111 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 
-    it("settles an interrupted non-end request after observing native movement", () => {
+    for (const platform of ["ios", "android"] as const) {
+        it(`settles a stalled ${platform} end request after bounded retries`, () => {
+            Platform.OS = platform;
+            const resolve = mock(() => {});
+            const scrollTo = mock(() => {});
+            const ctx = createMockContext(
+                { totalSize: 1000 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    hasScrolled: true,
+                    pendingScrollResolve: resolve,
+                    positions: [0],
+                    props: { data: ["row"], getFixedItemSize: () => 1000 },
+                    refScroller: { current: { scrollTo } } as any,
+                    scroll: 300,
+                    scrollingTo: {
+                        animated: true,
+                        index: 0,
+                        isScrollToEnd: true,
+                        offset: 0,
+                        targetOffset: 800,
+                        viewPosition: 1,
+                    },
+                    scrollLength: 200,
+                    scrollPending: 300,
+                },
+            );
+            checkFinishedScrollFallback(ctx);
+            flushTimers(6);
+            expect(scrollTo).toHaveBeenCalledTimes(5);
+            expect(resolve).toHaveBeenCalledWith();
+            expect(ctx.state.scrollingTo).toBeUndefined();
+        });
+    }
+
+    for (const platform of ["ios", "android"] as const) {
+        it(`keeps internal ${platform} end-follow intent through continuously growing fallback targets`, async () => {
+            Platform.OS = platform;
+            const scrollTo = mock();
+            const ctx = createMockContext(
+                { isFollowingEnd: true, totalSize: 1000 },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    hasScrolled: true,
+                    maintainingScrollAtEnd: "instant",
+                    pendingMaintainScrollAtEnd: true,
+                    positions: [0],
+                    props: { data: ["row"], maintainScrollAtEnd: true },
+                    refScroller: { current: { scrollTo } } as any,
+                    scroll: 300,
+                    scrollingTo: {
+                        animated: false,
+                        index: 0,
+                        isScrollToEnd: true,
+                        offset: 0,
+                        targetOffset: 800,
+                        viewPosition: 1,
+                    },
+                    scrollLength: 200,
+                    scrollPending: 300,
+                    sizesKnown: new Map([["item_0", 1000]]),
+                },
+            );
+            ctx.scrollToEnd = mock(() => false);
+            const target = ctx.state.scrollingTo;
+            ctx.state.scrollingTo = undefined;
+            const completion = getScrollRequestTracker(ctx).runNowIfIdle(() => {
+                ctx.state.scrollingTo = target;
+                return true;
+            });
+            checkFinishedScrollFallback(ctx);
+            for (let tick = 1; tick <= 6; tick++) {
+                ctx.values.set("totalSize", 1000 + tick * 50);
+                ctx.state.sizesKnown.set("item_0", 1000 + tick * 50);
+                flushTimers(1);
+            }
+            expect(scrollTo).toHaveBeenCalledTimes(5);
+            expect(scrollTo).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 1050 });
+            expect(ctx.values.get("isFollowingEnd")).toBe(true);
+            expect(ctx.state.endFollowInterrupted).toBeFalsy();
+            expect(ctx.scrollToEnd).toHaveBeenCalledWith({ animated: false });
+            expect(await completion).toBeUndefined();
+            ctx.state.scheduledWork.dispose();
+        });
+    }
+
+    it("settles an unaligned native request after movement stops", () => {
         Platform.OS = "ios";
         const resolveScroll = mock(() => {});
+        const commit = mock(() => {});
         const ctx = createMockContext(
             { totalSize: 1000 },
             {
                 hasScrolled: true,
+                pendingMaintainScrollAtEnd: true,
                 pendingScrollResolve: resolveScroll,
                 scroll: 300,
+                scrollAdjustHandler: {
+                    commitPendingAdjust: commit,
+                    getAdjust: () => 0,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
+                },
                 scrollingTo: {
                     animated: true,
                     index: 5,
@@ -192,10 +377,55 @@ describe("checkFinishedScrollFallback", () => {
         checkFinishedScrollFallback(ctx);
         flushTimers(1);
 
-        expect(resolveScroll).toHaveBeenCalledTimes(1);
+        expect(commit).toHaveBeenCalledWith();
+        expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(ctx.state.scroll).toBe(300);
+        expect(resolveScroll).toHaveBeenCalledWith();
         expect(ctx.state.pendingScrollResolve).toBeUndefined();
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
+
+    for (const queuedReplacement of [false, true]) {
+        it(`preserves native fallback ownership (queued replacement: ${queuedReplacement})`, () => {
+            Platform.OS = "ios";
+            const resolve = mock(() => {});
+            const ctx = createMockContext(
+                { isFollowingEnd: true, totalSize: 1000 },
+                {
+                    didContainersLayout: true,
+                    hasScrolled: true,
+                    pendingScrollResolve: resolve,
+                    scroll: 300,
+                    scrollingTo: {
+                        animated: true,
+                        index: 5,
+                        isScrollToEnd: !queuedReplacement,
+                        offset: 500,
+                        targetOffset: 500,
+                        viewPosition: 0,
+                    },
+                    scrollLength: 200,
+                    scrollPending: 300,
+                },
+            );
+            const tracker = getScrollRequestTracker(ctx);
+            const token = queuedReplacement ? tracker.start(resolve) : undefined;
+            resolve.mockClear();
+            checkFinishedScrollFallback(ctx);
+            flushTimers(1);
+
+            expect(ctx.state.scrollingTo).toBeUndefined();
+            if (queuedReplacement) {
+                expect(resolve).not.toHaveBeenCalled();
+                expect(ctx.state.pendingScrollResolve).toBe(resolve);
+                expect(tracker.isCurrent(token!)).toBe(true);
+                expect(tracker.isWaitingToRun()).toBe(true);
+            } else {
+                expect(resolve).toHaveBeenCalledWith();
+                expect(ctx.values.get("isFollowingEnd")).toBe(false);
+            }
+        });
+    }
 
     it("keeps a coalesced animated end follow owned while native is moving and animates a stalled retarget", () => {
         Platform.OS = "ios";

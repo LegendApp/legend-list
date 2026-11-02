@@ -1,3 +1,4 @@
+import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
@@ -20,7 +21,9 @@ export function getAlignItemsAtEndPadding(ctx: StateContext) {
         state.props.data.length > 0 &&
         state.scrollLength > 0;
 
-    return shouldPad ? Math.max(0, state.scrollLength - getRawContentLength(ctx) - getContentInsetEnd(ctx)) : 0;
+    return shouldPad
+        ? Math.max(0, state.scrollLength - getRawContentLength(ctx) - getContentInsetTop(ctx) - getContentInsetEnd(ctx))
+        : 0;
 }
 
 export function updateContentMetricsState(ctx: StateContext) {

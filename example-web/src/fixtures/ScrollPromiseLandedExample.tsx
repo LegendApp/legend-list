@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList, type LegendListRef, type LegendListScrollResult } from "@legendapp/list/react";
+import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
@@ -93,17 +93,17 @@ export default function ScrollPromiseLandedExample() {
         return Math.round(observedOffset() - list.getState().positionAtIndex(TARGET_INDEX));
     };
 
-    const run = (action: string, scroll: () => Promise<LegendListScrollResult> | undefined) => {
+    const run = (action: string, scroll: () => Promise<void> | undefined) => {
         const start = performance.now();
         setReport(undefined);
-        void scroll()?.then((result) => {
+        void scroll()?.then(() => {
             const offsetFromTarget = measureOffset();
             const scrollTop = observedOffset();
             const resolved: Report = {
                 action,
                 elapsedMs: Math.round(performance.now() - start),
                 offsetFromTarget,
-                result: result ? result.reason : "landed",
+                result: "settled",
             };
             setReport(resolved);
             // An early resolve shows up as movement after .then while still off target. Movement that

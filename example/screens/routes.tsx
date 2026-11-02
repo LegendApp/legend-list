@@ -21,6 +21,7 @@ import { OPTIMIZATION_HOME_ENTRIES, OPTIMIZATION_ROUTE_SLUG } from "~/screens/ex
 import { ProductShelfExample } from "~/screens/examples/ProductShelfExample";
 import { ReanimatedSharedValuesExample } from "~/screens/examples/ReanimatedSharedValuesExample";
 import { SectionedDirectoryExample } from "~/screens/examples/SectionedDirectoryExample";
+import { TranslucentChatExample } from "~/screens/examples/TranslucentChatExample";
 import { VideoFeedExample } from "~/screens/examples/VideoFeedExample";
 import { VisibilityExample } from "~/screens/examples/VisibilityExample";
 import AccurateScrollToFixture from "~/screens/fixtures/accurate-scrollto";
@@ -76,6 +77,8 @@ import ProductShelfFixture from "~/screens/fixtures/product-shelf";
 import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
 import ScrollRegressionQaFixture from "~/screens/fixtures/scroll-regression-qa";
 import SectionListFixedSizeFixture from "~/screens/fixtures/section-list-fixed-size";
+import StatusBarFollowFixture from "~/screens/fixtures/status-bar-follow";
+import TopInsetFixture from "~/screens/fixtures/top-inset";
 import VideoFeedFixture from "~/screens/fixtures/video-feed";
 import AiChatFixture from "./fixtures/ai-chat";
 
@@ -118,14 +121,25 @@ const exampleComponents = {
     "video-feed": VideoFeedExample,
 } satisfies Record<ExampleSlug, ScreenComponent>;
 
-export const EXAMPLE_ROUTES: ExampleRouteDefinition[] = CURATED_EXAMPLES.map((example) => ({
-    component: exampleComponents[example.slug],
-    description: example.description,
-    group: example.group,
-    kind: "example",
-    slug: example.slug,
-    title: example.title,
-}));
+export const EXAMPLE_ROUTES: ExampleRouteDefinition[] = [
+    ...CURATED_EXAMPLES.map((example) => ({
+        component: exampleComponents[example.slug],
+        description: example.description,
+        group: example.group,
+        kind: "example" as const,
+        slug: example.slug,
+        title: example.title,
+    })),
+    {
+        component: TranslucentChatExample,
+        description:
+            "Streaming AI chat beneath a translucent header, with an overlay composer that follows the keyboard.",
+        group: "Messaging",
+        kind: "example",
+        slug: "translucent-chat",
+        title: "Translucent AI Chat",
+    },
+];
 
 const COMPARISON_ROUTE: RouteDefinition = {
     component: ComparisonsExample,
@@ -164,6 +178,25 @@ const DEBUGGING_ROUTE: RouteDefinition = {
 };
 
 export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
+    {
+        component: TopInsetFixture,
+        description:
+            "Checks index and region targets under a translucent header; add ?initial=1 for initialScrollIndex.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "top-inset",
+        title: "Top Inset",
+    },
+    {
+        component: StatusBarFollowFixture,
+        description: "Tests end-follow ownership after an iOS status-bar tap scrolls to the top.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "status-bar-follow",
+        title: "Status Bar Follow",
+    },
     {
         component: KeyboardViewabilityFixture,
         description: "Compares reported viewable rows with the area left visible above a real keyboard.",

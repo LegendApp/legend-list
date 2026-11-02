@@ -1,7 +1,7 @@
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
+import { getScrollRangeEnd } from "@/core/clampScrollOffset";
 import { setContainerLayoutBaseline } from "@/core/containerLayoutBaseline";
-import { type ItemSizeMeasurement, updateItemSizesBatch } from "@/core/updateItemSizes";
-import { getContentSize } from "@/state/getContentSize";
+import { type ItemSizeMeasurement, isContainerItemCurrent, updateItemSizesBatch } from "@/core/updateItemSizes";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 
@@ -20,7 +20,7 @@ export function measureContainersInLayoutEffect(
         const viewRef = ctx.viewRefs.get(containerId);
         const itemKey = peek$(ctx, `containerItemKey${containerId}`);
         const element = viewRef?.current as HTMLElement | null;
-        if (itemKey !== undefined && element) {
+        if (itemKey !== undefined && element && isContainerItemCurrent(ctx, containerId, itemKey)) {
             const generation = ctx.state.containerItemGenerations[containerId] ?? 0;
             const rect = element.getBoundingClientRect();
             // ResizeObserver uses this same border-box baseline to recognize the
@@ -43,15 +43,15 @@ export function measureContainersInLayoutEffect(
             const bootstrap =
                 state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
             if (bootstrap?.visibleIndices?.length && state.dataChangeEpoch === dataChangeEpoch) {
-                const measuredKeys = new Set(
-                    measurements
-                        .filter(
-                            ({ containerId, generation, itemKey }) =>
-                                peek$(ctx, `containerItemKey${containerId}`) === itemKey &&
-                                (state.containerItemGenerations[containerId] ?? 0) === generation,
-                        )
-                        .map(({ itemKey }) => itemKey),
-                );
+                const measuredKeys = new Set<string>();
+                for (const { containerId, generation, itemKey } of measurements) {
+                    if (
+                        peek$(ctx, `containerItemKey${containerId}`) === itemKey &&
+                        (state.containerItemGenerations[containerId] ?? 0) === generation
+                    ) {
+                        measuredKeys.add(itemKey);
+                    }
+                }
                 const isCurrentViewportMeasured = bootstrap.visibleIndices.every((index) =>
                     measuredKeys.has(getId(state, index)),
                 );
@@ -65,7 +65,7 @@ export function measureContainersInLayoutEffect(
                     );
                 });
                 const physicalMax = state.refScroller.current?.getMaxScrollOffset?.();
-                const layoutMax = Math.max(0, getContentSize(ctx) - state.scrollLength);
+                const layoutMax = getScrollRangeEnd(ctx);
                 if (
                     isCurrentViewportMeasured &&
                     isCurrentBufferMeasured &&

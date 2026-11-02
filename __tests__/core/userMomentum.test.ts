@@ -1,107 +1,152 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
-import { armUserMomentumStallCheck } from "../../src/core/userMomentum";
+import { rearmEndFollowIfSettled } from "../../src/core/finishMaintainScrollAtEnd";
+import { armUserScrollSettle, settleUserScroll } from "../../src/core/userMomentum";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { installFakeClock } from "../helpers/webScrollHarness";
 
-function makeStallContext() {
-    const timeouts: Array<{ callback: () => void; delay: number }> = [];
-    const ctx = createMockContext(
-        {},
+function makeContext() {
+    return createMockContext(
+        { totalSize: 1000 },
         {
-            isMomentumScrolling: true,
+            endFollowInterrupted: true,
             lastNativeScrollTime: 0,
-            releasedFromUserDrag: true,
+            props: { data: [0], maintainScrollAtEnd: {}, maintainScrollAtEndThreshold: 0.25 },
+            queuedInitialLayout: true,
+            scroll: 690,
+            scrollLength: 300,
+            userScrollContentSize: 1000,
         },
     );
-    ctx.state.scheduledWork.timeout = (callback, delay) => {
-        timeouts.push({ callback, delay });
-    };
-    return { ctx, timeouts };
 }
 
-describe("user momentum stall check", () => {
-    it("re-arms instead of finishing when the timer fires late", () => {
-        const { ctx, timeouts } = makeStallContext();
-        const realNow = Date.now;
-        const t0 = realNow();
-
+describe("user scroll settlement", () => {
+    it.each([false, true])("waits for native quiet (momentum: %s)", (momentum) => {
+        const clock = installFakeClock();
+        const ctx = makeContext();
+        let now = 0;
+        const date = spyOn(Date, "now").mockImplementation(() => now);
         try {
-            Date.now = () => t0;
-            armUserMomentumStallCheck(ctx);
-
-            // A blocked JS thread fires the check past its due time while
-            // scroll events may still be queued behind the block. Finishing
-            // now would resume following mid-flick; re-arm one more window.
-            Date.now = () => t0 + 650;
-            timeouts[0].callback();
-            expect(ctx.state.isMomentumScrolling).toBe(true);
-            expect(timeouts.length).toBe(2);
-
-            // With the thread healthy again, an on-time check over a silent
-            // native scroll still recovers the settled flick.
-            Date.now = () => t0 + 1150;
-            timeouts[1].callback();
-            expect(ctx.state.isMomentumScrolling).toBe(false);
-            expect(ctx.state.releasedFromUserDrag).toBe(false);
-        } finally {
-            Date.now = realNow;
-        }
-    });
-
-    it("finishes an on-time check once native scroll activity has stopped", () => {
-        const { ctx, timeouts } = makeStallContext();
-        const realNow = Date.now;
-        const t0 = realNow();
-
-        try {
-            Date.now = () => t0;
-            ctx.state.lastNativeScrollTime = t0;
-            armUserMomentumStallCheck(ctx);
-
-            // On time, with scroll events still fresh inside the window: the
-            // flick is live, so the check waits another window.
-            Date.now = () => t0 + 500;
-            ctx.state.lastNativeScrollTime = t0 + 400;
-            timeouts[0].callback();
-            expect(ctx.state.isMomentumScrolling).toBe(true);
-
-            // On time again with the native scroll silent past the window:
-            // the settled flick recovers and ownership releases.
-            Date.now = () => t0 + 1000;
-            timeouts[1].callback();
-            expect(ctx.state.isMomentumScrolling).toBe(false);
-            expect(ctx.state.releasedFromUserDrag).toBe(false);
-            expect(ctx.state.momentumStallFirstLateFireAt).toBeUndefined();
-        } finally {
-            Date.now = realNow;
-        }
-    });
-
-    it("bounds recovery when every check fires late", () => {
-        const { ctx, timeouts } = makeStallContext();
-        const realNow = Date.now;
-        const t0 = realNow();
-
-        try {
-            Date.now = () => t0;
-            armUserMomentumStallCheck(ctx);
-
-            // Every check arrives ~150ms too late to trust, so re-arms
-            // continue while the late-fire run stays inside the ceiling.
-            for (const fireAt of [650, 1300, 1950, 2600]) {
-                Date.now = () => t0 + fireAt;
-                timeouts.at(-1)!.callback();
-                expect(ctx.state.isMomentumScrolling).toBe(true);
+            ctx.state.isMomentumScrolling = momentum;
+            armUserScrollSettle(ctx);
+            for (now = 100; now <= 600; now += 100) {
+                ctx.state.lastNativeScrollTime = now - 50;
+                clock.advance(100);
+                expect(ctx.values.get("isFollowingEnd")).not.toBe(true);
             }
-
-            // The run has now outlived the ceiling: a permanently starved
-            // timer still recovers rather than suspend following forever.
-            Date.now = () => t0 + 3250;
-            timeouts.at(-1)!.callback();
-            expect(ctx.state.isMomentumScrolling).toBe(false);
+            const quiet = momentum ? 500 : 100;
+            now = 600 + quiet;
+            clock.advance(quiet);
+            expect(ctx.values.get("isFollowingEnd")).toBe(true);
         } finally {
-            Date.now = realNow;
+            ctx.state.scheduledWork.dispose();
+            date.mockRestore();
+            clock.restore();
         }
     });
+
+    it("uses fresh geometry even when following and threshold intent are latched", () => {
+        const ctx = makeContext();
+        ctx.values.set("isFollowingEnd", true);
+        ctx.values.set("isWithinMaintainScrollAtEndThreshold", true);
+        ctx.state.scroll = 500;
+        settleUserScroll(ctx);
+        expect(ctx.values.get("isFollowingEnd")).toBe(false);
+    });
+
+    it("keeps a new drag in control when an old momentum end arrives", () => {
+        const ctx = makeContext();
+        ctx.state.isDragging = true;
+        settleUserScroll(ctx);
+        expect(ctx.values.get("isFollowingEnd")).not.toBe(true);
+    });
+
+    it.each([
+        { contentSize: 1000, near: true, scroll: 690 },
+        { contentSize: 1150, near: true, scroll: 690 },
+        { contentSize: 1150, near: false, scroll: 400 },
+    ])("settles baseline-free momentum without catching up at $scroll with content $contentSize", (scenario) => {
+        const ctx = makeContext();
+        const scrollToEnd = mock(() => Promise.resolve());
+        ctx.scrollToEnd = scrollToEnd;
+        ctx.state.userScrollContentSize = undefined;
+        ctx.state.isMomentumScrolling = true;
+        ctx.state.scroll = scenario.scroll;
+        ctx.values.set("totalSize", scenario.contentSize);
+        ctx.values.set("isScrollActive", true);
+        ctx.values.set("isFollowingEnd", false);
+        ctx.values.set("isWithinMaintainScrollAtEndThreshold", scenario.near);
+        armUserScrollSettle(ctx);
+        try {
+            settleUserScroll(ctx);
+
+            expect(ctx.values.get("isFollowingEnd")).toBe(scenario.near);
+            expect(ctx.state.endFollowInterrupted).toBe(!scenario.near);
+            expect(ctx.state.scroll).toBe(scenario.scroll);
+            expect(ctx.state.userScrollContentSize).toBeUndefined();
+            expect(ctx.state.isMomentumScrolling).toBe(false);
+            expect(ctx.values.get("isScrollActive")).toBe(false);
+            expect(ctx.state.scheduledWork.has("endFollowRearm")).toBe(false);
+            expect(ctx.state.scheduledWork.has("maintainScrollAtEnd")).toBe(false);
+            expect(scrollToEnd.mock.calls).toEqual([]);
+        } finally {
+            ctx.state.scheduledWork.dispose();
+        }
+    });
+
+    it.each(["drag", "request", "completion", "app native scroll", "reader anchor"] as const)(
+        "does not rearm through %s ownership when the baseline-free watchdog fires",
+        (owner) => {
+            const clock = installFakeClock();
+            const date = spyOn(Date, "now").mockImplementation(() => clock.now);
+            const ctx = makeContext();
+            const resolve = mock(() => {});
+            const scrollToEnd = mock(() => Promise.resolve());
+            ctx.scrollToEnd = scrollToEnd;
+            ctx.state.userScrollContentSize = undefined;
+            ctx.state.isMomentumScrolling = true;
+            ctx.values.set("isScrollActive", true);
+            ctx.values.set("isFollowingEnd", false);
+            ctx.values.set("isWithinMaintainScrollAtEndThreshold", true);
+            if (owner === "drag") ctx.state.isDragging = true;
+            if (owner === "request") ctx.state.scrollingTo = { offset: 690 } as any;
+            if (owner === "completion") ctx.state.pendingScrollResolve = resolve;
+            if (owner === "app native scroll") {
+                ctx.state.scheduledWork.timeout(() => {}, 2000, "appScrollRearm");
+            }
+            if (owner === "reader anchor") ctx.state.visibleContentAnchor = { key: "reader", offset: 10 };
+            const request = ctx.state.scrollingTo;
+            const completion = ctx.state.pendingScrollResolve;
+            try {
+                armUserScrollSettle(ctx);
+                clock.advance(700);
+
+                expect(ctx.values.get("isFollowingEnd")).toBe(false);
+                expect(ctx.state.endFollowInterrupted).toBe(true);
+                expect(ctx.state.scrollingTo).toBe(request);
+                expect(ctx.state.pendingScrollResolve).toBe(completion);
+                expect(resolve).not.toHaveBeenCalled();
+                expect(scrollToEnd.mock.calls).toEqual([]);
+                expect(ctx.state.scroll).toBe(690);
+                if (owner === "request" || owner === "completion") {
+                    expect(ctx.values.get("isScrollActive")).toBe(true);
+                }
+
+                ctx.state.isDragging = false;
+                ctx.state.isMomentumScrolling = false;
+                ctx.state.scrollingTo = undefined;
+                ctx.state.pendingScrollResolve = undefined;
+                ctx.state.visibleContentAnchor = undefined;
+                ctx.state.scheduledWork.cancel("appScrollRearm");
+                rearmEndFollowIfSettled(ctx);
+                expect(ctx.values.get("isFollowingEnd")).toBe(true);
+                expect(scrollToEnd.mock.calls).toEqual([]);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+                date.mockRestore();
+                clock.restore();
+            }
+        },
+    );
 });

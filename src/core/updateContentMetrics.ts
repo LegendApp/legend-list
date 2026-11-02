@@ -84,6 +84,9 @@ export function setContentInsetOverride(ctx: StateContext, inset: Partial<Insets
     state.contentInsetOverride = nextInset;
 
     if (didChange) {
+        if (Platform.OS !== "web" && state.props.anchoredEndSpaceOwner === "list") {
+            maybeUpdateAnchoredEndSpace(ctx);
+        }
         updateContentMetricsState(ctx);
     }
 

@@ -1,20 +1,22 @@
 export type ScheduledWorkKey =
     | "adaptiveRender"
     | "alignItemsAtEndPaddingFallback"
+    | "appScrollRearm"
     | "bootstrapMeasuredLayout"
     | "checkFinishedScrollFallback"
     | "checkFinishedScrollFrame"
     | "checkFinishedScrollRetryFrame"
+    | `containerMeasurementRetry${number}`
     | "endFollowRearm"
     | "fullDrawDistancePrewarm"
     | "ignoreScrollFromMVCP"
     | "imperativeScrollReady"
+    | "maintainScrollAtEnd"
     | "mvcpRecalculate"
     | "platformScrollCompletion"
-    | "scrollElementTarget"
+    | "scrollTargetRetarget"
     | "preservedInitialScroll"
-    | "renderRangeProjection"
-    | "userMomentumStallCheck";
+    | "renderRangeProjection";
 
 interface Work {
     callback?: () => void;

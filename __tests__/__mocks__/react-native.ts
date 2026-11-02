@@ -114,3 +114,8 @@ export const ScrollView = createHostComponent("ScrollView");
 
 export type View = any; // for type-only imports
 export type ScrollView = any; // for type-only imports
+
+export const AccessibilityInfo = {
+    addEventListener: (_event: string, _callback: (enabled: boolean) => void) => ({ remove: () => {} }),
+    isScreenReaderEnabled: () => Promise.resolve(false),
+};

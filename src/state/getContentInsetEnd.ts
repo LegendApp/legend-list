@@ -1,5 +1,5 @@
 import { Platform } from "@/platform/Platform";
-import { getHorizontalInsetEnd } from "@/utils/rtl";
+import { getHorizontalInsetEnd, isHorizontalRTL } from "@/utils/rtl";
 import { peek$, type StateContext } from "./state";
 
 function getContentInsetEndAdjustmentEnd(adjustment?: number) {
@@ -16,7 +16,6 @@ export function getContentInsetEnd(ctx: StateContext, contentInsetEndAdjustmentO
     // scroll range never has, so those platforms keep the reported inset.
     const contentInset = Platform.OS === "ios" ? props.contentInset : undefined;
     const baseInset = contentInset ?? state.nativeContentInset;
-    const baseEndInset = (horizontal ? getHorizontalInsetEnd(state, baseInset) : baseInset?.bottom) || 0;
     const contentInsetEndAdjustment = getContentInsetEndAdjustmentEnd(
         contentInsetEndAdjustmentOverride ?? props.contentInsetEndAdjustment,
     );
@@ -24,15 +23,16 @@ export function getContentInsetEnd(ctx: StateContext, contentInsetEndAdjustmentO
     const anchoredEndInset = props.anchoredEndSpace && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
 
     const overrideInset = state.contentInsetOverride ?? undefined;
-    const adjustedBaseEndInset = baseEndInset + contentInsetEndAdjustment;
-    if (overrideInset) {
-        const mergedInset = { bottom: 0, left: 0, right: 0, top: 0, ...baseInset, ...overrideInset };
-        return Math.max(
-            ((horizontal ? getHorizontalInsetEnd(state, mergedInset) : mergedInset.bottom) || 0) +
-                contentInsetEndAdjustment,
-            anchoredEndInset,
-        );
-    }
-
-    return Math.max(adjustedBaseEndInset, anchoredEndInset);
+    const mergedInset = overrideInset
+        ? { bottom: 0, left: 0, right: 0, top: 0, ...baseInset, ...overrideInset }
+        : baseInset;
+    const endInset =
+        ((horizontal ? getHorizontalInsetEnd(state, mergedInset) : mergedInset?.bottom) || 0) +
+        contentInsetEndAdjustment;
+    // List-owned space is padding in addition to UIKit's inset. Web's spacer and
+    // scroll-view-owned insets already include that space. Native RTL retains
+    // its overlapping inset convention for scroll-coordinate conversion.
+    return Platform.OS !== "web" && props.anchoredEndSpaceOwner === "list" && !isHorizontalRTL(state)
+        ? endInset + anchoredEndInset
+        : Math.max(endInset, anchoredEndInset);
 }

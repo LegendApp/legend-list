@@ -10,6 +10,7 @@ import type { ScrollTarget } from "@/types.internal";
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;
     private pendingAdjust = 0;
+    private supersededAdjust = 0;
     private ctx: StateContext;
 
     constructor(ctx: StateContext) {
@@ -33,6 +34,14 @@ export class ScrollAdjustHandler {
     getAdjust() {
         return this.appliedAdjust;
     }
+    /** Pending adjust the active animation's destination did not already account for. */
+    getUnsupersededPendingAdjust() {
+        return this.pendingAdjust - this.supersededAdjust;
+    }
+    /** Keeps the pending adjust of a superseded animation out of its replacement's offset target. */
+    supersedePendingAdjust() {
+        this.supersededAdjust = this.pendingAdjust;
+    }
     commitPendingAdjust(scrollTarget?: ScrollTarget) {
         if (PlatformAdjustBreaksScroll) {
             // On web and Android, adjust during a scrollTo breaks the scrollTo,
@@ -40,9 +49,12 @@ export class ScrollAdjustHandler {
             // and then do the normal scrollBy when it's finished.
             const state = this.ctx.state;
             const pending = this.pendingAdjust;
+            // Only a replacement's own offset target excludes what a superseded animation deferred
+            const superseded = scrollTarget ? this.supersededAdjust : 0;
 
             // Clear pending state
             this.pendingAdjust = 0;
+            this.supersededAdjust = 0;
 
             if (pending !== 0) {
                 let targetScroll: number;
@@ -57,7 +69,9 @@ export class ScrollAdjustHandler {
                     targetScroll = clampScrollOffset(this.ctx, targetScroll, scrollTarget);
                 } else {
                     // Fallback: just add pending to current scroll
-                    targetScroll = clampScrollOffset(this.ctx, state.scroll + pending);
+                    targetScroll = clampScrollOffset(this.ctx, state.scroll + pending - superseded, {
+                        clampToContentContainerMinSize: !scrollTarget || scrollTarget.clampToContentContainerMinSize,
+                    });
                 }
 
                 const adjustment = targetScroll - state.scroll;

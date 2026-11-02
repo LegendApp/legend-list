@@ -1,13 +1,14 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { getObservedScrollOffset } from "@/core/emitMetrics";
+import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
+import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scrollTo } from "@/core/scrollTo";
-import { clampScrollIndex } from "@/core/scrollToIndex";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import { clampScrollIndex } from "@/utils/clampScrollIndex";
 import { getItemSizeAtIndex } from "@/utils/getItemSize";
 import { resetInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -30,6 +31,9 @@ export function dispatchInitialScroll(
 
     scrollTo(ctx, {
         animated: false,
+        clampToContentContainerMinSize:
+            ctx.state.initialScrollSession?.kind === "offset" ||
+            isEndOfContentTarget(target, ctx.state.props.data.length),
         forceScroll,
         index: index !== undefined && index >= 0 ? index : undefined,
         isInitialScroll: true,
@@ -71,8 +75,12 @@ export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: Scr
     }
 
     const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
-    const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
-    return clampScrollOffset(ctx, resolvedOffset, initialScroll);
+    const target = {
+        ...initialScroll,
+        clampToContentContainerMinSize: isEndOfContentTarget(initialScroll, state.props.data.length),
+    };
+    const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, target);
+    return clampScrollOffset(ctx, resolvedOffset, target);
 }
 
 function getAdvanceableInitialScrollState(
@@ -199,10 +207,6 @@ export function advanceCurrentInitialScrollSession(
     },
 ) {
     return ctx.state.initialScrollSession?.kind === "offset"
-        ? advanceOffsetInitialScroll(ctx, {
-              forceScroll: options?.forceScroll,
-          })
-        : advanceMeasuredInitialScroll(ctx, {
-              forceScroll: options?.forceScroll,
-          });
+        ? advanceOffsetInitialScroll(ctx, options)
+        : advanceMeasuredInitialScroll(ctx, options);
 }

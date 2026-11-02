@@ -2,6 +2,7 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { createContainerItemMetadata, resolveContainerItemMetadata } from "@/core/containerItemMetadata";
+import { getItemSpaceOffset, getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
@@ -26,6 +27,7 @@ import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
+import { isHorizontalRTL } from "@/utils/rtl";
 import { setDidLayout } from "@/utils/setDidLayout";
 
 const RENDER_RANGE_PROJECTION_FULL_VELOCITY = 4;
@@ -228,36 +230,9 @@ function maybeEmitFirstVisibleItemChanged(state: InternalState, index: number | 
     onFirstVisibleItemChanged({ index, item: state.props.data[index], key });
 }
 
-function findFirstVisibleIndexInCachedRange(ctx: StateContext, scroll: number) {
-    const state = ctx.state;
-    const {
-        endBuffered,
-        idCache,
-        positions,
-        props: { data },
-        sizes,
-        startBuffered,
-    } = state;
-
-    if (startBuffered === null || endBuffered === null || startBuffered < 0 || endBuffered < startBuffered) {
-        return null;
-    }
-
-    for (let i = startBuffered; i <= endBuffered && i < data.length; i++) {
-        const id = idCache[i] ?? getId(state, i);
-        const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-        const top = positions[i]!;
-        if (top + size > scroll) {
-            return i;
-        }
-    }
-
-    return null;
-}
-
-function updateViewabilityForCachedRange(
+function updateVisibleRangeForCachedRange(
     ctx: StateContext,
-    viewabilityConfigCallbackPairs: NonNullable<InternalState["viewabilityConfigCallbackPairs"]>,
+    viewabilityConfigCallbackPairs: InternalState["viewabilityConfigCallbackPairs"],
     scrollLength: number,
     scroll: number,
     scrollBottom: number,
@@ -292,16 +267,16 @@ function updateViewabilityForCachedRange(
         }
     }
 
-    Object.assign(state, {
-        endNoBuffer: visibleRange.endNoBuffer,
-        firstFullyOnScreenIndex: visibleRange.firstFullyOnScreenIndex,
+    Object.assign(state, visibleRange, {
         idsInView: getIdsInVisibleRange(state, visibleRange),
-        startNoBuffer: visibleRange.startNoBuffer,
     });
 
     maybeEmitFirstVisibleItemChanged(state, visibleRange.startNoBuffer);
 
-    if (state.props.hasExternalScroll || (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null)) {
+    if (
+        viewabilityConfigCallbackPairs &&
+        (state.props.hasExternalScroll || (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null))
+    ) {
         updateViewableItems(
             state,
             ctx,
@@ -356,9 +331,11 @@ export function calculateItemsInView(
             return;
         }
 
-        let totalSize = getContentSize(ctx);
+        // Native RTL rows are positioned within the item extent, before the container minimum.
+        const includeContentContainerMinSize = Platform.OS === "web" || !isHorizontalRTL(state);
+        let totalSize = getContentSize(ctx, includeContentContainerMinSize);
         let changedContainerIds: Set<number> | undefined;
-        const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "alignItemsAtEndPadding") + peek$(ctx, "headerSize");
+        const topPad = getStartOffsetAdjustment(ctx);
         const numColumns = peek$(ctx, "numColumns");
         const speed = params.scrollVelocity ?? getScrollVelocity(state);
 
@@ -378,7 +355,6 @@ export function calculateItemsInView(
               : state.scroll;
 
         let scrollAdjustPending = 0;
-        let scrollAdjustPad = 0;
         let scroll = 0;
         let scrollTopBuffered = 0;
         let scrollBottom = 0;
@@ -387,9 +363,8 @@ export function calculateItemsInView(
         const updateScroll = (nextScrollState: number) => {
             nativeScrollState = nextScrollState;
             scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
-            scrollAdjustPad = scrollAdjustPending - topPad;
             // Subtract top padding to put scroll into the coordinate system of the item positions
-            scroll = Math.round(nextScrollState + scrollExtra + scrollAdjustPad);
+            scroll = getItemSpaceOffset(ctx, nextScrollState + scrollExtra, scrollAdjustPending, topPad);
             if (!state.props.hasExternalScroll && scroll + scrollLength > totalSize) {
                 // Sometimes we may have scrolled past the visible area which can make items at the top of the
                 // screen not render. So make sure we clamp scroll to the end.
@@ -466,8 +441,10 @@ export function calculateItemsInView(
             // An external owner's negative offset is preceding content, not native bounce.
             const overscrollBeforeContent = state.props.hasExternalScroll ? 0 : Math.max(0, -nativeScrollState);
             scrollBottom = Math.max(scrollStart, scroll + scrollLength + overscrollBeforeContent);
+            // Spend the top buffer above the first item or under the header below the viewport.
+            const unusedTopBuffer = state.props.hasExternalScroll ? 0 : Math.max(0, scrollBufferTop - scroll);
             scrollTopBuffered = scrollStart - scrollBufferTop + projectedBufferAdjustment;
-            scrollBottomBuffered = scrollBottom + scrollBufferBottom + projectedBufferAdjustment;
+            scrollBottomBuffered = scrollBottom + scrollBufferBottom + unusedTopBuffer + projectedBufferAdjustment;
         };
         updateScrollRange();
 
@@ -492,17 +469,13 @@ export function calculateItemsInView(
             ) {
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
-                    if (viewabilityConfigCallbackPairs) {
-                        updateViewabilityForCachedRange(
-                            ctx,
-                            viewabilityConfigCallbackPairs,
-                            scrollLength,
-                            scroll,
-                            scrollBottom,
-                        );
-                    } else if (state.props.onFirstVisibleItemChanged) {
-                        maybeEmitFirstVisibleItemChanged(state, findFirstVisibleIndexInCachedRange(ctx, scroll));
-                    }
+                    updateVisibleRangeForCachedRange(
+                        ctx,
+                        viewabilityConfigCallbackPairs,
+                        scrollLength,
+                        scroll,
+                        scrollBottom,
+                    );
                     stickyState?.finishCalculateItemsInView?.();
                     return;
                 }
@@ -541,7 +514,7 @@ export function calculateItemsInView(
         // Appends can grow content size while the scroll offset is unchanged. Refresh the
         // cached content size after positions update so the next scroll-range cache reflects
         // the new tail instead of the pre-update end-of-list.
-        totalSize = getContentSize(ctx);
+        totalSize = getContentSize(ctx, includeContentContainerMinSize);
 
         if (positionRecalculationStartIndex !== undefined) {
             // Clear the invalidation marker after using it for position updates.
@@ -673,14 +646,11 @@ export function calculateItemsInView(
             }
         }
 
-        Object.assign(state, {
+        Object.assign(state, visibleRange, {
             endBuffered,
-            endNoBuffer: visibleRange.endNoBuffer,
-            firstFullyOnScreenIndex: visibleRange.firstFullyOnScreenIndex,
             idsInView: getIdsInVisibleRange(state, visibleRange),
             startBuffered,
             startBufferedId,
-            startNoBuffer: visibleRange.startNoBuffer,
         });
 
         // Precompute the scroll that will be needed for the range to change

@@ -1,5 +1,4 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollAdjustmentSource } from "@/types.internal";
@@ -14,7 +13,7 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
 
         const doit = () => {
             if (needsScrollWorkaround) {
-                doScrollTo(ctx, { horizontal: state.props.horizontal, isAdjustment: true, offset: state.scroll });
+                ctx.doScrollTo!({ horizontal: state.props.horizontal, isAdjustment: true, offset: state.scroll });
             } else {
                 state.scrollAdjustHandler.requestAdjust(positionDiff);
 
@@ -25,8 +24,8 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
         };
         state.scroll += positionDiff;
         // Growth already served by MVCP must not also count as end-follow credit.
-        if (positionDiff > 0 && state.momentumSuspendContentSize !== undefined) {
-            state.momentumSuspendCompensated = true;
+        if (state.userScrollContentSize !== undefined) {
+            state.userScrollContentSize += positionDiff;
         }
         state.scrollForNextCalculateItemsInView = undefined;
 

@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { getScrollRangeEnd } from "../../src/core/clampScrollOffset";
+import { getNativeScrollPoint } from "../../src/core/doScrollParams";
+import { onScroll } from "../../src/core/onScroll";
 import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
-import { setFooterSize } from "../../src/core/updateContentMetrics";
+import { setContentInsetOverride, setFooterSize } from "../../src/core/updateContentMetrics";
+import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
+import { Platform } from "../../src/platform/Platform";
 import { getContentInsetEnd } from "../../src/state/getContentInsetEnd";
 import { peek$, type StateContext, set$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -32,6 +37,123 @@ describe("updateAnchoredEndSpace", () => {
         mockState.sizesKnown.set("item_1", 120);
         mockState.sizesKnown.set("item_2", 80);
     });
+
+    it.each([0, 24])("keeps the list-owned anchor at offset %i with a native bottom inset", (offset) => {
+        const previousPlatform = Platform.OS;
+        Platform.OS = "ios";
+        try {
+            mockState.props.anchoredEndSpace = { anchorIndex: 1, anchorOffset: offset };
+            mockState.props.anchoredEndSpaceOwner = "list";
+            mockState.props.contentInset = { bottom: 40, left: 0, right: 0, top: 0 };
+            mockState.positions = [0, 100, 220];
+            mockState.totalSize = 300;
+            set$(mockCtx, "totalSize", 300);
+
+            maybeUpdateAnchoredEndSpace(mockCtx);
+
+            expect(mockState.positions[1]! - getScrollRangeEnd(mockCtx)).toBe(offset);
+            expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(60 - offset);
+        } finally {
+            Platform.OS = previousPlatform;
+            mockState.scheduledWork.dispose();
+        }
+    });
+
+    it.each([
+        { inset: 86, platform: "ios" },
+        { inset: 0, platform: "ios" },
+        { inset: 86, platform: "android" },
+    ] as const)(
+        "preserves stable RTL anchor space and offsets on $platform with inset $inset",
+        ({ platform, inset }) => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = platform;
+            const onSizeChanged = mock();
+            const ctx = createMockContext(
+                { numColumns: 1, otherAxisSize: 100, readyToRender: true },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    horizontalRTLScrollType: "inverted",
+                    props: {
+                        anchoredEndSpace: { anchorIndex: 9, onSizeChanged },
+                        anchoredEndSpaceOwner: "list",
+                        contentInset: { bottom: 0, left: inset, right: 0, top: 0 },
+                        data: Array.from({ length: 10 }, (_, id) => ({ id: String(id) })),
+                        estimatedItemSize: 100,
+                        getFixedItemSize: () => 100,
+                        horizontal: true,
+                        keyExtractor: (item: { id: string }) => item.id,
+                        rtl: true,
+                    },
+                    queuedInitialLayout: true,
+                    scrollLength: 600,
+                },
+            );
+            try {
+                updateItemPositions(ctx, true);
+                expect(maybeUpdateAnchoredEndSpace(ctx)).toBe(500);
+                expect(maybeUpdateAnchoredEndSpace(ctx)).toBe(500);
+                expect(onSizeChanged).toHaveBeenCalledTimes(1);
+                expect(onSizeChanged).toHaveBeenCalledWith(500);
+
+                const point = getNativeScrollPoint(ctx, 300);
+                onScroll(ctx, {
+                    nativeEvent: {
+                        contentInset: { bottom: 0, left: platform === "ios" ? inset : 0, right: 0, top: 0 },
+                        contentOffset: point,
+                        contentSize: { height: 100, width: ctx.state.totalSize + peek$(ctx, "anchoredEndSpaceSize") },
+                        layoutMeasurement: { height: 100, width: 600 },
+                    },
+                } as any);
+                expect(point.x).toBe(600);
+                expect(ctx.state.scroll).toBe(300);
+                expect(onSizeChanged).toHaveBeenCalledTimes(1);
+            } finally {
+                Platform.OS = previousPlatform;
+                ctx.state.scheduledWork.dispose();
+            }
+        },
+    );
+
+    it.each(["override", "native observation"])(
+        "keeps the list-owned anchor current when its end inset changes by %s",
+        (source) => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                mockState.props.anchoredEndSpace = { anchorIndex: 1 };
+                mockState.props.anchoredEndSpaceOwner = "list";
+                if (source === "native observation") mockState.props.contentInset = undefined;
+                mockState.positions = [0, 100, 220];
+                mockState.totalSize = 300;
+                mockState.scroll = mockState.scrollPending = 100;
+                set$(mockCtx, "totalSize", 300);
+                set$(mockCtx, "isWithinMaintainScrollAtEndThreshold", true);
+                expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+
+                if (source === "override") {
+                    setContentInsetOverride(mockCtx, { bottom: 40 });
+                } else {
+                    onScroll(mockCtx, {
+                        nativeEvent: {
+                            contentInset: { bottom: 40, left: 0, right: 0, top: 0 },
+                            contentOffset: { x: 0, y: 100 },
+                            contentSize: { height: 400, width: 300 },
+                            layoutMeasurement: { height: 300, width: 300 },
+                        },
+                    } as any);
+                }
+
+                expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(60);
+                expect(mockState.positions[1]! - getScrollRangeEnd(mockCtx)).toBe(0);
+                expect(mockState.scroll).toBe(100);
+            } finally {
+                Platform.OS = previousPlatform;
+                mockState.scheduledWork.dispose();
+            }
+        },
+    );
 
     it("computes anchored end space and reports readiness once for the committed anchor", () => {
         const onSizeChanged = mock(() => {});
@@ -104,7 +226,8 @@ describe("updateAnchoredEndSpace", () => {
         expect(onReady).toHaveBeenLastCalledWith({ anchorIndex: -1, anchorKey: undefined, size: 0 });
     });
 
-    it("uses anchored end space as a minimum end inset with additive adjustments", () => {
+    it("uses scroll-owned anchored space as a minimum end inset with additive adjustments", () => {
+        mockState.props.anchoredEndSpaceOwner = "scroll";
         mockState.props.contentInset = { bottom: 20, left: 0, right: 0, top: 0 };
         mockState.props.contentInsetEndAdjustment = 40;
         set$(mockCtx, "anchoredEndSpaceSize", 50);

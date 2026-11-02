@@ -3,7 +3,7 @@ import {
     schedulePreservedEndAnchorCorrection,
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
-import { cancelImperativeScroll } from "@/core/cancelImperativeScroll";
+import { cancelImperativeScroll, syncScrollActive } from "@/core/cancelImperativeScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
@@ -136,14 +136,11 @@ export function handleInitialScrollDataChange(
     if (didStartFreshData) {
         // The previous dataset's scroll must not block or finish the new bootstrap.
         cancelImperativeScroll(state);
-        set$(ctx, "isScrollActive", !!state.isDragging || !!state.isMomentumScrolling);
+        syncScrollActive(ctx);
         state.endFollowInterrupted = false;
-        state.didDeferMaintainScrollAtEndForMomentum = false;
-        state.momentumSuspendContentSize = undefined;
-        state.momentumSuspendCompensated = false;
+        state.userScrollContentSize = undefined;
         state.visibleContentAnchor = undefined;
         state.pendingEndMeasurements = undefined;
-        state.scrollElementTarget = undefined;
         set$(ctx, "isFollowingEnd", false);
         state.maintainingScrollAtEnd = undefined;
         state.pendingMaintainScrollAtEnd = false;
@@ -179,7 +176,8 @@ export function handleInitialScrollDataChange(
             dataLength,
             didDataChange,
             initialScrollAtEnd,
-            previousDataLength: previousInitialScrollDataLength,
+            // A new dataset reuses the empty-to-non-empty bootstrap handoff.
+            previousDataLength: didStartFreshData ? 0 : previousInitialScrollDataLength,
             stylePaddingEnd,
         });
         return;

@@ -1,11 +1,12 @@
 import * as React from "react";
 
-import { beforeEach, expect, it, mock } from "bun:test";
+import { beforeEach, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import { LegendList } from "../../src/components/LegendList";
 import { useCombinedRef } from "../../src/hooks/useCombinedRef";
 import { Platform } from "../../src/platform/Platform";
+import * as screenReader from "../../src/platform/screenReader";
 import type { OnViewableItemsChangedInfo } from "../../src/types.base";
 import { typedForwardRef } from "../../src/types.internal";
 import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
@@ -162,4 +163,44 @@ it("refreshes stationary viewability when overlaid composer padding changes", as
     });
     expect(latestRows).toEqual([6, 7, 8, 9, 10, 11]);
     list.unmount();
+});
+
+it("does not classify controller keyboard motion as accessibility input", async () => {
+    Platform.OS = "android";
+    spyOn(screenReader, "isScreenReaderEnabled").mockReturnValue(true);
+    const onUserScroll = mock(() => {});
+    const list = await mount({ onUserScroll });
+    const scroll = (y: number) =>
+        scrollProps.onScroll({
+            nativeEvent: {
+                contentOffset: { x: 0, y },
+                contentSize: { height: 4000, width: 300 },
+                layoutMeasurement: { height: 580, width: 300 },
+            },
+        });
+    try {
+        act(() => {
+            handlers.onMove({ height: 335, progress: 1 });
+            reactToKeyboard();
+            scroll(900);
+            scroll(935);
+            handlers.onEnd({ height: 0, progress: 0 });
+            reactToKeyboard();
+            // Native frames can trail the final occlusion/inset report.
+            scroll(800);
+            scroll(700);
+            scroll(600);
+        });
+        expect(onUserScroll).not.toHaveBeenCalled();
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 600));
+        });
+        act(() => {
+            scroll(600);
+            scroll(550);
+        });
+        expect(onUserScroll).toHaveBeenCalledTimes(1);
+    } finally {
+        list.unmount();
+    }
 });

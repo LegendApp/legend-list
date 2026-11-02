@@ -570,31 +570,28 @@ describe("requestAdjust", () => {
     });
 
     describe("growth compensation while end following is suspended", () => {
-        it("marks positive growth as compensated inside the suspended window", () => {
-            mockState.momentumSuspendContentSize = 1000;
-            mockState.momentumSuspendCompensated = false;
+        it("shifts the release baseline by positive compensation", () => {
+            mockState.userScrollContentSize = 1000;
 
             requestAdjust(mockCtx, 200);
 
-            expect(mockState.momentumSuspendCompensated).toBe(true);
+            expect(mockState.userScrollContentSize).toBe(1200);
         });
 
         it("ignores adjustments outside the suspended window", () => {
-            mockState.momentumSuspendContentSize = undefined;
-            mockState.momentumSuspendCompensated = false;
+            mockState.userScrollContentSize = undefined;
 
             requestAdjust(mockCtx, 200);
 
-            expect(mockState.momentumSuspendCompensated).toBe(false);
+            expect(mockState.userScrollContentSize).toBeUndefined();
         });
 
-        it("does not treat shrink as compensation", () => {
-            mockState.momentumSuspendContentSize = 1000;
-            mockState.momentumSuspendCompensated = false;
+        it("shifts the release baseline by negative compensation", () => {
+            mockState.userScrollContentSize = 1000;
 
             requestAdjust(mockCtx, -200);
 
-            expect(mockState.momentumSuspendCompensated).toBe(false);
+            expect(mockState.userScrollContentSize).toBe(800);
         });
     });
 });

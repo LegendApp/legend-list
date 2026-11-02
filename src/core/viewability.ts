@@ -1,5 +1,6 @@
+import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import type {
     ViewAmountToken,
     ViewabilityConfig,
@@ -243,10 +244,7 @@ function computeViewability(
     // Only an integration's explicitly reported occlusion clips viewability.
     scrollSize = Math.max(0, scrollSize - (state.viewabilityInsetEnd ?? 0));
     const { sizes, scroll: scrollState } = state;
-    const topPad =
-        (peek$(ctx, "stylePaddingTop") || 0) +
-        (peek$(ctx, "alignItemsAtEndPadding") || 0) +
-        (peek$(ctx, "headerSize") || 0);
+    const topPad = getStartOffsetAdjustment(ctx);
     const { itemVisiblePercentThreshold, viewAreaCoveragePercentThreshold } = viewabilityConfig;
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;

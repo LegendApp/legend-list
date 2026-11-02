@@ -3,7 +3,9 @@ import "../setup";
 
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { interruptUserScroll } from "../../src/core/cancelScroll";
+import { rearmEndFollowIfSettled } from "../../src/core/finishMaintainScrollAtEnd";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { prepareMVCP } from "../../src/core/mvcp";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { Platform } from "../../src/platform/Platform";
@@ -79,7 +81,7 @@ describe("size-cache invalidation reader anchoring", () => {
             finishScrollTo(ctx);
             await pending;
             updateItemSizesBatch(ctx, [{ itemKey: "item_19", size: { height: 140, width: 400 } }]);
-            expect(handle.getScrollAnchor()).toEqual({ key: "item_20", offset: 0 });
+            expect(handle.anchorVisibleContent({ hold: false })).toEqual({ key: "item_20", offset: 0 });
             expect(ctx.state.scroll).toBeGreaterThan(2000);
         } finally {
             ctx.state.scheduledWork.dispose();
@@ -120,6 +122,59 @@ describe("size-cache invalidation reader anchoring", () => {
     });
 
     for (const platform of ["ios", "android", "web"] as const) {
+        for (const explicit of [false, true]) {
+            it(`respects data MVCP after cache invalidation with an explicit anchor ${explicit} on ${platform}`, () => {
+                Platform.OS = platform;
+                const data = Array.from({ length: 10 }, (_, index) => ({ id: `row-${index}` }));
+                const ctx = createMockContext(
+                    { isWithinMaintainScrollAtEndThreshold: true, numColumns: 1, readyToRender: true },
+                    {
+                        didContainersLayout: true,
+                        didFinishInitialScroll: true,
+                        endFollowInterrupted: true,
+                        idCache: data.map((item) => item.id),
+                        idsInView: ["row-2"],
+                        indexByKey: new Map(data.map((item, index) => [item.id, index])),
+                        positions: data.map((_, index) => index * 100),
+                        props: {
+                            data,
+                            estimatedItemSize: 100,
+                            keyExtractor: (item) => item.id,
+                            maintainScrollAtEnd: true,
+                        },
+                        scroll: 225,
+                        scrollLength: 500,
+                        sizes: new Map(data.map((item) => [item.id, 100])),
+                        totalSize: 1000,
+                    },
+                );
+                try {
+                    const handle = createImperativeHandle(ctx);
+                    handle.clearCaches();
+                    if (explicit) handle.anchorVisibleContent({ key: "row-2" });
+
+                    rearmEndFollowIfSettled(ctx);
+                    const remainedInterrupted = ctx.state.endFollowInterrupted;
+
+                    const adjust = prepareMVCP(ctx, true);
+                    const nextData = [{ id: "new-0" }, { id: "new-1" }, { id: "new-2" }, ...data];
+                    ctx.state.props.data = nextData;
+                    ctx.state.indexByKey.clear();
+                    for (const [index, item] of nextData.entries()) {
+                        ctx.state.indexByKey.set(item.id, index);
+                        ctx.state.positions[index] = index * 100;
+                    }
+                    adjust?.();
+
+                    expect(ctx.state.scroll).toBe(explicit ? 525 : 225);
+                    expect(remainedInterrupted).toBe(explicit);
+                    if (!explicit) expect(ctx.state.visibleContentAnchor).toBeUndefined();
+                } finally {
+                    ctx.state.scheduledWork.dispose();
+                }
+            });
+        }
+
         it(`keeps the partially visible key and offset through grow/shrink remeasurement on ${platform}`, () => {
             Platform.OS = platform;
             const data = Array.from({ length: 30 }, (_, index) => ({ id: `row-${index}` }));
@@ -173,7 +228,7 @@ describe("size-cache invalidation reader anchoring", () => {
                         })),
                     );
                     expect(ctx.state.scroll - ctx.state.positions[16]!).toBe(25);
-                    expect(handle.getScrollAnchor()).toEqual({ key: "row-16", offset: 25 });
+                    expect(handle.anchorVisibleContent({ hold: false })).toEqual({ key: "row-16", offset: 25 });
                 }
             }
 

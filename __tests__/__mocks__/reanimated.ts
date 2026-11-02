@@ -26,17 +26,26 @@ const createSharedValue = <T>(initial: T) => {
 const defaults = {
     cancelAnimation: () => {},
     createAnimatedComponent: <T extends ComponentType<any>>(component: T): T => component,
+    interpolate: (value: number) => value,
     isWorkletFunction: () => false,
+    makeMutable: createSharedValue,
     runOnJS: (callback: (...args: any[]) => any) => callback,
     runOnUI: (callback: (...args: any[]) => any) => callback,
     ScrollView: () => null,
+    scrollTo: () => {},
     useAnimatedProps: (updater: () => unknown) => updater,
     useAnimatedReaction: () => {},
     useAnimatedRef: () => ({ current: null }),
     useAnimatedScrollHandler: (handler: any) => handler,
     useAnimatedStyle: (updater: () => unknown) => updater(),
     useComposedEventHandler: (handlers: any[]) => handlers[0],
-    useScrollViewOffset: () => {},
+    useDerivedValue: (updater: () => unknown) => ({
+        get value() {
+            return updater();
+        },
+    }),
+    useHandler: () => ({}),
+    useScrollViewOffset: () => createSharedValue(0),
     useSharedValue: createSharedValue,
     View: () => null,
 };
