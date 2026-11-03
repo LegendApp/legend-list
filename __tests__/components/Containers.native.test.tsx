@@ -5,6 +5,7 @@ import "../setup";
 
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { type StateContext, StateProvider, set$, useStateContext } from "@/state/state";
+import type { ContentExtentComponentInternalProps } from "@/types.internal";
 import { createMockState } from "../__mocks__/createMockState";
 import { act, render } from "../helpers/testingLibrary";
 
@@ -149,6 +150,60 @@ describe("Containers native", () => {
             });
             expect(beforeCommit).toEqual({ extent: 1000, rowPosition: 600 });
             expect(geometry()).toEqual({ extent: 1000, rowPosition: 900 });
+            unmount();
+        });
+    }
+
+    for (const horizontal of [false, true]) {
+        it(`hands the committed extent to an integration's content extent wrapper (horizontal: ${horizontal})`, async () => {
+            const { Containers } = await import(
+                `../../src/components/Containers.native?content-extent-${horizontal ? "x" : "y"}`
+            );
+            const received: Array<Omit<ContentExtentComponentInternalProps, "children">> = [];
+            function ContentExtent({
+                children,
+                committedSize,
+                horizontal: extentHorizontal,
+                sizeAdjustment,
+            }: ContentExtentComponentInternalProps) {
+                received.push({ committedSize, horizontal: extentHorizontal, sizeAdjustment });
+                return React.createElement("content-extent", null, children);
+            }
+            let ctx: StateContext;
+            function Content() {
+                ctx = useStateContext();
+                // Set up once, so a re-render doesn't reset totalSize after the test changes it.
+                if (!ctx.state) {
+                    ctx.state = createMockState({ props: { contentExtentComponentInternal: ContentExtent } as any });
+                    // The layer's end margin cancels the trailing gap, so the wrapper must include it.
+                    ctx.columnWrapperStyle = horizontal ? { columnGap: 12 } : { rowGap: 12 };
+                    ctx.values.set("numColumns", 1);
+                    ctx.values.set("numContainersPooled", 0);
+                    ctx.values.set("readyToRender", true);
+                    ctx.values.set("totalSize", 1000);
+                }
+                return (
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal={horizontal}
+                        recycleItems={false}
+                    />
+                );
+            }
+            const { toJSON, unmount } = render(
+                <StateProvider>
+                    <Content />
+                </StateProvider>,
+            );
+            const tree = toJSON() as any;
+            expect(tree.type).toBe("content-extent");
+            expect(tree.children[0].props.style[horizontal ? "minWidth" : "minHeight"]).toBe(1000);
+            expect(received.at(-1)).toEqual({ committedSize: 1000, horizontal, sizeAdjustment: -12 });
+
+            // The wrapper only sees a shrink once React commits it with the row positions.
+            act(() => set$(ctx!, "totalSize", 700));
+            expect(received.at(-1)).toEqual({ committedSize: 700, horizontal, sizeAdjustment: -12 });
             unmount();
         });
     }
