@@ -17,6 +17,7 @@ import Reanimated, {
     scrollTo,
     useAnimatedReaction,
     useAnimatedRef,
+    useAnimatedStyle,
     useScrollViewOffset,
     useSharedValue,
 } from "react-native-reanimated";
@@ -27,6 +28,42 @@ import { internal } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
 const { typedForwardRef, useCombinedRef } = internal;
+
+type ContentExtentProps = {
+    children: React.ReactNode;
+    committedSize: number;
+    horizontal: boolean;
+    sizeAdjustment: number;
+};
+
+/**
+ * The list commits a shrinking content extent through React, which mounts at once, while the
+ * blank space that grows to compensate waits for Reanimated's next frame, so the offset clamps
+ * in between. Hold the extent on Reanimated's side and release it from a layout effect: that
+ * write is queued after both the grown blank space (written when the shrink was measured) and
+ * React's mount of the rows and ScrollAdjust (which carries MVCP), so the extent shrinks with or
+ * after the larger inset and never ahead of MVCP. In one commit iOS applies contentInset before
+ * contentSize and Android applies padding before child layout. Growth still lands at once
+ * through the inner Animated size, ahead of the blank space shrinking.
+ */
+function ReanimatedContentExtent({ children, committedSize, horizontal, sizeAdjustment }: ContentExtentProps) {
+    const size = Math.max(0, committedSize + sizeAdjustment);
+    const extent = useSharedValue<number>(size);
+    useLayoutEffect(() => {
+        // runOnUI rather than a `.value` write: a JS-thread write reaches the UI runtime as its own
+        // job, while runOnUI calls from one JS tick flush as one job behind earlier ones.
+        runOnUI((next: number) => {
+            "worklet";
+            extent.value = next;
+        })(size);
+    }, [extent, size]);
+    const style = useAnimatedStyle(
+        () => (horizontal ? { minWidth: extent.value } : { minHeight: extent.value }),
+        [horizontal],
+    );
+
+    return <Reanimated.View style={style}>{children}</Reanimated.View>;
+}
 
 if (typeof __DEV__ !== "undefined" && __DEV__ && !KeyboardChatScrollView) {
     console.warn(
@@ -293,7 +330,12 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         return {
             ...anchoredEndSpace,
             onSizeChanged: (size: number) => {
-                blankSpace.value = size;
+                // runOnUI keeps this ahead of the content extent's release, which ReanimatedContentExtent
+                // queues later from a layout effect; a `.value` write is dispatched on its own.
+                runOnUI((next: number) => {
+                    "worklet";
+                    blankSpace.value = next;
+                })(size);
                 anchoredEndSpace.onSizeChanged?.(size);
             },
         };
@@ -423,6 +465,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         AnimatedLegendListProps<ItemT> & {
             anchoredEndSpace?: AnchoredEndSpaceConfig;
             anchoredEndSpaceOwnerInternal?: "list" | "scroll";
+            contentExtentComponentInternal?: React.ComponentType<ContentExtentProps>;
             ref?: ForwardedRef<LegendListRef>;
         }
     >;
@@ -431,6 +474,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         <AnimatedLegendListInternal
             anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
             anchoredEndSpaceOwnerInternal="scroll"
+            contentExtentComponentInternal={ReanimatedContentExtent}
             ref={combinedRef}
             refScrollView={combinedScrollRef}
             renderScrollComponent={memoList}
