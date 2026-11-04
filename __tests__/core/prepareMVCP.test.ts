@@ -627,6 +627,26 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, "data");
         });
 
+        it("should anchor the last visible item on dataChanged with anchor end", () => {
+            withWebPlatform(() => {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                    anchor: "end",
+                    data: true,
+                });
+
+                const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+                // Older rows load above and the first visible row loses its header, so the rows move by
+                // different amounts. The last visible row decides the adjustment.
+                setLayoutValue(mockState, "positions", "item-1", 300);
+                setLayoutValue(mockState, "positions", "item-2", 420);
+
+                adjustFunction();
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 170, "data");
+            });
+        });
+
         it("restores position when idsInView already contains an oversized visible row", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
                 data: true,
@@ -713,6 +733,24 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+        });
+
+        it("should anchor the last visible item with anchor end", () => {
+            setScrollingTo(undefined);
+            mockState.props.maintainVisibleContentPosition = {
+                ...mockState.props.maintainVisibleContentPosition,
+                anchor: "end",
+            };
+            mockState.idsInView = ["item-2", "item-3"];
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            // item-2 shrinks, so only the item below it moves
+            setLayoutValue(mockState, "positions", "item-3", 400); // Changed from 450 to 400
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -50, undefined);
         });
 
         it("should handle visible items not in indexByKey", () => {
