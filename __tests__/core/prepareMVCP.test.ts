@@ -654,6 +654,21 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
         });
 
+        it("should anchor the last visible item in end-aligned lists", () => {
+            setScrollingTo(undefined);
+            mockState.props.alignItemsAtEnd = true;
+            mockState.idsInView = ["item-2", "item-3"];
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            // item-2 shrinks, so only the item below it moves
+            setLayoutValue(mockState, "positions", "item-3", 400); // Changed from 450 to 400
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -50, undefined);
+        });
+
         it("should handle visible items not in indexByKey", () => {
             mockState.idsInView = ["non-existent-item", "item-1"];
 
