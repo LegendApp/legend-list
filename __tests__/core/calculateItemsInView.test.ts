@@ -326,6 +326,22 @@ describe("calculateItemsInView", () => {
         }
     });
 
+    it("applies a deferred item-size MVCP correction in the next pass that repositions items", () => {
+        setupFixedSizeItems(30, 10);
+        const deferredPass = mock(() => {});
+        mockState.scheduledWork.frame(deferredPass, "mvcpRecalculate");
+        const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP").mockImplementation(() => undefined);
+        try {
+            // A scroll-driven pass runs before the deferred frame.
+            calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+
+            expect(prepareMVCPSpy).toHaveBeenCalledWith(mockCtx, undefined, "item-size");
+            expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
+        } finally {
+            prepareMVCPSpy.mockRestore();
+        }
+    });
+
     it("limits cold assignments to the current buffer and header-corrected animated target union", () => {
         setupFixedSizeItems(120, 64);
         mockState.props.estimatedItemSize = 64;
