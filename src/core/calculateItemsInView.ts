@@ -346,9 +346,8 @@ export function calculateItemsInView(
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
-        const { dataChanged, didMeasureEstimatedLayout, forceFullItemPositions, mvcpAdjustmentSource } = params;
+        const { dataChanged, didMeasureEstimatedLayout, forceFullItemPositions } = params;
         const { hasEstimatedInitialLayout } = state;
-        const doMVCP = params.doMVCP && !hasEstimatedInitialLayout;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
@@ -508,6 +507,15 @@ export function calculateItemsInView(
                 }
             }
         }
+
+        // A deferred item-size correction must land in any pass that repositions items, or they move without it.
+        const shouldApplyDeferredMVCP =
+            !hasEstimatedInitialLayout && !params.doMVCP && state.scheduledWork.has("mvcpRecalculate");
+        if (shouldApplyDeferredMVCP) {
+            state.scheduledWork.cancel("mvcpRecalculate");
+        }
+        const doMVCP = !hasEstimatedInitialLayout && (params.doMVCP || shouldApplyDeferredMVCP);
+        const mvcpAdjustmentSource = shouldApplyDeferredMVCP ? "item-size" : params.mvcpAdjustmentSource;
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
