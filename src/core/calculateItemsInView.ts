@@ -322,7 +322,8 @@ export function calculateItemsInView(
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
-        const { dataChanged, doMVCP, forceFullItemPositions, mvcpAdjustmentSource } = params;
+        const { dataChanged, forceFullItemPositions } = params;
+        let { doMVCP, mvcpAdjustmentSource } = params;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
@@ -480,6 +481,13 @@ export function calculateItemsInView(
                     return;
                 }
             }
+        }
+
+        // A deferred item-size correction must land in any pass that repositions items, or they move without it.
+        if (!doMVCP && state.scheduledWork.has("mvcpRecalculate")) {
+            state.scheduledWork.cancel("mvcpRecalculate");
+            doMVCP = true;
+            mvcpAdjustmentSource = "item-size";
         }
 
         ////// Update item positions and do MVCP
