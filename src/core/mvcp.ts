@@ -243,6 +243,7 @@ export function prepareMVCP(
     const { idsInView, positions, props } = state;
     const {
         maintainVisibleContentPosition: {
+            anchor,
             autoscrollToTopThreshold,
             data: mvcpData,
             size: mvcpScroll,
@@ -250,6 +251,9 @@ export function prepareMVCP(
         },
     } = props;
     const isWeb = Platform.OS === "web";
+    // With anchor "end", the last visible item stays in place, like in an inverted list.
+    const isEndAnchor = anchor === "end";
+    const getAnchorCandidateId = (i: number) => idsInView[isEndAnchor ? idsInView.length - 1 - i : i];
 
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
@@ -310,14 +314,19 @@ export function prepareMVCP(
             // If we're currently scrolling to a target index, do MVCP for its position
             targetId = scrollingTo?.key ?? getId(state, scrollTarget);
         } else if (idsInView.length > 0 && state.didContainersLayout && !dataChanged) {
-            // Do MVCP for the first item fully in view
-            targetId = idsInView.find((id) => indexByKey.get(id) !== undefined);
+            // Do MVCP for the first item in view, or the last one with anchor "end"
+            for (let i = 0; i < idsInView.length && targetId === undefined; i++) {
+                const id = getAnchorCandidateId(i);
+                if (indexByKey.get(id) !== undefined) {
+                    targetId = id;
+                }
+            }
         }
 
         if (dataChanged && idsInView.length > 0 && state.didContainersLayout) {
             // Capture visible anchors for fallback in case the primary anchor disappears after data updates.
             for (let i = 0; i < idsInView.length; i++) {
-                const id = idsInView[i];
+                const id = getAnchorCandidateId(i);
                 const index = previousIndexByKey.get(id);
                 if (index !== undefined) {
                     const position = positions[index];

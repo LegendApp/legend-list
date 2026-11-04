@@ -10,6 +10,7 @@ export function normalizeMaintainVisibleContentPosition(
 
     if (value && typeof value === "object") {
         return {
+            anchor: value.anchor,
             autoscrollToTopThreshold: value.autoscrollToTopThreshold,
             data: value.data ?? false,
             shouldRestorePosition: value.shouldRestorePosition,

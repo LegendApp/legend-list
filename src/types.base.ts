@@ -272,6 +272,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * - size (default: true) stabilizes during size/layout changes while scrolling.
      * - data (default: false) stabilizes when the data array changes.
      * - shouldRestorePosition can opt out specific items from data-change anchoring.
+     * - anchor (default: "start") picks the visible item that stays in place, the first or the last with "end".
      * - autoscrollToTopThreshold animates to the start after anchoring near the start.
      * - undefined (default) enables scroll stabilization but skips data-change anchoring.
      * - true enables both JS behaviors; false disables both.
@@ -520,6 +521,12 @@ export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     autoscrollToTopThreshold?: number;
     data?: boolean;
     size?: boolean;
+    /**
+     * Which visible item stays in place when sizes or data change. "start" (default) keeps the first visible
+     * item in place, so changes move the content below it. "end" keeps the last visible item in place, so changes
+     * move the content above it, like in an inverted list. Use "end" for chat-style lists read from the bottom.
+     */
+    anchor?: "start" | "end";
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }
 
