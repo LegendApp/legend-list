@@ -242,6 +242,8 @@ export function prepareMVCP(
         maintainVisibleContentPosition: { data: mvcpData, size: mvcpScroll, shouldRestorePosition },
     } = props;
     const isWeb = Platform.OS === "web";
+    // End-aligned lists keep the last visible item in place, like an inverted list.
+    const anchorIdsInView = props.alignItemsAtEnd ? [...idsInView].reverse() : idsInView;
 
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
@@ -301,14 +303,14 @@ export function prepareMVCP(
             // If we're currently scrolling to a target index, do MVCP for its position
             targetId = scrollingTo?.key ?? getId(state, scrollTarget);
         } else if (idsInView.length > 0 && state.didContainersLayout && !dataChanged) {
-            // Do MVCP for the first item fully in view
-            targetId = idsInView.find((id) => indexByKey.get(id) !== undefined);
+            // Do MVCP for the first item fully in view, or the last one in end-aligned lists
+            targetId = anchorIdsInView.find((id) => indexByKey.get(id) !== undefined);
         }
 
         if (dataChanged && idsInView.length > 0 && state.didContainersLayout) {
             // Capture visible anchors for fallback in case the primary anchor disappears after data updates.
-            for (let i = 0; i < idsInView.length; i++) {
-                const id = idsInView[i];
+            for (let i = 0; i < anchorIdsInView.length; i++) {
+                const id = anchorIdsInView[i];
                 const index = indexByKey.get(id);
                 if (index !== undefined) {
                     const position = positions[index];
