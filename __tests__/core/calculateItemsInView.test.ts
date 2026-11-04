@@ -202,10 +202,10 @@ describe("calculateItemsInView", () => {
 
         calculateItemsInView(mockCtx, { scrollVelocity: 0 });
         record();
-        expect([mockState.startBuffered, mockState.endBuffered]).toEqual([0, 20]);
+        expect([mockState.startBuffered, mockState.endBuffered]).toEqual([0, 16]);
         scrollTo(mockCtx, { animated: true, offset: 600 });
         record();
-        expect([mockState.startBuffered, mockState.endBuffered]).toEqual([0, 20]);
+        expect([mockState.startBuffered, mockState.endBuffered]).toEqual([0, 16]);
         expect(mockState.scrollTargetPinnedRange).toEqual({ end: 19, start: 7 });
         // A deterministic frame during the first animation, before replacing its target.
         mockState.scroll = mockState.scrollPending = 350;
@@ -215,14 +215,14 @@ describe("calculateItemsInView", () => {
         scrollTo(mockCtx, { animated: true, offset: 1200 });
         record();
 
-        // At rest: item-space bottom 812 - 133 + 375 + 258 = 1312 => buffer 0..20 (21).
-        // Target600: [467,1279] intersects 7..19, already inside the current buffer.
+        // At rest: item-space bottom 812 - 133 + 375 = 1054 => buffer 0..16 (17).
+        // Target600: [467,1279] intersects 7..19; union 0..19 needs 20 rows, 3 cold.
         // Frame350: buffer [217-125,217+812+375] intersects 1..21 (21 rows).
         // Target1200: [1067,1879] intersects 16..29; union 1..29 needs 29 rows.
-        // The latter union adds 8 cold slots since target600.
+        // The latter union adds 9 cold slots since target600, including the intermediate frame.
         expect([mockState.startBuffered, mockState.endBuffered]).toEqual([1, 21]);
         expect(mockState.scrollTargetPinnedRange).toEqual({ end: 29, start: 16 });
-        expect(counts).toEqual([21, 21, 21, 29]);
+        expect(counts).toEqual([17, 20, 21, 29]);
         for (let index = 1; index <= 29; index++) {
             expect(mockState.containerItemKeys.has(`item_${index}`)).toBe(true);
         }
@@ -808,15 +808,13 @@ describe("calculateItemsInView", () => {
             ]);
         });
 
-        it("buffers rows below a known header while keeping the visible range below it", () => {
+        it("should limit initial rendered items to the space below a known header size", () => {
             setupFixedSizeItems(20, 100);
             mockCtx.values.set("headerSize", 800);
 
             calculateItemsInView(mockCtx);
 
-            expect(mockState.startNoBuffer).toBe(0);
-            expect(mockState.endNoBuffer).toBe(2);
-            expect(getRenderedContainerKeys()).toEqual(Array.from({ length: 11 }, (_, i) => `item_${i}`));
+            expect(getRenderedContainerKeys()).toEqual(["item_0", "item_1", "item_2"]);
         });
 
         it("should preserve a full viewport of items during native overscroll", () => {
@@ -861,36 +859,34 @@ describe("calculateItemsInView", () => {
                 "item_8",
                 "item_9",
                 "item_10",
-                "item_11",
             ]);
         });
     });
 
     describe("scroll buffer handling", () => {
-        it.each([
-            [0, 0, false, 15],
-            [0, 600, false, 15],
-            [200, 0, false, 15],
-            [0, 0, true, 13],
-            [0, 600, true, 7],
-            [200, 0, true, 15],
-        ])(
-            "spends unused top buffer below the viewport (scroll=%s, header=%s, external=%s)",
-            (scroll, headerSize, hasExternalScroll, endBuffered) => {
-                setupFixedSizeItems(100, 100);
-                mockState.props.drawDistance = 250; // Default draw distance.
-                mockState.props.hasExternalScroll = hasExternalScroll;
-                mockState.scroll = scroll;
-                mockCtx.values.set("headerSize", headerSize);
-                mockCtx.values.set("readyToRender", true);
+        for (const os of ["ios", "web"] as const) {
+            it.each([
+                [0, 0, 13, 10],
+                [0, 600, 7, 4],
+                [600, 0, 17, 16],
+            ])(
+                `keeps ${os} mounts within the directional buffer budget (scroll=%s, header=%s)`,
+                (scroll, header, end, visibleEnd) => {
+                    spyOn(Platform, "OS", "get").mockReturnValue(os);
+                    setupFixedSizeItems(100, 100);
+                    mockState.props.drawDistance = 250;
+                    mockState.scroll = scroll;
+                    mockCtx.values.set("headerSize", header);
+                    mockCtx.values.set("readyToRender", true);
 
-                calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                    calculateItemsInView(mockCtx, { scrollVelocity: 0 });
 
-                expect(mockState.endBuffered).toBe(endBuffered);
-                expect(mockState.endNoBuffer).toBe(headerSize ? 4 : 10 + scroll / 100);
-                expect(mockState.scroll).toBe(scroll);
-            },
-        );
+                    expect(mockState.endNoBuffer).toBe(visibleEnd);
+                    expect(mockState.endBuffered).toBe(end);
+                    expect(getRenderedContainerKeys()).toHaveLength(end - mockState.startBuffered + 1);
+                },
+            );
+        }
 
         it("should include buffered items beyond visible area", () => {
             mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
@@ -2119,7 +2115,7 @@ describe("calculateItemsInView", () => {
             expect(mockState.startNoBuffer).toBe(0);
             expect(mockState.endNoBuffer).toBe(1);
             expect(mockState.startBuffered).toBe(0);
-            expect(mockState.endBuffered).toBe(3);
+            expect(mockState.endBuffered).toBe(2);
             expect(setDidLayoutSpy).toHaveBeenCalledTimes(1);
         });
 
@@ -2211,7 +2207,7 @@ describe("calculateItemsInView", () => {
             expect(mockState.startNoBuffer).toBe(0);
             expect(mockState.endNoBuffer).toBe(1);
             expect(mockState.startBuffered).toBe(0);
-            expect(mockState.endBuffered).toBe(3);
+            expect(mockState.endBuffered).toBe(2);
             expect(setDidLayoutSpy).not.toHaveBeenCalled();
         });
     });
