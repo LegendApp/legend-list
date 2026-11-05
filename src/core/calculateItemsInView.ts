@@ -290,6 +290,17 @@ function updateVisibleRangeForCachedRange(
     }
 }
 
+export function schedulePendingDataChangeLayout(ctx: StateContext) {
+    const state = ctx.state;
+    state.scheduledWork.microtask(() => {
+        // A normal commit handles this before the microtask. Suspense can keep its
+        // layout effects disconnected while the visible list still receives scrolls.
+        if (!state.isUnmounted && state.didDataChange && state.previousIndexByKey !== state.indexByKey) {
+            calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+        }
+    }, "dataChangeLayout");
+}
+
 export function calculateItemsInView(
     ctx: StateContext,
     params: {
@@ -305,10 +316,13 @@ export function calculateItemsInView(
     // Render refreshes key lookups before the parent's data-change layout pass.
     // If keys moved, preserve the old positions/slots until that pass captures MVCP.
     // Stable indices (such as an append) can still update while Suspense hides effects.
-    if (state.didDataChange && !state.isFirst && !params.dataChanged) {
+    if (state.didDataChange && !state.isFirst && !params.dataChanged && state.previousIndexByKey !== state.indexByKey) {
         if (!state.previousIndexByKey) return;
         for (const [key, index] of state.previousIndexByKey) {
-            if (state.indexByKey.get(key) !== index) return;
+            if (state.indexByKey.get(key) !== index) {
+                schedulePendingDataChangeLayout(ctx);
+                return;
+            }
         }
     }
     batchedUpdates(() => {
@@ -517,8 +531,8 @@ export function calculateItemsInView(
             scrollVelocity: speed,
             startIndex,
         });
-        // A safe append advances the position snapshot for later pending renders.
-        if (state.previousIndexByKey && !dataChanged) {
+        // Advance the position snapshot for later pending renders and the eventual commit.
+        if (state.previousIndexByKey) {
             state.previousIndexByKey = indexByKey;
         }
 

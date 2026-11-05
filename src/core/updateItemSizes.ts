@@ -1,5 +1,5 @@
 import { schedulePreservedEndAnchorCorrection } from "@/core/bootstrapInitialScroll";
-import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { calculateItemsInView, schedulePendingDataChangeLayout } from "@/core/calculateItemsInView";
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
@@ -96,7 +96,8 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     const state = ctx.state;
     // The parent's data-change layout pass consumes these sizes and preserves the
     // old positions for MVCP. A child measurement must not overwrite them first.
-    if (state.didDataChange && !state.isFirst) {
+    if (state.didDataChange && !state.isFirst && state.previousIndexByKey !== state.indexByKey) {
+        schedulePendingDataChangeLayout(ctx);
         if (result.shouldMaintainScrollAtEnd) {
             state.scheduledWork.microtask(
                 () => doMaintainScrollAtEnd(ctx, { immediate: true }),

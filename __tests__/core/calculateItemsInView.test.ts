@@ -153,6 +153,45 @@ describe("calculateItemsInView", () => {
         });
     }
 
+    it("resumes scrolling while Suspense keeps a prepend's layout effects pending", async () => {
+        const rows = Array.from({ length: 100 }, (_, i) => ({ id: `row-${i}` }));
+        mockState.props.data = rows;
+        mockState.props.keyExtractor = (item: { id: string }) => item.id;
+        mockState.props.getFixedItemSize = () => 50;
+        mockState.props.drawDistance = 100;
+        mockState.props.recycleItems = true;
+        mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+        mockState.scrollLength = 200;
+        mockState.didContainersLayout = true;
+        mockState.isFirst = false;
+        mockCtx.values.set("readyToRender", true);
+        calculateItemsInView(mockCtx, { dataChanged: true, scrollVelocity: 0 });
+
+        mockState.previousData = rows;
+        mockState.previousIndexByKey = mockState.indexByKey;
+        mockState.props.data = [{ id: "older" }, ...rows];
+        mockState.didDataChange = true;
+        mockState.indexByKey = new Map();
+        mockState.idCache.length = mockState.props.data.length;
+        for (let i = 0; i < mockState.props.data.length; i++) mockState.indexByKey.set(getId(mockState, i), i);
+        const positions = [...mockState.positions];
+        mockState.scroll = 2500;
+        calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+        expect(mockState.positions).toEqual(positions);
+
+        // A suspended parent never runs its data-change effect in this turn.
+        await Promise.resolve();
+        expect(mockState.containerItemKeys.has("row-50")).toBe(true);
+        expect(mockState.previousIndexByKey).toBe(mockState.indexByKey);
+        const scroll = mockState.scroll;
+        const slots = new Map(mockState.containerItemKeys);
+
+        // Reconnecting that effect must not apply the prepend adjustment twice.
+        checkResetContainers(mockCtx, mockState.props.data);
+        expect(mockState.scroll).toBe(scroll);
+        expect(mockState.containerItemKeys).toEqual(slots);
+    });
+
     it("preserves newly appended slots if another pending render inserts before them", () => {
         const rows = Array.from({ length: 10 }, (_, i) => ({ id: `row-${i}` }));
         mockState.props.keyExtractor = (item: { id: string }) => item.id;
