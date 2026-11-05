@@ -5,6 +5,7 @@ import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { requestAdjust } from "../../src/utils/requestAdjust";
+import { setInitialRenderState } from "../../src/utils/setInitialRenderState";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("requestAdjust", () => {
@@ -183,6 +184,41 @@ describe("requestAdjust", () => {
             rafCallbacks[0]();
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(25);
+        });
+
+        it("keeps the list hidden until an adjustment queued before it was ready is applied", () => {
+            // An item above the initial scroll target measured smaller than its estimate while the list was hidden
+            mockState.didFinishInitialScroll = false;
+            mockCtx.values.set("readyToRender", false);
+            const adjustCountsAtLoad: number[] = [];
+            mockState.props.onLoad = () => adjustCountsAtLoad.push(scrollAdjustHandlerCalls.length);
+
+            requestAdjust(mockCtx, -45, "item-size");
+            setInitialRenderState(mockCtx, { didInitialScroll: true });
+
+            expect(mockCtx.values.get("readyToRender")).toBe(false);
+
+            rafCallbacks[0]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([-45]);
+            expect(mockCtx.values.get("readyToRender")).toBe(true);
+            expect(adjustCountsAtLoad).toEqual([1]);
+        });
+
+        it("becomes ready after the last of several queued adjustments", () => {
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+            mockCtx.values.set("readyToRender", false);
+
+            requestAdjust(mockCtx, 10);
+            requestAdjust(mockCtx, 5);
+            rafCallbacks[0]();
+
+            expect(mockCtx.values.get("readyToRender")).toBe(false);
+
+            rafCallbacks[1]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([10, 5]);
+            expect(mockCtx.values.get("readyToRender")).toBe(true);
         });
 
         it("should handle undefined readyToRender as falsy", () => {

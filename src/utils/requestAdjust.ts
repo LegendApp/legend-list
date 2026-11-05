@@ -2,6 +2,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollAdjustmentSource } from "@/types.internal";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function requestAdjust(ctx: StateContext, positionDiff: number, source?: ScrollAdjustmentSource) {
     const state = ctx.state;
@@ -16,10 +17,6 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
                 ctx.doScrollTo!({ horizontal: state.props.horizontal, isAdjustment: true, offset: state.scroll });
             } else {
                 state.scrollAdjustHandler.requestAdjust(positionDiff);
-
-                if (state.adjustingFromInitialMount) {
-                    state.adjustingFromInitialMount--;
-                }
             }
         };
         state.scroll += positionDiff;
@@ -71,7 +68,13 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
             }
         } else {
             state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 0) + 1;
-            requestAnimationFrame(doit);
+            requestAnimationFrame(() => {
+                doit();
+                state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 1) - 1;
+                if (!state.adjustingFromInitialMount) {
+                    setInitialRenderState(ctx, {});
+                }
+            });
         }
     }
 }
