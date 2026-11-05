@@ -70,6 +70,7 @@ export interface ThresholdSnapshot {
     data: readonly unknown[];
     dataLength?: number;
     didRearmForData?: boolean;
+    isRequestPending?: boolean;
 }
 
 export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";

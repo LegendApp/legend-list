@@ -51,7 +51,7 @@ export function canDispatchReachedEdge(
     );
 }
 
-export function markReachedEdge(ctx: StateContext, edge: ReachedEdge) {
+function markReachedEdge(ctx: StateContext, edge: ReachedEdge) {
     const state = ctx.state;
     state.edgeReachedGate = "closed";
     state.edgeReachedGateScroll = state.scroll;
@@ -60,6 +60,25 @@ export function markReachedEdge(ctx: StateContext, edge: ReachedEdge) {
     const snapshot = getThresholdSnapshot(ctx);
     snapshot.didRearmForData = didThresholdDataChange(state[snapshotKey], snapshot);
     state[snapshotKey] = snapshot;
+}
+
+// A promise returned by the callback owns its edge until it settles, so rows the request adds
+// while loading, such as a loading row, do not request the same page again.
+export function dispatchReachedEdge(ctx: StateContext, edge: ReachedEdge, dispatch: () => unknown) {
+    markReachedEdge(ctx, edge);
+    const snapshot = ctx.state[edge === "start" ? "startReachedSnapshot" : "endReachedSnapshot"]!;
+    const result = dispatch() as PromiseLike<unknown> | undefined;
+    if (typeof result?.then === "function") {
+        snapshot.isRequestPending = true;
+        const settle = () => {
+            snapshot.isRequestPending = false;
+            // Recheck once the request's rows commit, so a page that stays inside the threshold keeps paging.
+            if (!ctx.state.isUnmounted) {
+                ctx.state.scheduledWork.frame(() => ctx.state.reprocessCurrentScroll?.(), "reachedEdgeSettle");
+            }
+        };
+        result.then(settle, settle);
+    }
 }
 
 function getThresholdSnapshot(ctx: StateContext): ThresholdSnapshot {

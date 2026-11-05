@@ -4,8 +4,8 @@ import { type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import {
     canDispatchReachedEdge,
+    dispatchReachedEdge,
     getDistanceFromStart,
-    markReachedEdge,
     type ReachedEdge,
     resetSharedEdgeGateIfOutsideHysteresis,
 } from "@/utils/edgeReachedGate";
@@ -44,8 +44,9 @@ export function checkAtTop(ctx: StateContext, allowedEdge?: ReachedEdge, allowGa
                     state.props.onStartReached &&
                     canDispatchReachedEdge(ctx, "start", allowedEdge, allowGateCreatedInCurrentCheck)
                 ) {
-                    markReachedEdge(ctx, "start");
-                    state.props.onStartReached({ distanceFromStart: distance });
+                    dispatchReachedEdge(ctx, "start", () =>
+                        state.props.onStartReached!({ distanceFromStart: distance }),
+                    );
                     return true;
                 }
                 return false;

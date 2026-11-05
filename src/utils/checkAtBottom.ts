@@ -4,7 +4,7 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import {
     canDispatchReachedEdge,
-    markReachedEdge,
+    dispatchReachedEdge,
     type ReachedEdge,
     resetSharedEdgeGateIfOutsideHysteresis,
 } from "@/utils/edgeReachedGate";
@@ -67,8 +67,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
                         state.props.onEndReached &&
                         canDispatchReachedEdge(ctx, "end", allowedEdge, allowGateCreatedInCurrentCheck)
                     ) {
-                        markReachedEdge(ctx, "end");
-                        state.props.onEndReached({ distanceFromEnd: distance });
+                        dispatchReachedEdge(ctx, "end", () => state.props.onEndReached!({ distanceFromEnd: distance }));
                         return true;
                     }
                     return false;

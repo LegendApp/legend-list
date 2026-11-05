@@ -11,10 +11,12 @@ export function isOutsideThresholdHysteresis(distance: number, atThreshold: bool
 }
 
 // A new length re-arms an edge. A new array of the same length re-arms it only with a content size
-// change. Replacing an array without measured content progress does not re-arm it.
+// change. Replacing an array without measured content progress does not re-arm it, nor does
+// data that arrives while the callback's request is pending.
 export function didThresholdDataChange(snapshot: ThresholdSnapshot | undefined, context: ThresholdSnapshot) {
     return (
         !!snapshot &&
+        !snapshot.isRequestPending &&
         (snapshot.dataLength !== context.dataLength ||
             (snapshot.data !== context.data && snapshot.contentSize !== context.contentSize))
     );

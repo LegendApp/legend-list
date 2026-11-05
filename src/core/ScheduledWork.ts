@@ -16,6 +16,7 @@ export type ScheduledWorkKey =
     | "platformScrollCompletion"
     | "scrollTargetRetarget"
     | "preservedInitialScroll"
+    | "reachedEdgeSettle"
     | "renderRangeProjection";
 
 interface Work {
