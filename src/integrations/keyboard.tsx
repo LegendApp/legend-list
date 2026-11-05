@@ -1,6 +1,15 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import {
+    createContext,
+    type ForwardedRef,
+    useCallback,
+    useContext,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+} from "react";
 import type { LayoutChangeEvent, ScrollViewProps, View } from "react-native";
 import { Platform } from "react-native";
 import {
@@ -37,6 +46,13 @@ type ContentExtentProps = {
 };
 
 /**
+ * Whether ReanimatedContentExtent holds shrinks. Only anchored end space grows to compensate for
+ * one, so without it the extent follows the list. A context rather than a prop keeps the
+ * component's identity stable, so turning anchored end space on or off doesn't remount the rows.
+ */
+const HoldContentShrinkContext = createContext(false);
+
+/**
  * The list commits a shrinking content extent through React, which mounts at once, while the
  * blank space that grows to compensate waits for Reanimated's next frame, so the offset clamps
  * in between. Hold the extent on Reanimated's side and release it from a layout effect: that
@@ -47,20 +63,25 @@ type ContentExtentProps = {
  * through the inner Animated size, ahead of the blank space shrinking.
  */
 function ReanimatedContentExtent({ children, committedSize, horizontal, sizeAdjustment }: ContentExtentProps) {
+    const holdShrink = useContext(HoldContentShrinkContext);
     const size = Math.max(0, committedSize + sizeAdjustment);
     const extent = useSharedValue<number>(size);
     useLayoutEffect(() => {
+        if (!holdShrink) {
+            return;
+        }
         // runOnUI rather than a `.value` write: a JS-thread write reaches the UI runtime as its own
         // job, while runOnUI calls from one JS tick flush as one job behind earlier ones.
         runOnUI((next: number) => {
             "worklet";
             extent.value = next;
         })(size);
-    }, [extent, size]);
-    const style = useAnimatedStyle(
-        () => (horizontal ? { minWidth: extent.value } : { minHeight: extent.value }),
-        [horizontal],
-    );
+    }, [extent, holdShrink, size]);
+    const style = useAnimatedStyle(() => {
+        // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
+        const minSize = holdShrink ? extent.value : 0;
+        return horizontal ? { minWidth: minSize } : { minHeight: minSize };
+    }, [holdShrink, horizontal]);
 
     return <Reanimated.View style={style}>{children}</Reanimated.View>;
 }
@@ -318,7 +339,11 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
 
     useEffect(() => {
         if (!anchoredEndSpace) {
-            blankSpace.value = 0;
+            // Through runOnUI like onSizeChanged, so this reset can't overtake a size queued before it.
+            runOnUI(() => {
+                "worklet";
+                blankSpace.value = 0;
+            })();
         }
     }, [anchoredEndSpace, blankSpace]);
 
@@ -471,14 +496,16 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     >;
 
     return (
-        <AnimatedLegendListInternal
-            anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
-            anchoredEndSpaceOwnerInternal="scroll"
-            contentExtentComponentInternal={ReanimatedContentExtent}
-            ref={combinedRef}
-            refScrollView={combinedScrollRef}
-            renderScrollComponent={memoList}
-            {...rest}
-        />
+        <HoldContentShrinkContext.Provider value={!!anchoredEndSpace}>
+            <AnimatedLegendListInternal
+                anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
+                anchoredEndSpaceOwnerInternal="scroll"
+                contentExtentComponentInternal={ReanimatedContentExtent}
+                ref={combinedRef}
+                refScrollView={combinedScrollRef}
+                renderScrollComponent={memoList}
+                {...rest}
+            />
+        </HoldContentShrinkContext.Provider>
     );
 });
