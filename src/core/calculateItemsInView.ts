@@ -302,6 +302,15 @@ export function calculateItemsInView(
     } = {},
 ) {
     const state = ctx.state;
+    // Render refreshes key lookups before the parent's data-change layout pass.
+    // If keys moved, preserve the old positions/slots until that pass captures MVCP.
+    // Stable indices (such as an append) can still update while Suspense hides effects.
+    if (state.didDataChange && !state.isFirst && !params.dataChanged) {
+        if (!state.previousIndexByKey) return;
+        for (const [key, index] of state.previousIndexByKey) {
+            if (state.indexByKey.get(key) !== index) return;
+        }
+    }
     batchedUpdates(() => {
         const {
             columns,
@@ -508,6 +517,10 @@ export function calculateItemsInView(
             scrollVelocity: speed,
             startIndex,
         });
+        // A safe append advances the position snapshot for later pending renders.
+        if (state.previousIndexByKey && !dataChanged) {
+            state.previousIndexByKey = indexByKey;
+        }
 
         // Appends can grow content size while the scroll offset is unchanged. Refresh the
         // cached content size after positions update so the next scroll-range cache reflects

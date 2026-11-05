@@ -94,6 +94,17 @@ function mergeItemSizeUpdateResult(result: ItemSizeUpdateResult, next: ItemSizeU
 
 function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     const state = ctx.state;
+    // The parent's data-change layout pass consumes these sizes and preserves the
+    // old positions for MVCP. A child measurement must not overwrite them first.
+    if (state.didDataChange && !state.isFirst) {
+        if (result.shouldMaintainScrollAtEnd) {
+            state.scheduledWork.microtask(
+                () => doMaintainScrollAtEnd(ctx, { immediate: true }),
+                "dataChangeItemSizeFollow",
+            );
+        }
+        return;
+    }
     if (result.shouldMaintainScrollAtEnd && Platform.OS === "web") {
         queueMicrotask(() => doMaintainScrollAtEnd(ctx, { immediate: true }));
     }

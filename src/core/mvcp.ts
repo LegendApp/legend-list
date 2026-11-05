@@ -277,6 +277,7 @@ export function prepareMVCP(
     const explicitAnchor = state.visibleContentAnchor;
     const shouldMVCP = !!explicitAnchor || (dataChanged ? mvcpData : mvcpScroll);
     const indexByKey = state.indexByKey;
+    const previousIndexByKey = dataChanged ? (state.previousIndexByKey ?? indexByKey) : indexByKey;
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
@@ -310,7 +311,7 @@ export function prepareMVCP(
             // Capture visible anchors for fallback in case the primary anchor disappears after data updates.
             for (let i = 0; i < idsInView.length; i++) {
                 const id = idsInView[i];
-                const index = indexByKey.get(id);
+                const index = previousIndexByKey.get(id);
                 if (index !== undefined) {
                     const position = positions[index];
                     if (position !== undefined) {
@@ -321,7 +322,7 @@ export function prepareMVCP(
         }
 
         if (targetId !== undefined && prevPosition === undefined) {
-            const targetIndex = indexByKey.get(targetId);
+            const targetIndex = previousIndexByKey.get(targetId);
             if (targetIndex !== undefined) {
                 prevPosition = positions[targetIndex];
             }

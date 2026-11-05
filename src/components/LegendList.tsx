@@ -589,6 +589,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useWindowScroll: useWindowScrollResolved,
     };
 
+    if (didDataChangeLocal) {
+        // Child layout effects can measure before the parent's data-change effect.
+        // Keep their key lookup on the same dataset as state.props.data.
+        if (!isFirstLocal) state.previousIndexByKey ??= state.indexByKey;
+        state.indexByKey = new Map();
+        state.idCache.length = dataProp.length;
+        for (let index = 0; index < dataProp.length; index++) {
+            state.indexByKey.set(getId(state, index), index);
+        }
+    }
+
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
 
     if (!isFirstLocal && previousAdaptiveRender && !experimental_adaptiveRender) {
@@ -906,6 +917,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
         if (didDataChange) {
             state.pendingDataComparison = undefined;
+            state.previousIndexByKey = undefined;
         }
         // Now that it's done, reset the flags
         state.didColumnsChange = false;

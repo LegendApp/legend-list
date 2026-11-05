@@ -7,6 +7,7 @@ export type ScheduledWorkKey =
     | "checkFinishedScrollFrame"
     | "checkFinishedScrollRetryFrame"
     | `containerMeasurementRetry${number}`
+    | "dataChangeItemSizeFollow"
     | "endFollowRearm"
     | "fullDrawDistancePrewarm"
     | "ignoreScrollFromMVCP"

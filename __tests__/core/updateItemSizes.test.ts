@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { invalidateFixedItemSizes } from "../../src/core/containerItemMetadata";
+import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
 import {
@@ -70,6 +71,24 @@ describe("updateItemSizes", () => {
 
     afterEach(() => {
         Platform.OS = prevPlatform;
+    });
+
+    it("preserves layout end following after a child measures during a data change", async () => {
+        mockState.didDataChange = true;
+        mockState.isFirst = false;
+        mockState.props.maintainScrollAtEnd = { onDataChange: false, onItemLayout: true };
+        const follow = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockReturnValue(true);
+        try {
+            updateItemSizes(mockCtx, { itemKey: "item_0", size: { height: 150, width: 400 } });
+            expect(mockState.sizesKnown.get("item_0")).toBe(150);
+            expect(follow).not.toHaveBeenCalled();
+            mockState.didDataChange = false;
+            await Promise.resolve();
+            expect(follow).toHaveBeenCalledTimes(1);
+        } finally {
+            follow.mockRestore();
+            mockState.scheduledWork.dispose();
+        }
     });
 
     it("keeps a fixed row's new measurement when it becomes dynamic", () => {

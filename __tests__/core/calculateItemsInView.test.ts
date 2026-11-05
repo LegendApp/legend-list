@@ -2,6 +2,7 @@ import { Platform } from "@/platform/Platform";
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { interruptUserScroll } from "../../src/core/cancelScroll";
+import { checkResetContainers } from "../../src/core/checkResetContainers";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
 import { scrollTo } from "../../src/core/scrollTo";
@@ -12,6 +13,7 @@ import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { getExpandedContainerPoolSize } from "../../src/utils/containerPool";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
+import { getId } from "../../src/utils/getId";
 import { getScrollVelocity } from "../../src/utils/getScrollVelocity";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import * as setDidLayoutModule from "../../src/utils/setDidLayout";
@@ -83,6 +85,117 @@ describe("calculateItemsInView", () => {
         run();
         return performance.now() - start;
     }
+
+    for (const platform of ["ios", "android", "web"] as const) {
+        it(`preserves slot ownership until loading-row and prepend positions commit on ${platform}`, () => {
+            const previousOS = Platform.OS;
+            Platform.OS = platform;
+            try {
+                const rows = Array.from({ length: 100 }, (_, i) => ({ id: `row-${i}` }));
+                mockState.props.data = rows;
+                mockState.props.keyExtractor = (item: { id: string }) => item.id;
+                mockState.props.getFixedItemSize = () => 50;
+                mockState.props.drawDistance = 100;
+                mockState.props.recycleItems = true;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.scroll = 500;
+                mockState.scrollLength = 200;
+                mockState.didContainersLayout = true;
+                mockState.isFirst = false;
+                mockCtx.values.set("readyToRender", true);
+                calculateItemsInView(mockCtx, { dataChanged: true, scrollVelocity: 0 });
+
+                const slots = new Map(mockState.containerItemKeys);
+                const commitData = (data: typeof rows, expectedScroll: number) => {
+                    // LegendList refreshes key lookups during render so child measurements
+                    // see current indices; positions remain from the previous committed data.
+                    mockState.previousData = mockState.props.data;
+                    mockState.previousIndexByKey = mockState.indexByKey;
+                    mockState.props.data = data;
+                    mockState.didDataChange = true;
+                    mockState.indexByKey = new Map();
+                    mockState.idCache.length = data.length;
+                    for (let i = 0; i < data.length; i++) {
+                        mockState.indexByKey.set(getId(mockState, i), i);
+                    }
+                    const positions = [...mockState.positions];
+                    const idsInView = [...mockState.idsInView];
+
+                    // A child layout or queued scroll pass runs before the parent effect.
+                    for (const doMVCP of [false, true]) {
+                        calculateItemsInView(mockCtx, { doMVCP, scrollVelocity: 0 });
+                        expect(mockState.containerItemKeys).toEqual(slots);
+                        expect(mockState.positions).toEqual(positions);
+                        expect(mockState.idsInView).toEqual(idsInView);
+                    }
+
+                    checkResetContainers(mockCtx, data);
+                    mockState.didDataChange = false;
+                    mockState.previousIndexByKey = undefined;
+                    expect(mockState.scroll).toBe(expectedScroll);
+                    for (const [key, slot] of slots) {
+                        expect(mockState.containerItemKeys.get(key)).toBe(slot);
+                        expect(mockCtx.values.get(`containerItemIndex${slot}`)).toBe(
+                            data.findIndex((item) => item.id === key),
+                        );
+                    }
+                    calculateItemsInView(mockCtx, { doMVCP: true, scrollVelocity: 0 });
+                    for (const [key, slot] of slots) {
+                        expect(mockState.containerItemKeys.get(key)).toBe(slot);
+                    }
+                };
+
+                commitData([{ id: "loading" }, ...rows], 550);
+                commitData([...Array.from({ length: 50 }, (_, i) => ({ id: `older-${i}` })), ...rows], 3000);
+            } finally {
+                Platform.OS = previousOS;
+            }
+        });
+    }
+
+    it("preserves newly appended slots if another pending render inserts before them", () => {
+        const rows = Array.from({ length: 10 }, (_, i) => ({ id: `row-${i}` }));
+        mockState.props.keyExtractor = (item: { id: string }) => item.id;
+        mockState.props.getFixedItemSize = () => 50;
+        mockState.props.drawDistance = 0;
+        mockState.props.recycleItems = true;
+        mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+        mockState.scrollLength = 100;
+        mockState.scroll = 400;
+        mockState.didContainersLayout = true;
+        mockState.isFirst = false;
+        mockCtx.values.set("readyToRender", true);
+
+        const publishData = (data: typeof rows) => {
+            mockState.previousData = mockState.props.data;
+            mockState.previousIndexByKey ??= mockState.indexByKey;
+            mockState.props.data = data;
+            mockState.didDataChange = true;
+            mockState.indexByKey = new Map();
+            mockState.idCache.length = data.length;
+            for (let i = 0; i < data.length; i++) mockState.indexByKey.set(getId(mockState, i), i);
+        };
+        mockState.props.data = rows;
+        calculateItemsInView(mockCtx, { dataChanged: true, scrollVelocity: 0 });
+
+        const appended = [{ id: "appended-a" }, { id: "appended-b" }];
+        publishData([...rows, ...appended]);
+        // The append can refresh content size even if the parent effects are hidden.
+        calculateItemsInView(mockCtx, { forceFullItemPositions: true, scrollVelocity: 0 });
+        expect(mockState.totalSize).toBe(600);
+        mockState.scroll = 500;
+        calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+        expect(mockState.idsInView).toEqual(appended.map((item) => item.id));
+        const slots = appended.map((item) => mockState.containerItemKeys.get(item.id));
+
+        publishData([...rows, { id: "loading" }, ...appended]);
+        calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+        expect(appended.map((item) => mockState.containerItemKeys.get(item.id))).toEqual(slots);
+        checkResetContainers(mockCtx, mockState.props.data);
+        expect(mockState.scroll).toBe(550);
+        expect(mockState.idsInView).toEqual(appended.map((item) => item.id));
+        expect(appended.map((item) => mockState.containerItemKeys.get(item.id))).toEqual(slots);
+    });
 
     it.each([false, true])("uses horizontal start padding instead of top padding (rtl=%s)", (rtl) => {
         setupFixedSizeItems(30, 10);

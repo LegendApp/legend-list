@@ -251,6 +251,62 @@ describe("Containers layout-effect measurement scheduling", () => {
         }
     });
 
+    it("measures a prepended page without rendering rows at stale indices", async () => {
+        const { LegendList } = await import("../../src/components/LegendList");
+        const { measureContainersInLayoutEffect } = await import(
+            "../../src/core/measureContainersInLayoutEffect.native"
+        );
+        let ctx: ReturnType<typeof useStateContext>;
+        let scrollProps: any;
+        const committedIndices: number[] = [];
+        const Surface = React.forwardRef((props: any, ref: React.Ref<any>) => {
+            ctx = useStateContext();
+            scrollProps = props;
+            React.useImperativeHandle(ref, () => ({ measure: () => {}, scrollTo: () => {} }));
+            React.useLayoutEffect(() => {
+                committedIndices.push(ctx.state.indexByKey.get("0")!);
+                measureContainersInLayoutEffect(ctx);
+            });
+            return <>{props.children}</>;
+        });
+        let items = Array.from({ length: 100 }, (_, index) => ({ id: String(index) }));
+        const renders: string[] = [];
+        const list = () => (
+            <LegendList
+                data={items}
+                drawDistance={50}
+                estimatedItemSize={100}
+                keyExtractor={(item) => item.id}
+                maintainVisibleContentPosition
+                recycleItems
+                renderItem={({ item }) => {
+                    renders.push(item.id);
+                    return <Text>{item.id}</Text>;
+                }}
+                renderScrollComponent={(props) => <Surface {...props} />}
+            />
+        );
+        let renderer: ReactTestRenderer;
+        await act(async () => {
+            renderer = TestRenderer.create(list());
+        });
+        try {
+            await act(async () => {
+                scrollProps.onLayout({ nativeEvent: { layout: { height: 500, width: 320, x: 0, y: 0 } } });
+            });
+            renders.length = 0;
+            committedIndices.length = 0;
+            measuredHeights.set(0, 180);
+            items = [...Array.from({ length: 50 }, (_, index) => ({ id: String(index - 50) })), ...items];
+            await act(async () => renderer!.update(list()));
+            expect(committedIndices[0]).toBe(50);
+            expect(renders).toEqual(["-1"]);
+            expect(ctx!.state.startBuffered).toBeGreaterThanOrEqual(49);
+        } finally {
+            await act(async () => renderer!.unmount());
+        }
+    });
+
     it("applies one coherent position recalculation for all containers committed together", async () => {
         const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
         const { renderer } = await renderContainers("coherent-batch");

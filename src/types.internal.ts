@@ -220,6 +220,7 @@ export interface InternalState {
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
     ignoreScrollFromMVCPIgnored?: boolean;
     indexByKey: Map<string, number>;
+    previousIndexByKey?: Map<string, number>;
     clearPreservedInitialScrollOnNextFinish?: boolean;
     initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
