@@ -17,6 +17,8 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     if (!params.isAdjustment) {
         // Explicit requests own their momentum; MVCP re-assertions keep the gesture's ownership.
         state.userScrollContentSize = undefined;
+        // The offset is computed from the current positions, so it already includes every adjustment requested so far.
+        state.nativeScrollEpoch = (state.nativeScrollEpoch ?? 0) + 1;
     }
 
     scroller.scrollTo({ animated: isAnimated, ...getNativeScrollPoint(ctx, offset, horizontal) });

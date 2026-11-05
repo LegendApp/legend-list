@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { doScrollTo } from "../../src/core/doScrollTo.native";
+import { initialScrollWatchdog } from "../../src/core/initialScrollSession";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { requestAdjust } from "../../src/utils/requestAdjust";
+import { setInitialRenderState } from "../../src/utils/setInitialRenderState";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("requestAdjust", () => {
@@ -185,6 +188,66 @@ describe("requestAdjust", () => {
             expect(scrollAdjustHandlerCalls[0]).toBe(25);
         });
 
+        it("keeps the list hidden until an adjustment queued before it was ready is applied", () => {
+            // An item above the initial scroll target measured smaller than its estimate while the list was hidden
+            mockState.didFinishInitialScroll = false;
+            mockCtx.values.set("readyToRender", false);
+            const adjustCountsAtLoad: number[] = [];
+            mockState.props.onLoad = () => adjustCountsAtLoad.push(scrollAdjustHandlerCalls.length);
+
+            requestAdjust(mockCtx, -45, "item-size");
+            setInitialRenderState(mockCtx, { didInitialScroll: true });
+
+            expect(mockCtx.values.get("readyToRender")).toBe(false);
+
+            rafCallbacks[0]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([-45]);
+            expect(mockCtx.values.get("readyToRender")).toBe(true);
+            expect(adjustCountsAtLoad).toEqual([1]);
+        });
+
+        it("becomes ready after the last of several queued adjustments", () => {
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+            mockCtx.values.set("readyToRender", false);
+
+            requestAdjust(mockCtx, 10);
+            requestAdjust(mockCtx, 5);
+            rafCallbacks[0]();
+
+            expect(mockCtx.values.get("readyToRender")).toBe(false);
+
+            rafCallbacks[1]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([10, 5]);
+            expect(mockCtx.values.get("readyToRender")).toBe(true);
+        });
+
+        it("skips a deferred adjustment that a later native scroll already includes", () => {
+            // Positions move right away, so a native scroll issued before the frame already targets the
+            // adjusted offset. Moving the anchor as well would shift the list a second time.
+            mockCtx.values.set("readyToRender", false);
+            mockState.refScroller = { current: { scrollTo: () => {} } } as any;
+
+            requestAdjust(mockCtx, -36, "item-size");
+            doScrollTo(mockCtx, { offset: mockState.scroll });
+            rafCallbacks[0]();
+
+            expect(scrollAdjustHandlerCalls).toHaveLength(0);
+            expect(mockState.adjustingFromInitialMount).toBe(0);
+        });
+
+        it("applies a deferred adjustment when no native scroll lands before its frame", () => {
+            mockCtx.values.set("readyToRender", false);
+            mockState.refScroller = { current: { scrollTo: () => {} } } as any;
+
+            doScrollTo(mockCtx, { offset: mockState.scroll });
+            requestAdjust(mockCtx, -36, "item-size");
+            rafCallbacks[0]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([-36]);
+        });
+
         it("should handle undefined readyToRender as falsy", () => {
             mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
             mockCtx.values.delete("readyToRender");
@@ -193,6 +256,43 @@ describe("requestAdjust", () => {
 
             expect(rafCallbacks).toHaveLength(1);
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
+        });
+    });
+
+    describe("in-flight initial scroll targets", () => {
+        const startInitialScroll = () => {
+            mockState.scrollingTo = {
+                animated: false,
+                index: 37,
+                isInitialScroll: true,
+                offset: 1618,
+                targetOffset: 1578,
+                viewOffset: 40,
+            } as any;
+            mockState.initialScrollSession = {
+                completion: { watchdog: { startScroll: 0, targetOffset: 1578 } },
+                kind: "bootstrap",
+            } as any;
+        };
+
+        it("moves a native initial scroll target with the adjustment", () => {
+            // Retries reissue the stored target, which has to follow the content like state.scroll does.
+            startInitialScroll();
+
+            requestAdjust(mockCtx, -36, "item-size");
+
+            expect(mockState.scrollingTo).toMatchObject({ offset: 1582, targetOffset: 1542 });
+            expect(initialScrollWatchdog.get(mockState)?.targetOffset).toBe(1542);
+        });
+
+        it("leaves web initial scroll targets to the index-based retargeting", () => {
+            Platform.OS = "web";
+            startInitialScroll();
+
+            requestAdjust(mockCtx, -36, "item-size");
+
+            expect(mockState.scrollingTo).toMatchObject({ offset: 1618, targetOffset: 1578 });
+            expect(initialScrollWatchdog.get(mockState)?.targetOffset).toBe(1578);
         });
     });
 

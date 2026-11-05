@@ -143,6 +143,10 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 }
 
 function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
+    if (Platform.OS !== "web") {
+        // Like doScrollTo, a retry targets an offset that already includes the adjustments requested so far.
+        ctx.state.nativeScrollEpoch = (ctx.state.nativeScrollEpoch ?? 0) + 1;
+    }
     ctx.state.refScroller.current?.scrollTo({ animated, ...getNativeScrollPoint(ctx, offset) });
 }
 
