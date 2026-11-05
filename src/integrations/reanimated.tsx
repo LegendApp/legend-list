@@ -300,6 +300,14 @@ function useAnimatedLegendListSharedValuesSync(
     legendList: LegendListRef | null,
     sharedValues: AnimatedLegendListSharedValues | undefined,
 ) {
+    const scrollOffset = sharedValues?.scrollOffset;
+    React.useEffect(() => {
+        if (legendList && scrollOffset) {
+            // Seed a new target once; subsequent offsets belong to native scroll tracking.
+            setSharedValueValue(scrollOffset, legendList.getState().scroll);
+        }
+    }, [legendList, scrollOffset]);
+
     React.useEffect(() => {
         if (!legendList || !sharedValues) {
             return;
@@ -315,7 +323,6 @@ function useAnimatedLegendListSharedValuesSync(
             sharedValues.isWithinMaintainScrollAtEndThreshold,
             state.isWithinMaintainScrollAtEndThreshold,
         );
-        setSharedValueValue(sharedValues.scrollOffset, state.scroll);
 
         const unsubscribers = [
             sharedValues.activeStickyIndex

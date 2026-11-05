@@ -9,9 +9,10 @@ import { IsNewArchitecture } from "../../src/constants-platform";
 import { useCombinedRef } from "../../src/hooks/useCombinedRef";
 import { useLatestRef } from "../../src/hooks/useLatestRef";
 import { useStableRenderComponent } from "../../src/hooks/useStableRenderComponent";
-import { peek$, useArr$, useStateContext } from "../../src/state/state";
+import { peek$, StateProvider, useArr$, useStateContext } from "../../src/state/state";
 import { typedForwardRef, typedMemo } from "../../src/types.internal";
 import { getComponent } from "../../src/utils/getComponent";
+import { createMockState } from "../__mocks__/createMockState";
 import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
@@ -139,6 +140,21 @@ const createReanimatedOverrides = () => {
     return shared;
 };
 
+function StickyHeaderProbe({ PositionComponent }: { PositionComponent: React.ComponentType<any> }) {
+    const ctx = useStateContext();
+    ctx.state = createMockState({ positions: [100], props: { stickyHeaderIndicesArr: [0] } });
+    ctx.state.sizes.set("header", 36);
+    ctx.values.set("containerItemKey0", "header");
+    ctx.values.set("containerItemIndex0", 0);
+    ctx.values.set("containerPosition0", 100);
+
+    return (
+        <PositionComponent horizontal={false} id={0} onLayout={() => {}} refView={{ current: null }} style={{}}>
+            {null}
+        </PositionComponent>
+    );
+}
+
 function registerLegendListModuleMock(isNewArchitecture = IsNewArchitecture) {
     mock.module("@legendapp/list/react-native", () => ({
         internal: {
@@ -221,6 +237,50 @@ describe("AnimatedLegendList sharedValues integration", () => {
             TestRenderer.create(renderedBridge);
         });
         expect(scrollOffsetTrackerCalls).toEqual([sharedValues.scrollOffset]);
+    });
+
+    it("keeps a sticky header at the viewport top when sharedValues is recreated after a layout correction", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?sticky-native-offset-rerender");
+        const scrollOffset = createSharedValueMock(0);
+        const props = {
+            data: [{ id: "header" }],
+            estimatedItemSize: 36,
+            renderItem: () => null,
+            stickyHeaderIndices: [0],
+        };
+        let renderer: any;
+        act(() => {
+            renderer = TestRenderer.create(<AnimatedLegendList {...props} sharedValues={{ scrollOffset } as any} />);
+        });
+
+        // Native tracking owns the visual offset. JS can already include an MVCP correction.
+        const nativeScroll = 600;
+        scrollOffset.set(nativeScroll);
+        currentLegendListState.scroll = nativeScroll + 12;
+        act(() => {
+            renderer.update(<AnimatedLegendList {...props} sharedValues={{ scrollOffset } as any} />);
+        });
+
+        let stickyRenderer: any;
+        act(() => {
+            stickyRenderer = TestRenderer.create(
+                <StateProvider>
+                    <StickyHeaderProbe PositionComponent={lastLegendListProps.stickyPositionComponentInternal} />
+                </StateProvider>,
+            );
+        });
+        const style = Object.assign({}, ...stickyRenderer.root.findByType("reanimated-view").props.style);
+        const headerViewportY = style.transform[0].translateY - nativeScroll;
+        expect(headerViewportY).toBe(0);
+        expect(scrollOffset.get()).toBe(nativeScroll);
+
+        const replacementScrollOffset = createSharedValueMock(0);
+        act(() => {
+            renderer.update(
+                <AnimatedLegendList {...props} sharedValues={{ scrollOffset: replacementScrollOffset } as any} />,
+            );
+        });
+        expect(replacementScrollOffset.get()).toBe(currentLegendListState.scroll);
     });
 
     it("does not track the scroll offset for semantic shared values", async () => {
