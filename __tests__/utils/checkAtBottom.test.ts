@@ -2,12 +2,51 @@ import { afterEach, describe, expect, it } from "bun:test";
 import "../setup";
 
 import { clampScrollOffset } from "../../src/core/clampScrollOffset";
+import { updateContentMetricsState } from "../../src/core/updateContentMetricsState";
 import { Platform } from "../../src/platform/Platform";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
+import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAtBottom", () => {
+    for (const headerSize of [0, 8]) {
+        it(`ignores retained animated alignment padding when rows are cleared (header ${headerSize}px)`, () => {
+            let calls = 0;
+            const alignmentPadding = 680 - headerSize;
+            const ctx = createMockContext(
+                { alignItemsAtEndPadding: alignmentPadding, headerSize, totalSize: 120 },
+                {
+                    didContainersLayout: true,
+                    props: {
+                        alignItemsAtEndPaddingEnabled: true,
+                        data: [{ id: "a" }, { id: "b" }],
+                        maintainScrollAtEnd: normalizeMaintainScrollAtEnd({ animated: true }),
+                        onEndReached: () => calls++,
+                        onEndReachedThreshold: 0.5,
+                    },
+                    queuedInitialLayout: true,
+                    scroll: 0,
+                    scrollLength: 800,
+                },
+            );
+            try {
+                checkAtBottom(ctx);
+                expect(calls).toBe(1);
+                ctx.state.props.data = [];
+                ctx.state.totalSize = 0;
+                ctx.values.set("totalSize", 0);
+                updateContentMetricsState(ctx);
+                expect(ctx.values.get("alignItemsAtEndPadding")).toBe(alignmentPadding);
+                checkAtBottom(ctx);
+                checkAtBottom(ctx);
+                expect(calls).toBe(headerSize ? 2 : 1);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+            }
+        });
+    }
+
     it.each([0, 0.5, 1, 1.01, 30])("uses the end-position epsilon for zero-threshold following at %ipx", (gap) => {
         const ctx = createMockContext(
             { totalSize: 1000 },

@@ -25,11 +25,11 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
 
     const contentSize = getContentSize(ctx);
     const distanceFromEnd = contentSize - scroll - scrollLength;
-    // Empty results can leave padding or other content at the end, but stale row estimates do not count.
+    // Empty results can leave padding or other content at the end; estimates and alignment runway do not count.
     const allowEmptyDataChange =
         state.props.data.length === 0 &&
         !!state.endReachedSnapshot?.dataLength &&
-        contentSize > (state.pendingTotalSize ?? state.totalSize);
+        contentSize - (peek$(ctx, "alignItemsAtEndPadding") || 0) > (state.pendingTotalSize ?? state.totalSize);
     resetSharedEdgeGateIfOutsideHysteresis(ctx);
     if (state.props.data.length === 0 && scrollLength > 0 && contentSize <= scrollLength && !allowEmptyDataChange) {
         set$(ctx, "isAtEnd", true);
