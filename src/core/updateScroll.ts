@@ -61,8 +61,11 @@ export function updateScroll(
     const adjustChanged =
         lastScrollAdjustForHistory !== undefined && Math.abs(adjust - lastScrollAdjustForHistory) > 0.1;
 
-    if (adjustChanged) {
+    if (adjustChanged || options?.nativeGeometryChanged) {
         scrollHistory.length = 0;
+    }
+    if (options?.nativeGeometryChanged) {
+        state.scrollForNextCalculateItemsInView = undefined;
     }
 
     state.lastScrollAdjustForHistory = adjust;
@@ -70,7 +73,7 @@ export function updateScroll(
     // Don't add to the history if it's initial scroll event otherwise invalid velocity will be calculated
     // Don't add to the history if we are scrolling to an offset
     if (scrollingTo === undefined && !(scrollHistory.length === 0 && newScroll === state.scroll)) {
-        if (!adjustChanged) {
+        if (!adjustChanged && !options?.nativeGeometryChanged) {
             // Skip history samples while scrollAdjust is changing since those jumps are synthetic
             scrollHistory.push({ scroll: newScroll, time: currentTime });
         }
@@ -170,6 +173,7 @@ export function updateScroll(
         didResolvePendingNativeMVCPAdjust ||
         didCancelMaintainScrollAtEnd ||
         allowedEdge !== undefined ||
+        options?.nativeGeometryChanged ||
         forceUpdate ||
         lastCalculated === undefined ||
         Math.abs(state.scroll - lastCalculated) > 2;
