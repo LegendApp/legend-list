@@ -62,14 +62,20 @@ function markReachedEdge(ctx: StateContext, edge: ReachedEdge) {
     state[snapshotKey] = snapshot;
 }
 
-// A promise returned by the callback owns its edge until it settles, so rows the request adds
-// while loading, such as a loading row, do not request the same page again.
+// Suppress data-driven rearming while invoking the callback and until its promise settles.
+// Explicit user gestures retain their existing retry behavior.
 export function dispatchReachedEdge(ctx: StateContext, edge: ReachedEdge, dispatch: () => unknown) {
     markReachedEdge(ctx, edge);
     const snapshot = ctx.state[edge === "start" ? "startReachedSnapshot" : "endReachedSnapshot"]!;
-    const result = dispatch() as PromiseLike<unknown> | undefined;
+    snapshot.isRequestPending = true;
+    let result: PromiseLike<unknown> | undefined;
+    try {
+        result = dispatch() as PromiseLike<unknown> | undefined;
+    } catch (error) {
+        snapshot.isRequestPending = false;
+        throw error;
+    }
     if (typeof result?.then === "function") {
-        snapshot.isRequestPending = true;
         const settle = () => {
             snapshot.isRequestPending = false;
             // Recheck once the request's rows commit, so a page that stays inside the threshold keeps paging.
@@ -78,6 +84,8 @@ export function dispatchReachedEdge(ctx: StateContext, edge: ReachedEdge, dispat
             }
         };
         result.then(settle, settle);
+    } else {
+        snapshot.isRequestPending = false;
     }
 }
 

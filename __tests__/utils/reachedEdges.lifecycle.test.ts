@@ -341,6 +341,48 @@ describe("reached edges lifecycle", () => {
     });
 
     for (const edge of ["start", "end"] as const) {
+        for (const outcome of ["synchronous", "resolve", "reject", "throw"] as const) {
+            it(`defers recursive ${edge} paging while its callback inserts a loading row (${outcome})`, async () => {
+                const { ctx } = scenario(566, 474, edge);
+                let calls = 0;
+                let resolve!: () => void;
+                let reject!: () => void;
+                const pending = new Promise<void>((onResolve, onReject) => {
+                    resolve = onResolve;
+                    reject = () => onReject(new Error("request failed"));
+                });
+                ctx.state.props[edge === "start" ? "onStartReached" : "onEndReached"] = () => {
+                    calls++;
+                    if (calls === 1) {
+                        ctx.state.props.data = [{ id: -1 }, ...ctx.state.props.data];
+                        checkThresholds(ctx);
+                        if (outcome === "throw") throw new Error("request failed");
+                        return outcome === "synchronous" ? undefined : pending;
+                    }
+                };
+                ctx.state.reprocessCurrentScroll = () => checkThresholds(ctx);
+                try {
+                    if (outcome === "throw") expect(() => setDidLayout(ctx)).toThrow("request failed");
+                    else setDidLayout(ctx);
+                    expect(calls).toBe(1);
+                    if (outcome === "resolve" || outcome === "reject") {
+                        checkThresholds(ctx);
+                        expect(calls).toBe(1);
+                        if (outcome === "resolve") resolve();
+                        else reject();
+                        await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+                    } else {
+                        checkThresholds(ctx);
+                    }
+                    expect(calls).toBe(2);
+                } finally {
+                    ctx.state.scheduledWork.dispose();
+                }
+            });
+        }
+    }
+
+    for (const edge of ["start", "end"] as const) {
         it(`delivers ${edge} when a new gesture enters the window after its first scroll event`, () => {
             const { ctx, start, end } = scenario(566, 474, "both", 0.1);
             ctx.state.scroll = edge === "end" ? 0 : 92;
