@@ -219,5 +219,8 @@ export function updateScroll(
 
         state.dataChangeNeedsScrollUpdate = false;
         state.lastScrollDelta = 0;
+    } else {
+        // Small scroll deltas can cross the end tolerance without recalculating items.
+        checkThresholds(ctx, allowedEdge);
     }
 }

@@ -2,13 +2,70 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import "../setup"; // Import global test setup
 
 import * as doMaintainScrollAtEndModule from "@/core/doMaintainScrollAtEnd";
+import { onScroll } from "@/core/onScroll";
 import { updateScroll } from "@/core/updateScroll";
 import * as flushSyncModule from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { peek$ } from "@/state/state";
+import { checkAtBottom } from "@/utils/checkAtBottom";
+import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
+
+describe("updateScroll end state after content growth", () => {
+    for (const os of ["ios", "android", "web"] as const) {
+        it(`refreshes isAtEnd for settling offsets below the item recalculation threshold on ${os}`, () => {
+            const originalPlatform = Platform.OS;
+            Platform.OS = os;
+            const calculateItems = mock(() => {});
+            const ctx = createMockContext(
+                { totalSize: 1000 },
+                {
+                    props: { data: ["a"], maintainScrollAtEnd: true, maintainScrollAtEndThreshold: 0 },
+                    queuedInitialLayout: true,
+                    scroll: 700,
+                    scrollLength: 300,
+                    triggerCalculateItemsInView: calculateItems,
+                },
+            );
+            const handle = createImperativeHandle(ctx);
+            const sendScroll = (offset: number) =>
+                onScroll(ctx, {
+                    nativeEvent: {
+                        contentOffset: { x: 0, y: offset },
+                        contentSize: { height: 1065.625, width: 300 },
+                        layoutMeasurement: { height: 300, width: 300 },
+                    },
+                } as any);
+            try {
+                checkAtBottom(ctx);
+                expect(handle.getState().isAtEnd).toBe(true);
+                ctx.state.props.data = ["a", "b"];
+                ctx.values.set("totalSize", 1065.625);
+                // The follow approaches the new end, then settles by less than two pixels.
+                sendScroll(764.125);
+                expect(handle.getState().distanceFromEnd).toBe(1.5);
+                expect(handle.getState().isAtEnd).toBe(false);
+                calculateItems.mockClear();
+                const onAtEnd = mock(() => {});
+                handle.getState().listen("isAtEnd", onAtEnd);
+                for (const gap of [0, 1]) {
+                    sendScroll(765.625 - gap);
+                    expect(handle.getState().distanceFromEnd).toBe(gap);
+                    expect(handle.getState().isAtEnd).toBe(true);
+                }
+                expect(calculateItems).not.toHaveBeenCalled();
+                sendScroll(765.625 - 1.25);
+                expect(handle.getState().isAtEnd).toBe(false);
+                expect(onAtEnd.mock.calls).toEqual([[true], [false]]);
+            } finally {
+                ctx.state.scheduledWork.dispose();
+                Platform.OS = originalPlatform;
+            }
+        });
+    }
+});
 
 describe("updateScroll large user jumps", () => {
     let mockCtx: StateContext;
