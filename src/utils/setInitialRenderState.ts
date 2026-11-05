@@ -56,7 +56,11 @@ export function setInitialRenderState(
         state.didFinishInitialScroll = true;
     }
 
-    const isReadyToRender = Boolean(state.didContainersLayout && state.didFinishInitialScroll);
+    // An adjustment requested before the list was ready reaches the scroll view on the next frame. Revealing the
+    // list earlier would show items at their unadjusted offset for a frame.
+    const isReadyToRender = Boolean(
+        state.didContainersLayout && state.didFinishInitialScroll && !state.adjustingFromInitialMount,
+    );
     if (isReadyToRender && !peek$(ctx, "readyToRender")) {
         set$(ctx, "readyToRender", true);
         setAdaptiveRender(ctx, "normal", "ready");
