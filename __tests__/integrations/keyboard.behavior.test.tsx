@@ -263,32 +263,30 @@ describe("KeyboardAwareLegendList", () => {
         expect(nextScrollElement.props.blankSpace.value).toBe(0);
     });
 
-    for (const horizontal of [false, true]) {
-        it(`wraps the list in a content extent that holds a committed shrink until after the commit (horizontal: ${horizontal})`, async () => {
-            const extent = await renderContentExtent({ anchoredEndSpace: { anchorIndex: 0 } }, horizontal);
+    it("wraps the list in a content extent that holds a committed shrink until after the commit", async () => {
+        const extent = await renderContentExtent({ anchoredEndSpace: { anchorIndex: 0 } });
 
-            expect(extent.renderer.toJSON()).toMatchObject({
-                children: [{ type: "containers-layer" }],
-                type: "reanimated-view",
-            });
-            // The negative gap margin is part of the extent the layer occupies.
-            expect(extent.minSize()).toBe(990);
-
-            // React's commit of the shrink still renders the held extent; only the
-            // layout effect after it releases the new size to Reanimated.
-            extent.commit(700);
-            expect(extent.minSize()).toBe(990);
-            extent.rerender();
-            expect(extent.minSize()).toBe(690);
-
-            // Growth is not held back by the wrapper either (it never exceeds the inner size).
-            extent.commit(1200);
-            extent.rerender();
-            expect(extent.minSize()).toBe(1190);
-
-            act(() => extent.renderer.unmount());
+        expect(extent.renderer.toJSON()).toMatchObject({
+            children: [{ type: "containers-layer" }],
+            type: "reanimated-view",
         });
-    }
+        // The negative gap margin is part of the extent the layer occupies.
+        expect(extent.minSize()).toBe(990);
+
+        // React's commit of the shrink still renders the held extent; only the
+        // layout effect after it releases the new size to Reanimated.
+        extent.commit(700);
+        expect(extent.minSize()).toBe(990);
+        extent.rerender();
+        expect(extent.minSize()).toBe(690);
+
+        // Growth is not held back by the wrapper either (it never exceeds the inner size).
+        extent.commit(1200);
+        extent.rerender();
+        expect(extent.minSize()).toBe(1190);
+
+        act(() => extent.renderer.unmount());
+    });
 
     it("queues the grown blank space ahead of the extent's release", async () => {
         const extent = await renderContentExtent({ anchoredEndSpace: { anchorIndex: 0 } });
@@ -317,19 +315,28 @@ describe("KeyboardAwareLegendList", () => {
         act(() => extent.renderer.unmount());
     });
 
-    it("does not hold a shrink without anchored end space", async () => {
-        const extent = await renderContentExtent({});
-        expect(extent.minSize()).toBe(0);
+    // Nothing grows to compensate for the shrink in these cases (blankSpace is a bottom inset), so
+    // holding it would only delay the content (and a footer below it) by a UI job.
+    for (const { name, props, horizontal } of [
+        { horizontal: false, name: "without anchored end space", props: {} },
+        {
+            horizontal: true,
+            name: "on a horizontal list",
+            props: { anchoredEndSpace: { anchorIndex: 0 }, horizontal: true },
+        },
+    ]) {
+        it(`does not hold a shrink ${name}`, async () => {
+            const extent = await renderContentExtent(props, horizontal);
+            expect(extent.minSize()).toBe(0);
 
-        // Nothing grows to compensate for the shrink, so holding it would only delay the
-        // content (and a footer below it) by a UI job.
-        deferUIJobs = true;
-        extent.commit(700);
-        expect(uiJobs).toHaveLength(0);
-        expect(extent.minSize()).toBe(0);
+            deferUIJobs = true;
+            extent.commit(700);
+            expect(uiJobs).toHaveLength(0);
+            expect(extent.minSize()).toBe(0);
 
-        act(() => extent.renderer.unmount());
-    });
+            act(() => extent.renderer.unmount());
+        });
+    }
 
     it("queues the blankSpace reset behind a size queued before it", async () => {
         const renderer = await renderKeyboardAwareLegendList({ anchoredEndSpace: { anchorIndex: 0 } });
