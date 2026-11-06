@@ -19,6 +19,8 @@ const useCommittedMinSize = IsNewArchitecture ? () => useArr$(["totalSize"])[0] 
 /**
  * An integration that applies end space outside React can hold the extent's shrink until
  * the end space grown to compensate has landed. That ordering relies on Fabric commits.
+ * Only vertical lists are wrapped: the one integration that uses this (KeyboardAwareLegendList)
+ * applies its end space as a bottom inset.
  */
 const useContentExtentComponent = IsNewArchitecture
     ? () => useStateContext().state.props.contentExtentComponentInternal
@@ -75,7 +77,6 @@ const ContainersLayer = typedMemo(function ContainersLayer({
             }
             if (gapX) {
                 style.marginRight = -gapX;
-                endMargin = -gapX;
             }
         } else {
             if (gapX && numColumns > 1) {
@@ -95,8 +96,8 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     );
     const ContentExtent = useContentExtentComponent();
 
-    return ContentExtent ? (
-        <ContentExtent committedSize={minSize ?? 0} horizontal={horizontal} sizeAdjustment={endMargin}>
+    return ContentExtent && !horizontal ? (
+        <ContentExtent committedSize={minSize ?? 0} sizeAdjustment={endMargin}>
             {layer}
         </ContentExtent>
     ) : (

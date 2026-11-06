@@ -155,18 +155,13 @@ describe("Containers native", () => {
     }
 
     for (const horizontal of [false, true]) {
-        it(`hands the committed extent to an integration's content extent wrapper (horizontal: ${horizontal})`, async () => {
+        it(`${horizontal ? "does not wrap a horizontal layer in" : "hands the committed extent to"} an integration's content extent wrapper`, async () => {
             const { Containers } = await import(
                 `../../src/components/Containers.native?content-extent-${horizontal ? "x" : "y"}`
             );
             const received: Array<Omit<ContentExtentComponentInternalProps, "children">> = [];
-            function ContentExtent({
-                children,
-                committedSize,
-                horizontal: extentHorizontal,
-                sizeAdjustment,
-            }: ContentExtentComponentInternalProps) {
-                received.push({ committedSize, horizontal: extentHorizontal, sizeAdjustment });
+            function ContentExtent({ children, committedSize, sizeAdjustment }: ContentExtentComponentInternalProps) {
+                received.push({ committedSize, sizeAdjustment });
                 return React.createElement("content-extent", null, children);
             }
             let ctx: StateContext;
@@ -197,13 +192,20 @@ describe("Containers native", () => {
                 </StateProvider>,
             );
             const tree = toJSON() as any;
-            expect(tree.type).toBe("content-extent");
-            expect(tree.children[0].props.style[horizontal ? "minWidth" : "minHeight"]).toBe(1000);
-            expect(received.at(-1)).toEqual({ committedSize: 1000, horizontal, sizeAdjustment: -12 });
+            if (horizontal) {
+                // Only vertical lists are wrapped: the keyboard integration's end space is a bottom inset.
+                expect(tree.type).not.toBe("content-extent");
+                expect(tree.props.style.minWidth).toBe(1000);
+                expect(received).toHaveLength(0);
+            } else {
+                expect(tree.type).toBe("content-extent");
+                expect(tree.children[0].props.style.minHeight).toBe(1000);
+                expect(received.at(-1)).toEqual({ committedSize: 1000, sizeAdjustment: -12 });
 
-            // The wrapper only sees a shrink once React commits it with the row positions.
-            act(() => set$(ctx!, "totalSize", 700));
-            expect(received.at(-1)).toEqual({ committedSize: 700, horizontal, sizeAdjustment: -12 });
+                // The wrapper only sees a shrink once React commits it with the row positions.
+                act(() => set$(ctx!, "totalSize", 700));
+                expect(received.at(-1)).toEqual({ committedSize: 700, sizeAdjustment: -12 });
+            }
             unmount();
         });
     }

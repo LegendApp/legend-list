@@ -41,15 +41,13 @@ const { typedForwardRef, useCombinedRef } = internal;
 type ContentExtentProps = {
     children: React.ReactNode;
     committedSize: number;
-    horizontal: boolean;
     sizeAdjustment: number;
 };
 
 /**
  * Whether ReanimatedContentExtent holds shrinks. Only anchored end space grows to compensate for
- * one, and only on vertical lists (blankSpace is a bottom inset), so otherwise the extent follows
- * the list. A context rather than a prop keeps the component's identity stable, so turning anchored
- * end space on or off doesn't remount the rows.
+ * one, so without it the extent follows the list. A context rather than a prop keeps the
+ * component's identity stable, so turning anchored end space on or off doesn't remount the rows.
  */
 const HoldContentShrinkContext = createContext(false);
 
@@ -63,7 +61,7 @@ const HoldContentShrinkContext = createContext(false);
  * contentSize and Android applies padding before child layout. Growth still lands at once
  * through the inner Animated size, ahead of the blank space shrinking.
  */
-function ReanimatedContentExtent({ children, committedSize, horizontal, sizeAdjustment }: ContentExtentProps) {
+function ReanimatedContentExtent({ children, committedSize, sizeAdjustment }: ContentExtentProps) {
     const holdShrink = useContext(HoldContentShrinkContext);
     const size = Math.max(0, committedSize + sizeAdjustment);
     const extent = useSharedValue<number>(size);
@@ -78,11 +76,8 @@ function ReanimatedContentExtent({ children, committedSize, horizontal, sizeAdju
             extent.value = next;
         })(size);
     }, [extent, holdShrink, size]);
-    const style = useAnimatedStyle(() => {
-        // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
-        const minSize = holdShrink ? extent.value : 0;
-        return horizontal ? { minWidth: minSize } : { minHeight: minSize };
-    }, [holdShrink, horizontal]);
+    // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
+    const style = useAnimatedStyle(() => ({ minHeight: holdShrink ? extent.value : 0 }), [holdShrink]);
 
     return <Reanimated.View style={style}>{children}</Reanimated.View>;
 }
@@ -498,12 +493,10 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     >;
 
     return (
-        <HoldContentShrinkContext.Provider value={!!anchoredEndSpace && !isHorizontal}>
+        <HoldContentShrinkContext.Provider value={!!anchoredEndSpace}>
             <AnimatedLegendListInternal
                 anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
                 anchoredEndSpaceOwnerInternal="scroll"
-                // Passed even without anchored end space: adding it later would remount every container.
-                // When it isn't holding, it's a plain Reanimated.View with a minimum size of 0.
                 contentExtentComponentInternal={ReanimatedContentExtent}
                 ref={combinedRef}
                 refScrollView={combinedScrollRef}
