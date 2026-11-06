@@ -589,10 +589,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useWindowScroll: useWindowScrollResolved,
     };
 
-    if (didDataChangeLocal) {
+    if (didDataChangeLocal && !isFirstLocal) {
         // Child layout effects can measure before the parent's data-change effect.
         // Keep their key lookup on the same dataset as state.props.data.
-        if (!isFirstLocal) state.previousIndexByKey ??= state.indexByKey;
+        state.previousIndexByKey ??= state.indexByKey;
         state.indexByKey = new Map();
         state.idCache.length = dataProp.length;
         for (let index = 0; index < dataProp.length; index++) {
