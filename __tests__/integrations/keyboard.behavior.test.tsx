@@ -12,7 +12,7 @@ import TestRenderer, { act } from "../helpers/testRenderer";
 let lastAnimatedLegendListProps: any;
 // When set, the AnimatedLegendList mock renders the integration's content extent around a stand-in
 // for the containers layer, as ContainersLayer does.
-let mockContentExtent: { committedSize: number; horizontal: boolean } | undefined;
+let mockContentExtent: { committedSize: number } | undefined;
 const reportContentInsetMock = mock(
     (_insets: Partial<{ bottom: number; left: number; right: number; top: number }>) => {},
 );
@@ -108,11 +108,7 @@ mock.module("@legendapp/list/reanimated", () => ({
         );
         const ContentExtent = props.contentExtentComponentInternal as ContentExtentComponent | undefined;
         return mockContentExtent && ContentExtent ? (
-            <ContentExtent
-                committedSize={mockContentExtent.committedSize}
-                horizontal={mockContentExtent.horizontal}
-                sizeAdjustment={-10}
-            >
+            <ContentExtent committedSize={mockContentExtent.committedSize} sizeAdjustment={-10}>
                 {React.createElement("containers-layer")}
             </ContentExtent>
         ) : null;
@@ -146,8 +142,8 @@ type ContentExtentComponent = React.ComponentType<ContentExtentComponentInternal
 // evaluates animated styles during render, so a size released to Reanimated after a commit only
 // shows in the tree after the next render: rerender() observes it. Pass the same props object
 // throughout so the list's memoized callbacks stay stable.
-const renderContentExtent = async (props: Record<string, unknown>, horizontal = false) => {
-    mockContentExtent = { committedSize: 1000, horizontal };
+const renderContentExtent = async (props: Record<string, unknown>) => {
+    mockContentExtent = { committedSize: 1000 };
     const KeyboardAwareLegendList = await importKeyboardAwareLegendList();
     const renderer = await renderKeyboardAwareLegendList(props);
     const rerender = () =>
@@ -160,7 +156,7 @@ const renderContentExtent = async (props: Record<string, unknown>, horizontal = 
             mockContentExtent!.committedSize = nextCommittedSize;
             rerender();
         },
-        minSize: () => (renderer.toJSON() as any).props.style[horizontal ? "minWidth" : "minHeight"],
+        minSize: () => (renderer.toJSON() as any).props.style.minHeight,
         renderer,
         rerender,
     };
@@ -315,28 +311,19 @@ describe("KeyboardAwareLegendList", () => {
         act(() => extent.renderer.unmount());
     });
 
-    // Nothing grows to compensate for the shrink in these cases (blankSpace is a bottom inset), so
-    // holding it would only delay the content (and a footer below it) by a UI job.
-    for (const { name, props, horizontal } of [
-        { horizontal: false, name: "without anchored end space", props: {} },
-        {
-            horizontal: true,
-            name: "on a horizontal list",
-            props: { anchoredEndSpace: { anchorIndex: 0 }, horizontal: true },
-        },
-    ]) {
-        it(`does not hold a shrink ${name}`, async () => {
-            const extent = await renderContentExtent(props, horizontal);
-            expect(extent.minSize()).toBe(0);
+    it("does not hold a shrink without anchored end space", async () => {
+        const extent = await renderContentExtent({});
+        expect(extent.minSize()).toBe(0);
 
-            deferUIJobs = true;
-            extent.commit(700);
-            expect(uiJobs).toHaveLength(0);
-            expect(extent.minSize()).toBe(0);
+        // Nothing grows to compensate for the shrink, so holding it would only delay the
+        // content (and a footer below it) by a UI job.
+        deferUIJobs = true;
+        extent.commit(700);
+        expect(uiJobs).toHaveLength(0);
+        expect(extent.minSize()).toBe(0);
 
-            act(() => extent.renderer.unmount());
-        });
-    }
+        act(() => extent.renderer.unmount());
+    });
 
     it("queues the blankSpace reset behind a size queued before it", async () => {
         const renderer = await renderKeyboardAwareLegendList({ anchoredEndSpace: { anchorIndex: 0 } });

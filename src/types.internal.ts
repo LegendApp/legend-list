@@ -171,12 +171,14 @@ export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export type AnchoredEndSpaceOwner = "list" | "scroll";
 
-/** Wraps the native content extent so an integration can publish its shrink on its own commit path. */
+/**
+ * Wraps the native content extent of a vertical list so an integration can publish its shrink on
+ * its own commit path. Horizontal lists aren't wrapped.
+ */
 export interface ContentExtentComponentInternalProps {
     children: React.ReactNode;
     /** The totalSize React is committing with the row positions. */
     committedSize: number;
-    horizontal: boolean;
     /** Added to totalSize to get the extent the layer occupies (negative gap margins). */
     sizeAdjustment: number;
 }
