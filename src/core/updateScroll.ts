@@ -116,7 +116,8 @@ export function updateScroll(
         !adjustChanged &&
         scrollingTo === undefined &&
         !state.pendingNativeMVCPAdjust;
-    if (isUserScrollEvent) {
+    if (isUserScrollEvent && !options?.nativeGeometryChanged) {
+        // Geometry corrections do not indicate a new user direction.
         // The first sample after a pause has zero velocity, but a fresh direction.
         state.scrollBufferDirection = newScroll > prevScroll ? 1 : -1;
     }
