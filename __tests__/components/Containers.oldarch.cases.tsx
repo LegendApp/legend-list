@@ -46,3 +46,38 @@ it("keeps old-architecture content extent on the Animated update path", () => {
     expect(commits).toBe(1);
     unmount();
 });
+
+it("does not wrap the old-architecture layer in an integration's content extent", () => {
+    let wrapped = false;
+    function ContentExtent({ children }: { children: React.ReactNode }) {
+        wrapped = true;
+        return <>{children}</>;
+    }
+    function Setup() {
+        const ctx = useStateContext();
+        // Set up once, so a re-render doesn't reset the store's values.
+        if (!ctx.state) {
+            ctx.state = createMockState({ props: { contentExtentComponentInternal: ContentExtent } as any });
+            ctx.values.set("numContainersPooled", 0);
+            ctx.values.set("readyToRender", true);
+            ctx.values.set("totalSize", 1000);
+        }
+        return (
+            <Containers
+                freshDataTransitionEpoch={0}
+                getRenderedItem={() => null}
+                horizontal={false}
+                recycleItems={false}
+            />
+        );
+    }
+    const { toJSON, unmount } = render(
+        <StateProvider>
+            <Setup />
+        </StateProvider>,
+    );
+    // The wrapper relies on Fabric commit ordering, so old architecture keeps its Animated extent.
+    expect(wrapped).toBe(false);
+    expect((toJSON() as any).props.style.height.getValue()).toBe(1000);
+    unmount();
+});

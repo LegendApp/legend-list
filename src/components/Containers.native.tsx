@@ -16,6 +16,15 @@ import { type GetRenderedItem, typedMemo } from "@/types.internal";
 // end space set outside React (anchored end space) never outruns the content.
 // Old architecture keeps both on the Animated update path.
 const useCommittedMinSize = IsNewArchitecture ? () => useArr$(["totalSize"])[0] : () => undefined;
+/**
+ * An integration that applies end space outside React can hold the extent's shrink until
+ * the end space grown to compensate has landed. That ordering relies on Fabric commits.
+ * Only vertical lists are wrapped: the one integration that uses this (KeyboardAwareLegendList)
+ * applies its end space as a bottom inset.
+ */
+const useContentExtentComponent = IsNewArchitecture
+    ? () => useStateContext().state.props.contentExtentComponentInternal
+    : () => undefined;
 
 interface ContainersProps<ItemT> {
     freshDataTransitionEpoch: number;
@@ -55,6 +64,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({
           }
         : { height: size, minHeight: minSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0 };
 
+    let endMargin = 0;
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
         const { columnGap, rowGap, gap } = columnWrapperStyle;
@@ -74,14 +84,24 @@ const ContainersLayer = typedMemo(function ContainersLayer({
             }
             if (gapY) {
                 style.marginBottom = -gapY;
+                endMargin = -gapY;
             }
         }
     }
 
-    return (
+    const layer = (
         <Animated.View pointerEvents={isVisible ? undefined : "none"} style={style}>
             <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>
         </Animated.View>
+    );
+    const ContentExtent = useContentExtentComponent();
+
+    return ContentExtent && !horizontal ? (
+        <ContentExtent committedSize={minSize ?? 0} sizeAdjustment={endMargin}>
+            {layer}
+        </ContentExtent>
+    ) : (
+        layer
     );
 });
 

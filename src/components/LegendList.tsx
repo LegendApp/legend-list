@@ -68,6 +68,7 @@ import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/st
 import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
 import type {
     AnchoredEndSpaceOwner,
+    ContentExtentComponentInternalProps,
     InternalState,
     LegendListPropsBase,
     LegendListScrollerRef,
@@ -219,12 +220,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
     const anchoredEndSpaceOwner =
         ((props as any).anchoredEndSpaceOwnerInternal as AnchoredEndSpaceOwner | undefined) ?? "list";
+    const contentExtentComponentInternal = (props as any).contentExtentComponentInternal as
+        | React.ComponentType<ContentExtentComponentInternalProps>
+        | undefined;
     const positionComponentInternal = (props as any).positionComponentInternal as React.ComponentType<any> | undefined;
     const stickyPositionComponentInternal = (props as any).stickyPositionComponentInternal as
         | React.ComponentType<any>
         | undefined;
     const {
         anchoredEndSpaceOwnerInternal: _anchoredEndSpaceOwnerInternal,
+        contentExtentComponentInternal: _contentExtentComponentInternal,
         positionComponentInternal: _positionComponentInternal,
         stickyPositionComponentInternal: _stickyPositionComponentInternal,
         ...restProps
@@ -535,6 +540,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         animatedProps: animatedPropsInternal,
         contentContainerAlignItems: contentContainerStyle.alignItems,
         contentContainerMinSize,
+        contentExtentComponentInternal,
         contentInset,
         contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
         data: dataProp,
