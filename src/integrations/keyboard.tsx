@@ -47,8 +47,9 @@ type ContentExtentProps = {
 
 /**
  * Whether ReanimatedContentExtent holds shrinks. Only anchored end space grows to compensate for
- * one, so without it the extent follows the list. A context rather than a prop keeps the
- * component's identity stable, so turning anchored end space on or off doesn't remount the rows.
+ * one, and only on vertical lists (blankSpace is a bottom inset), so otherwise the extent follows
+ * the list. A context rather than a prop keeps the component's identity stable, so turning anchored
+ * end space on or off doesn't remount the rows.
  */
 const HoldContentShrinkContext = createContext(false);
 
@@ -70,8 +71,8 @@ function ReanimatedContentExtent({ children, committedSize, horizontal, sizeAdju
         if (!holdShrink) {
             return;
         }
-        // runOnUI rather than a `.value` write: a JS-thread write reaches the UI runtime as its own
-        // job, while runOnUI calls from one JS tick flush as one job behind earlier ones.
+        // runOnUI rather than a `.value` write: runOnUI jobs reach the UI runtime in call order, while
+        // on Reanimated 4.3+ a JS-thread `.value` write takes a separate path and can overtake them.
         runOnUI((next: number) => {
             "worklet";
             extent.value = next;
@@ -356,7 +357,8 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
             ...anchoredEndSpace,
             onSizeChanged: (size: number) => {
                 // runOnUI keeps this ahead of the content extent's release, which ReanimatedContentExtent
-                // queues later from a layout effect; a `.value` write is dispatched on its own.
+                // queues later from a layout effect; on Reanimated 4.3+ a `.value` write takes a
+                // separate path and could land after it.
                 runOnUI((next: number) => {
                     "worklet";
                     blankSpace.value = next;
@@ -496,10 +498,12 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     >;
 
     return (
-        <HoldContentShrinkContext.Provider value={!!anchoredEndSpace}>
+        <HoldContentShrinkContext.Provider value={!!anchoredEndSpace && !isHorizontal}>
             <AnimatedLegendListInternal
                 anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
                 anchoredEndSpaceOwnerInternal="scroll"
+                // Passed even without anchored end space: adding it later would remount every container.
+                // When it isn't holding, it's a plain Reanimated.View with a minimum size of 0.
                 contentExtentComponentInternal={ReanimatedContentExtent}
                 ref={combinedRef}
                 refScrollView={combinedScrollRef}
