@@ -85,6 +85,10 @@ export function processContainerLayout({ containerId, ctx, rectangle, ref, state
             if (state.itemKey === currentItemKey) {
                 const element = ref.current as unknown as HTMLElement | null;
                 const rect = element?.getBoundingClientRect?.();
+                if (rect && rect.width === 0 && rect.height === 0) {
+                    // Hidden or detached since the shrink was observed: keep the known size.
+                    return;
+                }
                 if (rect) {
                     layout = { height: rect.height, width: rect.width };
                 }
