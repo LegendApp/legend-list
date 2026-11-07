@@ -400,6 +400,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 dataChangeNeedsScrollUpdate: false,
                 didColumnsChange: false,
                 didDataChange: false,
+                didDataChangeBeforeAllocation: false,
                 didLoad: false,
                 enableScrollForNextCalculateItemsInView: true,
                 endBuffered: -1,
@@ -910,6 +911,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const didAllocateContainers = data.length > 0 && doInitialAllocateContainers(ctx);
         if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
             checkResetContainers(ctx, data, { didColumnsChange });
+        }
+        if (didDataChange && !didAllocateContainers && !peek$(ctx, "numContainers")) {
+            // Positions computed now are for data the first allocation has not seen yet.
+            state.didDataChangeBeforeAllocation = true;
         }
         if (didPinsChange && !didDataChange && !didColumnsChange && !isFirst) {
             state.scrollForNextCalculateItemsInView = undefined;
