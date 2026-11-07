@@ -1,3 +1,12 @@
+## 3.7.2
+
+- Fix: Preserve web row order and focus, and keep pinned rows updated.
+- Fix: End-following, sticky offsets, and edge callbacks after geometry or data changes.
+- Fix: Preserve anchors through prepends and prevent duplicate pending edge requests.
+- Fix: Keep wheel scrolling responsive.
+- Fix: Prevent native geometry corrections from inventing velocity or reversing the render buffer.
+- Perf: Reduce rendering work through directional buffers, reused size estimates, and faster initial indexing.
+
 ## 3.7.1
 
 - Fix: Loading callbacks respond reliably to data changes and new scroll gestures.
