@@ -172,6 +172,18 @@ export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export type AnchoredEndSpaceOwner = "list" | "scroll";
 
+/**
+ * Wraps the native content extent of a vertical list so an integration can publish its shrink on
+ * its own commit path. Horizontal lists aren't wrapped.
+ */
+export interface ContentExtentComponentInternalProps {
+    children: React.ReactNode;
+    /** The totalSize React is committing with the row positions. */
+    committedSize: number;
+    /** Added to totalSize to get the extent the layer occupies (negative gap margins). */
+    sizeAdjustment: number;
+}
+
 // Internal bridge for integrations, not part of the public list ref contract.
 // Keyboard integrations report occlusion separately from scroll-range insets.
 export interface LegendListInternalRef extends LegendListRef {
@@ -334,6 +346,8 @@ export interface InternalState {
         animatedProps: StylesAsSharedValue<Record<string, any>>;
         anchoredEndSpace: AnchoredEndSpaceConfig | undefined;
         anchoredEndSpaceOwner: AnchoredEndSpaceOwner;
+        /** Provided by integrations that apply end space outside React. */
+        contentExtentComponentInternal?: React.ComponentType<ContentExtentComponentInternalProps>;
         alwaysRender: AlwaysRenderConfig | undefined;
         contentContainerAlignItems: ViewStyle["alignItems"] | undefined;
         contentContainerMinSize?: number;
