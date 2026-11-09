@@ -3,9 +3,12 @@ import * as React from "react";
 
 import { isArray } from "@/utils/helpers";
 
+// Style arrays can nest like React Native's (e.g. [styles.list, props.style] where props.style is
+// itself an array), so flatten recursively; spreading a nested array would add numeric keys that the
+// DOM rejects when React assigns the style.
 function flattenStyles<T>(styles: T | T[]): T {
     if (isArray(styles)) {
-        return Object.assign({}, ...styles.filter(Boolean));
+        return Object.assign({}, ...styles.filter(Boolean).map(flattenStyles));
     }
     return styles;
 }
