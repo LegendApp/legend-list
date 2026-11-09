@@ -2,11 +2,12 @@ import "../setup";
 
 import * as React from "react";
 
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { PositionView, PositionViewSticky } from "../../src/components/PositionView.native";
 import { updateItemSizes } from "../../src/core/updateItemSizes";
 import { type StateContext, StateProvider, set$, useStateContext } from "../../src/state/state";
 import { createMockState } from "../__mocks__/createMockState";
+import { Animated } from "../__mocks__/react-native";
 import { setLayoutValue } from "../helpers/layoutArrays";
 import { act, render } from "../helpers/testingLibrary";
 
@@ -14,6 +15,14 @@ let currentCtx: StateContext | undefined;
 
 function flattenStyle(style: any) {
     return Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+}
+
+function translateYAt(json: any, animatedScrollY: InstanceType<typeof Animated.Value>, scrolls: number[]) {
+    const translateY = flattenStyle(json?.props?.style)?.transform?.[0]?.translateY;
+    return scrolls.map((scroll) => {
+        animatedScrollY.setValue(scroll);
+        return translateY.__getValue();
+    });
 }
 
 function StickyHarness({
@@ -26,7 +35,7 @@ function StickyHarness({
     position,
     stickyHeaderIndices,
 }: {
-    animatedScrollY: { interpolate: (config: any) => any };
+    animatedScrollY: InstanceType<typeof Animated.Value>;
     currentSize: number;
     index: number;
     itemIndex?: number;
@@ -36,6 +45,7 @@ function StickyHarness({
     stickyHeaderIndices: number[];
 }) {
     const ctx = useStateContext();
+    currentCtx = ctx;
 
     if (!ctx.state) {
         ctx.state = createMockState({
@@ -170,8 +180,7 @@ describe("PositionView.native", () => {
     });
 
     it("pushes a tall sticky header out when the next sticky header arrives", () => {
-        const interpolate = mock((config: any) => config);
-        const animatedScrollY = { interpolate };
+        const animatedScrollY = new Animated.Value(0);
         const { toJSON, unmount } = render(
             <StateProvider>
                 <StickyHarness
@@ -186,25 +195,14 @@ describe("PositionView.native", () => {
             </StateProvider>,
         );
 
-        const expectedInterpolation = {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            inputRange: [100, 180],
-            outputRange: [100, 180],
-        };
-
-        expect(interpolate).toHaveBeenCalledTimes(1);
-        expect(interpolate).toHaveBeenCalledWith(expectedInterpolation);
-
-        const flattenedStyle = flattenStyle((toJSON() as any)?.props?.style);
-        expect(flattenedStyle?.transform).toEqual([{ translateY: expectedInterpolation }]);
+        // Pins at scroll 100, then stops at 180 where the next header (300) pushes its 120px out.
+        expect(translateYAt(toJSON(), animatedScrollY, [0, 100, 150, 180, 500])).toEqual([100, 100, 150, 180, 180]);
 
         unmount();
     });
 
     it("uses the current container index signal when a sticky item moves", () => {
-        const interpolate = mock((config: any) => config);
-        const animatedScrollY = { interpolate };
+        const animatedScrollY = new Animated.Value(0);
         const { toJSON, unmount } = render(
             <StateProvider>
                 <StickyHarness
@@ -220,18 +218,41 @@ describe("PositionView.native", () => {
             </StateProvider>,
         );
 
-        const expectedInterpolation = {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            inputRange: [100, 180],
-            outputRange: [100, 180],
-        };
-
-        expect(interpolate).toHaveBeenCalledWith(expectedInterpolation);
-
         const flattenedStyle = flattenStyle((toJSON() as any)?.props?.style);
         expect(flattenedStyle?.zIndex).toBe(1002);
-        expect(flattenedStyle?.transform).toEqual([{ translateY: expectedInterpolation }]);
+        expect(translateYAt(toJSON(), animatedScrollY, [0, 150, 500])).toEqual([100, 150, 180]);
+
+        unmount();
+    });
+
+    it("keeps one native-driven transform and updates it when a data change moves the header", () => {
+        currentCtx = undefined;
+        const animatedScrollY = new Animated.Value(0);
+        const { toJSON, unmount } = render(
+            <StateProvider>
+                <StickyHarness
+                    animatedScrollY={animatedScrollY}
+                    currentSize={48}
+                    index={3}
+                    itemKey="today"
+                    nextStickyPosition={0}
+                    position={400}
+                    stickyHeaderIndices={[0, 3]}
+                />
+            </StateProvider>,
+        );
+        const translateBefore = flattenStyle((toJSON() as any)?.props?.style)?.transform?.[0]?.translateY;
+        expect(translateYAt(toJSON(), animatedScrollY, [0])).toEqual([400]);
+
+        // An earlier row moves into this section, so the header's row shifts up without any scroll.
+        act(() => {
+            set$(currentCtx!, "containerPosition7", 160);
+        });
+
+        const translateAfter = flattenStyle((toJSON() as any)?.props?.style)?.transform?.[0]?.translateY;
+        // A replaced node is not evaluated by the native driver until the next scroll event.
+        expect(translateAfter).toBe(translateBefore);
+        expect(translateYAt(toJSON(), animatedScrollY, [0, 160, 300])).toEqual([160, 160, 300]);
 
         unmount();
     });
