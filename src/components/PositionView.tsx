@@ -37,6 +37,8 @@ const baseCss: CSSProperties = {
         : {}),
 };
 
+const horizontalCss: CSSProperties = { width: "max-content" };
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewState = typedMemo(function PositionViewState({
     id,
@@ -52,7 +54,7 @@ const PositionViewState = typedMemo(function PositionViewState({
         ? (Object.assign({}, ...style) as CSSProperties)
         : (style as unknown as CSSProperties);
     const combinedStyle: CSSProperties = horizontal
-        ? ({ ...baseCss, ...composed, left: position } as CSSProperties)
+        ? ({ ...baseCss, ...horizontalCss, ...composed, left: position } as CSSProperties)
         : ({ ...baseCss, ...composed, top: position } as CSSProperties);
 
     const {
@@ -103,7 +105,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     );
 
     const viewStyle = React.useMemo(() => {
-        const styleBase: CSSProperties = { ...baseCss, ...composed };
+        const styleBase: CSSProperties = { ...baseCss, ...(horizontal ? horizontalCss : {}), ...composed };
         delete styleBase.transform;
 
         const offset = stickyHeaderConfig?.offset ?? 0;
