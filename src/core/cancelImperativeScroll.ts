@@ -2,7 +2,9 @@ import { type StateContext, set$ } from "@/state/state";
 
 type InternalState = StateContext["state"];
 
-export function cancelScrollCompletionChecks({ scheduledWork }: InternalState) {
+export function cancelScrollCompletionChecks(state: InternalState) {
+    const { scheduledWork } = state;
+    state.silentInitialScrollReturn = undefined;
     scheduledWork.cancel("checkFinishedScrollFrame");
     scheduledWork.cancel("checkFinishedScrollRetryFrame");
     scheduledWork.cancel("checkFinishedScrollFallback");
