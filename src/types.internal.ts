@@ -254,6 +254,8 @@ export interface InternalState {
     layoutAdjustmentEpoch?: number;
     /** Counts absolute native scrolls, so an adjustment deferred before one of them is not applied again. */
     nativeScrollEpoch?: number;
+    /** Moves a silently dispatched initial scroll back onto its target after the retry nudged it away. */
+    silentInitialScrollReturn?: () => void;
     endFollowInterrupted?: boolean;
     visibleContentAnchor?: { key: string; offset: number; sizeOnly?: true };
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
