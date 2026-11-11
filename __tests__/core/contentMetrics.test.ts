@@ -511,6 +511,80 @@ describe("updateContentMetrics", () => {
         }
     });
 
+    for (const os of ["ios", "android"] as const) {
+        it(`compensates native MVCP when a measured header changes above the viewport (${os})`, () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = os;
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const ctx = createMockContext(
+                {
+                    headerSize: 60,
+                    readyToRender: true,
+                    totalSize: 1000,
+                },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    didMeasureHeader: true,
+                    props: {
+                        data: [1],
+                        maintainVisibleContentPosition: { data: false, size: true },
+                    },
+                    scroll: 200,
+                    scrollLength: 500,
+                    totalSize: 1000,
+                },
+            );
+
+            try {
+                setHeaderSize(ctx, 120);
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 60);
+            } finally {
+                requestAdjustSpy.mockRestore();
+                Platform.OS = prevPlatform;
+            }
+        });
+    }
+
+    it("syncs the Android clamp before compensating a header that shrinks near the end", () => {
+        const prevPlatform = Platform.OS;
+        Platform.OS = "android";
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        const ctx = createMockContext(
+            {
+                headerSize: 300,
+                readyToRender: true,
+                totalSize: 700,
+            },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                didMeasureHeader: true,
+                lastLayout: { height: 500, width: 300, x: 0, y: 0 },
+                props: {
+                    data: [1],
+                    maintainVisibleContentPosition: { data: false, size: true },
+                },
+                scroll: 450,
+                scrollLength: 500,
+                totalSize: 700,
+            },
+        );
+
+        try {
+            setHeaderSize(ctx, 100);
+
+            // The header and rows fill 1000 points. The 200-point shrink leaves 800, so Android clamps the offset to 300 before the
+            // adjustment lands. Only the remaining 50 points are adjusted, which ends at the kept position, 250.
+            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, -50);
+            expect(ctx.state.scroll).toBe(250);
+        } finally {
+            requestAdjustSpy.mockRestore();
+            Platform.OS = prevPlatform;
+        }
+    });
+
     it("does not compensate the initial web MVCP header measurement", () => {
         const prevPlatform = Platform.OS;
         Platform.OS = "web";
