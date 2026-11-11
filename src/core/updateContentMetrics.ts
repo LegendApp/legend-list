@@ -1,4 +1,3 @@
-import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { Insets } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -26,7 +25,6 @@ function shouldAdjustForHeaderSizeChange(ctx: StateContext, previousHeaderSize: 
     const previousHeaderEnd = (leadingPadding || 0) + previousHeaderSize;
 
     return (
-        Platform.OS === "web" &&
         props.maintainVisibleContentPosition.size &&
         didContainersLayout &&
         didFinishInitialScroll &&
