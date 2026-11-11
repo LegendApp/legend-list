@@ -1,3 +1,4 @@
+import { getAdjustAfterAndroidShrinkClamp } from "@/core/clampScrollOffset";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { Insets } from "@/types.base";
@@ -26,7 +27,6 @@ function shouldAdjustForHeaderSizeChange(ctx: StateContext, previousHeaderSize: 
     const previousHeaderEnd = (leadingPadding || 0) + previousHeaderSize;
 
     return (
-        Platform.OS === "web" &&
         props.maintainVisibleContentPosition.size &&
         didContainersLayout &&
         didFinishInitialScroll &&
@@ -49,8 +49,9 @@ export function setHeaderSize(ctx: StateContext, size: number) {
         // Do not compensate the initial measurement from no known header.
         // If a zero/estimated header was already recorded, this layout change
         // is a real content shift above the viewport and should preserve MVCP.
+        // Native MVCP anchors to an absolutely positioned view that a header resize does not move, so move it here.
         if (hasMeasuredOrEstimatedHeaderBaseline && shouldAdjustForHeaderSizeChange(ctx, previousHeaderSize, size)) {
-            requestAdjust(ctx, size - previousHeaderSize);
+            requestAdjust(ctx, getAdjustAfterAndroidShrinkClamp(ctx, size - previousHeaderSize));
         }
     }
 
