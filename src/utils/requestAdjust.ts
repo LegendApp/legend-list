@@ -1,7 +1,9 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollAdjustmentSource } from "@/types.internal";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function requestAdjust(ctx: StateContext, positionDiff: number, source?: ScrollAdjustmentSource) {
     const state = ctx.state;
@@ -16,10 +18,6 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
                 ctx.doScrollTo!({ horizontal: state.props.horizontal, isAdjustment: true, offset: state.scroll });
             } else {
                 state.scrollAdjustHandler.requestAdjust(positionDiff);
-
-                if (state.adjustingFromInitialMount) {
-                    state.adjustingFromInitialMount--;
-                }
             }
         };
         state.scroll += positionDiff;
@@ -28,6 +26,7 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
             state.userScrollContentSize += positionDiff;
         }
         state.scrollForNextCalculateItemsInView = undefined;
+        shiftNativeInitialScrollTarget(state, positionDiff);
 
         const readyToRender = peek$(ctx, "readyToRender");
 
@@ -71,7 +70,38 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
             }
         } else {
             state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 0) + 1;
-            requestAnimationFrame(doit);
+            const nativeScrollEpoch = state.nativeScrollEpoch;
+            requestAnimationFrame(() => {
+                // A native scroll issued in the meantime already landed on the adjusted offset. Moving the
+                // anchor as well would apply the adjustment a second time.
+                if (state.nativeScrollEpoch === nativeScrollEpoch) {
+                    doit();
+                }
+                state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 1) - 1;
+                if (!state.adjustingFromInitialMount) {
+                    setInitialRenderState(ctx, {});
+                }
+            });
         }
+    }
+}
+
+/**
+ * Native retries of an initial scroll reuse the offset recorded when it was dispatched. The adjustment moves
+ * state.scroll with the content, so the recorded target has to move with it. Web retargets from the index instead.
+ */
+function shiftNativeInitialScrollTarget(state: StateContext["state"], positionDiff: number) {
+    const scrollingTo = state.scrollingTo;
+    if (Platform.OS === "web" || !scrollingTo?.isInitialScroll || scrollingTo.animated) {
+        return;
+    }
+
+    scrollingTo.offset += positionDiff;
+    if (scrollingTo.targetOffset !== undefined) {
+        scrollingTo.targetOffset += positionDiff;
+    }
+    const watchdog = initialScrollWatchdog.get(state);
+    if (watchdog) {
+        watchdog.targetOffset += positionDiff;
     }
 }

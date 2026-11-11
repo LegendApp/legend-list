@@ -143,6 +143,10 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 }
 
 function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
+    if (Platform.OS !== "web") {
+        // Like doScrollTo, a retry targets an offset that already includes the adjustments requested so far.
+        ctx.state.nativeScrollEpoch = (ctx.state.nativeScrollEpoch ?? 0) + 1;
+    }
     ctx.state.refScroller.current?.scrollTo({ animated, ...getNativeScrollPoint(ctx, offset) });
 }
 
@@ -230,10 +234,13 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         : targetOffset + SILENT_INITIAL_SCROLL_TARGET_EPSILON;
                 initialScrollCompletion.markSilentInitialScrollRetry(state);
                 scrollToFallbackOffset(ctx, jiggleOffset);
-                state.scheduledWork.frame(
-                    () => scrollToFallbackOffset(ctx, targetOffset),
-                    "checkFinishedScrollRetryFrame",
-                );
+                // Adjustments can move the target while the nudge is pending, so return to its current offset.
+                const returnToTarget = () => {
+                    state.silentInitialScrollReturn = undefined;
+                    scrollToFallbackOffset(ctx, initialScrollWatchdog.get(state)?.targetOffset ?? targetOffset);
+                };
+                state.silentInitialScrollReturn = returnToTarget;
+                state.scheduledWork.frame(returnToTarget, "checkFinishedScrollRetryFrame");
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
             } else if (shouldRetryUnalignedEndScroll) {
                 scrollToFallbackOffset(ctx, completionState.clampedTargetOffset, !!isStillScrollingTo.animated);

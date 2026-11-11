@@ -4,8 +4,10 @@ import "../setup";
 import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { checkFinishedScroll, checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
 import { doScrollTo } from "../../src/core/doScrollTo.native";
+import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { Platform } from "../../src/platform/Platform";
+import { requestAdjust } from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("checkFinishedScrollFallback", () => {
@@ -723,6 +725,139 @@ describe("checkFinishedScrollFallback", () => {
         flushTimers(1);
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("returns a silent Android retry to its target when the scroll finishes before the retry frame", () => {
+        Platform.OS = "android";
+        const frames: FrameRequestCallback[] = [];
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            frames.push(callback);
+            return frames.length;
+        }) as typeof globalThis.requestAnimationFrame;
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        globalThis.cancelAnimationFrame = ((handle: number) => {
+            frames[handle - 1] = () => {};
+        }) as typeof globalThis.cancelAnimationFrame;
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                didContainersLayout: true,
+                hasScrolled: false,
+                initialScrollSession: {
+                    completion: {
+                        didDispatchNativeScroll: true,
+                        watchdog: {
+                            targetOffset: 220,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 220,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 220,
+                    targetOffset: 220,
+                    viewOffset: 0,
+                } as any,
+                scrollPending: 220,
+            },
+        );
+
+        try {
+            checkFinishedScrollFallback(ctx);
+            flushTimers(1);
+            expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 219 }]);
+
+            // Another completion check finishes the scroll while the retry frame is still pending.
+            finishScrollTo(ctx);
+            for (const frame of frames.splice(0)) {
+                frame(0);
+            }
+
+            // The list returns to its target once, instead of staying one point away from it.
+            expect(scrollToCalls).toEqual([
+                { animated: false, x: 0, y: 219 },
+                { animated: false, x: 0, y: 220 },
+            ]);
+            expect(ctx.state.scrollingTo).toBeUndefined();
+        } finally {
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
+    it("returns a silent Android retry to the target an adjustment moved while the nudge was pending", () => {
+        Platform.OS = "android";
+        const frames: FrameRequestCallback[] = [];
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            frames.push(callback);
+            return frames.length;
+        }) as typeof globalThis.requestAnimationFrame;
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        globalThis.cancelAnimationFrame = ((handle: number) => {
+            frames[handle - 1] = () => {};
+        }) as typeof globalThis.cancelAnimationFrame;
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                didContainersLayout: true,
+                hasScrolled: false,
+                initialScrollSession: {
+                    completion: {
+                        didDispatchNativeScroll: true,
+                        watchdog: {
+                            targetOffset: 220,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 220,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 220,
+                    targetOffset: 220,
+                    viewOffset: 0,
+                } as any,
+                scrollPending: 220,
+            },
+        );
+
+        try {
+            checkFinishedScrollFallback(ctx);
+            flushTimers(1);
+            expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 219 }]);
+
+            // Rows above the target measure smaller while the nudge is pending, which moves the target up.
+            requestAdjust(ctx, -36, "item-size");
+            for (const frame of frames.splice(0)) {
+                frame(0);
+            }
+
+            // The retry returns to the moved target instead of the offset recorded before the adjustment.
+            expect(scrollToCalls).toEqual([
+                { animated: false, x: 0, y: 219 },
+                { animated: false, x: 0, y: 184 },
+            ]);
+        } finally {
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
     });
 
     it("does not finish a silent iOS bootstrap dispatch before native scroll is observed", () => {
