@@ -252,6 +252,8 @@ export interface InternalState {
     // Content size at release while a user gesture awaits settlement.
     userScrollContentSize?: number;
     layoutAdjustmentEpoch?: number;
+    /** Counts absolute native scrolls, so an adjustment deferred before one of them is not applied again. */
+    nativeScrollEpoch?: number;
     endFollowInterrupted?: boolean;
     visibleContentAnchor?: { key: string; offset: number; sizeOnly?: true };
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
