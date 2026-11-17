@@ -136,7 +136,10 @@ function handleStickyRecycling(
         const arrayIdx = stickyArray.indexOf(itemIndex);
         if (arrayIdx === -1) {
             state.stickyContainerPool.delete(containerIndex);
-            set$(ctx, `containerSticky${containerIndex}`, false);
+            // Pinned rows join the pool without becoming sticky; releasing them must not re-render them.
+            if (peek$(ctx, `containerSticky${containerIndex}`)) {
+                set$(ctx, `containerSticky${containerIndex}`, false);
+            }
             continue;
         }
 

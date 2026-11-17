@@ -465,6 +465,34 @@ export function prepareMVCP(
                 positionDiff,
             });
 
+            // Native end following runs a frame after this MVCP pass. While the reader follows the end with
+            // instant following, a size-only change lands at the new end now instead of anchoring the top row
+            // and letting the end catch up a frame later.
+            const follow = state.props.maintainScrollAtEnd;
+            if (
+                !isWeb &&
+                follow &&
+                !follow.animated &&
+                (adjustmentSource === "item-size"
+                    ? follow.onItemLayout
+                    : adjustmentSource === "layout" && follow.onLayout) &&
+                state.didFinishInitialScroll &&
+                !state.isDragging &&
+                state.userScrollContentSize === undefined &&
+                !state.visibleContentAnchor &&
+                !state.scrollingTo &&
+                !ctx.scrollRequestTracker?.isWaitingToRun() &&
+                peek$(ctx, "isFollowingEnd")
+            ) {
+                const endOffset = getScrollRangeEnd(ctx);
+                if (state.scroll > endOffset) {
+                    // Native clamps shrinking content to its new end; keep JS there without a command.
+                    state.scroll = endOffset;
+                    state.scrollPending = endOffset;
+                }
+                positionDiff = endOffset - state.scroll;
+            }
+
             if (Platform.OS === "android" && !dataChanged && scrollTarget === undefined) {
                 const maxScroll = getScrollRangeEnd(ctx);
                 if (state.scroll > maxScroll + MVCP_POSITION_EPSILON) {

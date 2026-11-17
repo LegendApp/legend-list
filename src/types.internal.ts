@@ -23,7 +23,7 @@ import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
 
 export type { BaseScrollViewProps, LegendListPropsBase } from "@/types.base";
 
-export type ScrollAdjustmentSource = "data" | "item-size";
+export type ScrollAdjustmentSource = "data" | "item-size" | "layout";
 
 export interface ScrollEventTargetLike {
     addEventListener(type: string, listener: (...args: any[]) => void): void;

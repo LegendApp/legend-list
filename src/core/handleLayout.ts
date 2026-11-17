@@ -62,7 +62,7 @@ export function handleLayout(
         // Allocation calculates the first range synchronously unless an initial
         // scroll target defers it to a frame.
         if (needsCalculate && (!didAllocate || state.initialScroll)) {
-            calculateItemsInView(ctx, { doMVCP: true });
+            calculateItemsInView(ctx, { doMVCP: true, mvcpAdjustmentSource: "layout" });
         }
         const scrollTarget = state.scrollingTo;
         if (

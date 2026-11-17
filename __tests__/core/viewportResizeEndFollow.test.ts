@@ -3,6 +3,7 @@ import "../setup";
 
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { checkFinishedScroll, getCurrentTargetOffset } from "../../src/core/checkFinishedScroll";
+import { getScrollRangeEnd } from "../../src/core/clampScrollOffset";
 import { reissueClampedNativeEndScroll } from "../../src/core/doMaintainScrollAtEnd";
 import * as platformScroll from "../../src/core/doScrollTo";
 import { doScrollTo as doNativeScrollTo } from "../../src/core/doScrollTo.native";
@@ -43,6 +44,7 @@ describe.each(["ios", "android"] as const)("end following across a viewport resi
         const data = Array.from({ length: 20 }, (_, index) => ({ id: String(index) }));
         const ctx: StateContext = createMockContext(
             {
+                isFollowingEnd: true,
                 isWithinMaintainScrollAtEndThreshold: true,
                 numColumns: 1,
                 numContainers: 20,
@@ -120,6 +122,8 @@ describe.each(["ios", "android"] as const)("end following across a viewport resi
         };
 
         handleLayout(ctx, { height, width, x: 0, y: 0 }, () => {});
+        // A taller viewport recalculates in the layout pass, which lands at the new end.
+        if (height > 400) expect(Math.abs(state.scroll - getScrollRangeEnd(ctx))).toBeLessThanOrEqual(1);
         nativeLength = height;
         await tick();
         await tick();
@@ -130,6 +134,8 @@ describe.each(["ios", "android"] as const)("end following across a viewport resi
                 ctx,
                 data.slice(first, first + 5).map((item) => ({ itemKey: item.id, size: { height: itemHeight, width } })),
             );
+            // The re-measure pass itself lands at the end; following does not catch up a frame later.
+            expect(Math.abs(state.scroll - getScrollRangeEnd(ctx))).toBeLessThanOrEqual(1);
             // Follow the content once native mounts it, without waiting for the 100 ms fallback.
             for (let i = 0; i <= mountFrames; i++) await tick();
             expect(offEnd()).toBeLessThanOrEqual(1);
