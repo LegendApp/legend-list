@@ -167,6 +167,10 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
     const previousTotalSize = state.totalSize;
 
     for (const measurement of measurements) {
+        const { height, width } = measurement.size;
+        // Fabric's measure() can report NaN for a container with no layout yet. A NaN size would make
+        // totalSize NaN, which never equals itself and re-renders forever; onLayout reports it later.
+        if (!Number.isFinite(height) || !Number.isFinite(width)) continue;
         // Measurements can arrive after recycling. Only explicit imperative sizes,
         // which have no container id, bypass the current-assignment check.
         const ownsMeasuredItem =

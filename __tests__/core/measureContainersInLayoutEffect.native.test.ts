@@ -80,6 +80,30 @@ describe("measureContainersInLayoutEffect", () => {
         calculateSpy.mockRestore();
     });
 
+    it("ignores a NaN Fabric measurement from a container that has no layout yet", () => {
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        ctx.state.totalSize = 200;
+        ctx.viewRefs.set(0, {
+            current: {
+                measure: (callback: any) => callback(0, 0, Number.NaN, Number.NaN),
+            },
+        } as any);
+        ctx.viewRefs.set(1, {
+            current: {
+                measure: (callback: any) => callback(0, 0, 400, 220),
+            },
+        } as any);
+
+        measureContainersInLayoutEffect(ctx);
+
+        // The container's onLayout reports its real size once it has one.
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(100);
+        expect(ctx.state.sizesKnown.get("item_1")).toBe(220);
+        expect(ctx.state.totalSize).toBe(320);
+        expect(ctx.values.get("otherAxisSize")).toBe(400);
+        calculateSpy.mockRestore();
+    });
+
     it("skips per-container reveal bookkeeping when hiding is disabled", () => {
         const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
         let hideItemsUntilMeasuredReads = 0;
