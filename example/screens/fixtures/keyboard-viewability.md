@@ -29,3 +29,9 @@ platform branches, dismissal, interactive movement with an unchanged large range
 inset, keyboard offsets, and composer resizing without a scroll event. Core tests
 also preserve item-percentage versus viewport-coverage semantics for tall rows.
 The Android cases are automated; Android native motion was not exercised.
+
+For pending dwell, select **Dwell 1000ms**, move one row, and cover then uncover
+a row before the second elapses. A newly uncovered row must wait a full second;
+continuously visible rows retain their earlier deadline. **Immediate** replaces
+the config while stationary and should report eligible rows immediately. These
+controls are a manual fixture; no new device run is claimed for this release.

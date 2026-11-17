@@ -985,11 +985,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [ctx, !!onMetricsChange]);
 
     useEffect(() => {
-        const viewability = setupViewability({
-            onViewableItemsChanged,
-            viewabilityConfig,
-            viewabilityConfigCallbackPairs,
-        });
+        const viewability = setupViewability(
+            { onViewableItemsChanged, viewabilityConfig, viewabilityConfigCallbackPairs },
+            ctx,
+        );
         state.viewabilityConfigCallbackPairs = viewability;
         state.enableScrollForNextCalculateItemsInView = true;
         if (viewability) {

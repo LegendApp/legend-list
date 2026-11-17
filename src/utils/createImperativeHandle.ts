@@ -340,7 +340,7 @@ export function createImperativeHandle(
             state.viewabilityInsetEnd = next;
             // The controller scrolls on the UI thread; retain ownership through trailing frames.
             if (isScreenReaderEnabled()) armAppScrollRearm(ctx);
-            if (state.viewabilityConfigCallbackPairs) {
+            if (state.viewabilityConfigCallbackPairs && state.startNoBuffer != null && state.endNoBuffer != null) {
                 // A keyboard can cover stationary content without a scroll event.
                 // Refresh viewability only; occlusion must not initiate scrolling.
                 updateViewableItems(
@@ -348,8 +348,8 @@ export function createImperativeHandle(
                     ctx,
                     state.viewabilityConfigCallbackPairs,
                     state.scrollLength,
-                    state.startNoBuffer ?? 0,
-                    state.endNoBuffer ?? -1,
+                    state.startNoBuffer,
+                    state.endNoBuffer,
                     state.startBuffered,
                     state.endBuffered,
                 );

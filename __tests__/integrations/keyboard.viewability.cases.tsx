@@ -204,3 +204,83 @@ it("does not classify controller keyboard motion as accessibility input", async 
         list.unmount();
     }
 });
+
+it("reports mounted rows only after their minimumViewTime", async () => {
+    const calls: OnViewableItemsChangedInfo<string>[] = [];
+    const list = render(
+        <LegendList
+            data={data}
+            estimatedItemSize={100}
+            getFixedItemSize={() => 100}
+            keyExtractor={(item: string) => item}
+            onViewableItemsChanged={(info) => calls.push(info)}
+            recycleItems={false}
+            renderItem={() => null}
+            renderScrollComponent={(props) => <Surface {...props} />}
+            viewabilityConfig={{ itemVisiblePercentThreshold: 50, minimumViewTime: 250 }}
+        />,
+    );
+    try {
+        await flushFrames();
+        act(() => scrollProps.onLayout({ nativeEvent: { layout: { height: 300, width: 300, x: 0, y: 0 } } }));
+        await flushFrames();
+        expect(calls).toHaveLength(0);
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+        });
+        expect(calls).toHaveLength(1);
+        expect(calls[0].viewableItems.map((token) => [token.key, token.item, token.index])).toEqual([
+            ["0", "0", 0],
+            ["1", "1", 1],
+            ["2", "2", 2],
+        ]);
+    } finally {
+        list.unmount();
+    }
+});
+
+for (const os of ["ios", "android"]) {
+    it(`restarts a covered row's pending dwell through the mounted keyboard integration (${os})`, async () => {
+        Platform.OS = os;
+        const calls: OnViewableItemsChangedInfo<string>[] = [];
+        const { KeyboardAwareLegendList } = await import("../../src/integrations/keyboard?viewability-regression");
+        const list = render(
+            <KeyboardAwareLegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                keyExtractor={(item: string) => item}
+                onViewableItemsChanged={(info: OnViewableItemsChangedInfo<string>) => calls.push(info)}
+                recycleItems={false}
+                renderItem={() => null}
+                viewabilityConfig={{ itemVisiblePercentThreshold: 50, minimumViewTime: 250 }}
+            />,
+        );
+        const wait = async (ms: number) =>
+            act(async () => {
+                await new Promise((resolve) => setTimeout(resolve, ms));
+            });
+        try {
+            await flushFrames();
+            act(() => scrollProps.onLayout({ nativeEvent: { layout: { height: 300, width: 300, x: 0, y: 0 } } }));
+            await flushFrames();
+            await wait(100);
+            act(() => {
+                handlers.onMove({ height: 150, progress: 1 });
+                reactToKeyboard();
+            });
+            await wait(200);
+            expect(calls.at(-1)!.viewableItems.map((token) => token.key)).toEqual(["0", "1"]);
+            act(() => {
+                handlers.onEnd({ height: 0, progress: 0 });
+                reactToKeyboard();
+            });
+            await wait(100);
+            expect(calls.at(-1)!.viewableItems.map((token) => token.key)).toEqual(["0", "1"]);
+            await wait(200);
+            expect(calls.at(-1)!.viewableItems.map((token) => token.key)).toEqual(["0", "1", "2"]);
+        } finally {
+            list.unmount();
+        }
+    });
+}

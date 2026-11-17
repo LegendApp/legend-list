@@ -10,20 +10,13 @@ import type {
 } from "@/types.base";
 import type { InternalState, LegendListPropsBase } from "@/types.internal";
 import { getId } from "@/utils/getId";
-import { findContainerId } from "@/utils/helpers";
+import { findContainerId, warnDevOnce } from "@/utils/helpers";
 
-function ensureViewabilityState(
-    ctx: StateContext,
-    configId: string,
-): {
-    endBuffered: number;
-    viewableItems: ViewToken[];
-    start: number;
-    startBuffered: number;
-    end: number;
-    previousStart: number;
-    previousEnd: number;
-} {
+type ViewabilityConfigState = StateContext["mapViewabilityConfigStates"] extends Map<string, infer State>
+    ? State
+    : never;
+
+function ensureViewabilityState(ctx: StateContext, configId: string): ViewabilityConfigState {
     // Lazily initialize the per-list map if absent (e.g., in tests with manual contexts)
     let map = ctx.mapViewabilityConfigStates;
     if (!map) {
@@ -51,6 +44,7 @@ export function setupViewability(
         LegendListPropsBase<any, LooseScrollViewProps>,
         "viewabilityConfig" | "viewabilityConfigCallbackPairs" | "onViewableItemsChanged"
     >,
+    ctx?: StateContext,
 ): ViewabilityConfigCallbackPairs<any> | undefined {
     let { viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged } = props;
 
@@ -68,6 +62,50 @@ export function setupViewability(
         ];
     }
 
+    const configIds = new Set<string>();
+    for (const pair of viewabilityConfigCallbackPairs ?? []) {
+        const id = pair.viewabilityConfig.id!;
+        if (configIds.has(id)) {
+            warnDevOnce(
+                "viewability-duplicate-config-id",
+                "Each viewability config must have a unique id when using multiple configs.",
+            );
+        }
+        configIds.add(id);
+        const viewabilityState = ctx?.mapViewabilityConfigStates.get(id);
+        const previousConfig = viewabilityState?.pair?.viewabilityConfig;
+        if (viewabilityState) {
+            viewabilityState.pair = pair;
+        }
+        // Effect replay can retain a pending deadline after disposing its timer.
+        if (
+            ctx &&
+            (previousConfig !== pair.viewabilityConfig ||
+                (viewabilityState?.deadline !== undefined && !ctx.state.scheduledWork.has(`viewability${id}`))) &&
+            ctx.state.startNoBuffer != null &&
+            ctx.state.endNoBuffer != null
+        ) {
+            updateViewableItems(
+                ctx.state,
+                ctx,
+                [pair],
+                ctx.state.scrollLength,
+                ctx.state.startNoBuffer,
+                ctx.state.endNoBuffer,
+                ctx.state.startBuffered,
+                ctx.state.endBuffered,
+            );
+        }
+    }
+    if (ctx) {
+        for (const id of ctx.mapViewabilityConfigStates.keys()) {
+            if (!configIds.has(id)) {
+                ctx.state.scheduledWork.cancel(`viewability${id}`);
+                ctx.mapViewabilityConfigStates.delete(id);
+            }
+        }
+    }
+
     return viewabilityConfigCallbackPairs;
 }
 
@@ -81,37 +119,45 @@ export function updateViewableItems(
     startBuffered = start,
     endBuffered = end,
 ) {
-    const {
-        props: { data },
-    } = state;
     for (const viewabilityConfigCallbackPair of viewabilityConfigCallbackPairs) {
         const viewabilityState = ensureViewabilityState(ctx, viewabilityConfigCallbackPair.viewabilityConfig.id!);
         viewabilityState.start = start;
         viewabilityState.end = end;
         viewabilityState.startBuffered = startBuffered;
         viewabilityState.endBuffered = endBuffered;
-        if (viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime) {
-            state.scheduledWork.timeout(
-                () => updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize),
-                viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime,
-            );
-        } else {
-            updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize);
-        }
+        viewabilityState.pair = viewabilityConfigCallbackPair;
+        viewabilityState.scrollSize = scrollSize;
+        updateViewableItemsWithConfig(viewabilityState, state, ctx);
     }
 }
 
 function updateViewableItemsWithConfig(
-    data: readonly any[],
-    viewabilityConfigCallbackPair: ViewabilityConfigCallbackPair<any>,
+    viewabilityState: ViewabilityConfigState,
     state: InternalState,
     ctx: StateContext,
-    scrollSize: number,
 ) {
-    const { viewabilityConfig, onViewableItemsChanged } = viewabilityConfigCallbackPair;
+    // Always read the latest data, range and pair: a minimumViewTime timer runs this
+    // after data or props may have changed since it was scheduled.
+    const data = state.props.data;
+    const { viewabilityConfig, onViewableItemsChanged } = viewabilityState.pair!;
+    const scrollSize = viewabilityState.scrollSize!;
     const configId = viewabilityConfig.id!;
-    const viewabilityState = ensureViewabilityState(ctx, configId);
+    const timerKey = `viewability${configId}` as const;
     const { viewableItems: previousViewableItems, start, end, startBuffered, endBuffered } = viewabilityState;
+
+    // With minimumViewTime, a key becomes viewable only after staying visible for that long
+    // without interruption. `since` records when each visible key entered; leaving clears it.
+    const minimumViewTime = Math.max(0, Number(viewabilityConfig.minimumViewTime) || 0);
+    let since = viewabilityState.since;
+    if (minimumViewTime) {
+        since ??= viewabilityState.since = new Map();
+    } else if (since) {
+        since = viewabilityState.since = viewabilityState.deadline = undefined;
+        state.scheduledWork.cancel(timerKey);
+    }
+    const now = since ? performance.now() : 0;
+    const visibleKeys = since && new Set<string>();
+    let nextDeadline = Number.POSITIVE_INFINITY;
 
     let staleViewabilityAmountIds: number[] | undefined;
     for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
@@ -170,6 +216,16 @@ function updateViewableItemsWithConfig(
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
             if (checkIsViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, i)) {
+                if (since) {
+                    visibleKeys!.add(key);
+                    const visibleSince = since.get(key) ?? now;
+                    since.set(key, visibleSince);
+                    const deadline = visibleSince + minimumViewTime;
+                    if (!previousViewableKeys.has(key) && now < deadline) {
+                        nextDeadline = Math.min(nextDeadline, deadline);
+                        continue;
+                    }
+                }
                 const viewToken: ViewToken = {
                     containerId,
                     index: i,
@@ -181,6 +237,31 @@ function updateViewableItemsWithConfig(
                 if (!previousViewableKeys.has(viewToken.key)) {
                     changed.push(viewToken);
                 }
+            }
+        }
+    }
+
+    if (since) {
+        for (const key of since.keys()) {
+            if (!visibleKeys!.has(key)) {
+                since.delete(key);
+            }
+        }
+        // One timer per config, for the earliest key still waiting out its minimumViewTime.
+        if (nextDeadline !== viewabilityState.deadline || !state.scheduledWork.has(timerKey)) {
+            if (nextDeadline === Number.POSITIVE_INFINITY) {
+                viewabilityState.deadline = undefined;
+                state.scheduledWork.cancel(timerKey);
+            } else {
+                viewabilityState.deadline = nextDeadline;
+                state.scheduledWork.timeout(
+                    () => {
+                        viewabilityState.deadline = undefined;
+                        updateViewableItemsWithConfig(viewabilityState, state, ctx);
+                    },
+                    Math.min(nextDeadline - now, 2147483647),
+                    timerKey,
+                );
             }
         }
     }

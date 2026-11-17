@@ -8,10 +8,12 @@ import type { LegendListRef, OnViewableItemsChangedInfo } from "@legendapp/list/
 const rows = Array.from({ length: 40 }, (_, id) => String(id));
 const keyExtractor = (item: string) => item;
 const fixedSize = () => 100;
-const config = { itemVisiblePercentThreshold: 50 };
+const immediateConfig = { itemVisiblePercentThreshold: 50 };
+const dwellConfig = { itemVisiblePercentThreshold: 50, minimumViewTime: 1000 };
 
 function Probe() {
     const list = useRef<LegendListRef>(null);
+    const [dwell, setDwell] = useState(false);
     const input = useRef<TextInput>(null);
     const scroller = useRef<View>(null);
     const observed = useRef({ offset: 0, viewport: 0 });
@@ -33,7 +35,7 @@ function Probe() {
     };
     return (
         <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row" }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
                 <Button onPress={() => input.current?.focus()} title="Open keyboard" />
                 <Button onPress={() => Keyboard.dismiss()} title="Close" />
                 <Button
@@ -41,6 +43,7 @@ function Probe() {
                     title="Move to 600"
                 />
                 <Button onPress={read} title="Read" />
+                <Button onPress={() => setDwell((value) => !value)} title={dwell ? "Dwell 1000ms" : "Immediate"} />
             </View>
             <Text style={{ height: 90 }} testID="viewability-report">
                 {report}
@@ -67,7 +70,7 @@ function Probe() {
                     )}
                     scrollEventThrottle={16}
                     style={{ flex: 1 }}
-                    viewabilityConfig={config}
+                    viewabilityConfig={dwell ? dwellConfig : immediateConfig}
                 />
             </View>
             <KeyboardStickyView style={{ backgroundColor: "#fff", height: 50 }}>

@@ -11,6 +11,7 @@ import type {
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
+    ViewabilityConfigCallbackPair,
     ViewToken,
 } from "@/types.base";
 import type { InternalScrollTarget, InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
@@ -160,6 +161,12 @@ export interface StateContext {
             start: number;
             startBuffered: number;
             viewableItems: ViewToken[];
+            // minimumViewTime tracking: when each currently visible key became visible,
+            // plus the latest pair, scroll size and deadline for the single pending timer.
+            deadline?: number;
+            pair?: ViewabilityConfigCallbackPair<any>;
+            scrollSize?: number;
+            since?: Map<string, number>;
         }
     >;
     pendingContainerIds: Set<number> | null | undefined;

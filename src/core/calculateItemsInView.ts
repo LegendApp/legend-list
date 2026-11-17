@@ -273,10 +273,7 @@ function updateVisibleRangeForCachedRange(
 
     maybeEmitFirstVisibleItemChanged(state, visibleRange.startNoBuffer);
 
-    if (
-        viewabilityConfigCallbackPairs &&
-        (state.props.hasExternalScroll || (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null))
-    ) {
+    if (viewabilityConfigCallbackPairs) {
         updateViewableItems(
             state,
             ctx,
@@ -973,11 +970,8 @@ export function calculateItemsInView(
             }
         }
 
-        if (
-            viewabilityConfigCallbackPairs &&
-            (state.props.hasExternalScroll ||
-                (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null))
-        ) {
+        // A calculated empty range must clear reported rows and pending dwell.
+        if (viewabilityConfigCallbackPairs) {
             updateViewableItems(
                 ctx.state,
                 ctx,

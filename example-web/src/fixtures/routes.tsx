@@ -29,6 +29,7 @@ import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
 import RecycleImagePriorityExample from "./RecycleImagePriorityExample";
 import ScrollPromiseLandedExample from "./ScrollPromiseLandedExample";
 import SnapToIndicesExample from "./SnapToIndicesExample";
+import ViewabilityDwellExample from "./ViewabilityDwellExample";
 import WindowScrollExample from "./WindowScrollExample";
 
 export type FixtureRoute = {
@@ -41,6 +42,15 @@ export type FixtureRoute = {
 };
 
 export const FIXTURE_ROUTES: FixtureRoute[] = [
+    {
+        description:
+            "Checks per-row dwell, pending callback/config replacement and data changes, with window, horizontal, columns and StrictMode options.",
+        element: () => <ViewabilityDwellExample />,
+        group: "Scroll & Position",
+        path: "viewability-dwell",
+        title: "Viewability Dwell",
+        usesWindowScroll: true,
+    },
     {
         description:
             "Switches datasets in one mounted list with end, unread, and jump targets, tall rows, and late sizes.",

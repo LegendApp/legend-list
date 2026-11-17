@@ -19,7 +19,8 @@ export type ScheduledWorkKey =
     | "scrollTargetRetarget"
     | "preservedInitialScroll"
     | "reachedEdgeSettle"
-    | "renderRangeProjection";
+    | "renderRangeProjection"
+    | `viewability${string}`;
 
 interface Work {
     callback?: () => void;

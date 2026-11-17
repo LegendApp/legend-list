@@ -849,14 +849,16 @@ export type OnViewableItemsChanged<ItemT> = ((info: OnViewableItemsChangedInfo<I
 
 export interface ViewabilityConfig {
     /**
-     * A unique ID to identify this viewability config
+     * A unique ID to identify this viewability config. Required when using multiple configs.
      */
     id?: string;
 
     /**
      * Minimum amount of time (in milliseconds) that an item must be physically viewable before the
      * viewability callback will be fired. A high number means that scrolling through content without
-     * stopping will not mark the content as viewable.
+     * stopping will not mark the content as viewable. Reported items leaving view are marked as no
+     * longer viewable immediately. Re-entering items must stay visible for the full duration again.
+     * Infinity prevents new items from becoming viewable without scheduling a timer.
      */
     minimumViewTime?: number | undefined;
 
