@@ -643,7 +643,6 @@ describe("updateItemPositions", () => {
 
             updateItemPositions(mockCtx, false);
 
-            // The average size floors to the pixel grid
             const expectedRoundedSize = roundSize(125.5);
             expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
             expect(getLayoutValue(mockState, "positions", "item2")).toBe(expectedRoundedSize);

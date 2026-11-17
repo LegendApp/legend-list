@@ -129,17 +129,17 @@ describe("helpers", () => {
     });
 
     describe("roundSize", () => {
-        // The mock PixelRatio.get() returns 3, so the grid step is 1/3 dp.
-        it("should floor to the pixel grid", () => {
+        // The PixelRatio mock returns 3, so one pixel is 1/3 dp
+        it("should round to the nearest pixel on the grid", () => {
             expect(roundSize(10.1)).toBe(10);
-            expect(roundSize(10.5)).toBe(31 / 3); // 31 whole pixels
+            expect(roundSize(10.5)).toBe(32 / 3);
             expect(roundSize(10.7)).toBe(32 / 3);
-            expect(roundSize(11)).toBe(11); // 33 whole pixels
+            expect(roundSize(11)).toBe(11);
         });
 
-        it("should floor to the pixel grid at other device scales", () => {
+        it("should round to the pixel grid at other device scales", () => {
             const spy = spyOn(PixelRatio, "get").mockReturnValue(2);
-            expect(roundSize(10.3)).toBe(10);
+            expect(roundSize(10.3)).toBe(10.5);
             expect(roundSize(10.5)).toBe(10.5);
             expect(roundSize(10.6)).toBe(10.5);
             spy.mockRestore();
@@ -147,18 +147,28 @@ describe("helpers", () => {
 
         it("should handle zero and negative numbers", () => {
             expect(roundSize(0)).toBe(0);
-            expect(roundSize(-5.3)).toBe(-16 / 3); // Rounds down for negatives
+            expect(roundSize(-5.3)).toBe(-16 / 3);
             expect(roundSize(-11)).toBe(-11);
         });
 
         it("should handle large numbers", () => {
             expect(roundSize(1000.1)).toBe(1000);
-            expect(roundSize(1000.5)).toBe(3001 / 3);
+            expect(roundSize(1000.5)).toBe(3002 / 3);
         });
 
         it("should handle floating point precision", () => {
-            expect(roundSize(0.1 + 0.2)).toBe(0); // 0.1 + 0.2 = 0.30000000000000004, under one pixel
+            expect(roundSize(0.1 + 0.2)).toBe(1 / 3);
             expect(roundSize(10.000000000001)).toBe(10);
+        });
+
+        it("should keep whole pixels that a float32 layout stores just below the grid", () => {
+            // 4.99999988 pixels
+            expect(roundSize(Math.fround(5 / 3))).toBe(5 / 3);
+
+            const spy = spyOn(PixelRatio, "get").mockReturnValue(2.625);
+            // 22.99999988 pixels
+            expect(roundSize(Math.fround(23 / 2.625))).toBe(23 / 2.625);
+            spy.mockRestore();
         });
 
         it("should handle edge cases", () => {
@@ -171,7 +181,7 @@ describe("helpers", () => {
             // Simulate multiple operations that could accumulate errors
             let value = 0;
             for (let i = 0; i < 3; i++) {
-                value += 1 / 3; // One pixel at the mock scale of 3
+                value += 1 / 3;
                 value = roundSize(value);
             }
 

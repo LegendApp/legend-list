@@ -23,11 +23,10 @@ export function clearWarnDevOnceForTests() {
 }
 
 export function roundSize(size: number) {
-    // Round down to a whole physical pixel to avoid accumulating
-    // rounding errors. Without it, a prepend shifts the items and the MVCP anchor by a fractional
-    // pixel size, the renderer can snap them to different pixels, and the list jitters
+    // Whole physical pixels keep a prepend from moving the items and the MVCP anchor by different
+    // amounts. Float32 error can put a measured size just below a whole pixel, so round to nearest
     const scale = PixelRatio.get();
-    return Math.floor(size * scale) / scale;
+    return Math.round(size * scale) / scale;
 }
 
 export function isNullOrUndefined(value: unknown) {
