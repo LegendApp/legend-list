@@ -72,6 +72,63 @@ describe("short content pagination", () => {
         });
     }
 
+    it("keeps zero-row responses settled with unmeasured loading footers", async () => {
+        const { LegendList } = await import("../../src/components/LegendList");
+        let ctx: StateContext;
+        let scrollProps: any;
+        const ScrollSurface = React.forwardRef(function UnmeasuredScrollSurface(
+            props: any,
+            forwardedRef: React.Ref<any>,
+        ) {
+            ctx = useStateContext();
+            scrollProps = props;
+            React.useImperativeHandle(forwardedRef, () => ({ measure: () => {}, scrollTo: () => {} }));
+            return <>{props.children}</>;
+        });
+        let data = [{ id: "0" }, { id: "1" }];
+        const calls: number[] = [];
+        const list = (loading: boolean) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={83}
+                getFixedItemSize={() => 83}
+                keyExtractor={(item) => item.id}
+                ListFooterComponent={loading ? <Text>loading</Text> : undefined}
+                onEndReached={() => calls.push(data.length)}
+                renderItem={({ item }) => <Text>{item.id}</Text>}
+                renderScrollComponent={(props: any) => <ScrollSurface {...props} />}
+            />
+        );
+        const rendered = render(list(false));
+        await flushFrames();
+        // Only establish the viewport. Rows and loading footers never report a layout,
+        // matching a DOM test environment without element geometry.
+        act(() => scrollProps.onLayout({ nativeEvent: { layout: { height: 800, width: 300, x: 0, y: 0 } } }));
+        await flushFrames();
+        const expected = [2];
+        expect(calls).toEqual(expected);
+        for (const page of [[], [], [{ id: "2" }]]) {
+            rendered.rerender(list(true));
+            await flushFrames();
+            expect(calls).toEqual(expected);
+            data = [...data, ...page];
+            rendered.rerender(list(false));
+            await flushFrames();
+            // Loading state and same-length responses do not re-arm the delivered edge.
+            if (page.length) expected.push(data.length);
+            expect(calls).toEqual(expected);
+            expect(ctx!.values.get("footerSize") ?? 0).toBe(0);
+            // Repeated renders cannot request another copy of this page.
+            for (let repeat = 0; repeat < 3; repeat++) {
+                rendered.rerender(list(false));
+                await flushFrames();
+            }
+            expect(calls).toEqual(expected);
+        }
+        expect(calls).toEqual([2, 3]);
+        rendered.unmount();
+    });
+
     it("bounds both edges while pages load and re-arms for new data arrays", async () => {
         const { LegendList } = await import("../../src/components/LegendList");
         let scrollProps: any;

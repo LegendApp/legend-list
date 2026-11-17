@@ -670,6 +670,24 @@ describe.each([false, true])("native end following during momentum (screen reade
         }
     }
 
+    it("keeps ownership across repeated momentum begins from a paging snap", async () => {
+        const list = await mountFollowingList();
+        list.beginDrag();
+        list.scroll(690);
+        list.endDrag();
+        list.beginMomentum();
+        // Android paging emits a second begin for its snap animator; ownership
+        // must survive it, so the snap still suspends end following.
+        list.beginMomentum();
+        await list.append();
+        expect(list.writes).toEqual([]);
+        list.scroll(600);
+        list.endMomentum();
+        await flushFrames();
+        expect(list.writes).toEqual([]);
+        list.unmount();
+    });
+
     it("does not pull a flick back to the end when data arrives after finger release", async () => {
         const list = await mountFollowingList();
         list.beginDrag();
