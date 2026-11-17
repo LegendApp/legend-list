@@ -1,3 +1,14 @@
+## 3.7.3
+
+- Fix: scrollToOffset and scrollToIndex land at their target even when rows above are measured during the scroll.
+- Fix: Pinned sticky headers report their pinned position to measure() after scrolling stops.
+- Fix: While following the end on native, a row re-measure or a taller viewport now lands at the new end in the same pass instead of a frame later.
+- Fix: Ignore NaN item measurements from Fabric measure(), which could loop until "Maximum update depth exceeded".
+- Fix: On web, rows inside a CSS-transformed (scaled) ancestor are measured at their layout size, so they no longer keep a scaled size and leave gaps.
+- Fix: With minimumViewTime, a row becomes viewable only after it has stayed visible for the full time itself. Leaving resets its dwell, and a callback or config replaced during a pending dwell takes effect without another scroll.
+- Fix: On web, pressing Home keeps the list at the top when rows are measured during or after the browser's scroll.
+- Fix: Native sticky headers no longer add a JS listener to the scroll value, whose removal could race iOS native cleanup when sticky headers, data or the list unmount.
+
 ## 3.7.2
 
 - Fix: Preserve web row order and focus, and keep pinned rows updated.
