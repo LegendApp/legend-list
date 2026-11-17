@@ -1062,7 +1062,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [],
     );
 
-    const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
+    const scrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll, combinedRef);
     const refreshControlElement = refreshControl as React.ReactElement<{ progressViewOffset?: number }> | undefined;
 
     return (
@@ -1088,7 +1088,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 onLayoutFooter={onLayoutFooter}
                 onMomentumScrollBegin={fns.onMomentumScrollBegin}
                 onMomentumScrollEnd={fns.onMomentumScrollEnd}
-                onScroll={onScrollHandler}
+                onScroll={scrollHandler.onScroll}
                 recycleItems={recycleItems}
                 refreshControl={
                     refreshControlElement
@@ -1106,7 +1106,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                               />
                           )
                 }
-                refScrollView={combinedRef}
+                refScrollView={scrollHandler.refScrollView}
                 renderScrollComponent={renderScrollComponent}
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}
                 scrollElement={scrollElementResolved}

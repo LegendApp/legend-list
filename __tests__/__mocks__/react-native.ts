@@ -84,6 +84,9 @@ const AnimatedScrollView = createHostComponent("AnimatedScrollView");
 const AnimatedView = createHostComponent("AnimatedView");
 
 export const Animated = {
+    attachNativeEvent(_view: unknown, _eventName: string, _mapping: unknown[]) {
+        return { detach() {} };
+    },
     // In tests we simply return the passed component without wrapping
     createAnimatedComponent<T extends AnyFunction>(Component: T): T {
         return Component;
