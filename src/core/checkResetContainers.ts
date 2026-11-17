@@ -32,6 +32,10 @@ export function checkResetContainers(
 
     // Keep data invalidated if calculation must wait for the first viewport.
     state.positionsAreCurrent = false;
+    if (state.props.maintainVisibleContentPosition.data) {
+        // New data is anchored below; a reset left over from an earlier scroll jump would let its rows move the view.
+        state.userScrollAnchorReset = undefined;
+    }
     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
     if (state.pendingEndMeasurements?.size) {

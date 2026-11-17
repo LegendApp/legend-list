@@ -7,6 +7,7 @@ import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtE
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import * as checkThresholdsModule from "../../src/utils/checkThresholds";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("checkResetContainers", () => {
@@ -63,6 +64,18 @@ describe("checkResetContainers", () => {
         checkResetContainers(ctx, data);
 
         expect(state.pendingEndMeasurements).toEqual(pending ? new Set(["item-2", "item-3"]) : undefined);
+    });
+
+    it.each([true, false])("anchors new data after a scroll jump reset (data MVCP=%s)", (mvcpData) => {
+        const data = [{ id: "item-0", value: "Z" }, ...state.props.data];
+        state.props.data = data;
+        state.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(mvcpData);
+        const reset = { keys: new Set(["item-1"]) };
+        state.userScrollAnchorReset = reset;
+
+        checkResetContainers(ctx, data);
+
+        expect(state.userScrollAnchorReset).toBe(mvcpData ? undefined : reset);
     });
 
     it("retains appended measurements after an immediate follow", () => {
