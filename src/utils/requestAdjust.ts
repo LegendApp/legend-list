@@ -3,8 +3,15 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollAdjustmentSource } from "@/types.internal";
 
+function preservesOffsetTarget(ctx: StateContext, source: ScrollAdjustmentSource | undefined) {
+    const target = ctx.state.scrollingTo;
+    return source === "item-size" && target && target.index === undefined && !target.isScrollToEnd;
+}
+
 export function requestAdjust(ctx: StateContext, positionDiff: number, source?: ScrollAdjustmentSource) {
     const state = ctx.state;
+    // Measurements update layout, but must not replace an absolute offset destination.
+    if (preservesOffsetTarget(ctx, source)) return;
     if (Math.abs(positionDiff) > 0.1) {
         state.layoutAdjustmentEpoch = (state.layoutAdjustmentEpoch ?? 0) + 1;
         const dataChanged = source === "data";
@@ -12,6 +19,10 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;
 
         const doit = () => {
+            if (preservesOffsetTarget(ctx, source)) {
+                if (state.adjustingFromInitialMount) state.adjustingFromInitialMount--;
+                return;
+            }
             if (needsScrollWorkaround) {
                 ctx.doScrollTo!({ horizontal: state.props.horizontal, isAdjustment: true, offset: state.scroll });
             } else {

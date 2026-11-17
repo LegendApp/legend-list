@@ -96,7 +96,14 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
     const diff1 = Math.abs(scroll - clampedTargetOffset);
     const adjustedTargetOffset = clampedTargetOffset + adjust;
     const diff2 = Math.abs(scroll - adjustedTargetOffset);
-    const canUseAdjustedCompletion = !isWebInitialScroll && (!scrollingTo.animated || Platform.OS === "ios");
+    const hasMeasuredIndexTarget =
+        !scrollingTo.isInitialScroll &&
+        scrollingTo.index !== undefined &&
+        state.positions[scrollingTo.index] !== undefined;
+    // The current index offset already includes measurement changes; adding the
+    // applied MVCP adjustment again would accept a second, incorrect landing.
+    const canUseAdjustedCompletion =
+        !isWebInitialScroll && !hasMeasuredIndexTarget && (!scrollingTo.animated || Platform.OS === "ios");
     // Layout can predict the end before an explicit native command lands. Keep its
     // owner until native catches up, so later measurements can correct the target.
     const isWaitingForNativeEnd =
@@ -110,6 +117,9 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
 
     return {
         clampedTargetOffset,
+        // A measurement moved the target away from the offset already issued.
+        didTargetOffsetChange: Math.abs(clampedTargetOffset - (scrollingTo.targetOffset ?? scrollingTo.offset)) > 1,
+        hasMeasuredIndexTarget,
         isAtResolvedTarget:
             !isWaitingForNativeEnd &&
             Math.abs(scroll - maxOffset) < 1 &&
@@ -125,14 +135,15 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 
     const { state } = ctx;
     const completionState = getResolvedScrollCompletionState(ctx, scrollingTo);
-    // Passing a newly measured target does not stop the browser's animation toward the issued offset.
-    const isPassingWebTarget =
-        Platform.OS === "web" &&
+    // Passing a newly measured target does not stop the platform's animation toward the issued offset.
+    const isPassingTarget =
+        (Platform.OS === "web" ||
+            (completionState.hasMeasuredIndexTarget && !isEndAlignedLastItemTarget(ctx, scrollingTo))) &&
         scrollingTo.animated &&
         !scrollingTo.isInitialScroll &&
-        Math.abs(completionState.clampedTargetOffset - (scrollingTo.targetOffset ?? scrollingTo.offset)) > 1;
+        completionState.didTargetOffsetChange;
     if (
-        !isPassingWebTarget &&
+        !isPassingTarget &&
         completionState.isAtResolvedTarget &&
         (!scrollingTo.isInitialScroll ||
             state.hasScrolled ||
@@ -198,10 +209,11 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 state.hasScrolled && (!isStillScrollingTo.isInitialScroll || completionState.isAtResolvedTarget);
             const shouldRetryUnalignedInitialScroll =
                 isStillScrollingTo.isInitialScroll && !completionState.isAtResolvedTarget;
-            const shouldRetryUnalignedEndScroll =
+            const shouldRetryUnalignedIndexScroll =
                 Platform.OS !== "web" &&
                 !isStillScrollingTo.isInitialScroll &&
-                isEndAlignedLastItemTarget(ctx, isStillScrollingTo) &&
+                (isEndAlignedLastItemTarget(ctx, isStillScrollingTo) ||
+                    (isStillScrollingTo.index !== undefined && completionState.didTargetOffsetChange)) &&
                 !completionState.isAtResolvedTarget &&
                 numChecks <= maxChecks;
             const isAnimatedMaintain = !!(
@@ -216,7 +228,10 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 !isStillScrollingTo.isInitialScroll &&
                 isStillScrollingTo.animated &&
                 Date.now() - (state.lastNativeScrollTime ?? 0) < USER_MOMENTUM_STALL_TIMEOUT_MS;
-            if ((didMaintainProgress || isMovingNativeRequest) && !completionState.isAtResolvedTarget) {
+            if (
+                (didMaintainProgress || isMovingNativeRequest) &&
+                (!completionState.isAtResolvedTarget || completionState.didTargetOffsetChange)
+            ) {
                 // A stale momentum-end event can arrive during an animation, including a native
                 // status-bar interruption whose sparse final frames precede onScrollToTop.
                 numChecks = 0;
@@ -235,7 +250,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     "checkFinishedScrollRetryFrame",
                 );
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
-            } else if (shouldRetryUnalignedEndScroll) {
+            } else if (shouldRetryUnalignedIndexScroll) {
+                // Completion compares against the command actually in flight, including a measured retarget.
+                isStillScrollingTo.targetOffset = completionState.clampedTargetOffset;
                 scrollToFallbackOffset(ctx, completionState.clampedTargetOffset, !!isStillScrollingTo.animated);
                 scheduleFallbackCheck(100);
             } else if (

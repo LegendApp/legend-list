@@ -44,11 +44,14 @@ export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScr
         : scrollingTo.index === undefined
           ? undefined
           : clampScrollIndex(scrollingTo.index, ctx.state.props.data.length);
-    // Web requests follow measurements; initial placement keeps its own completion policy.
+    // Explicit index requests follow measured positions and sizes on every platform.
+    // Initial placement keeps its own completion policy.
     const isRetargetingWebScroll =
         Platform.OS === "web" && (!scrollingTo.isInitialScroll || ctx.state.initialScrollSession?.kind === "bootstrap");
     const requestedTargetOffset =
-        index !== undefined && (isRetargetingWebScroll || isEndAlignedLastItemTarget(ctx, scrollingTo))
+        index !== undefined &&
+        ctx.state.positions[index] !== undefined &&
+        (!scrollingTo.isInitialScroll || isRetargetingWebScroll || isEndAlignedLastItemTarget(ctx, scrollingTo))
             ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), { ...scrollingTo, index })
             : isRetargetingWebScroll
               ? calculateOffsetWithOffsetPosition(ctx, scrollingTo.offset, scrollingTo)
