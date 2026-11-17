@@ -20,6 +20,7 @@ export type ScheduledWorkKey =
     | "scrollTargetRetarget"
     | "stickySettle"
     | "preservedInitialScroll"
+    | "reachedEdgeScrollIdle"
     | "reachedEdgeSettle"
     | "renderRangeProjection"
     | `viewability${string}`;
