@@ -3,6 +3,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { clearPreservedInitialScrollTarget, supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
+import { cancelNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -59,6 +60,7 @@ export function stopScrollAnimation(ctx: StateContext, observed = getObservedScr
 
 function releaseScrollOwners(ctx: StateContext, supersedeInitial: boolean) {
     const { state } = ctx;
+    cancelNativeScrollToStart(ctx);
     ctx.scrollRequestTracker?.cancel();
     interruptMaintainScrollAtEnd(ctx);
     cancelImperativeScroll(state);

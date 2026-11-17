@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, jest, mock, spyOn } from "
 import "../setup";
 
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { ScheduledWork } from "@/core/ScheduledWork";
 import { Platform } from "@/platform/Platform";
 import { set$ } from "@/state/state";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
@@ -69,6 +70,8 @@ const mockCtx = {
             anchoredEndSpace: undefined as { anchorIndex: number } | undefined,
             contentInsetEndAdjustment: undefined as number | undefined,
         },
+        refScroller: { current: null },
+        scheduledWork: new ScheduledWork(),
         scrollingTo: undefined as { animated?: boolean } | undefined,
     },
     values: new Map(),
@@ -157,6 +160,7 @@ function resetMocks() {
     mockCtx.state.horizontalRTLScrollType = undefined;
     mockCtx.state.lastLayout = undefined;
     mockCtx.state.anchoredEndSpaceSize = undefined;
+    mockCtx.state.scheduledWork.dispose();
     mockCtx.state.dataChangeNeedsScrollUpdate = false;
     mockCtx.state.didFinishInitialScroll = true;
     mockCtx.state.initialScroll = undefined;

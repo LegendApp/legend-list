@@ -5,6 +5,7 @@ import { doScrollTo } from "@/core/doScrollTo";
 import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
+import { cancelNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -150,6 +151,7 @@ export function scrollTo(
     params: InternalScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean },
 ) {
     const state = ctx.state;
+    cancelNativeScrollToStart(ctx);
     const { noScrollingTo, forceScroll, ...scrollTarget } = params;
     const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
     const {

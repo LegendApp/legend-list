@@ -15,6 +15,7 @@ export type ScheduledWorkKey =
     | "imperativeScrollReady"
     | "maintainScrollAtEnd"
     | "mvcpRecalculate"
+    | "nativeScrollToStart"
     | "platformScrollCompletion"
     | "scrollTargetRetarget"
     | "preservedInitialScroll"

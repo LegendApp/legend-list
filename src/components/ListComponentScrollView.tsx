@@ -15,6 +15,11 @@ import {
 
 import { interruptUserScroll } from "@/core/cancelScroll";
 import { rearmEndFollowIfSettled } from "@/core/finishMaintainScrollAtEnd";
+import {
+    beginNativeScrollToStart,
+    cancelNativeScrollToStart,
+    hasNativeScrollToStart,
+} from "@/core/nativeScrollToStart";
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { listen$, peek$, useArr$, useStateContext } from "@/state/state";
@@ -475,6 +480,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             isWheel = false,
         ) => {
             const state = ctx.state;
+            const isScrollToStart = !horizontal && (event as KeyboardEvent).key === "Home";
             const captured = isWheel ? wheelAnimations.get(event) : undefined;
             if (
                 !captured &&
@@ -484,12 +490,15 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 !state.pendingMaintainScrollAtEnd &&
                 !state.scrollingTo &&
                 !state.pendingScrollResolve &&
+                !hasNativeScrollToStart(ctx) &&
+                !isScrollToStart &&
                 !hasActiveInitialScroll(state)
             ) {
                 return false;
             }
             const explicit = captured?.explicit ?? isExplicitNavigation();
-            if (direction > 0 && !explicit && !(isNew && state.props.onUserScroll)) return false;
+            if (direction > 0 && !explicit && !hasNativeScrollToStart(ctx) && !(isNew && state.props.onUserScroll))
+                return false;
             const node = resolveScrollableNode(scrollRef.current, externalTarget);
             const maxOffset = getMaxScrollOffset();
             const offset = peekLogicalHorizontalOffset(state, getCurrentScrollOffset(), maxOffset);
@@ -523,6 +532,8 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                             : interruptUserScroll(ctx, delta, cancelledAnimationOffset);
                     if (appliedDelta && event.cancelable) event.preventDefault();
                 }
+                if (isScrollToStart) beginNativeScrollToStart(ctx);
+                else cancelNativeScrollToStart(ctx);
                 if (isNew) state.props.onUserScroll?.();
                 return true;
             }
@@ -660,6 +671,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         target.addEventListener("pointercancel", onPointerRelease);
         return () => {
             unlistenScrollActive();
+            if (ctx.state) cancelNativeScrollToStart(ctx);
             clearTimeout(resetWheelTimer);
             target.removeEventListener("wheel", captureWheel, true);
             target.removeEventListener("wheel", onWheel);

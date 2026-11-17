@@ -4,7 +4,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
-import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
+import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { ScrollTarget } from "@/types.internal";
 
@@ -13,9 +13,22 @@ export class ScrollAdjustHandler {
     private pendingAdjust = 0;
     private supersededAdjust = 0;
     private ctx: StateContext;
+    private webAdjustSignal?: number;
+    private webAdjustment?: { expected: number; observed: number };
 
     constructor(ctx: StateContext) {
         this.ctx = ctx;
+    }
+    isRelativeWebAdjust(signal: number) {
+        return signal === this.webAdjustSignal;
+    }
+    getWebAdjustRemainder(observed: number) {
+        return this.webAdjustment?.observed === observed ? this.webAdjustment.expected - observed : 0;
+    }
+    recordWebAdjust(expected: number, observed: number) {
+        // A browser clamp consumes rejected distance; only subpixel rounding
+        // remains credit for the next relative correction.
+        this.webAdjustment = { expected: Math.abs(expected - observed) < 1 ? expected : observed, observed };
     }
     requestAdjust(add: number) {
         const scrollingTo = this.ctx.state.scrollingTo;
@@ -25,6 +38,7 @@ export class ScrollAdjustHandler {
             set$(this.ctx, "scrollAdjustPending", this.pendingAdjust);
         } else {
             this.appliedAdjust += add;
+            if (Platform.OS === "web") this.webAdjustSignal = this.appliedAdjust;
             set$(this.ctx, "scrollAdjust", this.appliedAdjust);
         }
 
@@ -86,6 +100,7 @@ export class ScrollAdjustHandler {
 
                     state.scrollForNextCalculateItemsInView = undefined;
 
+                    this.webAdjustSignal = undefined;
                     set$(this.ctx, "scrollAdjust", this.appliedAdjust);
                 }
 

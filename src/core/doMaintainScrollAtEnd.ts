@@ -3,6 +3,7 @@ import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getCurrentTargetOffset } from "@/core/getCurrentTargetOffset";
+import { hasNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
 import { isWebScrollAwayFromEnd, updateScroll } from "@/core/updateScroll";
@@ -30,6 +31,9 @@ export function reissueClampedNativeEndScroll(ctx: StateContext) {
 export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?: boolean; prepareOnly?: boolean }) {
     const state = ctx.state;
     if (state.isUnmounted) return false;
+    // Home already interrupted following. A measurement observing its next native
+    // frame must not infer a second interruption and release that browser owner.
+    if (Platform.OS === "web" && hasNativeScrollToStart(ctx)) return false;
     // A measurement may beat the browser's scroll event after scrollIntoView.
     if (Platform.OS === "web") {
         const observed = getObservedScrollOffset(ctx);

@@ -79,12 +79,23 @@ export function ScrollAdjust() {
                 // An offscreen list must not pull a shared scroll owner back to itself.
                 const isOutsideList = scroller?.isScrollInRange?.() === false;
                 const userOffsetDelta = (scrollAdjustUserOffset || 0) - lastScrollAdjustUserOffsetRef.current;
-                const intendedScroll = userOffsetDelta !== 0 ? currentScroll + userOffsetDelta : ctx.state.scroll;
+                const isRelative = ctx.state.scrollAdjustHandler.isRelativeWebAdjust?.(scrollAdjust || 0);
+                const remainder = isRelative ? ctx.state.scrollAdjustHandler.getWebAdjustRemainder(currentScroll) : 0;
+                const intendedScroll =
+                    userOffsetDelta !== 0 || isRelative
+                        ? currentScroll + signalScrollDelta + remainder
+                        : ctx.state.scroll;
                 // Reconcile against live DOM scroll so browser clamping/anchoring
                 // is not applied a second time as another relative scrollBy.
                 const scrollDelta = intendedScroll - currentScroll;
                 const shouldScroll = !isOutsideList && Math.abs(scrollDelta) > 0.01;
-                const scrollBy = () => scrollAdjustBy(el, axis.x * scrollDelta, axis.y * scrollDelta);
+                const scrollBy = () => {
+                    scrollAdjustBy(el, axis.x * scrollDelta, axis.y * scrollDelta);
+                    const after =
+                        (isExternal ? scroller?.getCurrentScrollOffset?.() : undefined) ??
+                        (horizontal ? el.scrollLeft : el.scrollTop);
+                    ctx.state.scrollAdjustHandler.recordWebAdjust?.(intendedScroll, after);
+                };
 
                 contentNodeRef.current = contentNode;
 
@@ -128,6 +139,10 @@ export function ScrollAdjust() {
                     }
                 } else if (shouldScroll) {
                     scrollBy();
+                } else if (isRelative && !isOutsideList) {
+                    // A new correction can exactly consume old rounding credit
+                    // without a DOM write. Do not carry that credit again.
+                    ctx.state.scrollAdjustHandler.recordWebAdjust(intendedScroll, currentScroll);
                 }
             }
 
