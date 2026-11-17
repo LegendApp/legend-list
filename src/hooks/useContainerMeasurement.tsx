@@ -3,6 +3,7 @@ import * as React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { IsNewArchitecture } from "@/constants-platform";
+import { measureContainerLayoutSize } from "@/core/containerLayoutBaseline";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { batchItemSizeUpdates, updateItemSizes } from "@/core/updateItemSizes";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
@@ -84,9 +85,8 @@ export function processContainerLayout({ containerId, ctx, rectangle, ref, state
         scheduleWebShrinkMeasurement(state, () => {
             if (state.itemKey === currentItemKey) {
                 const element = ref.current as unknown as HTMLElement | null;
-                const rect = element?.getBoundingClientRect?.();
-                if (rect) {
-                    layout = { height: rect.height, width: rect.width };
+                if (element) {
+                    layout = measureContainerLayoutSize(element);
                 }
                 applyLayout();
             }

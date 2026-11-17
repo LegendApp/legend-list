@@ -110,6 +110,11 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 title: "Mutable Cells",
             },
             {
+                description: "Measures rows inside a CSS-scaled ancestor by their layout size.",
+                slug: "scaled-container",
+                title: "Scaled Container",
+            },
+            {
                 description: "Regression surface for maintain-visible-content-position behavior.",
                 slug: "mvcp-test",
                 title: "MVCP Test",

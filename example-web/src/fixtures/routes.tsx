@@ -27,6 +27,7 @@ import MutableCellsExample from "./MutableCellsExample";
 import MVCPTestExample from "./MVCPTestExample";
 import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
 import RecycleImagePriorityExample from "./RecycleImagePriorityExample";
+import ScaledContainerExample from "./ScaledContainerExample";
 import ScrollPromiseLandedExample from "./ScrollPromiseLandedExample";
 import SnapToIndicesExample from "./SnapToIndicesExample";
 import ViewabilityDwellExample from "./ViewabilityDwellExample";
@@ -207,6 +208,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Data & Layout",
         path: "mutable-cells",
         title: "Mutable Cells",
+    },
+    {
+        description: "Measures rows inside a CSS-scaled ancestor by their layout size.",
+        element: () => <ScaledContainerExample />,
+        group: "Data & Layout",
+        path: "scaled-container",
+        title: "Scaled Container",
     },
     {
         description: "Regression surface for maintain-visible-content-position behavior.",

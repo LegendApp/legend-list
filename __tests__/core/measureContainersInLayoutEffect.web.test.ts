@@ -414,4 +414,43 @@ describe("measureContainersInLayoutEffect web", () => {
         expect(calculateSpy).toHaveBeenCalledTimes(1);
         calculateSpy.mockRestore();
     });
+
+    it("measures the layout box when an ancestor transform scales the rect", async () => {
+        const { measureContainersInLayoutEffect } = await import(
+            "../../src/core/measureContainersInLayoutEffect.ts?web-layout-transform"
+        );
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        const originalGetComputedStyle = globalThis.getComputedStyle;
+        globalThis.getComputedStyle = (() => ({ height: "50px", width: "400px" })) as any;
+        const ctx = createMockContext(
+            { containerItemKey0: "item_0", otherAxisSize: 400, readyToRender: true },
+            {
+                didContainersLayout: true,
+                endBuffered: 0,
+                indexByKey: new Map([["item_0", 0]]),
+                props: { data: [{ id: "item_0" }], estimatedItemSize: 100 },
+                sizes: new Map([["item_0", 100]]),
+                sizesKnown: new Map([["item_0", 100]]),
+                startBuffered: 0,
+            },
+        );
+        // A scale(1.5) ancestor: the rect is 75 x 600 while the layout box is 50 x 400.
+        const element = {
+            getBoundingClientRect: () => ({ height: 75, width: 600 }),
+            offsetHeight: 50,
+            offsetWidth: 400,
+        } as HTMLElement;
+        ctx.state.containerItemKeys.set("item_0", 0);
+        ctx.viewRefs.set(0, { current: element } as any);
+
+        try {
+            measureContainersInLayoutEffect(ctx);
+        } finally {
+            globalThis.getComputedStyle = originalGetComputedStyle;
+        }
+
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(50);
+        expect(getContainerLayoutBaseline(element)).toEqual({ height: 50, width: 400 });
+        calculateSpy.mockRestore();
+    });
 });

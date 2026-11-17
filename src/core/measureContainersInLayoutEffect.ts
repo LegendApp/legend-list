@@ -1,6 +1,6 @@
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { getScrollRangeEnd } from "@/core/clampScrollOffset";
-import { setContainerLayoutBaseline } from "@/core/containerLayoutBaseline";
+import { measureContainerLayoutSize, setContainerLayoutBaseline } from "@/core/containerLayoutBaseline";
 import { type ItemSizeMeasurement, isContainerItemCurrent, updateItemSizesBatch } from "@/core/updateItemSizes";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
@@ -22,15 +22,15 @@ export function measureContainersInLayoutEffect(
         const element = viewRef?.current as HTMLElement | null;
         if (itemKey !== undefined && element && isContainerItemCurrent(ctx, containerId, itemKey)) {
             const generation = ctx.state.containerItemGenerations[containerId] ?? 0;
-            const rect = element.getBoundingClientRect();
+            const size = measureContainerLayoutSize(element);
             // ResizeObserver uses this same border-box baseline to recognize the
             // subsequent observer delivery as confirmation rather than a new change.
-            setContainerLayoutBaseline(element, rect);
+            setContainerLayoutBaseline(element, size);
             measurements.push({
                 containerId,
                 generation,
                 itemKey,
-                size: { height: rect.height, width: rect.width },
+                size,
             });
         }
     }
