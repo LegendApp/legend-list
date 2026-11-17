@@ -1,5 +1,9 @@
 export const PixelRatio = {
     get() {
-        return 1;
+        // Guard for SSR
+        if (typeof window === "undefined" || !window.devicePixelRatio) {
+            return 1;
+        }
+        return window.devicePixelRatio;
     },
 };
