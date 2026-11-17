@@ -51,6 +51,7 @@ export interface LegendListScrollerRef {
 }
 
 export interface MaintainVisibleContentPositionNormalized<ItemT = any> {
+    anchor?: "start" | "end";
     data: boolean;
     size: boolean;
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
