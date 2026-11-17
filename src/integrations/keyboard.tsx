@@ -1,6 +1,15 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import {
+    createContext,
+    type ForwardedRef,
+    useCallback,
+    useContext,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+} from "react";
 import type { LayoutChangeEvent, ScrollViewProps, View } from "react-native";
 import { Platform } from "react-native";
 import {
@@ -17,6 +26,7 @@ import Reanimated, {
     scrollTo,
     useAnimatedReaction,
     useAnimatedRef,
+    useAnimatedStyle,
     useScrollViewOffset,
     useSharedValue,
 } from "react-native-reanimated";
@@ -27,6 +37,50 @@ import { internal } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
 const { typedForwardRef, useCombinedRef } = internal;
+
+type ContentExtentProps = {
+    children: React.ReactNode;
+    committedSize: number;
+    sizeAdjustment: number;
+};
+
+/**
+ * Whether ReanimatedContentExtent holds shrinks. Only anchored end space grows to compensate for
+ * one, so without it the extent follows the list. A context rather than a prop keeps the
+ * component's identity stable, so turning anchored end space on or off doesn't remount the rows.
+ */
+const HoldContentShrinkContext = createContext(false);
+
+/**
+ * The list commits a shrinking content extent through React, which mounts at once, while the
+ * blank space that grows to compensate waits for Reanimated's next frame, so the offset clamps
+ * in between. Hold the extent on Reanimated's side and release it from a layout effect: that
+ * write is queued after both the grown blank space (written when the shrink was measured) and
+ * React's mount of the rows and ScrollAdjust (which carries MVCP), so the extent shrinks with or
+ * after the larger inset and never ahead of MVCP. In one commit iOS applies contentInset before
+ * contentSize and Android applies padding before child layout. Growth still lands at once
+ * through the inner Animated size, ahead of the blank space shrinking.
+ */
+function ReanimatedContentExtent({ children, committedSize, sizeAdjustment }: ContentExtentProps) {
+    const holdShrink = useContext(HoldContentShrinkContext);
+    const size = Math.max(0, committedSize + sizeAdjustment);
+    const extent = useSharedValue<number>(size);
+    useLayoutEffect(() => {
+        if (!holdShrink) {
+            return;
+        }
+        // runOnUI rather than a `.value` write: runOnUI jobs reach the UI runtime in call order, while
+        // on Reanimated 4.3+ a JS-thread `.value` write takes a separate path and can overtake them.
+        runOnUI((next: number) => {
+            "worklet";
+            extent.value = next;
+        })(size);
+    }, [extent, holdShrink, size]);
+    // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
+    const style = useAnimatedStyle(() => ({ minHeight: holdShrink ? extent.value : 0 }), [holdShrink]);
+
+    return <Reanimated.View style={style}>{children}</Reanimated.View>;
+}
 
 if (typeof __DEV__ !== "undefined" && __DEV__ && !KeyboardChatScrollView) {
     console.warn(
@@ -281,7 +335,11 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
 
     useEffect(() => {
         if (!anchoredEndSpace) {
-            blankSpace.value = 0;
+            // Through runOnUI like onSizeChanged, so this reset can't overtake a size queued before it.
+            runOnUI(() => {
+                "worklet";
+                blankSpace.value = 0;
+            })();
         }
     }, [anchoredEndSpace, blankSpace]);
 
@@ -293,7 +351,13 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         return {
             ...anchoredEndSpace,
             onSizeChanged: (size: number) => {
-                blankSpace.value = size;
+                // runOnUI keeps this ahead of the content extent's release, which ReanimatedContentExtent
+                // queues later from a layout effect; on Reanimated 4.3+ a `.value` write takes a
+                // separate path and could land after it.
+                runOnUI((next: number) => {
+                    "worklet";
+                    blankSpace.value = next;
+                })(size);
                 anchoredEndSpace.onSizeChanged?.(size);
             },
         };
@@ -423,18 +487,22 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         AnimatedLegendListProps<ItemT> & {
             anchoredEndSpace?: AnchoredEndSpaceConfig;
             anchoredEndSpaceOwnerInternal?: "list" | "scroll";
+            contentExtentComponentInternal?: React.ComponentType<ContentExtentProps>;
             ref?: ForwardedRef<LegendListRef>;
         }
     >;
 
     return (
-        <AnimatedLegendListInternal
-            anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
-            anchoredEndSpaceOwnerInternal="scroll"
-            ref={combinedRef}
-            refScrollView={combinedScrollRef}
-            renderScrollComponent={memoList}
-            {...rest}
-        />
+        <HoldContentShrinkContext.Provider value={!!anchoredEndSpace}>
+            <AnimatedLegendListInternal
+                anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
+                anchoredEndSpaceOwnerInternal="scroll"
+                contentExtentComponentInternal={ReanimatedContentExtent}
+                ref={combinedRef}
+                refScrollView={combinedScrollRef}
+                renderScrollComponent={memoList}
+                {...rest}
+            />
+        </HoldContentShrinkContext.Provider>
     );
 });

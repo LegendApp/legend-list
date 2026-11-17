@@ -5,11 +5,14 @@ import * as React from "react";
 import type { LayoutChangeEvent } from "react-native";
 
 import { useCombinedRef } from "../../src/hooks/useCombinedRef";
-import { typedForwardRef } from "../../src/types.internal";
+import { type ContentExtentComponentInternalProps, typedForwardRef } from "../../src/types.internal";
 import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastAnimatedLegendListProps: any;
+// When set, the AnimatedLegendList mock renders the integration's content extent around a stand-in
+// for the containers layer, as ContainersLayer does.
+let mockContentExtent: { committedSize: number } | undefined;
 const reportContentInsetMock = mock(
     (_insets: Partial<{ bottom: number; left: number; right: number; top: number }>) => {},
 );
@@ -47,6 +50,10 @@ mock.module("react-native-keyboard-controller", () => ({
     useKeyboardHandler: () => {},
 }));
 
+// runOnUI runs immediately unless a test defers it to observe what reaches the UI runtime, in order.
+let deferUIJobs = false;
+const uiJobs: Array<() => void> = [];
+
 const createReanimatedOverrides = () => {
     const shared = {
         isWorkletFunction: () => false,
@@ -54,13 +61,21 @@ const createReanimatedOverrides = () => {
             (fn: (...args: any[]) => void) =>
             (...args: any[]) =>
                 fn(...args),
+        runOnUI:
+            (fn: (...args: any[]) => void) =>
+            (...args: any[]) => {
+                if (deferUIJobs) uiJobs.push(() => fn(...args));
+                else fn(...args);
+            },
         useAnimatedProps: (updater: () => unknown) => updater(),
         useAnimatedRef: () => ({ current: null }),
         useAnimatedScrollHandler: (handler: any) => handler,
         useAnimatedStyle: (updater: () => unknown) => updater(),
         useComposedEventHandler: (handlers: any[]) => handlers[0],
         useScrollViewOffset: () => {},
-        useSharedValue: createSharedValue,
+        // Persist across renders like the real hook, so held values are observable.
+        useSharedValue: <T,>(initial: T) => React.useRef(createSharedValue(initial)).current,
+        View: (props: any) => React.createElement("reanimated-view", props),
     };
 
     return shared;
@@ -91,7 +106,12 @@ mock.module("@legendapp/list/reanimated", () => ({
             }),
             [],
         );
-        return null;
+        const ContentExtent = props.contentExtentComponentInternal as ContentExtentComponent | undefined;
+        return mockContentExtent && ContentExtent ? (
+            <ContentExtent committedSize={mockContentExtent.committedSize} sizeAdjustment={-10}>
+                {React.createElement("containers-layer")}
+            </ContentExtent>
+        ) : null;
     }),
 }));
 
@@ -102,8 +122,11 @@ const baseProps = {
     renderItem: () => null,
 };
 
+const importKeyboardAwareLegendList = async () =>
+    (await import("../../src/integrations/keyboard?keyboard-behavior-test")).KeyboardAwareLegendList;
+
 const renderKeyboardAwareLegendList = async (props: Record<string, unknown> = {}) => {
-    const { KeyboardAwareLegendList } = await import("../../src/integrations/keyboard?keyboard-behavior-test");
+    const KeyboardAwareLegendList = await importKeyboardAwareLegendList();
 
     let renderer: TestRenderer.ReactTestRenderer;
     act(() => {
@@ -111,6 +134,32 @@ const renderKeyboardAwareLegendList = async (props: Record<string, unknown> = {}
     });
 
     return renderer!;
+};
+
+type ContentExtentComponent = React.ComponentType<ContentExtentComponentInternalProps>;
+
+// Renders KeyboardAwareLegendList with the list mock rendering its content extent. The mock
+// evaluates animated styles during render, so a size released to Reanimated after a commit only
+// shows in the tree after the next render: rerender() observes it. Pass the same props object
+// throughout so the list's memoized callbacks stay stable.
+const renderContentExtent = async (props: Record<string, unknown>) => {
+    mockContentExtent = { committedSize: 1000 };
+    const KeyboardAwareLegendList = await importKeyboardAwareLegendList();
+    const renderer = await renderKeyboardAwareLegendList(props);
+    const rerender = () =>
+        act(() => {
+            renderer.update(<KeyboardAwareLegendList {...baseProps} {...props} />);
+        });
+
+    return {
+        commit: (nextCommittedSize: number) => {
+            mockContentExtent!.committedSize = nextCommittedSize;
+            rerender();
+        },
+        minSize: () => (renderer.toJSON() as any).props.style.minHeight,
+        renderer,
+        rerender,
+    };
 };
 
 function ComposerInsetProbe({
@@ -142,7 +191,10 @@ function ComposerInsetProbe({
 describe("KeyboardAwareLegendList", () => {
     beforeEach(() => {
         lastAnimatedLegendListProps = undefined;
+        mockContentExtent = undefined;
         reportContentInsetMock.mockClear();
+        deferUIJobs = false;
+        uiJobs.length = 0;
     });
 
     it("bridges anchored end space updates into blankSpace and preserves upstream callbacks", async () => {
@@ -205,6 +257,90 @@ describe("KeyboardAwareLegendList", () => {
 
         expect(lastAnimatedLegendListProps.anchoredEndSpace).toBeUndefined();
         expect(nextScrollElement.props.blankSpace.value).toBe(0);
+    });
+
+    it("wraps the list in a content extent that holds a committed shrink until after the commit", async () => {
+        const extent = await renderContentExtent({ anchoredEndSpace: { anchorIndex: 0 } });
+
+        expect(extent.renderer.toJSON()).toMatchObject({
+            children: [{ type: "containers-layer" }],
+            type: "reanimated-view",
+        });
+        // The negative gap margin is part of the extent the layer occupies.
+        expect(extent.minSize()).toBe(990);
+
+        // React's commit of the shrink still renders the held extent; only the
+        // layout effect after it releases the new size to Reanimated.
+        extent.commit(700);
+        expect(extent.minSize()).toBe(990);
+        extent.rerender();
+        expect(extent.minSize()).toBe(690);
+
+        // Growth is not held back by the wrapper either (it never exceeds the inner size).
+        extent.commit(1200);
+        extent.rerender();
+        expect(extent.minSize()).toBe(1190);
+
+        act(() => extent.renderer.unmount());
+    });
+
+    it("queues the grown blank space ahead of the extent's release", async () => {
+        const extent = await renderContentExtent({ anchoredEndSpace: { anchorIndex: 0 } });
+        const blankSpace = lastAnimatedLegendListProps.renderScrollComponent({}).props.blankSpace;
+        lastAnimatedLegendListProps.anchoredEndSpace.onSizeChanged(300);
+
+        deferUIJobs = true;
+        // A row after the anchor shrinks: the blank space grows when the shrink is measured,
+        // then React commits the smaller extent with the row positions.
+        lastAnimatedLegendListProps.anchoredEndSpace.onSizeChanged(500);
+        extent.commit(800);
+
+        // Neither write bypasses the UI job queue, and the blank space is queued first.
+        expect(blankSpace.value).toBe(300);
+        expect(uiJobs).toHaveLength(2);
+
+        uiJobs.shift()!();
+        expect(blankSpace.value).toBe(500);
+        extent.rerender();
+        expect(extent.minSize()).toBe(990);
+
+        uiJobs.shift()!();
+        extent.rerender();
+        expect(extent.minSize()).toBe(790);
+
+        act(() => extent.renderer.unmount());
+    });
+
+    it("does not hold a shrink without anchored end space", async () => {
+        const extent = await renderContentExtent({});
+        expect(extent.minSize()).toBe(0);
+
+        // Nothing grows to compensate for the shrink, so holding it would only delay the
+        // content (and a footer below it) by a UI job.
+        deferUIJobs = true;
+        extent.commit(700);
+        expect(uiJobs).toHaveLength(0);
+        expect(extent.minSize()).toBe(0);
+
+        act(() => extent.renderer.unmount());
+    });
+
+    it("queues the blankSpace reset behind a size queued before it", async () => {
+        const renderer = await renderKeyboardAwareLegendList({ anchoredEndSpace: { anchorIndex: 0 } });
+        const blankSpace = lastAnimatedLegendListProps.renderScrollComponent({}).props.blankSpace;
+        const KeyboardAwareLegendList = await importKeyboardAwareLegendList();
+
+        deferUIJobs = true;
+        // A size reported in the same JS task as the render that removes anchored end space.
+        act(() => {
+            lastAnimatedLegendListProps.anchoredEndSpace.onSizeChanged(48);
+            renderer.update(<KeyboardAwareLegendList {...baseProps} anchoredEndSpace={undefined} />);
+        });
+        expect(blankSpace.value).toBe(0);
+        for (const job of uiJobs.splice(0)) job();
+
+        expect(blankSpace.value).toBe(0);
+        act(() => renderer.unmount());
     });
 
     it("reports KeyboardChatScrollView content inset changes to LegendList", async () => {
