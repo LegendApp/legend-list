@@ -6,6 +6,7 @@ import { Animated } from "react-native";
 import { describe, expect, it, mock, spyOn } from "bun:test";
 import type { LooseScrollView } from "../../src/platform/scrollview-types";
 import { useStickyScrollHandler } from "../../src/platform/useStickyScrollHandler.native";
+import { set$ } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
@@ -86,6 +87,28 @@ describe("useStickyScrollHandler.native", () => {
             probe.unmount();
         }
         expect(probe.detachments.every((detach) => detach.mock.calls.length === 1)).toBe(true);
+    });
+
+    it("copies the settled offset into the JS value once, without a value listener", async () => {
+        const probe = mountProbe();
+        try {
+            const value = probe.ctx.animatedScrollY as unknown as Animated.Value;
+            const setValue = spyOn(value, "setValue");
+            const addListener = spyOn(value, "addListener");
+            set$(probe.ctx, "isScrollActive", true);
+            for (const y of [100, 240, 380]) {
+                probe.result.onScroll({ nativeEvent: { contentOffset: { y } } } as any);
+            }
+            expect(setValue).not.toHaveBeenCalled();
+            set$(probe.ctx, "isScrollActive", false);
+            // The copy waits for a momentum phase that may follow a release.
+            expect(setValue).not.toHaveBeenCalled();
+            await new Promise((resolve) => setTimeout(resolve, 150));
+            expect(setValue.mock.calls).toEqual([[380]]);
+            expect(addListener).not.toHaveBeenCalled();
+        } finally {
+            probe.unmount();
+        }
     });
 
     it("rebinds and forwards the ref when a custom scroller replaces its native view in its own commit", async () => {

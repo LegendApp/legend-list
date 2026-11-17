@@ -48,6 +48,7 @@ export type ListenerType =
     | "scrollAdjustUserOffset"
     | "scrollSize"
     | "snapToOffsets"
+    | "stickySettle"
     | "stylePaddingTop"
     | "totalSize"
     | "isFollowingEnd"
@@ -120,6 +121,7 @@ export type ListenerTypeValueMap = {
     scrollAdjustUserOffset: number;
     scrollSize: { width: number; height: number };
     snapToOffsets: number[];
+    stickySettle: number;
     stylePaddingTop: number;
     totalSize: number;
     adaptiveRender: "normal" | "light";

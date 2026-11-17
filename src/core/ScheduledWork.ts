@@ -18,6 +18,7 @@ export type ScheduledWorkKey =
     | "nativeScrollToStart"
     | "platformScrollCompletion"
     | "scrollTargetRetarget"
+    | "stickySettle"
     | "preservedInitialScroll"
     | "reachedEdgeSettle"
     | "renderRangeProjection"

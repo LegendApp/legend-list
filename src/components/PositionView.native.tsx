@@ -107,6 +107,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         `containerItemKey${id}`,
         `containerItemIndex${id}`,
         "totalSize",
+        // Re-render when a scroll settles so the commit carries the settled offset.
+        "stickySettle",
     ]);
     const pushLimit = React.useMemo(
         () => getStickyPushLimit(ctx.state, itemIndex, itemKey),
