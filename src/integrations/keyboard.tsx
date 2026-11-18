@@ -231,7 +231,10 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     const scrollRef = useAnimatedRef<React.ElementRef<typeof Reanimated.ScrollView>>();
     const combinedScrollRef = useCombinedRef<React.ElementRef<typeof Reanimated.ScrollView>>(scrollRef, refScrollView);
     const scrollOffset = useScrollViewOffset(scrollRef);
-    const dimensions = useSharedValue({ content: 0, viewport: 0 });
+    // One value per handler: JS writes apply on the UI runtime later, so onLayout and
+    // onContentSizeChange spreading one shared object in the same frame would drop a field.
+    const contentHeight = useSharedValue(0);
+    const viewportHeight = useSharedValue(0);
     const frozenClose = useSharedValue(false);
     const closeOffset = useSharedValue(0);
     const endScrollFreeze = typeof freeze === "object" ? getEndScrollFreeze(freeze) : undefined;
@@ -304,9 +307,9 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         (keyboardInset = 0) => {
             "worklet";
             const padding = keyboardInset + (contentInsetEndAdjustment?.value ?? 0);
-            return staticBottomInset + Math.min(dimensions.value.viewport, Math.max(blankSpace.value, padding));
+            return staticBottomInset + Math.min(viewportHeight.value, Math.max(blankSpace.value, padding));
         },
-        [blankSpace, contentInsetEndAdjustment, dimensions, staticBottomInset],
+        [blankSpace, contentInsetEndAdjustment, staticBottomInset, viewportHeight],
     );
     const onContentInsetChange = useCallback(
         (insets: KeyboardChatScrollViewContentInsets) => {
@@ -345,7 +348,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         keyboardCloses.set(freeze, {
             prepare: () => {
                 const report = refLegendList.current?.reportContentInsetForScrollInternal;
-                if (isHorizontal || !dimensions.value.viewport || keyboard.value.height === 0 || !report) return false;
+                if (isHorizontal || !viewportHeight.value || keyboard.value.height === 0 || !report) return false;
                 report({ ...reportedInsets.current, bottom: getEndInset() });
                 return true;
             },
@@ -358,7 +361,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         return () => {
             keyboardCloses.delete(freeze);
         };
-    }, [dimensions, freeze, getEndInset, isHorizontal, keyboard]);
+    }, [freeze, getEndInset, isHorizontal, keyboard, viewportHeight]);
     useAnimatedReaction(
         () =>
             frozenClose.value && endScrollFreeze?.value === "immediate" && typeof freeze === "object" && freeze.value
@@ -369,10 +372,10 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
                 frozenClose.value = false;
                 return;
             }
-            if (isHorizontal || !dimensions.value.viewport) return;
+            if (isHorizontal || !viewportHeight.value) return;
             closeOffset.value = Math.min(closeOffset.value, current.scroll);
             const keyboardInset = Math.max(0, current.height - (keyboardOffset ?? 0) * keyboard.value.progress);
-            const contentEnd = dimensions.value.content - dimensions.value.viewport;
+            const contentEnd = contentHeight.value - viewportHeight.value;
             const keyboardEndInset = getEndInset(keyboardInset);
             // Keep a monotonic ceiling across overlapping requests (#557).
             const inset = Math.max(getEndInset(), Math.min(keyboardEndInset, closeOffset.value - contentEnd));
@@ -397,11 +400,11 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
                     offset={keyboardOffset}
                     onContentInsetChange={onContentInsetChange}
                     onContentSizeChange={(width, height) => {
-                        dimensions.value = { ...dimensions.value, content: height };
+                        contentHeight.value = height;
                         scrollProps.onContentSizeChange?.(width, height);
                     }}
                     onLayout={(event) => {
-                        dimensions.value = { ...dimensions.value, viewport: event.nativeEvent.layout.height };
+                        viewportHeight.value = event.nativeEvent.layout.height;
                         scrollProps.onLayout?.(event);
                     }}
                 />
@@ -410,12 +413,13 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         [
             applyWorkaroundForContentInsetHitTestBug,
             blankSpace,
+            contentHeight,
             contentInsetEndAdjustment,
-            dimensions,
             freeze,
             keyboardLiftBehavior,
             keyboardOffset,
             onContentInsetChange,
+            viewportHeight,
         ],
     );
 
