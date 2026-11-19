@@ -38,6 +38,17 @@ import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/lis
 
 const { typedForwardRef, useCombinedRef } = internal;
 
+/**
+ * Writes a shared value through runOnUI: runOnUI jobs reach the UI runtime in call order, while on
+ * Reanimated 4.3+ a JS-thread `.value` write takes a separate path and can overtake them.
+ */
+function setOnUI(sharedValue: SharedValue<number>, value: number) {
+    runOnUI((next: number) => {
+        "worklet";
+        sharedValue.value = next;
+    })(value);
+}
+
 type ContentExtentProps = {
     children: React.ReactNode;
     committedSize: number;
@@ -69,12 +80,7 @@ function ReanimatedContentExtent({ children, committedSize, sizeAdjustment }: Co
         if (!holdShrink) {
             return;
         }
-        // runOnUI rather than a `.value` write: runOnUI jobs reach the UI runtime in call order, while
-        // on Reanimated 4.3+ a JS-thread `.value` write takes a separate path and can overtake them.
-        runOnUI((next: number) => {
-            "worklet";
-            extent.value = next;
-        })(size);
+        setOnUI(extent, size);
     }, [extent, holdShrink, size]);
     // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
     const style = useAnimatedStyle(() => ({ minHeight: holdShrink ? extent.value : 0 }), [holdShrink]);
@@ -335,11 +341,8 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
 
     useEffect(() => {
         if (!anchoredEndSpace) {
-            // Through runOnUI like onSizeChanged, so this reset can't overtake a size queued before it.
-            runOnUI(() => {
-                "worklet";
-                blankSpace.value = 0;
-            })();
+            // Queued like onSizeChanged, so this reset can't overtake a size queued before it.
+            setOnUI(blankSpace, 0);
         }
     }, [anchoredEndSpace, blankSpace]);
 
@@ -351,13 +354,9 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         return {
             ...anchoredEndSpace,
             onSizeChanged: (size: number) => {
-                // runOnUI keeps this ahead of the content extent's release, which ReanimatedContentExtent
-                // queues later from a layout effect; on Reanimated 4.3+ a `.value` write takes a
-                // separate path and could land after it.
-                runOnUI((next: number) => {
-                    "worklet";
-                    blankSpace.value = next;
-                })(size);
+                // Queued ahead of the content extent's release, which ReanimatedContentExtent queues
+                // later from a layout effect.
+                setOnUI(blankSpace, size);
                 anchoredEndSpace.onSizeChanged?.(size);
             },
         };
