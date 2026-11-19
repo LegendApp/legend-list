@@ -198,7 +198,7 @@ export function checkLayoutInvariants(ctx: ListCtx, options: CheckLayoutOptions 
 function findScroller(element: HTMLElement): HTMLElement | null {
     for (let node = element.parentElement; node; node = node.parentElement) {
         const style = getComputedStyle(node);
-        if (/(auto|scroll)/.test(style.overflowY + style.overflowX)) return node;
+        if (/auto|scroll/.test(style.overflowY + style.overflowX)) return node;
     }
     return null;
 }
