@@ -31,6 +31,9 @@
             "@legendapp/list/section-list": [
                 "../src/section-list"
             ],
+            "@legendapp/list/infinite": [
+                "../src/integrations/infinite"
+            ],
             "@legendapp/list/keyboard": [
                 "../src/integrations/keyboard"
             ],
