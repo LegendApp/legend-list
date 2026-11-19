@@ -465,17 +465,17 @@ export function prepareMVCP(
                 positionDiff,
             });
 
-            // Native end following runs a frame after this MVCP pass. While the reader follows the end with
-            // instant following, a size-only change lands at the new end now instead of anchoring the top row
-            // and letting the end catch up a frame later.
+            // Instant end following owns the end, rather than the visible row anchor. An anchor adjustment
+            // would leave the list short of the end, or wait on native for a clamp that may never arrive.
             const follow = state.props.maintainScrollAtEnd;
             if (
-                !isWeb &&
                 follow &&
                 !follow.animated &&
-                (adjustmentSource === "item-size"
-                    ? follow.onItemLayout
-                    : adjustmentSource === "layout" && follow.onLayout) &&
+                (dataChanged
+                    ? shouldMaintainScrollAtEndOnDataChange(state)
+                    : adjustmentSource === "item-size"
+                      ? follow.onItemLayout
+                      : adjustmentSource === "layout" && follow.onLayout) &&
                 state.didFinishInitialScroll &&
                 !state.isDragging &&
                 state.userScrollContentSize === undefined &&
@@ -486,7 +486,7 @@ export function prepareMVCP(
             ) {
                 const endOffset = getScrollRangeEnd(ctx);
                 if (state.scroll > endOffset) {
-                    // Native clamps shrinking content to its new end; keep JS there without a command.
+                    // The platform clamps shrinking content to its new end; keep JS there without a command.
                     state.scroll = endOffset;
                     state.scrollPending = endOffset;
                 }

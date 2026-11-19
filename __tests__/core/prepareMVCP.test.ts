@@ -278,7 +278,77 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
         });
 
-        describe("native instant end following on a size-only change", () => {
+        describe("instant end following on a data change", () => {
+            const followEnd = (platform: "ios" | "android" | "web") => {
+                Platform.OS = platform;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(true);
+                mockCtx.values.set("isFollowingEnd", true);
+                mockState.previousData = mockState.props.data;
+                mockState.totalSize = 730;
+                mockState.scroll = mockState.scrollPending = 230;
+            };
+            const trimFront = (delta: number) => {
+                mockState.props.data = mockState.props.data.slice(1);
+                mockState.idCache.shift();
+                mockState.indexByKey.clear();
+                mockState.idCache.forEach((id, index) => mockState.indexByKey.set(id, index));
+                mockState.positions.shift();
+                for (let i = 0; i < mockState.positions.length; i++)
+                    mockState.positions[i] = mockState.positions[i]! - 100;
+                mockState.totalSize += delta;
+            };
+
+            for (const platform of ["ios", "android", "web"] as const) {
+                it(`keeps a shrinking end without a backward anchor adjustment (${platform})`, () => {
+                    followEnd(platform);
+                    const restore = expectAdjustFunction(prepareMVCP(mockCtx, true));
+                    trimFront(-20);
+                    restore();
+
+                    expect(mockState.scroll).toBe(210);
+                    expect(mockState.scrollPending).toBe(210);
+                    expect(mockState.pendingNativeMVCPAdjust).toBeUndefined();
+                    expect(requestAdjustSpy).not.toHaveBeenCalled();
+                });
+
+                it(`targets the growing end instead of the trimmed row anchor (${platform})`, () => {
+                    followEnd(platform);
+                    const restore = expectAdjustFunction(prepareMVCP(mockCtx, true));
+                    trimFront(80);
+                    restore();
+
+                    expect(mockState.scroll).toBe(310);
+                    expect(mockState.pendingNativeMVCPAdjust).toBeUndefined();
+                    expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 80, "data");
+                });
+
+                for (const reason of ["disabled", "append-only", "reading older content"] as const) {
+                    it(`preserves the row anchor when data following is ${reason} (${platform})`, () => {
+                        followEnd(platform);
+                        if (reason === "reading older content") {
+                            mockCtx.values.set("isFollowingEnd", false);
+                        } else {
+                            mockState.props.maintainScrollAtEnd!.onDataChange =
+                                reason === "disabled" ? false : "append";
+                        }
+                        const restore = expectAdjustFunction(prepareMVCP(mockCtx, true));
+                        trimFront(80);
+                        restore();
+
+                        if (platform === "web") {
+                            expect(mockState.scroll).toBe(130);
+                            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -100, "data");
+                        } else {
+                            expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-100);
+                            expect(requestAdjustSpy).not.toHaveBeenCalled();
+                        }
+                    });
+                }
+            }
+        });
+
+        describe("instant end following on a size-only change", () => {
             // Content is 730 tall in a 500 viewport, so the end is 230. item-1 is the MVCP anchor
             // and item-3 sits below it, so resizing item-3 leaves the anchor diff at 0.
             const followEnd = () => {
@@ -292,28 +362,32 @@ describe("prepareMVCP", () => {
                 mockState.totalSize = 730 + delta;
             };
 
-            for (const source of ["item-size", "layout"] as const) {
-                it(`lands growth at the end in the same pass (${source})`, () => {
+            for (const platform of ["ios", "web"] as const) {
+                for (const source of ["item-size", "layout"] as const) {
+                    it(`lands growth at the end in the same pass (${source}, ${platform})`, () => {
+                        Platform.OS = platform;
+                        followEnd();
+                        const restore = expectAdjustFunction(prepareMVCP(mockCtx, false, source));
+                        resizeItem3(80);
+                        restore();
+
+                        expect(requestAdjustSpy).toHaveBeenCalledTimes(1);
+                        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 80, source);
+                    });
+                }
+
+                it(`keeps a shrink at the new end without a scroll command (${platform})`, () => {
+                    Platform.OS = platform;
                     followEnd();
-                    const restore = expectAdjustFunction(prepareMVCP(mockCtx, false, source));
-                    resizeItem3(80);
+                    const restore = expectAdjustFunction(prepareMVCP(mockCtx, false, "item-size"));
+                    resizeItem3(-80);
                     restore();
 
-                    expect(requestAdjustSpy).toHaveBeenCalledTimes(1);
-                    expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 80, source);
+                    expect(mockState.scroll).toBe(150);
+                    expect(mockState.scrollPending).toBe(150);
+                    expect(requestAdjustSpy).not.toHaveBeenCalled();
                 });
             }
-
-            it("keeps a shrink at the new end without a scroll command", () => {
-                followEnd();
-                const restore = expectAdjustFunction(prepareMVCP(mockCtx, false, "item-size"));
-                resizeItem3(-80);
-                restore();
-
-                expect(mockState.scroll).toBe(150);
-                expect(mockState.scrollPending).toBe(150);
-                expect(requestAdjustSpy).not.toHaveBeenCalled();
-            });
 
             const cases: [string, () => void, ("item-size" | "layout")?][] = [
                 ["following was interrupted", () => mockCtx.interruptUserScroll!()],
@@ -352,12 +426,6 @@ describe("prepareMVCP", () => {
                     "an explicit anchor is set",
                     () => {
                         mockState.visibleContentAnchor = { key: "item-1", offset: 130 };
-                    },
-                ],
-                [
-                    "the platform is web",
-                    () => {
-                        Platform.OS = "web";
                     },
                 ],
             ];
