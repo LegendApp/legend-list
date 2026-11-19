@@ -145,18 +145,38 @@ export function updateItemSizes(ctx: StateContext, measurement: ItemSizeMeasurem
     }
 }
 
+// Consecutive stale-measurement retries per container. A few microtask retries cover the normal
+// case where the parent refreshes the index map right after child layout effects. If the mapping
+// still does not match (for example when the app mutates its data array in place, so indexByKey and
+// data disagree until the next commit), retrying on microtasks never yields to React and spins the JS
+// thread forever. After MAX_MICROTASK_MEASUREMENT_RETRIES, retry on the next frame instead.
+const MAX_MICROTASK_MEASUREMENT_RETRIES = 3;
+const measurementRetries = new WeakMap<object, Map<number, number>>();
+
 export function isContainerItemCurrent(ctx: StateContext, containerId: number, itemKey: string) {
     if (peek$(ctx, `containerItemKey${containerId}`) !== itemKey) return false;
     const state = ctx.state;
+    let retries = measurementRetries.get(state);
     const index = state.indexByKey.get(itemKey);
-    if (index !== undefined && index < state.props.data.length && getId(state, index) === itemKey) return true;
+    if (index !== undefined && index < state.props.data.length && getId(state, index) === itemKey) {
+        retries?.delete(containerId);
+        return true;
+    }
 
     // The parent refreshes the index map after child layout effects. Remeasure the
     // committed slot afterward, including when recycling has changed its assignment.
-    state.scheduledWork.microtask(
-        () => ctx.containerLayoutTriggers.get(containerId)?.(),
-        `containerMeasurementRetry${containerId}`,
-    );
+    if (!retries) {
+        retries = new Map();
+        measurementRetries.set(state, retries);
+    }
+    const attempt = (retries.get(containerId) ?? 0) + 1;
+    retries.set(containerId, attempt);
+    const retry = () => ctx.containerLayoutTriggers.get(containerId)?.();
+    if (attempt <= MAX_MICROTASK_MEASUREMENT_RETRIES) {
+        state.scheduledWork.microtask(retry, `containerMeasurementRetry${containerId}`);
+    } else {
+        state.scheduledWork.frame(retry, `containerMeasurementRetry${containerId}`);
+    }
     return false;
 }
 

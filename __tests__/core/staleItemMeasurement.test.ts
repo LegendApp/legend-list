@@ -181,3 +181,28 @@ describe("measurement during data replacement", () => {
         });
     }
 });
+
+describe("measurement retries when the mapping never settles", () => {
+    it("stops retrying on microtasks and falls back to a frame", async () => {
+        const ctx = context();
+        ctx.state.props.getFixedItemSize = undefined;
+        // indexByKey says "pinned" is at 0, but data[0] is another item and stays that way
+        // (an app that mutates its data array in place).
+        ctx.state.props.data = [skeleton];
+        const frames: Array<() => void> = [];
+        const previousRaf = globalThis.requestAnimationFrame;
+        globalThis.requestAnimationFrame = ((cb: () => void) => {
+            frames.push(cb);
+            return frames.length;
+        }) as typeof requestAnimationFrame;
+        const retry = mock(() => updateItemSizes(ctx, { containerId: 0, itemKey: "pinned", size }));
+        ctx.containerLayoutTriggers.set(0, retry);
+        updateItemSizes(ctx, { containerId: 0, itemKey: "pinned", size });
+        for (let i = 0; i < 20; i++) await Promise.resolve();
+        // Bounded: a few microtask retries, then one pending frame instead of an endless microtask loop.
+        expect(retry).toHaveBeenCalledTimes(3);
+        expect(frames.length).toBe(1);
+        globalThis.requestAnimationFrame = previousRaf;
+        ctx.state.scheduledWork.dispose();
+    });
+});
