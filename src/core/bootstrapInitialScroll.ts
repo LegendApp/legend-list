@@ -171,7 +171,11 @@ function queueBootstrapInitialScrollReevaluation(state: InternalState) {
 function ensureBootstrapInitialScrollFrameTicker(ctx: StateContext) {
     const state = ctx.state;
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
-    if (!bootstrapInitialScroll || bootstrapInitialScroll.frameHandle !== undefined) {
+    if (
+        state.hasEstimatedInitialLayout ||
+        !bootstrapInitialScroll ||
+        bootstrapInitialScroll.frameHandle !== undefined
+    ) {
         return;
     }
 

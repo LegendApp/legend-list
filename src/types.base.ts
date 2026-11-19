@@ -441,6 +441,15 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     recycleItems?: boolean;
 
     /**
+     * Opt-in: mounts items on the first commit on Fabric and web using `estimatedListSize`
+     * or the window size instead of waiting for layout. Best used with known item sizes.
+     * Wrong size estimates or an initial scroll target can shift the first frame once the
+     * measured viewport corrects the range.
+     * @default false
+     */
+    showImmediately?: boolean;
+
+    /**
      * Ref to the underlying ScrollView component.
      */
     refScrollView?: React.Ref<any>;

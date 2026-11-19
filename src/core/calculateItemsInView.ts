@@ -306,6 +306,7 @@ export function calculateItemsInView(
     params: {
         doMVCP?: boolean;
         dataChanged?: boolean;
+        didMeasureEstimatedLayout?: boolean;
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
         mvcpAdjustmentSource?: ScrollAdjustmentSource;
@@ -345,7 +346,9 @@ export function calculateItemsInView(
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
-        const { dataChanged, doMVCP, forceFullItemPositions, mvcpAdjustmentSource } = params;
+        const { dataChanged, didMeasureEstimatedLayout, forceFullItemPositions, mvcpAdjustmentSource } = params;
+        const { hasEstimatedInitialLayout } = state;
+        const doMVCP = params.doMVCP && !hasEstimatedInitialLayout;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
@@ -411,7 +414,9 @@ export function calculateItemsInView(
                 set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
             }
             const shouldNotifyStickyHeaderChange =
-                !!onStickyHeaderChange && stickyHeaderIndicesArr.length > 0 && stickyIndexDidChange;
+                !!onStickyHeaderChange &&
+                stickyHeaderIndicesArr.length > 0 &&
+                (stickyIndexDidChange || didMeasureEstimatedLayout);
             return {
                 currentStickyIdx,
                 finishCalculateItemsInView: shouldNotifyStickyHeaderChange
@@ -476,6 +481,7 @@ export function calculateItemsInView(
         // Check precomputed scroll range to see if we can skip this check
         if (
             enableScrollForNextCalculateItemsInView &&
+            !hasEstimatedInitialLayout &&
             !suppressInitialScrollSideEffects &&
             !dataChanged &&
             !forceFullItemPositions &&
@@ -953,6 +959,10 @@ export function calculateItemsInView(
 
         if (Platform.OS === "web" && didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
+        }
+
+        if (hasEstimatedInitialLayout) {
+            return;
         }
 
         if (suppressInitialScrollSideEffects) {

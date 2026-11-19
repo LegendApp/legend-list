@@ -35,6 +35,10 @@ export function handleLayout(
     // non-zero scrollLength with a transient 0 measurement (common on web during
     // initial mount before flex sizing settles).
     const measuredLength = layout[scrollAxis];
+    const hadEstimatedInitialLayout = state.hasEstimatedInitialLayout;
+    if (hadEstimatedInitialLayout && !(measuredLength > 0)) {
+        return;
+    }
     const previousLength = state.scrollLength;
     const scrollLength = measuredLength > 0 ? measuredLength : previousLength;
     const otherAxisSize = layout[otherAxis];
@@ -46,11 +50,12 @@ export function handleLayout(
         state.lastLayout.y !== layout.y;
 
     state.lastLayout = layout;
+    if (hadEstimatedInitialLayout) state.hasEstimatedInitialLayout = false;
 
     const prevOtherAxisSize = state.otherAxisSize;
     const didChange = scrollLength !== state.scrollLength || otherAxisSize !== prevOtherAxisSize;
 
-    if (didChange) {
+    if (didChange || hadEstimatedInitialLayout) {
         state.scrollLength = scrollLength;
         state.otherAxisSize = otherAxisSize;
         updateContentMetricsState(ctx);
@@ -62,7 +67,11 @@ export function handleLayout(
         // Allocation calculates the first range synchronously unless an initial
         // scroll target defers it to a frame.
         if (needsCalculate && (!didAllocate || state.initialScroll)) {
-            calculateItemsInView(ctx, { doMVCP: true, mvcpAdjustmentSource: "layout" });
+            calculateItemsInView(ctx, {
+                didMeasureEstimatedLayout: hadEstimatedInitialLayout,
+                doMVCP: true,
+                mvcpAdjustmentSource: "layout",
+            });
         }
         const scrollTarget = state.scrollingTo;
         if (

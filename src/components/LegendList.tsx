@@ -203,6 +203,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         recycleItems = false,
         refreshControl,
         refreshing,
+        showImmediately = false,
         refScrollView,
         renderScrollComponent,
         renderItem,
@@ -335,7 +336,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
               }
             : undefined;
 
-    const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
     const [, scheduleImperativeScrollCommit] = React.useReducer((value: number) => value + 1, 0);
 
     const ctx = useStateContext();
@@ -384,8 +384,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         // Saving the state onto the context avoids recreating this twice in strict mode,
         // which can cause all sorts of issues because all our functions expect it to be created once.
         if (!ctx.state) {
+            const shouldEstimateInitialLayout = IsNewArchitecture && showImmediately;
             const initialScrollLength = (estimatedListSize ??
-                (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
+                (IsNewArchitecture && !shouldEstimateInitialLayout ? { height: 0, width: 0 } : getWindowSize()))[
+                horizontal ? "width" : "height"
+            ];
+            const hasEstimatedInitialLayout =
+                shouldEstimateInitialLayout && Number.isFinite(initialScrollLength) && initialScrollLength > 0;
             ctx.values.set("adaptiveRender", experimental_adaptiveRender?.initialMode ?? "normal");
 
             ctx.state = {
@@ -409,6 +414,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 freshDataTransitionEpoch: 0,
                 handledDataChangeEpoch: 0,
                 handledFreshDataTransitionEpoch: 0,
+                hasEstimatedInitialLayout,
                 hasHadNonEmptyData: dataProp.length > 0,
                 idCache: [],
                 idsInView: [],
@@ -441,7 +447,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollAdjustHandler: new ScrollAdjustHandler(ctx),
                 scrollForNextCalculateItemsInView: undefined,
                 scrollHistory: [],
-                scrollLength: initialScrollLength,
+                scrollLength: shouldEstimateInitialLayout && !hasEstimatedInitialLayout ? 0 : initialScrollLength,
                 scrollPending: 0,
                 scrollPrev: 0,
                 scrollPrevTime: 0,
@@ -478,6 +484,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const state = refState.current!;
+    const [canRender, setCanRender] = React.useState(!IsNewArchitecture || !!state.hasEstimatedInitialLayout);
     const isFirstLocal = state.isFirst;
     const previousAdaptiveRender = state.props.adaptiveRender;
     const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
@@ -804,11 +811,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         (layout: LayoutRectangle, fromLayoutEffect: boolean) => {
             const previousScrollLength = state.scrollLength;
             const previousOtherAxisSize = state.otherAxisSize;
+            const hadEstimatedInitialLayout = state.hasEstimatedInitialLayout;
             handleLayout(ctx, layout, setCanRender);
             maybeUpdateAnchoredEndSpace(ctx);
             const didLayoutAffectBootstrapTarget =
                 previousScrollLength !== state.scrollLength || previousOtherAxisSize !== state.otherAxisSize;
-            if (usesBootstrapInitialScroll && !fromLayoutEffect && didLayoutAffectBootstrapTarget) {
+            if (
+                usesBootstrapInitialScroll &&
+                ((hadEstimatedInitialLayout && !state.hasEstimatedInitialLayout) ||
+                    (!fromLayoutEffect && didLayoutAffectBootstrapTarget))
+            ) {
                 handleBootstrapInitialScrollLayoutChange(ctx);
             }
             if (usesBootstrapInitialScroll) {
@@ -997,9 +1009,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
 
-    // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
     useInit(() => {
-        if (!IsNewArchitecture) {
+        if (!IsNewArchitecture || state.hasEstimatedInitialLayout) {
             doInitialAllocateContainers(ctx);
         }
     });

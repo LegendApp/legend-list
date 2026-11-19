@@ -10,6 +10,7 @@ import { useFreshDataTransitionVisibility } from "@/hooks/useFreshDataTransition
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
 import { typedMemo } from "@/types.internal";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 
 const isFabric = IsNewArchitecture;
 
@@ -47,7 +48,9 @@ const ContainersLayer = typedMemo(function ContainersLayer({
         "otherAxisSize",
         "footerSize",
     ]);
-    const isVisible = useFreshDataTransitionVisibility(!!readyToRender, freshDataTransitionEpoch);
+    const showEstimatedItems = !!ctx.state.hasEstimatedInitialLayout && !hasActiveInitialScroll(ctx.state);
+    const canShowItems = !!readyToRender || showEstimatedItems;
+    const isVisible = useFreshDataTransitionVisibility(canShowItems, freshDataTransitionEpoch);
 
     const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
         ? {

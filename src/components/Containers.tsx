@@ -7,6 +7,7 @@ import { useFreshDataTransitionVisibility } from "@/hooks/useFreshDataTransition
 import { useArr$, useStateContext } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isHorizontalRTL } from "@/utils/rtl";
 
 export interface ContainersProps<ItemT> {
@@ -39,7 +40,9 @@ const ContainersInner = typedMemo(function ContainersInner({
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const isHorizontalRTLList = isHorizontalRTL(ctx.state);
     const [otherAxisSize, readyToRender, totalSize] = useArr$(["otherAxisSize", "readyToRender", "totalSize"]);
-    const isVisible = useFreshDataTransitionVisibility(!!readyToRender, freshDataTransitionEpoch);
+    const showEstimatedItems = !!ctx.state.hasEstimatedInitialLayout && !hasActiveInitialScroll(ctx.state);
+    const canShowItems = !!readyToRender || showEstimatedItems;
+    const isVisible = useFreshDataTransitionVisibility(canShowItems, freshDataTransitionEpoch);
 
     const style: React.CSSProperties = horizontal
         ? {
@@ -52,7 +55,7 @@ const ContainersInner = typedMemo(function ContainersInner({
           }
         : { height: totalSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0, position: "relative" };
 
-    if (!readyToRender) {
+    if (!canShowItems) {
         style.pointerEvents = "none";
     }
 

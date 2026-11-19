@@ -46,8 +46,8 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         set$(ctx, "numContainers", numContainers);
         set$(ctx, "numContainersPooled", getInitialContainerPoolSize(data.length, numContainers));
 
-        if (!IsNewArchitecture || state.lastLayout) {
-            if (state.initialScroll) {
+        if (!IsNewArchitecture || state.lastLayout || state.hasEstimatedInitialLayout) {
+            if (state.initialScroll && !state.hasEstimatedInitialLayout) {
                 requestAnimationFrame(() => {
                     // immediate render causes issues with initial index position
                     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });

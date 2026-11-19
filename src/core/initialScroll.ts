@@ -98,6 +98,7 @@ function getAdvanceableInitialScrollState(
 
     if (
         !initialScroll ||
+        state.hasEstimatedInitialLayout ||
         shouldWaitForInitialLayout ||
         didFinishInitialScroll ||
         (scrollingTo && !isInitialScrollInProgress)

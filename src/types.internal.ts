@@ -227,6 +227,7 @@ export interface InternalState {
     preservedEndAnchorCorrection?: {
         lastRequestTime?: number;
     };
+    hasEstimatedInitialLayout?: boolean;
     hasHadNonEmptyData: boolean;
     hasScrolled?: boolean;
     idCache: string[];
