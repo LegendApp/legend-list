@@ -49,7 +49,7 @@ export function useAiChatExample({
             const indexOfNewMessage = messages.length;
 
             stopStreaming();
-            const words = buildAssistantReply(trimmedPrompt, nextIdRef.current).split(/\s+/);
+            const words = buildAssistantReply(trimmedPrompt, nextIdRef.current).split(/(\s+)/);
             const placeholderId = `assistant-${nextIdRef.current++}`;
 
             setAnchorIndex(indexOfNewMessage);
