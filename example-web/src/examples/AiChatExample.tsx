@@ -74,7 +74,7 @@ function SidebarMessages() {
         }
 
         const newPromptIndex = messages.length;
-        const replyWords = buildAssistantReply(trimmedInput, nextIdRef.current).split(/\s+/);
+        const replyWords = buildAssistantReply(trimmedInput, nextIdRef.current).split(/(\s+)/);
         const placeholderId = `assistant-${nextIdRef.current++}`;
 
         stopStreaming();
