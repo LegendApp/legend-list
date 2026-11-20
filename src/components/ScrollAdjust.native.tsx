@@ -12,8 +12,11 @@ export function ScrollAdjust() {
     const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0) + bias;
     const horizontal = !!ctx.state?.props.horizontal;
 
+    // Keep this view native: maintainVisibleContentPosition anchors on it, and Android's
+    // horizontal ScrollView content view ignores collapsableChildren, so it would be flattened.
     return (
         <View
+            collapsable={false}
             style={{
                 height: 0,
                 left: horizontal ? scrollOffset : 0,
