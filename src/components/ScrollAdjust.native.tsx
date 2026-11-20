@@ -14,6 +14,10 @@ export function ScrollAdjust() {
 
     return (
         <View
+            // The native maintainVisibleContentPosition anchors on this view, so it must exist natively.
+            // ScrollView asks the new architecture not to flatten its children, but Android's horizontal
+            // content view ignores that request, and this empty view would be flattened away.
+            collapsable={false}
             style={{
                 height: 0,
                 left: horizontal ? scrollOffset : 0,
