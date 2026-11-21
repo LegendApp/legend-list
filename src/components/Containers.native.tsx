@@ -4,12 +4,12 @@ import { Animated, type ViewStyle } from "react-native";
 
 import { ContainerLayoutCoordinator } from "@/components/ContainerLayoutCoordinator";
 import { ContainerSlot } from "@/components/ContainerSlot";
+import type { ContainersProps } from "@/components/Containers";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useFreshDataTransitionVisibility } from "@/hooks/useFreshDataTransitionVisibility";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
-import type { StickyHeaderConfig } from "@/types.base";
-import { type GetRenderedItem, typedMemo } from "@/types.internal";
+import { typedMemo } from "@/types.internal";
 
 // Match PositionView: on Fabric the committed minimum holds a shrinking content
 // extent until row positions commit, while the Animated size grows it at once so
@@ -26,26 +26,21 @@ const useContentExtentComponent = IsNewArchitecture
     ? () => useStateContext().state.props.contentExtentComponentInternal
     : () => undefined;
 
-interface ContainersProps<ItemT> {
-    freshDataTransitionEpoch: number;
-    horizontal: boolean;
-    recycleItems: boolean;
-    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-    getRenderedItem: GetRenderedItem;
-    stickyHeaderConfig?: StickyHeaderConfig;
-}
-
 interface ContainersLayerProps {
     children: React.ReactNode;
+    footer?: React.ReactNode;
     freshDataTransitionEpoch: number;
     horizontal: boolean;
+    renderRows: boolean;
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const ContainersLayer = typedMemo(function ContainersLayer({
     children,
+    footer,
     freshDataTransitionEpoch,
     horizontal,
+    renderRows,
 }: ContainersLayerProps) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
@@ -89,7 +84,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({
         }
     }
 
-    const layer = (
+    const layer = renderRows && (
         <Animated.View pointerEvents={isVisible ? undefined : "none"} style={style}>
             <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>
         </Animated.View>
@@ -97,7 +92,11 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     const ContentExtent = useContentExtentComponent();
 
     return ContentExtent && !horizontal ? (
-        <ContentExtent committedSize={minSize ?? 0} sizeAdjustment={endMargin}>
+        <ContentExtent
+            committedSize={renderRows ? (minSize ?? 0) : 0}
+            footer={footer}
+            sizeAdjustment={renderRows ? endMargin : 0}
+        >
             {layer}
         </ContentExtent>
     ) : (
@@ -107,9 +106,11 @@ const ContainersLayer = typedMemo(function ContainersLayer({
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Containers = typedMemo(function Containers<ItemT>({
+    footer,
     freshDataTransitionEpoch,
     horizontal,
     recycleItems,
+    renderRows = true,
     ItemSeparatorComponent,
     stickyHeaderConfig,
     getRenderedItem,
@@ -117,7 +118,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
     const [numContainersPooled] = useArr$(["numContainersPooled"]);
 
     const containers: React.ReactNode[] = [];
-    for (let i = 0; i < numContainersPooled; i++) {
+    for (let i = 0; renderRows && i < numContainersPooled; i++) {
         containers.push(
             <ContainerSlot
                 getRenderedItem={getRenderedItem}
@@ -134,7 +135,12 @@ export const Containers = typedMemo(function Containers<ItemT>({
     }
 
     return (
-        <ContainersLayer freshDataTransitionEpoch={freshDataTransitionEpoch} horizontal={horizontal}>
+        <ContainersLayer
+            footer={footer}
+            freshDataTransitionEpoch={freshDataTransitionEpoch}
+            horizontal={horizontal}
+            renderRows={renderRows}
+        >
             {containers}
         </ContainersLayer>
     );

@@ -201,6 +201,7 @@ const AILegendListChat = () => {
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
     // Whether replies animate their height when they expand or collapse.
     const [animatedCollapse, setAnimatedCollapse] = useState(false);
+    const [showFooter, setShowFooter] = useState(false);
     const [inputText, setInputText] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [liftBehavior, setLiftBehavior] = useState<LiftBehavior>("whenAtEnd");
@@ -371,6 +372,12 @@ const AILegendListChat = () => {
                     >
                         {animatedCollapse ? `Collapse: animated (${COLLAPSE_ANIMATION_MS}ms)` : "Collapse: instant"}
                     </Text>
+                    <Text
+                        onPress={() => setShowFooter((prev) => !prev)}
+                        style={[styles.behaviorButton, showFooter && styles.behaviorButtonActive]}
+                    >
+                        {showFooter ? "Hide footer" : "Show footer"}
+                    </Text>
                 </View>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardAwareLegendList
@@ -388,6 +395,7 @@ const AILegendListChat = () => {
                         keyboardLiftBehavior={liftBehavior}
                         keyboardOffset={insets.bottom}
                         keyExtractor={(item) => item.id}
+                        ListFooterComponent={showFooter ? <Text style={styles.footer}>List footer</Text> : undefined}
                         maintainVisibleContentPosition
                         recycleItems
                         ref={listRef}
@@ -499,6 +507,12 @@ const styles = StyleSheet.create({
         color: "#007AFF",
         fontSize: 13,
         marginTop: 6,
+    },
+    footer: {
+        backgroundColor: "#e7f2ff",
+        color: "#1c3855",
+        padding: 10,
+        textAlign: "center",
     },
     input: {
         backgroundColor: "white",

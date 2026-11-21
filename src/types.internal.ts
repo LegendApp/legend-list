@@ -180,6 +180,7 @@ export interface ContentExtentComponentInternalProps {
     children: React.ReactNode;
     /** The totalSize React is committing with the row positions. */
     committedSize: number;
+    footer?: React.ReactNode;
     /** Added to totalSize to get the extent the layer occupies (negative gap margins). */
     sizeAdjustment: number;
 }

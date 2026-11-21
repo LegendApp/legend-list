@@ -52,6 +52,7 @@ function setOnUI(sharedValue: SharedValue<number>, value: number) {
 type ContentExtentProps = {
     children: React.ReactNode;
     committedSize: number;
+    footer?: React.ReactNode;
     sizeAdjustment: number;
 };
 
@@ -72,7 +73,7 @@ const HoldContentShrinkContext = createContext(false);
  * contentSize and Android applies padding before child layout. Growth still lands at once
  * through the inner Animated size, ahead of the blank space shrinking.
  */
-function ReanimatedContentExtent({ children, committedSize, sizeAdjustment }: ContentExtentProps) {
+function ReanimatedContentExtent({ children, committedSize, footer, sizeAdjustment }: ContentExtentProps) {
     const holdShrink = useContext(HoldContentShrinkContext);
     const size = Math.max(0, committedSize + sizeAdjustment);
     const extent = useSharedValue<number>(size);
@@ -83,9 +84,25 @@ function ReanimatedContentExtent({ children, committedSize, sizeAdjustment }: Co
         setOnUI(extent, size);
     }, [extent, holdShrink, size]);
     // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
-    const style = useAnimatedStyle(() => ({ minHeight: holdShrink ? extent.value : 0 }), [holdShrink]);
+    const hasFooter = !!footer;
+    const style = useAnimatedStyle(
+        () => ({ minHeight: holdShrink && !hasFooter ? extent.value : 0 }),
+        [holdShrink, hasFooter],
+    );
 
-    return <Reanimated.View style={style}>{children}</Reanimated.View>;
+    return (
+        <Reanimated.View style={style}>
+            {children}
+            {footer}
+            {holdShrink && hasFooter && <ContentExtentSpacer extent={extent} size={size} />}
+        </Reanimated.View>
+    );
+}
+
+function ContentExtentSpacer({ extent, size }: { extent: SharedValue<number>; size: number }) {
+    const style = useAnimatedStyle(() => ({ height: extent.value }));
+    // Yoga floors height at the padding. The matching negative margin leaves only the unreleased shrink in flow.
+    return <Reanimated.View pointerEvents="none" style={[{ marginTop: -size, paddingTop: size }, style]} />;
 }
 
 if (typeof __DEV__ !== "undefined" && __DEV__ && !KeyboardChatScrollView) {

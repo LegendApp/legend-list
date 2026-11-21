@@ -9,10 +9,12 @@ import type { StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 import { isHorizontalRTL } from "@/utils/rtl";
 
-interface ContainersProps<ItemT> {
+export interface ContainersProps<ItemT> {
+    footer?: React.ReactNode;
     freshDataTransitionEpoch: number;
     horizontal: boolean;
     recycleItems: boolean;
+    renderRows?: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
     getRenderedItem: GetRenderedItem;
     stickyHeaderConfig?: StickyHeaderConfig;

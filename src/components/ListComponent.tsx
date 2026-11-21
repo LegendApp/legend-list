@@ -9,6 +9,7 @@ import { getAutoOtherAxisStyle } from "@/components/listComponentStyles";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { interruptUserScroll } from "@/core/cancelScroll";
 import { doMaintainScrollAtEnd, reissueClampedNativeEndScroll } from "@/core/doMaintainScrollAtEnd";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -226,6 +227,21 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         [horizontal, onLayoutFooter, updateFooterSize],
     );
 
+    const footer = ListFooterComponent && (
+        <LayoutView onLayoutChange={onLayoutFooterInternal} style={ListFooterComponentStyle}>
+            {getComponent(ListFooterComponent)}
+        </LayoutView>
+    );
+    const renderRows = canRender && !ListEmptyComponent;
+    const extentFooter =
+        IsNewArchitecture &&
+        Platform.OS !== "web" &&
+        !horizontal &&
+        ctx.state.props.anchoredEndSpace &&
+        ctx.state.props.contentExtentComponentInternal
+            ? footer
+            : undefined;
+
     return (
         <SnapOrScroll
             {...rest}
@@ -273,21 +289,19 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             {ListEmptyComponent && getComponent(ListEmptyComponent)}
             {shouldRenderAlignItemsAtEndSpacer && <AlignItemsAtEndSpacer horizontal={horizontal} />}
 
-            {canRender && !ListEmptyComponent && (
+            {(renderRows || extentFooter) && (
                 <Containers
+                    footer={extentFooter}
                     freshDataTransitionEpoch={freshDataTransitionEpoch}
                     getRenderedItem={getRenderedItem}
                     horizontal={horizontal!}
                     ItemSeparatorComponent={ItemSeparatorComponent}
                     recycleItems={recycleItems!}
+                    renderRows={renderRows}
                     stickyHeaderConfig={stickyHeaderConfig}
                 />
             )}
-            {ListFooterComponent && (
-                <LayoutView onLayoutChange={onLayoutFooterInternal} style={ListFooterComponentStyle}>
-                    {getComponent(ListFooterComponent)}
-                </LayoutView>
-            )}
+            {!extentFooter && footer}
             {Platform.OS === "web" && <ScrollAdjust />}
             {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>
