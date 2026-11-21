@@ -49,6 +49,7 @@ interface ListComponentProps<ItemT>
         | "renderScrollComponent"
         | "style"
     > {
+    autoscrollToTopThreshold: number | undefined;
     contentContainerStyle: ViewStyle;
     horizontal: boolean;
     initialContentOffset: number | undefined;
@@ -94,6 +95,7 @@ const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizon
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
+    autoscrollToTopThreshold,
     canRender,
     freshDataTransitionEpoch,
     style,
@@ -267,7 +269,9 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             horizontal={horizontal}
             maintainVisibleContentPosition={
                 maintainVisibleContentPosition.size || maintainVisibleContentPosition.data
-                    ? { minIndexForVisible: 0 }
+                    ? Platform.OS !== "web" && autoscrollToTopThreshold !== undefined
+                        ? { autoscrollToTopThreshold, minIndexForVisible: 0 }
+                        : { minIndexForVisible: 0 }
                     : undefined
             }
             onLayout={onLayout}

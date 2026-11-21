@@ -1071,6 +1071,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             <ListComponent
                 {...restProps}
                 alignItemsAtEnd={alignItemsAtEnd}
+                autoscrollToTopThreshold={
+                    typeof maintainVisibleContentPositionProp === "object"
+                        ? maintainVisibleContentPositionProp?.autoscrollToTopThreshold
+                        : undefined
+                }
                 canRender={canRender}
                 contentContainerStyle={contentContainerStyle}
                 contentInset={contentInset}
