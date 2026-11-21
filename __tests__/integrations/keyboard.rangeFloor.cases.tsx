@@ -325,9 +325,6 @@ for (const withFooter of [false, true]) {
                     Math.max(rowAndFooterEnd + openHeight, anchorTop + VIEWPORT),
                 );
                 expect(maxFooterGap).toBeLessThanOrEqual(1 / 3);
-                console.log(
-                    `native range: ${mutation} footer=${withFooter} open=${!!openHeight} shift=${maxShiftPx.toFixed(2)}px`,
-                );
                 expect(maxShiftPx).toBeLessThanOrEqual(2);
             } finally {
                 act(() => renderer?.unmount());

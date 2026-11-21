@@ -108,7 +108,7 @@ mock.module("@legendapp/list/reanimated", () => ({
         );
         const ContentExtent = props.contentExtentComponentInternal as ContentExtentComponent | undefined;
         return mockContentExtent && ContentExtent ? (
-            <ContentExtent committedSize={mockContentExtent.committedSize} sizeAdjustment={-10}>
+            <ContentExtent committedSize={mockContentExtent.committedSize}>
                 {React.createElement("containers-layer")}
             </ContentExtent>
         ) : null;
@@ -143,7 +143,7 @@ type ContentExtentComponent = React.ComponentType<ContentExtentComponentInternal
 // shows in the tree after the next render: rerender() observes it. Pass the same props object
 // throughout so the list's memoized callbacks stay stable.
 const renderContentExtent = async (props: Record<string, unknown>) => {
-    mockContentExtent = { committedSize: 1000 };
+    mockContentExtent = { committedSize: 990 };
     const KeyboardAwareLegendList = await importKeyboardAwareLegendList();
     const renderer = await renderKeyboardAwareLegendList(props);
     const rerender = () =>
@@ -266,17 +266,16 @@ describe("KeyboardAwareLegendList", () => {
             children: [{ type: "containers-layer" }],
             type: "reanimated-view",
         });
-        // The negative gap margin is part of the extent the layer occupies.
         expect(extent.minSize()).toBe(990);
 
-        extent.commit(700);
+        extent.commit(690);
         expect(extent.minSize()).toBe(990);
         await new Promise(requestAnimationFrame);
         extent.rerender();
         expect(extent.minSize()).toBe(690);
 
         // Growth is not held back by the wrapper either (it never exceeds the inner size).
-        extent.commit(1200);
+        extent.commit(1190);
         await new Promise(requestAnimationFrame);
         extent.rerender();
         expect(extent.minSize()).toBe(1190);
@@ -293,7 +292,7 @@ describe("KeyboardAwareLegendList", () => {
         // A row after the anchor shrinks: the blank space grows when the shrink is measured,
         // then React commits the smaller extent with the row positions.
         lastAnimatedLegendListProps.anchoredEndSpace.onSizeChanged(500);
-        extent.commit(800);
+        extent.commit(790);
 
         // Neither write bypasses the UI job queue, and the blank space is queued first.
         expect(blankSpace.value).toBe(300);
@@ -321,7 +320,7 @@ describe("KeyboardAwareLegendList", () => {
         // Nothing grows to compensate for the shrink, so holding it would only delay the
         // content (and a footer below it) by a UI job.
         deferUIJobs = true;
-        extent.commit(700);
+        extent.commit(690);
         expect(uiJobs).toHaveLength(0);
         expect(extent.minSize()).toBe(0);
 

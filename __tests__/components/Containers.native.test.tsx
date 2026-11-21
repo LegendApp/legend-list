@@ -159,9 +159,9 @@ describe("Containers native", () => {
             const { Containers } = await import(
                 `../../src/components/Containers.native?content-extent-${horizontal ? "x" : "y"}`
             );
-            const received: Array<Omit<ContentExtentComponentInternalProps, "children">> = [];
-            function ContentExtent({ children, committedSize, sizeAdjustment }: ContentExtentComponentInternalProps) {
-                received.push({ committedSize, sizeAdjustment });
+            const received: number[] = [];
+            function ContentExtent({ children, committedSize }: ContentExtentComponentInternalProps) {
+                received.push(committedSize);
                 return React.createElement("content-extent", null, children);
             }
             let ctx: StateContext;
@@ -200,11 +200,11 @@ describe("Containers native", () => {
             } else {
                 expect(tree.type).toBe("content-extent");
                 expect(tree.children[0].props.style.minHeight).toBe(1000);
-                expect(received.at(-1)).toEqual({ committedSize: 1000, sizeAdjustment: -12 });
+                expect(received.at(-1)).toBe(988);
 
                 // The wrapper only sees a shrink once React commits it with the row positions.
                 act(() => set$(ctx!, "totalSize", 700));
-                expect(received.at(-1)).toEqual({ committedSize: 700, sizeAdjustment: -12 });
+                expect(received.at(-1)).toBe(688);
             }
             unmount();
         });

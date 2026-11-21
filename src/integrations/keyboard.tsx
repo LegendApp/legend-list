@@ -55,8 +55,6 @@ type ContentExtentProps = {
     contentAlignItems?: ViewStyle["alignItems"];
     contentRowGap?: number;
     footer?: React.ReactNode;
-    footerSize?: number;
-    sizeAdjustment: number;
 };
 
 /**
@@ -81,14 +79,9 @@ function ReanimatedContentExtent({
     contentAlignItems,
     contentRowGap = 0,
     footer,
-    footerSize = 0,
-    sizeAdjustment,
 }: ContentExtentProps) {
     const holdShrink = useContext(HoldContentShrinkContext);
-    const hasFooter = !!footer;
-    const size =
-        Math.max(0, committedSize + sizeAdjustment) + (hasFooter ? footerSize + (children ? contentRowGap : 0) : 0);
-    const extent = useSharedValue<number>(size);
+    const extent = useSharedValue(committedSize);
     useLayoutEffect(() => {
         if (!holdShrink) {
             return;
@@ -99,11 +92,11 @@ function ReanimatedContentExtent({
                 requestAnimationFrame(() => {
                     extent.value = next;
                 });
-            })(size);
+            })(committedSize);
         } else {
-            setOnUI(extent, size);
+            setOnUI(extent, committedSize);
         }
-    }, [extent, holdShrink, size]);
+    }, [extent, holdShrink, committedSize]);
     // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
     const style = useAnimatedStyle(() => ({ minHeight: holdShrink ? extent.value : 0 }), [holdShrink]);
     // The wrapper takes the content container's place as the footer's parent: give it the same gap
@@ -116,7 +109,7 @@ function ReanimatedContentExtent({
         [contentAlignItems, contentRowGap, style],
     );
 
-    if (hasFooter) {
+    if (footer) {
         // On iOS Fabric a React commit that restyles the held view mounts it without the held
         // minimum, so the footer shares the wrapper that React leaves alone during a shrink.
         return (

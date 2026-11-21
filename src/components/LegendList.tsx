@@ -69,7 +69,6 @@ import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/st
 import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
 import type {
     AnchoredEndSpaceOwner,
-    ContentExtentComponentInternalProps,
     InternalState,
     LegendListPropsBase,
     LegendListScrollerRef,
@@ -219,22 +218,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
 
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
-    const anchoredEndSpaceOwner =
-        ((props as any).anchoredEndSpaceOwnerInternal as AnchoredEndSpaceOwner | undefined) ?? "list";
-    const contentExtentComponentInternal = (props as any).contentExtentComponentInternal as
-        | React.ComponentType<ContentExtentComponentInternalProps>
-        | undefined;
-    const positionComponentInternal = (props as any).positionComponentInternal as React.ComponentType<any> | undefined;
-    const stickyPositionComponentInternal = (props as any).stickyPositionComponentInternal as
-        | React.ComponentType<any>
-        | undefined;
     const {
-        anchoredEndSpaceOwnerInternal: _anchoredEndSpaceOwnerInternal,
-        contentExtentComponentInternal: _contentExtentComponentInternal,
-        positionComponentInternal: _positionComponentInternal,
-        stickyPositionComponentInternal: _stickyPositionComponentInternal,
+        anchoredEndSpaceOwnerInternal,
+        contentExtentComponentInternal,
+        positionComponentInternal,
+        stickyPositionComponentInternal,
         ...restProps
-    } = rest as any;
+    } = rest as typeof rest &
+        Pick<
+            InternalState["props"],
+            "contentExtentComponentInternal" | "positionComponentInternal" | "stickyPositionComponentInternal"
+        > & { anchoredEndSpaceOwnerInternal?: AnchoredEndSpaceOwner };
+    const anchoredEndSpaceOwner = anchoredEndSpaceOwnerInternal ?? "list";
 
     const contentContainerStyleBase = StyleSheet.flatten(contentContainerStyleProp) as ViewStyle | undefined;
     const useAlignItemsAtEndPadding =

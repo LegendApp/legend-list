@@ -11,20 +11,13 @@ import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
 import { typedMemo } from "@/types.internal";
 
+const isFabric = IsNewArchitecture;
+
 // Match PositionView: on Fabric the committed minimum holds a shrinking content
 // extent until row positions commit, while the Animated size grows it at once so
 // end space set outside React (anchored end space) never outruns the content.
 // Old architecture keeps both on the Animated update path.
-const useCommittedMinSize = IsNewArchitecture ? () => useArr$(["totalSize"])[0] : () => undefined;
-/**
- * An integration that applies end space outside React can hold the extent's shrink until
- * the end space grown to compensate has landed. That ordering relies on Fabric commits.
- * Only vertical lists are wrapped: the one integration that uses this (KeyboardAwareLegendList)
- * applies its end space as a bottom inset.
- */
-const useContentExtentComponent = IsNewArchitecture
-    ? () => useStateContext().state.props.contentExtentComponentInternal
-    : () => undefined;
+const useCommittedMinSize = isFabric ? () => useArr$(["totalSize"])[0] : () => undefined;
 
 interface ContainersLayerProps {
     children: React.ReactNode;
@@ -48,7 +41,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const size = useValue$("totalSize");
     const minSize = useCommittedMinSize();
-    const [readyToRender, numColumns, otherAxisSize = 0, footerSize] = useArr$([
+    const [readyToRender, numColumns, otherAxisSize = 0, footerSize = 0] = useArr$([
         "readyToRender",
         "numColumns",
         "otherAxisSize",
@@ -66,13 +59,9 @@ const ContainersLayer = typedMemo(function ContainersLayer({
           }
         : { height: size, minHeight: minSize, minWidth: otherAxisSize, opacity: isVisible ? 1 : 0 };
 
-    let endMargin = 0;
+    const gapY = columnWrapperStyle?.rowGap || columnWrapperStyle?.gap || 0;
     if (columnWrapperStyle) {
-        // Extract gap properties from columnWrapperStyle if available
-        const { columnGap, rowGap, gap } = columnWrapperStyle;
-
-        const gapX = columnGap || gap || 0;
-        const gapY = rowGap || gap || 0;
+        const gapX = columnWrapperStyle.columnGap || columnWrapperStyle.gap || 0;
         if (horizontal) {
             if (gapY && numColumns > 1) {
                 style.marginVertical = -gapY / 2;
@@ -86,7 +75,6 @@ const ContainersLayer = typedMemo(function ContainersLayer({
             }
             if (gapY) {
                 style.marginBottom = -gapY;
-                endMargin = -gapY;
             }
         }
     }
@@ -96,22 +84,24 @@ const ContainersLayer = typedMemo(function ContainersLayer({
             <ContainerLayoutCoordinator>{children}</ContainerLayoutCoordinator>
         </Animated.View>
     );
-    const ContentExtent = useContentExtentComponent();
+    const ContentExtent = isFabric && !horizontal ? ctx.state.props.contentExtentComponentInternal : undefined;
 
-    return ContentExtent && !horizontal ? (
-        <ContentExtent
-            committedSize={renderRows ? (minSize ?? 0) : 0}
-            contentAlignItems={ctx.state.props.contentContainerAlignItems}
-            contentRowGap={contentRowGap}
-            footer={footer}
-            footerSize={footerSize}
-            sizeAdjustment={renderRows ? endMargin : 0}
-        >
-            {layer}
-        </ContentExtent>
-    ) : (
-        layer
-    );
+    if (ContentExtent) {
+        const rowsExtent = renderRows ? Math.max(0, (minSize ?? 0) - gapY) : 0;
+        const footerExtent = footer ? footerSize + (renderRows ? (contentRowGap ?? 0) : 0) : 0;
+        return (
+            <ContentExtent
+                committedSize={rowsExtent + footerExtent}
+                contentAlignItems={ctx.state.props.contentContainerAlignItems}
+                contentRowGap={contentRowGap}
+                footer={footer}
+            >
+                {layer}
+            </ContentExtent>
+        );
+    }
+
+    return layer;
 });
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional

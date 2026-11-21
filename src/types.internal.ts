@@ -178,14 +178,11 @@ export type AnchoredEndSpaceOwner = "list" | "scroll";
  */
 export interface ContentExtentComponentInternalProps {
     children: React.ReactNode;
-    /** The totalSize React is committing with the row positions. */
+    /** Extent React is committing, including the footer and gaps. */
     committedSize: number;
     contentAlignItems?: ViewStyle["alignItems"];
     contentRowGap?: number;
     footer?: React.ReactNode;
-    footerSize?: number;
-    /** Added to totalSize to get the extent the layer occupies (negative gap margins). */
-    sizeAdjustment: number;
 }
 
 // Internal bridge for integrations, not part of the public list ref contract.

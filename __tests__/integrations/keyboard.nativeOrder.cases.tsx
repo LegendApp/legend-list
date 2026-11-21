@@ -234,7 +234,6 @@ for (const order of ["restyle-drop", "layer-first"] as const) {
                         } else {
                             mountShrink(() => act(() => renderer.update(renderList(["prefix", "anchor"]))));
                         }
-                        console.log(`[native-order] ${name} maxShift=${maxShift}`);
                         expect(maxShift).toBe(0);
                         // The hold must also let go: the settled extent is the rows plus the footer.
                         const rowsEnd = ANCHOR_TOP + 100 + (mutation === "collapse" ? 200 : 0);
