@@ -52,6 +52,7 @@ function setOnUI(sharedValue: SharedValue<number>, value: number) {
 type ContentExtentProps = {
     children: React.ReactNode;
     committedSize: number;
+    contentRowGap?: number;
     footer?: React.ReactNode;
     sizeAdjustment: number;
 };
@@ -72,7 +73,13 @@ const HoldContentShrinkContext = createContext(false);
  * can mount separately from the controller's derived inset. Give the inset a frame to mount
  * before releasing the hold. Growth still lands at once through the inner Animated size.
  */
-function ReanimatedContentExtent({ children, committedSize, footer, sizeAdjustment }: ContentExtentProps) {
+function ReanimatedContentExtent({
+    children,
+    committedSize,
+    contentRowGap = 0,
+    footer,
+    sizeAdjustment,
+}: ContentExtentProps) {
     const holdShrink = useContext(HoldContentShrinkContext);
     const size = Math.max(0, committedSize + sizeAdjustment);
     const extent = useSharedValue<number>(size);
@@ -99,18 +106,18 @@ function ReanimatedContentExtent({ children, committedSize, footer, sizeAdjustme
     );
 
     return (
-        <Reanimated.View style={style}>
-            {children}
+        <>
+            {children && <Reanimated.View style={style}>{children}</Reanimated.View>}
             {footer}
-            {holdShrink && hasFooter && <ContentExtentSpacer extent={extent} size={size} />}
-        </Reanimated.View>
+            {holdShrink && hasFooter && <ContentExtentSpacer extent={extent} rowGap={contentRowGap} size={size} />}
+        </>
     );
 }
 
-function ContentExtentSpacer({ extent, size }: { extent: SharedValue<number>; size: number }) {
+function ContentExtentSpacer({ extent, rowGap, size }: { extent: SharedValue<number>; rowGap: number; size: number }) {
     const style = useAnimatedStyle(() => ({ height: extent.value }));
-    // Yoga floors height at the padding. The matching negative margin leaves only the unreleased shrink in flow.
-    return <Reanimated.View pointerEvents="none" style={[{ marginTop: -size, paddingTop: size }, style]} />;
+    // Floor the height at the committed size and subtract it and the root gap from flow.
+    return <Reanimated.View pointerEvents="none" style={[{ marginTop: -size - rowGap, paddingTop: size }, style]} />;
 }
 
 if (typeof __DEV__ !== "undefined" && __DEV__ && !KeyboardChatScrollView) {
@@ -511,7 +518,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         AnimatedLegendListProps<ItemT> & {
             anchoredEndSpace?: AnchoredEndSpaceConfig;
             anchoredEndSpaceOwnerInternal?: "list" | "scroll";
-            contentExtentComponentInternal?: React.ComponentType<ContentExtentProps>;
+            contentExtentComponentInternal?: typeof ReanimatedContentExtent;
             ref?: ForwardedRef<LegendListRef>;
         }
     >;

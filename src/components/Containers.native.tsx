@@ -28,6 +28,7 @@ const useContentExtentComponent = IsNewArchitecture
 
 interface ContainersLayerProps {
     children: React.ReactNode;
+    contentRowGap?: number;
     footer?: React.ReactNode;
     freshDataTransitionEpoch: number;
     horizontal: boolean;
@@ -37,6 +38,7 @@ interface ContainersLayerProps {
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const ContainersLayer = typedMemo(function ContainersLayer({
     children,
+    contentRowGap,
     footer,
     freshDataTransitionEpoch,
     horizontal,
@@ -94,6 +96,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     return ContentExtent && !horizontal ? (
         <ContentExtent
             committedSize={renderRows ? (minSize ?? 0) : 0}
+            contentRowGap={contentRowGap}
             footer={footer}
             sizeAdjustment={renderRows ? endMargin : 0}
         >
@@ -106,6 +109,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Containers = typedMemo(function Containers<ItemT>({
+    contentRowGap,
     footer,
     freshDataTransitionEpoch,
     horizontal,
@@ -136,6 +140,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
 
     return (
         <ContainersLayer
+            contentRowGap={contentRowGap}
             footer={footer}
             freshDataTransitionEpoch={freshDataTransitionEpoch}
             horizontal={horizontal}

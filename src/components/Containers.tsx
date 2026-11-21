@@ -10,6 +10,7 @@ import { type GetRenderedItem, typedMemo } from "@/types.internal";
 import { isHorizontalRTL } from "@/utils/rtl";
 
 export interface ContainersProps<ItemT> {
+    contentRowGap?: number;
     footer?: React.ReactNode;
     freshDataTransitionEpoch: number;
     horizontal: boolean;

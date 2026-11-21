@@ -17,7 +17,6 @@ import { setFooterSize, setHeaderSize } from "@/core/updateContentMetrics";
 import { useStableRenderComponent } from "@/hooks/useStableRenderComponent";
 import { LayoutView } from "@/platform/LayoutView";
 import { Platform } from "@/platform/Platform";
-import { StyleSheet } from "@/platform/StyleSheet";
 import { isScreenReaderEnabled } from "@/platform/screenReader";
 import type {
     LayoutChangeEvent,
@@ -39,6 +38,7 @@ import { isHorizontalRTL } from "@/utils/rtl";
 interface ListComponentProps<ItemT>
     extends Omit<
         LegendListPropsBase<ItemT, LooseScrollViewProps> & { scrollEventThrottle: number | undefined },
+        | "contentContainerStyle"
         | "data"
         | "estimatedItemSize"
         | "drawDistance"
@@ -49,6 +49,7 @@ interface ListComponentProps<ItemT>
         | "renderScrollComponent"
         | "style"
     > {
+    contentContainerStyle: ViewStyle;
     horizontal: boolean;
     initialContentOffset: number | undefined;
     freshDataTransitionEpoch: number;
@@ -136,10 +137,8 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     let anchoredEndSpaceStyle: ViewStyle | undefined;
     if (shouldMaterializeAnchoredEndSpace) {
         const paddingEnd = horizontal ? (isHorizontalRTL(ctx.state) ? "Left" : "Right") : "Bottom";
-        const flattenedContentContainerStyle = StyleSheet.flatten(contentContainerStyle) as ViewStyle | undefined;
         anchoredEndSpaceStyle = {
-            [`padding${paddingEnd}`]:
-                extractPadding({}, flattenedContentContainerStyle || {}, paddingEnd) + anchoredEndSpaceSize,
+            [`padding${paddingEnd}`]: extractPadding({}, contentContainerStyle, paddingEnd) + anchoredEndSpaceSize,
         };
     }
     const autoOtherAxisStyle = getAutoOtherAxisStyle({
@@ -234,13 +233,10 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     );
     const renderRows = canRender && !ListEmptyComponent;
     const extentFooter =
-        IsNewArchitecture &&
-        Platform.OS !== "web" &&
-        !horizontal &&
-        ctx.state.props.anchoredEndSpace &&
-        ctx.state.props.contentExtentComponentInternal
+        IsNewArchitecture && Platform.OS !== "web" && !horizontal && ctx.state.props.contentExtentComponentInternal
             ? footer
             : undefined;
+    const rowGap = extentFooter && (contentContainerStyle.rowGap ?? contentContainerStyle.gap);
 
     return (
         <SnapOrScroll
@@ -291,6 +287,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 
             {(renderRows || extentFooter) && (
                 <Containers
+                    contentRowGap={typeof rowGap === "number" ? Math.max(0, rowGap) : undefined}
                     footer={extentFooter}
                     freshDataTransitionEpoch={freshDataTransitionEpoch}
                     getRenderedItem={getRenderedItem}

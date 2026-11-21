@@ -96,19 +96,23 @@ const layoutEvent = (height: number) => ({ nativeEvent: { layout: { height, widt
 // positioned from the committed styles and animated minimums read after each UI job.
 function readGeometry(json: ReactTestRendererJSON | ReactTestRendererJSON[] | null) {
     const tops = new Map<string, number>();
-    function layout(nodes: ReactTestRendererNode[], top: number): number {
+    type FlowStyle = { gap?: number; rowGap?: number };
+    function layout(nodes: ReactTestRendererNode[], top: number, parentStyle: FlowStyle): number {
         let cursor = top;
+        let hasFlowChild = false;
         for (const node of nodes) {
             if (typeof node === "string") continue;
             const style = StyleSheet.flatten(node.props.style) ?? {};
             const absolute = style.position === "absolute";
-            const start = absolute ? top + (style.top ?? 0) : cursor + (style.marginTop ?? 0);
+            const gap = hasFlowChild ? (parentStyle.rowGap ?? parentStyle.gap ?? 0) : 0;
+            const start = absolute ? top + (style.top ?? 0) : cursor + gap + (style.marginTop ?? 0);
             if (node.props.testID) tops.set(node.props.testID, start);
             const paddingTop = style.paddingTop ?? 0;
             const padding = paddingTop + (style.paddingBottom ?? 0);
-            const childrenHeight = layout(node.children ?? [], start + paddingTop);
+            const childrenHeight = layout(node.children ?? [], start + paddingTop, style);
             const height = typeof style.height === "object" ? style.height.getValue() : style.height;
             if (!absolute) {
+                hasFlowChild = true;
                 cursor =
                     start +
                     Math.max(height ?? childrenHeight + padding, style.minHeight ?? 0, padding) +
@@ -117,11 +121,18 @@ function readGeometry(json: ReactTestRendererJSON | ReactTestRendererJSON[] | nu
         }
         return cursor - top;
     }
-    return { contentHeight: layout(json ? [json].flat() : [], 0), tops };
+    return {
+        contentHeight: layout(json ? [json].flat() : [], 0, StyleSheet.flatten(scrollProps.contentContainerStyle)),
+        tops,
+    };
 }
 
-for (const withFooter of [false, true]) {
-    for (const [mutation, replyHeight, openHeight] of [
+for (const [withFooter, rowGap] of [
+    [false, 0],
+    [true, 0],
+    [true, 16],
+] as const) {
+    for (const [mutation, replyHeight, openHeight, collapseHeight] of [
         ["collapse", 376, 0],
         ["collapse", 376, 160],
         ["collapse", 600, 0],
@@ -130,9 +141,17 @@ for (const withFooter of [false, true]) {
         ["delete", 376, 160],
         ["delete", 600, 0],
         ["delete", 600, 160],
+        ["collapse", 400, 0, 100],
+        ["collapse", 600, 160, 100],
+        ["delete", 400, 160],
     ] as const) {
-        it(`${mutation} keeps the anchor and content end together (footer=${withFooter}, reply=${replyHeight}, keyboard=${openHeight})`, () => {
+        it(`${mutation} keeps the anchor and content end together (footer=${withFooter}, gap=${rowGap}, reply=${replyHeight}, keyboard=${openHeight}, target=${collapseHeight ?? (mutation === "collapse" ? 200 : 0)})`, () => {
             const anchorTop = replyHeight < VIEWPORT ? 40 : 300;
+            const contentContainerStyle = rowGap
+                ? mutation === "collapse"
+                    ? [{ gap: 32 }, { rowGap }]
+                    : { gap: rowGap }
+                : undefined;
             keyboardHeight = openHeight;
             const { KeyboardAwareLegendList } =
                 require("../../src/integrations/keyboard") as typeof import("../../src/integrations/keyboard");
@@ -143,9 +162,12 @@ for (const withFooter of [false, true]) {
                 ["anchor", 100],
                 ["reply", replyHeight],
             ]);
-            const renderList = (data: string[]) => (
+            const renderList = (data: string[], anchored = true) => (
                 <KeyboardAwareLegendList
-                    anchoredEndSpace={{ anchorIndex: 1 }}
+                    anchoredEndSpace={anchored ? { anchorIndex: 1 } : undefined}
+                    // An explicit column style keeps the gap on the scroll container.
+                    columnWrapperStyle={rowGap ? {} : undefined}
+                    contentContainerStyle={contentContainerStyle}
                     data={data}
                     estimatedItemSize={100}
                     keyExtractor={(item: string) => item}
@@ -192,9 +214,10 @@ for (const withFooter of [false, true]) {
 
                 const blankSpace = scrollProps.blankSpace;
                 const before = readGeometry(renderer.toJSON());
-                expect(blankSpace.value).toBe(Math.max(0, VIEWPORT - (before.contentHeight - anchorTop)));
                 expect(before.tops.get("anchor")).toBe(anchorTop);
-                if (withFooter) expect(before.tops.get("footer")).toBe(anchorTop + 100 + replyHeight);
+                if (withFooter) expect(before.tops.get("footer")).toBe(anchorTop + 100 + replyHeight + rowGap);
+                expect(blankSpace.value).toBe(Math.max(0, VIEWPORT - (100 + replyHeight + (withFooter ? FOOTER : 0))));
+                expect(before.contentHeight).toBe(anchorTop + 100 + replyHeight + (withFooter ? FOOTER + rowGap : 0));
 
                 const lastKey = mutation === "collapse" ? "reply" : "anchor";
                 let offset = anchorTop;
@@ -203,6 +226,8 @@ for (const withFooter of [false, true]) {
                 const frames: Array<{ anchorOnScreen: number; footerGap?: number }> = [];
                 const mount = () => {
                     const { contentHeight, tops } = readGeometry(renderer.toJSON());
+                    expect(tops.get("anchor")).toBe(anchorTop);
+                    expect(tops.get(lastKey)! + sizes.get(lastKey)!).toBe(rowBottom);
                     offset = Math.min(offset, Math.max(0, contentHeight + appliedInset - VIEWPORT));
                     frames.push({
                         anchorOnScreen: tops.get("anchor")! - offset,
@@ -221,11 +246,13 @@ for (const withFooter of [false, true]) {
                     mount();
                 };
                 if (mutation === "collapse") {
-                    // Replay the increasing and decreasing shrink steps of the 300 ms iOS transition.
-                    for (const remainingHeight of [
-                        374, 369, 363, 355, 344, 331, 316, 298, 279, 266, 247, 236, 225, 215, 208, 203, 200,
-                    ]) {
-                        const height = 200 + Math.round(((replyHeight - 200) * (remainingHeight - 200)) / 176);
+                    // Replay the 300 ms transition, or a single layout update for the original hold cases.
+                    const heights = collapseHeight
+                        ? [collapseHeight]
+                        : [374, 369, 363, 355, 344, 331, 316, 298, 279, 266, 247, 236, 225, 215, 208, 203, 200].map(
+                              (height) => 200 + Math.round(((replyHeight - 200) * (height - 200)) / 176),
+                          );
+                    for (const height of heights) {
                         sizes.set("reply", height);
                         rowBottom = anchorTop + 100 + height;
                         measureRows();
@@ -237,17 +264,61 @@ for (const withFooter of [false, true]) {
                     mountShrink();
                 }
 
-                const finalHeight = rowBottom + (withFooter ? FOOTER : 0);
-                expect(blankSpace.value).toBe(anchorTop + VIEWPORT - finalHeight);
-                const final = readGeometry(renderer.toJSON());
-                expect(final.contentHeight).toBe(finalHeight);
-                expect(final.tops.get(lastKey)! + sizes.get(lastKey)!).toBe(rowBottom);
+                const rowAndFooterEnd = rowBottom + (withFooter ? FOOTER : 0);
+                expect(blankSpace.value).toBe(anchorTop + VIEWPORT - rowAndFooterEnd);
+                const after = readGeometry(renderer.toJSON());
+                expect(after.contentHeight).toBe(rowAndFooterEnd + rowGap);
                 expect(Math.max(...frames.map((frame) => Math.abs(frame.anchorOnScreen)))).toBe(0);
-                if (withFooter) expect(Math.max(...frames.map((frame) => Math.abs(frame.footerGap!)))).toBe(0);
+                if (withFooter) {
+                    expect(Math.max(...frames.map((frame) => Math.abs(frame.footerGap! - rowGap)))).toBe(0);
+                }
+                if (rowGap) {
+                    const data = mutation === "collapse" ? ["prefix", "anchor", "reply"] : ["prefix", "anchor"];
+                    act(() => renderer.update(renderList(data, false)));
+                    const unanchored = readGeometry(renderer.toJSON());
+                    expect(unanchored.contentHeight).toBe(after.contentHeight);
+                    expect(unanchored.tops.get("footer")).toBe(rowBottom + rowGap);
+                }
             } finally {
                 act(() => renderer?.unmount());
                 uninstallListRegistry();
             }
         });
     }
+}
+
+for (const startsAnchored of [false, true]) {
+    it(`preserves footer state when anchored end space toggles (starts anchored=${startsAnchored})`, () => {
+        const { KeyboardAwareLegendList } =
+            require("../../src/integrations/keyboard") as typeof import("../../src/integrations/keyboard");
+        let setDraft!: React.Dispatch<React.SetStateAction<string>>;
+        function Footer() {
+            const [draft, updateDraft] = React.useState("");
+            setDraft = updateDraft;
+            return <View accessibilityLabel={draft} testID="stateful-footer" />;
+        }
+        const renderList = (anchored: boolean) => (
+            <KeyboardAwareLegendList
+                anchoredEndSpace={anchored ? { anchorIndex: 0 } : undefined}
+                data={["row"]}
+                ListFooterComponent={Footer}
+                recycleItems={false}
+                renderItem={() => null}
+            />
+        );
+        let renderer!: ReactTestRenderer;
+        try {
+            act(() => {
+                renderer = TestRenderer.create(renderList(startsAnchored));
+            });
+            act(() => setDraft("saved draft"));
+            for (const anchored of [!startsAnchored, startsAnchored]) {
+                act(() => renderer.update(renderList(anchored)));
+                const footer = renderer.root.findAllByProps({ testID: "stateful-footer" })[0];
+                expect(footer.props.accessibilityLabel).toBe("saved draft");
+            }
+        } finally {
+            act(() => renderer?.unmount());
+        }
+    });
 }
