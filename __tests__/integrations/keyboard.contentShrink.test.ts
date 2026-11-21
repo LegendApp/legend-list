@@ -1,13 +1,14 @@
 import { expect, it } from "bun:test";
 
-it("passes mounted keyboard content shrink regressions in an isolated process", () => {
-    const proc = Bun.spawnSync(["bun", "test", "./__tests__/integrations/keyboard.contentShrink.cases.tsx"], {
-        cwd: process.cwd(),
-        stderr: "pipe",
-        stdout: "pipe",
+for (const model of ["contentShrink", "commitOrder", "nativeOrder", "rangeFloor"]) {
+    it(`passes the mounted keyboard ${model} cases`, () => {
+        const result = Bun.spawnSync(["bun", "test", `./__tests__/integrations/keyboard.${model}.cases.tsx`], {
+            stderr: "pipe",
+            stdout: "pipe",
+        });
+        expect({
+            exitCode: result.exitCode,
+            output: result.exitCode === 0 ? "" : result.stdout.toString() + result.stderr.toString(),
+        }).toEqual({ exitCode: 0, output: "" });
     });
-    expect({ code: proc.exitCode, stderr: proc.stderr.toString() }).toEqual({
-        code: 0,
-        stderr: expect.any(String),
-    });
-});
+}

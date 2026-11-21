@@ -14,6 +14,7 @@ import { typedForwardRef } from "../../src/types.internal";
 import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
 import TestRenderer, {
     act,
+    type ReactTestInstance,
     type ReactTestRenderer,
     type ReactTestRendererJSON,
     type ReactTestRendererNode,
@@ -58,6 +59,18 @@ const createSharedValue = <T,>(initial: T) => {
 const uiJobs: Array<() => void> = [];
 const uiFrameJobs: FrameRequestCallback[] = [];
 
+// The "react-reset" model replays the iOS Fabric trace where a React commit that restyles a view
+// mounts its animated keys at their first-render values; the held value returns only with the next
+// Reanimated commit. A view whose style prop keeps its identity is left alone.
+let reactRestyleResets = false;
+type AnimatedStyleRecord = { applied: any; initial: any; updater: () => any };
+const animatedStyleRecord = Symbol("animatedStyleRecord");
+const animatedStyles = new Set<AnimatedStyleRecord>();
+
+function commitReanimated() {
+    for (const record of animatedStyles) record.applied = record.updater();
+}
+
 function flushUIJobs() {
     const requestFrame = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = (callback) => uiFrameJobs.push(callback);
@@ -66,27 +79,65 @@ function flushUIJobs() {
     } finally {
         globalThis.requestAnimationFrame = requestFrame;
     }
+    commitReanimated();
+}
+
+function runUIFrames() {
+    // A frame job can release a React-owned hold through runOnJS; React commits it before the next frame.
+    act(() => {
+        for (const job of uiFrameJobs.splice(0)) job(0);
+    });
+    commitReanimated();
+}
+
+function ReanimatedView(props: any) {
+    const previousStyle = React.useRef(props.style);
+    if (reactRestyleResets && previousStyle.current !== props.style) {
+        for (const style of [props.style].flat(Number.POSITIVE_INFINITY)) {
+            const record: AnimatedStyleRecord | undefined = style?.[animatedStyleRecord];
+            if (record) record.applied = record.initial;
+        }
+    }
+    previousStyle.current = props.style;
+    return React.createElement("reanimated-view", props);
 }
 
 beforeEach(() => {
     uiJobs.length = 0;
     uiFrameJobs.length = 0;
+    animatedStyles.clear();
     keyboardHeight = 0;
     registerReanimatedModuleMock({
         runOnUI:
             (fn: (...args: any[]) => void) =>
             (...args: any[]) =>
                 uiJobs.push(() => fn(...args)),
-        useAnimatedStyle: (updater: () => any) => ({
-            get height() {
-                return updater().height;
-            },
-            get minHeight() {
-                return updater().minHeight;
-            },
-        }),
+        useAnimatedStyle: (updater: () => any) => {
+            const ref = React.useRef<{ record: AnimatedStyleRecord; style: object }>(undefined);
+            if (!ref.current) {
+                const initial = updater();
+                const record: AnimatedStyleRecord = { applied: initial, initial, updater };
+                const read = () => (reactRestyleResets ? record.applied : record.updater());
+                animatedStyles.add(record);
+                // Stable like Reanimated's animated style object.
+                ref.current = {
+                    record,
+                    style: {
+                        [animatedStyleRecord]: record,
+                        get height() {
+                            return read().height;
+                        },
+                        get minHeight() {
+                            return read().minHeight;
+                        },
+                    },
+                };
+            }
+            ref.current.record.updater = updater;
+            return ref.current.style;
+        },
         useSharedValue: <T,>(initial: T) => React.useRef(createSharedValue(initial)).current,
-        View: (props: any) => React.createElement("reanimated-view", props),
+        View: ReanimatedView,
     });
 });
 
@@ -127,165 +178,234 @@ function readGeometry(json: ReactTestRendererJSON | ReactTestRendererJSON[] | nu
     };
 }
 
-for (const [withFooter, rowGap] of [
-    [false, 0],
-    [true, 0],
-    [true, 16],
-] as const) {
-    for (const [mutation, replyHeight, openHeight, collapseHeight] of [
-        ["collapse", 376, 0],
-        ["collapse", 376, 160],
-        ["collapse", 600, 0],
-        ["collapse", 600, 160],
-        ["delete", 376, 0],
-        ["delete", 376, 160],
-        ["delete", 600, 0],
-        ["delete", 600, 160],
-        ["collapse", 400, 0, 100],
-        ["collapse", 600, 160, 100],
-        ["delete", 400, 160],
+// Bun runs it.failing; the installed bun-types predate its typing.
+const itFailing = (it as typeof it & { failing: typeof it }).failing;
+
+const layoutCases = [
+    ["collapse", 376, 0],
+    ["collapse", 376, 160],
+    ["collapse", 600, 0],
+    ["collapse", 600, 160],
+    ["delete", 376, 0],
+    ["delete", 376, 160],
+    ["delete", 600, 0],
+    ["delete", 600, 160],
+    ["collapse", 400, 0, 100],
+    ["collapse", 600, 160, 100],
+    ["delete", 400, 160],
+] as const;
+// iPhone trace sizes. "extent-first" runs a queued UI write (the release) before UIKit applies the
+// grown inset; "inset-first" is its control.
+const traceCases = [
+    ["collapse", 376, 0],
+    ["collapse", 376, 395],
+    ["delete", 200, 0],
+    ["delete", 200, 395],
+] as const;
+
+for (const model of ["default", "react-reset", "extent-first", "inset-first"] as const) {
+    const trace = model === "extent-first" || model === "inset-first";
+    const viewport = trace ? 687 : VIEWPORT;
+    const footerHeight = trace ? 37 : FOOTER;
+    const anchorHeight = trace ? 68 : 100;
+    for (const [withFooter, rowGap] of [
+        [false, 0],
+        [true, 0],
+        [true, 16],
     ] as const) {
-        it(`${mutation} keeps the anchor and content end together (footer=${withFooter}, gap=${rowGap}, reply=${replyHeight}, keyboard=${openHeight}, target=${collapseHeight ?? (mutation === "collapse" ? 200 : 0)})`, () => {
-            const anchorTop = replyHeight < VIEWPORT ? 40 : 300;
-            const contentContainerStyle = rowGap
-                ? mutation === "collapse"
-                    ? [{ gap: 32 }, { rowGap }]
-                    : { gap: rowGap }
-                : undefined;
-            keyboardHeight = openHeight;
-            const { KeyboardAwareLegendList } =
-                require("../../src/integrations/keyboard") as typeof import("../../src/integrations/keyboard");
-            const lists = new Set<ListCtx>();
-            const uninstallListRegistry = installListRegistry(lists);
-            const sizes = new Map([
-                ["prefix", anchorTop],
-                ["anchor", 100],
-                ["reply", replyHeight],
-            ]);
-            const renderList = (data: string[], anchored = true) => (
-                <KeyboardAwareLegendList
-                    anchoredEndSpace={anchored ? { anchorIndex: 1 } : undefined}
-                    // An explicit column style keeps the gap on the scroll container.
-                    columnWrapperStyle={rowGap ? {} : undefined}
-                    contentContainerStyle={contentContainerStyle}
-                    data={data}
-                    estimatedItemSize={100}
-                    keyExtractor={(item: string) => item}
-                    ListFooterComponent={withFooter ? <View testID="footer" /> : undefined}
-                    ListFooterComponentStyle={{ height: FOOTER }}
-                    recycleItems={false}
-                    renderItem={({ item }) => <View testID={item} />}
-                />
-            );
-            let renderer!: ReactTestRenderer;
-            try {
-                act(() => {
-                    renderer = TestRenderer.create(renderList(["prefix", "anchor", "reply"]));
-                });
-                const list = [...lists][0] as StateContext;
-                const measureRows = () =>
+        if (trace && rowGap) continue;
+        for (const [mutation, replyHeight, openHeight, collapseHeight] of trace ? traceCases : layoutCases) {
+            // Extent-first releases the hold before UIKit applies the grown inset. The device trace contradicts
+            // that order for the footer-on clamp (it came 4-7 ms before any release was queued), and applied to
+            // footer off too it fails cases that pass on device, so its footer-on cases document a known gap.
+            // The open collapse keeps enough headroom and passes.
+            const test =
+                model === "extent-first" && withFooter && (mutation === "delete" || !openHeight) ? itFailing : it;
+            test(`${mutation} keeps the anchor and content end together (model=${model}, footer=${withFooter}, gap=${rowGap}, reply=${replyHeight}, keyboard=${openHeight}, target=${collapseHeight ?? (mutation === "collapse" ? 200 : 0)})`, () => {
+                reactRestyleResets = model === "react-reset";
+                const anchorTop = trace ? 1566 : replyHeight < VIEWPORT ? 40 : 300;
+                const contentContainerStyle = rowGap
+                    ? mutation === "collapse"
+                        ? [{ gap: 32 }, { rowGap }]
+                        : { gap: rowGap }
+                    : undefined;
+                keyboardHeight = openHeight;
+                const { KeyboardAwareLegendList } =
+                    require("../../src/integrations/keyboard") as typeof import("../../src/integrations/keyboard");
+                const lists = new Set<ListCtx>();
+                const uninstallListRegistry = installListRegistry(lists);
+                const sizes = new Map([
+                    ["prefix", anchorTop],
+                    ["anchor", anchorHeight],
+                    ["reply", replyHeight],
+                ]);
+                const renderList = (data: string[], anchored = true) => (
+                    <KeyboardAwareLegendList
+                        anchoredEndSpace={anchored ? { anchorIndex: 1 } : undefined}
+                        // An explicit column style keeps the gap on the scroll container.
+                        columnWrapperStyle={rowGap ? {} : undefined}
+                        contentContainerStyle={contentContainerStyle}
+                        data={data}
+                        drawDistance={trace ? anchorTop : undefined}
+                        estimatedItemSize={100}
+                        keyExtractor={(item: string) => item}
+                        ListFooterComponent={withFooter ? <View testID="footer" /> : undefined}
+                        ListFooterComponentStyle={{ height: footerHeight }}
+                        recycleItems={false}
+                        renderItem={({ item }) => <View testID={item} />}
+                    />
+                );
+                let renderer!: ReactTestRenderer;
+                try {
                     act(() => {
-                        const views = renderer.root.findAll(
-                            (node) =>
-                                typeof node.type !== "string" &&
-                                typeof node.props.id === "number" &&
-                                !!node.props.refView,
-                        );
-                        batchItemSizeUpdates(() => {
-                            for (const view of views) {
-                                const key = peek$(list, `containerItemKey${view.props.id}`);
-                                const size = key === undefined ? undefined : sizes.get(key);
-                                if (size !== undefined) view.props.onLayout?.(layoutEvent(size));
-                            }
+                        renderer = TestRenderer.create(renderList(["prefix", "anchor", "reply"]));
+                    });
+                    const list = [...lists][0] as StateContext;
+                    const measureRows = () =>
+                        act(() => {
+                            const views = renderer.root.findAll(
+                                (node) =>
+                                    typeof node.type !== "string" &&
+                                    typeof node.props.id === "number" &&
+                                    !!node.props.refView,
+                            );
+                            batchItemSizeUpdates(() => {
+                                for (const view of views) {
+                                    const key = peek$(list, `containerItemKey${view.props.id}`);
+                                    const size = key === undefined ? undefined : sizes.get(key);
+                                    if (size !== undefined) view.props.onLayout?.(layoutEvent(size));
+                                }
+                            });
                         });
-                    });
-                act(() => scrollProps.onLayout(layoutEvent(VIEWPORT)));
-                if (withFooter) {
-                    const footerLayout = renderer.root.find(
-                        (node) =>
-                            typeof node.type === "string" &&
-                            node.children.some((child) => typeof child !== "string" && child.props.testID === "footer"),
-                    );
-                    act(() => footerLayout.props.onLayout(layoutEvent(FOOTER)));
-                }
-                measureRows();
-                flushUIJobs();
-                for (const job of uiFrameJobs.splice(0)) job(0);
-
-                const blankSpace = scrollProps.blankSpace;
-                const before = readGeometry(renderer.toJSON());
-                expect(before.tops.get("anchor")).toBe(anchorTop);
-                if (withFooter) expect(before.tops.get("footer")).toBe(anchorTop + 100 + replyHeight + rowGap);
-                expect(blankSpace.value).toBe(Math.max(0, VIEWPORT - (100 + replyHeight + (withFooter ? FOOTER : 0))));
-                expect(before.contentHeight).toBe(anchorTop + 100 + replyHeight + (withFooter ? FOOTER + rowGap : 0));
-
-                const lastKey = mutation === "collapse" ? "reply" : "anchor";
-                let offset = anchorTop;
-                let appliedInset = Math.max(blankSpace.value, openHeight);
-                let rowBottom = anchorTop + 100 + replyHeight;
-                const frames: Array<{ anchorOnScreen: number; footerGap?: number }> = [];
-                const mount = () => {
-                    const { contentHeight, tops } = readGeometry(renderer.toJSON());
-                    expect(tops.get("anchor")).toBe(anchorTop);
-                    expect(tops.get(lastKey)! + sizes.get(lastKey)!).toBe(rowBottom);
-                    offset = Math.min(offset, Math.max(0, contentHeight + appliedInset - VIEWPORT));
-                    frames.push({
-                        anchorOnScreen: tops.get("anchor")! - offset,
-                        footerGap: withFooter ? tops.get("footer")! - rowBottom : undefined,
-                    });
-                };
-                const mountShrink = () => {
-                    mount(); // React commits the rows and footer first.
+                    act(() => scrollProps.onLayout(layoutEvent(viewport)));
+                    if (withFooter) {
+                        const footerLayout = renderer.root.find(
+                            (node) =>
+                                typeof node.type === "string" &&
+                                node.children.some(
+                                    (child) => typeof child !== "string" && child.props.testID === "footer",
+                                ),
+                        );
+                        act(() => footerLayout.props.onLayout(layoutEvent(footerHeight)));
+                    }
+                    measureRows();
                     flushUIJobs();
+                    runUIFrames();
 
-                    // The candidate trace is consistent with a spacer layout reaching iOS before
-                    // the new content inset. Model that intermediate native range for footer cases.
-                    if (withFooter) mount();
-                    appliedInset = Math.max(blankSpace.value, openHeight);
-                    for (const job of uiFrameJobs.splice(0)) job(0);
-                    mount();
-                };
-                if (mutation === "collapse") {
-                    // Replay the 300 ms transition, or a single layout update for the original hold cases.
-                    const heights = collapseHeight
-                        ? [collapseHeight]
-                        : [374, 369, 363, 355, 344, 331, 316, 298, 279, 266, 247, 236, 225, 215, 208, 203, 200].map(
-                              (height) => 200 + Math.round(((replyHeight - 200) * (height - 200)) / 176),
-                          );
-                    for (const height of heights) {
-                        sizes.set("reply", height);
-                        rowBottom = anchorTop + 100 + height;
-                        measureRows();
+                    const blankSpace = scrollProps.blankSpace;
+                    const before = readGeometry(renderer.toJSON());
+                    expect(before.tops.get("anchor")).toBe(anchorTop);
+                    if (withFooter)
+                        expect(before.tops.get("footer")).toBe(anchorTop + anchorHeight + replyHeight + rowGap);
+                    expect(blankSpace.value).toBe(
+                        Math.max(0, viewport - (anchorHeight + replyHeight + (withFooter ? footerHeight : 0))),
+                    );
+                    expect(before.contentHeight).toBe(
+                        anchorTop + anchorHeight + replyHeight + (withFooter ? footerHeight + rowGap : 0),
+                    );
+
+                    const lastKey = mutation === "collapse" ? "reply" : "anchor";
+                    let offset = anchorTop;
+                    let appliedInset = Math.max(blankSpace.value, openHeight);
+                    let rowBottom = anchorTop + anchorHeight + replyHeight;
+                    const frames: Array<{ anchorOnScreen: number; footerGap?: number }> = [];
+                    let settledContent = before.contentHeight;
+                    const mount = (heldContent?: number) => {
+                        const { contentHeight, tops } = readGeometry(renderer.toJSON());
+                        // The device falsifier: the commit that shrinks the rows must still mount the held extent.
+                        if (heldContent !== undefined) expect(contentHeight).toBeGreaterThanOrEqual(heldContent);
+                        expect(tops.get("anchor")).toBe(anchorTop);
+                        expect(tops.get(lastKey)! + sizes.get(lastKey)!).toBe(rowBottom);
+                        offset = Math.min(offset, Math.max(0, contentHeight + appliedInset - viewport));
+                        frames.push({
+                            anchorOnScreen: tops.get("anchor")! - offset,
+                            footerGap: withFooter ? tops.get("footer")! - rowBottom : undefined,
+                        });
+                    };
+                    const mountShrink = () => {
+                        mount(settledContent); // React commits the rows and footer first.
+                        flushUIJobs();
+
+                        // The failing footer trace observes native size with the old inset.
+                        if (withFooter && model === "extent-first") runUIFrames();
+                        if (withFooter) mount();
+                        appliedInset = Math.max(blankSpace.value, openHeight);
+                        runUIFrames();
+                        mount();
+                        settledContent = readGeometry(renderer.toJSON()).contentHeight;
+                    };
+                    if (mutation === "collapse") {
+                        // Replay the 300 ms transition, or a single layout update for the original hold cases.
+                        const heights = collapseHeight
+                            ? [collapseHeight]
+                            : [374, 369, 363, 355, 344, 331, 316, 298, 279, 266, 247, 236, 225, 215, 208, 203, 200].map(
+                                  (height) => 200 + Math.round(((replyHeight - 200) * (height - 200)) / 176),
+                              );
+                        for (const height of heights) {
+                            sizes.set("reply", height);
+                            rowBottom = anchorTop + anchorHeight + height;
+                            measureRows();
+                            mountShrink();
+                        }
+                    } else {
+                        rowBottom = anchorTop + anchorHeight;
+                        act(() => renderer.update(renderList(["prefix", "anchor"])));
                         mountShrink();
                     }
-                } else {
-                    rowBottom = anchorTop + 100;
-                    act(() => renderer.update(renderList(["prefix", "anchor"])));
-                    mountShrink();
-                }
 
-                const rowAndFooterEnd = rowBottom + (withFooter ? FOOTER : 0);
-                expect(blankSpace.value).toBe(anchorTop + VIEWPORT - rowAndFooterEnd);
-                const after = readGeometry(renderer.toJSON());
-                expect(after.contentHeight).toBe(rowAndFooterEnd + rowGap);
-                expect(Math.max(...frames.map((frame) => Math.abs(frame.anchorOnScreen)))).toBe(0);
-                if (withFooter) {
-                    expect(Math.max(...frames.map((frame) => Math.abs(frame.footerGap! - rowGap)))).toBe(0);
+                    const rowAndFooterEnd = rowBottom + (withFooter ? footerHeight : 0);
+                    expect(blankSpace.value).toBe(anchorTop + viewport - rowAndFooterEnd);
+                    const after = readGeometry(renderer.toJSON());
+                    expect(after.contentHeight).toBe(rowAndFooterEnd + rowGap);
+                    expect(Math.max(...frames.map((frame) => Math.abs(frame.anchorOnScreen)))).toBe(0);
+                    if (withFooter) {
+                        expect(Math.max(...frames.map((frame) => Math.abs(frame.footerGap! - rowGap)))).toBe(0);
+                    }
+                    if (rowGap) {
+                        const data = mutation === "collapse" ? ["prefix", "anchor", "reply"] : ["prefix", "anchor"];
+                        act(() => renderer.update(renderList(data, false)));
+                        const unanchored = readGeometry(renderer.toJSON());
+                        expect(unanchored.contentHeight).toBe(after.contentHeight);
+                        expect(unanchored.tops.get("footer")).toBe(rowBottom + rowGap);
+                    }
+                } finally {
+                    act(() => renderer?.unmount());
+                    uninstallListRegistry();
                 }
-                if (rowGap) {
-                    const data = mutation === "collapse" ? ["prefix", "anchor", "reply"] : ["prefix", "anchor"];
-                    act(() => renderer.update(renderList(data, false)));
-                    const unanchored = readGeometry(renderer.toJSON());
-                    expect(unanchored.contentHeight).toBe(after.contentHeight);
-                    expect(unanchored.tops.get("footer")).toBe(rowBottom + rowGap);
-                }
-            } finally {
-                act(() => renderer?.unmount());
-                uninstallListRegistry();
-            }
-        });
+            });
+        }
     }
 }
+
+it("keeps the footer's cross-axis alignment when it shares the extent wrapper", () => {
+    const { KeyboardAwareLegendList } =
+        require("../../src/integrations/keyboard") as typeof import("../../src/integrations/keyboard");
+    let renderer!: ReactTestRenderer;
+    try {
+        act(() => {
+            renderer = TestRenderer.create(
+                <KeyboardAwareLegendList
+                    anchoredEndSpace={{ anchorIndex: 0 }}
+                    contentContainerStyle={{ alignItems: "center" }}
+                    data={["row"]}
+                    ListFooterComponent={<View testID="footer" />}
+                    recycleItems={false}
+                    renderItem={() => null}
+                />,
+            );
+        });
+        const hostParent = (node: ReactTestInstance | null) => {
+            let parent = node?.parent ?? null;
+            while (parent && typeof parent.type !== "string") parent = parent.parent;
+            return parent;
+        };
+        const container = hostParent(hostParent(renderer.root.findByProps({ testID: "footer" })));
+        const style = StyleSheet.flatten(container?.props.style ?? scrollProps.contentContainerStyle);
+        expect(style.alignItems).toBe("center");
+    } finally {
+        act(() => renderer?.unmount());
+    }
+});
 
 for (const startsAnchored of [false, true]) {
     it(`preserves footer state when anchored end space toggles (starts anchored=${startsAnchored})`, () => {
