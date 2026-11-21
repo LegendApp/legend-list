@@ -68,10 +68,9 @@ const HoldContentShrinkContext = createContext(false);
  * blank space that grows to compensate waits for Reanimated's next frame, so the offset clamps
  * in between. Hold the extent on Reanimated's side and release it from a layout effect: that
  * write is queued after both the grown blank space (written when the shrink was measured) and
- * React's mount of the rows and ScrollAdjust (which carries MVCP), so the extent shrinks with or
- * after the larger inset and never ahead of MVCP. In one commit iOS applies contentInset before
- * contentSize and Android applies padding before child layout. Growth still lands at once
- * through the inner Animated size, ahead of the blank space shrinking.
+ * React's mount of the rows and ScrollAdjust (which carries MVCP). On iOS the smaller extent
+ * can mount separately from the controller's derived inset. Give the inset a frame to mount
+ * before releasing the hold. Growth still lands at once through the inner Animated size.
  */
 function ReanimatedContentExtent({ children, committedSize, footer, sizeAdjustment }: ContentExtentProps) {
     const holdShrink = useContext(HoldContentShrinkContext);
@@ -81,7 +80,16 @@ function ReanimatedContentExtent({ children, committedSize, footer, sizeAdjustme
         if (!holdShrink) {
             return;
         }
-        setOnUI(extent, size);
+        if (Platform.OS === "ios") {
+            runOnUI((next: number) => {
+                "worklet";
+                requestAnimationFrame(() => {
+                    extent.value = next;
+                });
+            })(size);
+        } else {
+            setOnUI(extent, size);
+        }
     }, [extent, holdShrink, size]);
     // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
     const hasFooter = !!footer;

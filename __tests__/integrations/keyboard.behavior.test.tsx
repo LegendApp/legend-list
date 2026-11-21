@@ -259,7 +259,7 @@ describe("KeyboardAwareLegendList", () => {
         expect(nextScrollElement.props.blankSpace.value).toBe(0);
     });
 
-    it("wraps the list in a content extent that holds a committed shrink until after the commit", async () => {
+    it("holds a committed shrink until the next iOS UI frame", async () => {
         const extent = await renderContentExtent({ anchoredEndSpace: { anchorIndex: 0 } });
 
         expect(extent.renderer.toJSON()).toMatchObject({
@@ -269,15 +269,15 @@ describe("KeyboardAwareLegendList", () => {
         // The negative gap margin is part of the extent the layer occupies.
         expect(extent.minSize()).toBe(990);
 
-        // React's commit of the shrink still renders the held extent; only the
-        // layout effect after it releases the new size to Reanimated.
         extent.commit(700);
         expect(extent.minSize()).toBe(990);
+        await new Promise(requestAnimationFrame);
         extent.rerender();
         expect(extent.minSize()).toBe(690);
 
         // Growth is not held back by the wrapper either (it never exceeds the inner size).
         extent.commit(1200);
+        await new Promise(requestAnimationFrame);
         extent.rerender();
         expect(extent.minSize()).toBe(1190);
 
@@ -305,6 +305,9 @@ describe("KeyboardAwareLegendList", () => {
         expect(extent.minSize()).toBe(990);
 
         uiJobs.shift()!();
+        extent.rerender();
+        expect(extent.minSize()).toBe(990);
+        await new Promise(requestAnimationFrame);
         extent.rerender();
         expect(extent.minSize()).toBe(790);
 

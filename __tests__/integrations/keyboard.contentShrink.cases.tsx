@@ -55,20 +55,28 @@ const createSharedValue = <T,>(initial: T) => {
     };
 };
 
-// runOnUI runs immediately unless a test defers it, to replay the UI runtime's queue in order.
-let deferUIJobs = false;
 const uiJobs: Array<() => void> = [];
+const uiFrameJobs: FrameRequestCallback[] = [];
+
+function flushUIJobs() {
+    const requestFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback) => uiFrameJobs.push(callback);
+    try {
+        for (const job of uiJobs.splice(0)) job();
+    } finally {
+        globalThis.requestAnimationFrame = requestFrame;
+    }
+}
+
 beforeEach(() => {
-    deferUIJobs = false;
     uiJobs.length = 0;
+    uiFrameJobs.length = 0;
     keyboardHeight = 0;
     registerReanimatedModuleMock({
         runOnUI:
             (fn: (...args: any[]) => void) =>
-            (...args: any[]) => {
-                if (deferUIJobs) uiJobs.push(() => fn(...args));
-                else fn(...args);
-            },
+            (...args: any[]) =>
+                uiJobs.push(() => fn(...args)),
         useAnimatedStyle: (updater: () => any) => ({
             get height() {
                 return updater().height;
@@ -114,10 +122,14 @@ function readGeometry(json: ReactTestRendererJSON | ReactTestRendererJSON[] | nu
 
 for (const withFooter of [false, true]) {
     for (const [mutation, replyHeight, openHeight] of [
-        ["collapse", 400, 0],
-        ["delete", 400, 160],
+        ["collapse", 376, 0],
+        ["collapse", 376, 160],
+        ["collapse", 600, 0],
         ["collapse", 600, 160],
+        ["delete", 376, 0],
+        ["delete", 376, 160],
         ["delete", 600, 0],
+        ["delete", 600, 160],
     ] as const) {
         it(`${mutation} keeps the anchor and content end together (footer=${withFooter}, reply=${replyHeight}, keyboard=${openHeight})`, () => {
             const anchorTop = replyHeight < VIEWPORT ? 40 : 300;
@@ -175,6 +187,8 @@ for (const withFooter of [false, true]) {
                     act(() => footerLayout.props.onLayout(layoutEvent(FOOTER)));
                 }
                 measureRows();
+                flushUIJobs();
+                for (const job of uiFrameJobs.splice(0)) job(0);
 
                 const blankSpace = scrollProps.blankSpace;
                 const before = readGeometry(renderer.toJSON());
@@ -182,44 +196,54 @@ for (const withFooter of [false, true]) {
                 expect(before.tops.get("anchor")).toBe(anchorTop);
                 if (withFooter) expect(before.tops.get("footer")).toBe(anchorTop + 100 + replyHeight);
 
-                deferUIJobs = true;
-                if (mutation === "collapse") {
-                    sizes.set("reply", 100);
-                    measureRows();
-                } else {
-                    act(() => renderer.update(renderList(["prefix", "anchor"])));
-                }
-
                 const lastKey = mutation === "collapse" ? "reply" : "anchor";
-                const rowBottom = anchorTop + (mutation === "collapse" ? 200 : 100);
-                const checkFrame = () => {
+                let offset = anchorTop;
+                let appliedInset = Math.max(blankSpace.value, openHeight);
+                let rowBottom = anchorTop + 100 + replyHeight;
+                const frames: Array<{ anchorOnScreen: number; footerGap?: number }> = [];
+                const mount = () => {
                     const { contentHeight, tops } = readGeometry(renderer.toJSON());
-                    return {
-                        anchorTop: tops.get("anchor"),
-                        footerTop: tops.get("footer"),
-                        lastRowBottom: tops.get(lastKey)! + sizes.get(lastKey)!,
-                        scrollLimit: contentHeight + Math.max(blankSpace.value, openHeight) - VIEWPORT,
-                    };
+                    offset = Math.min(offset, Math.max(0, contentHeight + appliedInset - VIEWPORT));
+                    frames.push({
+                        anchorOnScreen: tops.get("anchor")! - offset,
+                        footerGap: withFooter ? tops.get("footer")! - rowBottom : undefined,
+                    });
                 };
-                const frames = [checkFrame()];
-                expect(uiJobs.length).toBeGreaterThan(0);
-                for (const job of uiJobs.splice(0)) {
-                    job();
-                    frames.push(checkFrame());
+                const mountShrink = () => {
+                    mount(); // React commits the rows and footer first.
+                    flushUIJobs();
+
+                    // The candidate trace is consistent with a spacer layout reaching iOS before
+                    // the new content inset. Model that intermediate native range for footer cases.
+                    if (withFooter) mount();
+                    appliedInset = Math.max(blankSpace.value, openHeight);
+                    for (const job of uiFrameJobs.splice(0)) job(0);
+                    mount();
+                };
+                if (mutation === "collapse") {
+                    // Replay the increasing and decreasing shrink steps of the 300 ms iOS transition.
+                    for (const remainingHeight of [
+                        374, 369, 363, 355, 344, 331, 316, 298, 279, 266, 247, 236, 225, 215, 208, 203, 200,
+                    ]) {
+                        const height = 200 + Math.round(((replyHeight - 200) * (remainingHeight - 200)) / 176);
+                        sizes.set("reply", height);
+                        rowBottom = anchorTop + 100 + height;
+                        measureRows();
+                        mountShrink();
+                    }
+                } else {
+                    rowBottom = anchorTop + 100;
+                    act(() => renderer.update(renderList(["prefix", "anchor"])));
+                    mountShrink();
                 }
 
                 const finalHeight = rowBottom + (withFooter ? FOOTER : 0);
                 expect(blankSpace.value).toBe(anchorTop + VIEWPORT - finalHeight);
-                expect(readGeometry(renderer.toJSON()).contentHeight).toBe(finalHeight);
-                for (const frame of frames) {
-                    // A clamp below this offset would move the anchored row away from the viewport top.
-                    expect(frame.scrollLimit).toBeGreaterThanOrEqual(anchorTop);
-                    expect(frame.anchorTop).toBe(anchorTop);
-                    expect(frame.lastRowBottom).toBe(rowBottom);
-                }
-                expect(frames.map((frame) => frame.footerTop)).toEqual(
-                    frames.map(() => (withFooter ? rowBottom : undefined)),
-                );
+                const final = readGeometry(renderer.toJSON());
+                expect(final.contentHeight).toBe(finalHeight);
+                expect(final.tops.get(lastKey)! + sizes.get(lastKey)!).toBe(rowBottom);
+                expect(Math.max(...frames.map((frame) => Math.abs(frame.anchorOnScreen)))).toBe(0);
+                if (withFooter) expect(Math.max(...frames.map((frame) => Math.abs(frame.footerGap!)))).toBe(0);
             } finally {
                 act(() => renderer?.unmount());
                 uninstallListRegistry();
