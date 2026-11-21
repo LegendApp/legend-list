@@ -203,18 +203,30 @@ const traceCases = [
     ["delete", 200, 395],
 ] as const;
 
-for (const model of ["default", "react-reset", "extent-first", "inset-first"] as const) {
+// Android emulator trace sizes: the keyboard lifted the list from its end, so the anchor starts above
+// the viewport and the shrink has to clamp the offset down to the anchored rest position.
+const androidEndCases = [
+    ["collapse", 670, 399],
+    ["delete", 670, 399],
+] as const;
+
+for (const model of ["default", "react-reset", "extent-first", "inset-first", "android-end"] as const) {
     const trace = model === "extent-first" || model === "inset-first";
-    const viewport = trace ? 687 : VIEWPORT;
+    const startAtEnd = model === "android-end";
+    const viewport = trace ? 687 : startAtEnd ? 731 : VIEWPORT;
     const footerHeight = trace ? 37 : FOOTER;
-    const anchorHeight = trace ? 68 : 100;
+    const anchorHeight = trace ? 68 : startAtEnd ? 70 : 100;
     for (const [withFooter, rowGap] of [
         [false, 0],
         [true, 0],
         [true, 16],
     ] as const) {
-        if (trace && rowGap) continue;
-        for (const [mutation, replyHeight, openHeight, collapseHeight] of trace ? traceCases : layoutCases) {
+        if ((trace && rowGap) || (startAtEnd && withFooter)) continue;
+        for (const [mutation, replyHeight, openHeight, collapseHeight] of trace
+            ? traceCases
+            : startAtEnd
+              ? androidEndCases
+              : layoutCases) {
             // Extent-first releases the hold before UIKit applies the grown inset. The device trace contradicts
             // that order for the footer-on clamp (it came 4-7 ms before any release was queued), and applied to
             // footer off too it fails cases that pass on device, so its footer-on cases document a known gap.
@@ -223,7 +235,7 @@ for (const model of ["default", "react-reset", "extent-first", "inset-first"] as
                 model === "extent-first" && withFooter && (mutation === "delete" || !openHeight) ? itFailing : it;
             test(`${mutation} keeps the anchor and content end together (model=${model}, footer=${withFooter}, gap=${rowGap}, reply=${replyHeight}, keyboard=${openHeight}, target=${collapseHeight ?? (mutation === "collapse" ? 200 : 0)})`, () => {
                 reactRestyleResets = model === "react-reset";
-                const anchorTop = trace ? 1566 : replyHeight < VIEWPORT ? 40 : 300;
+                const anchorTop = trace || startAtEnd ? 1566 : replyHeight < VIEWPORT ? 40 : 300;
                 const contentContainerStyle = rowGap
                     ? mutation === "collapse"
                         ? [{ gap: 32 }, { rowGap }]
@@ -246,7 +258,7 @@ for (const model of ["default", "react-reset", "extent-first", "inset-first"] as
                         columnWrapperStyle={rowGap ? {} : undefined}
                         contentContainerStyle={contentContainerStyle}
                         data={data}
-                        drawDistance={trace ? anchorTop : undefined}
+                        drawDistance={trace || startAtEnd ? anchorTop : undefined}
                         estimatedItemSize={100}
                         keyExtractor={(item: string) => item}
                         ListFooterComponent={withFooter ? <View testID="footer" /> : undefined}
@@ -305,10 +317,11 @@ for (const model of ["default", "react-reset", "extent-first", "inset-first"] as
                     );
 
                     const lastKey = mutation === "collapse" ? "reply" : "anchor";
-                    let offset = anchorTop;
                     let appliedInset = Math.max(blankSpace.value, openHeight);
+                    let offset = startAtEnd ? before.contentHeight + appliedInset - viewport : anchorTop;
                     let rowBottom = anchorTop + anchorHeight + replyHeight;
-                    const frames: Array<{ anchorOnScreen: number; footerGap?: number }> = [];
+                    const frames: Array<{ anchorOnScreen: number; endLag: number; footerGap?: number }> = [];
+                    const settledEndLags: number[] = [];
                     let settledContent = before.contentHeight;
                     const mount = (heldContent?: number) => {
                         const { contentHeight, tops } = readGeometry(renderer.toJSON());
@@ -317,8 +330,12 @@ for (const model of ["default", "react-reset", "extent-first", "inset-first"] as
                         expect(tops.get("anchor")).toBe(anchorTop);
                         expect(tops.get(lastKey)! + sizes.get(lastKey)!).toBe(rowBottom);
                         offset = Math.min(offset, Math.max(0, contentHeight + appliedInset - viewport));
+                        // How far the offset sits past the end clamp, or past the anchored rest once the anchor reaches it.
+                        const endLag = offset - Math.max(anchorTop, rowBottom + openHeight - viewport);
+                        if (heldContent === undefined) settledEndLags.push(endLag);
                         frames.push({
                             anchorOnScreen: tops.get("anchor")! - offset,
+                            endLag,
                             footerGap: withFooter ? tops.get("footer")! - rowBottom : undefined,
                         });
                     };
@@ -338,9 +355,14 @@ for (const model of ["default", "react-reset", "extent-first", "inset-first"] as
                         // Replay the 300 ms transition, or a single layout update for the original hold cases.
                         const heights = collapseHeight
                             ? [collapseHeight]
-                            : [374, 369, 363, 355, 344, 331, 316, 298, 279, 266, 247, 236, 225, 215, 208, 203, 200].map(
-                                  (height) => 200 + Math.round(((replyHeight - 200) * (height - 200)) / 176),
-                              );
+                            : startAtEnd
+                              ? [
+                                    669, 665, 654, 638, 616, 589, 555, 516, 471, 421, 374, 333, 298, 268, 244, 213, 207,
+                                    205,
+                                ]
+                              : [
+                                    374, 369, 363, 355, 344, 331, 316, 298, 279, 266, 247, 236, 225, 215, 208, 203, 200,
+                                ].map((height) => 200 + Math.round(((replyHeight - 200) * (height - 200)) / 176));
                         for (const height of heights) {
                             sizes.set("reply", height);
                             rowBottom = anchorTop + anchorHeight + height;
@@ -357,7 +379,14 @@ for (const model of ["default", "react-reset", "extent-first", "inset-first"] as
                     expect(blankSpace.value).toBe(anchorTop + viewport - rowAndFooterEnd);
                     const after = readGeometry(renderer.toJSON());
                     expect(after.contentHeight).toBe(rowAndFooterEnd + rowGap);
-                    expect(Math.max(...frames.map((frame) => Math.abs(frame.anchorOnScreen)))).toBe(0);
+                    if (startAtEnd) {
+                        // Never clamps below the rest, and is back on it once each step's UI work lands.
+                        expect(Math.min(...frames.map((frame) => frame.endLag))).toBe(0);
+                        expect(Math.max(...settledEndLags)).toBe(0);
+                        expect(frames.at(-1)!.anchorOnScreen).toBe(0);
+                    } else {
+                        expect(Math.max(...frames.map((frame) => Math.abs(frame.anchorOnScreen)))).toBe(0);
+                    }
                     if (withFooter) {
                         expect(Math.max(...frames.map((frame) => Math.abs(frame.footerGap! - rowGap)))).toBe(0);
                     }
