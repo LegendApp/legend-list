@@ -311,7 +311,6 @@ function testShrink(order: Model, withFooter: boolean, rowGap: number, scenario:
             let offset = startOffset;
             let appliedInset = controllerInset();
             let maxFooterGap = 0;
-            let maxHold = 0;
             let reportedHeight = before.contentHeight;
             let previous = before;
             const emitScroll = (content: number) =>
@@ -330,14 +329,9 @@ function testShrink(order: Model, withFooter: boolean, rowGap: number, scenario:
                 act(() => scrollProps.onContentSizeChange?.(WIDTH, reportedHeight));
                 emitScroll(reportedHeight);
             }
-            let firstClamp: string | undefined;
-            let phase = "initial";
             const applySize = (contentHeight: number) => {
                 const limit = Math.max(0, contentHeight + appliedInset - viewport);
                 if (offset > limit) {
-                    if (order !== "default") {
-                        firstClamp ??= `${phase} extent=${contentHeight.toFixed(2)} inset=${appliedInset.toFixed(2)} limit=${limit.toFixed(2)}`;
-                    }
                     offset = limit;
                     if (split) emitScroll(contentHeight);
                 }
@@ -353,11 +347,9 @@ function testShrink(order: Model, withFooter: boolean, rowGap: number, scenario:
                 }
                 if (withFooter) {
                     maxFooterGap = Math.max(maxFooterGap, Math.abs(tops.get("footer")! - rowBottom - rowGap));
-                    maxHold = Math.max(maxHold, contentHeight - tops.get("footer")! - footerSize);
                 }
             };
             const mountShrink = (commit: () => void, partial: boolean) => {
-                phase = "shrinking mount";
                 const oldTree = renderer.toJSON();
                 commit();
                 if (order === "layer-first") applySize(readGeometry(oldTree, true).contentHeight);
@@ -373,7 +365,6 @@ function testShrink(order: Model, withFooter: boolean, rowGap: number, scenario:
                 mount();
                 flushUIJobs();
                 if (order === "extent-first" && withFooter) {
-                    phase = "release before inset";
                     runUIFrame();
                     flushJSJobs();
                 }
@@ -383,7 +374,6 @@ function testShrink(order: Model, withFooter: boolean, rowGap: number, scenario:
                     reportInset(wantedInset);
                     mount(); // The report can precede the native inset mount.
                 }
-                phase = "inset applied";
                 appliedInset = wantedInset;
                 if (fable) mount();
                 runUIFrame();
@@ -433,12 +423,6 @@ function testShrink(order: Model, withFooter: boolean, rowGap: number, scenario:
             }
             const after = readGeometry(renderer.toJSON());
             const shift = Math.abs(startOffset - offset);
-            if (order !== "default" && !overlap) {
-                console.log(
-                    `[range] ${order} footer=${withFooter} open=${!!openHeight} ${mutation} shift=${(shift * 3).toFixed(2)}px hold=${maxHold.toFixed(2)}pt`,
-                );
-                if (firstClamp) console.log(`[first clamp] ${firstClamp}`);
-            }
             expect(maxFooterGap).toBeLessThanOrEqual(split ? 1 / 3 : 0);
             expect(shift).toBeLessThanOrEqual(split ? 2 / 3 : 0);
             expect(scrollProps.blankSpace.value).toBeCloseTo(anchorTop + viewport - rowBottom - footerExtent + rowGap);
