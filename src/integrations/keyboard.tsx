@@ -10,7 +10,7 @@ import {
     useMemo,
     useRef,
 } from "react";
-import type { LayoutChangeEvent, ScrollViewProps, View } from "react-native";
+import type { LayoutChangeEvent, ScrollViewProps, View, ViewStyle } from "react-native";
 import { Platform } from "react-native";
 import {
     KeyboardChatScrollView,
@@ -52,8 +52,10 @@ function setOnUI(sharedValue: SharedValue<number>, value: number) {
 type ContentExtentProps = {
     children: React.ReactNode;
     committedSize: number;
+    contentAlignItems?: ViewStyle["alignItems"];
     contentRowGap?: number;
     footer?: React.ReactNode;
+    footerSize?: number;
     sizeAdjustment: number;
 };
 
@@ -76,12 +78,16 @@ const HoldContentShrinkContext = createContext(false);
 function ReanimatedContentExtent({
     children,
     committedSize,
+    contentAlignItems,
     contentRowGap = 0,
     footer,
+    footerSize = 0,
     sizeAdjustment,
 }: ContentExtentProps) {
     const holdShrink = useContext(HoldContentShrinkContext);
-    const size = Math.max(0, committedSize + sizeAdjustment);
+    const hasFooter = !!footer;
+    const size =
+        Math.max(0, committedSize + sizeAdjustment) + (hasFooter ? footerSize + (children ? contentRowGap : 0) : 0);
     const extent = useSharedValue<number>(size);
     useLayoutEffect(() => {
         if (!holdShrink) {
@@ -99,25 +105,34 @@ function ReanimatedContentExtent({
         }
     }, [extent, holdShrink, size]);
     // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
-    const hasFooter = !!footer;
-    const style = useAnimatedStyle(
-        () => ({ minHeight: holdShrink && !hasFooter ? extent.value : 0 }),
-        [holdShrink, hasFooter],
+    const style = useAnimatedStyle(() => ({ minHeight: holdShrink ? extent.value : 0 }), [holdShrink]);
+    // The wrapper takes the content container's place as the footer's parent: give it the same gap
+    // and cross-axis alignment.
+    const wrapperStyle = useMemo(
+        () =>
+            contentRowGap || contentAlignItems
+                ? [{ alignItems: contentAlignItems, rowGap: contentRowGap }, style]
+                : style,
+        [contentAlignItems, contentRowGap, style],
     );
+
+    if (hasFooter) {
+        // On iOS Fabric a React commit that restyles the held view mounts it without the held
+        // minimum, so the footer shares the wrapper that React leaves alone during a shrink.
+        return (
+            <Reanimated.View style={wrapperStyle}>
+                {children}
+                {footer}
+            </Reanimated.View>
+        );
+    }
 
     return (
         <>
             {children && <Reanimated.View style={style}>{children}</Reanimated.View>}
             {footer}
-            {holdShrink && hasFooter && <ContentExtentSpacer extent={extent} rowGap={contentRowGap} size={size} />}
         </>
     );
-}
-
-function ContentExtentSpacer({ extent, rowGap, size }: { extent: SharedValue<number>; rowGap: number; size: number }) {
-    const style = useAnimatedStyle(() => ({ height: extent.value }));
-    // Floor the height at the committed size and subtract it and the root gap from flow.
-    return <Reanimated.View pointerEvents="none" style={[{ marginTop: -size - rowGap, paddingTop: size }, style]} />;
 }
 
 if (typeof __DEV__ !== "undefined" && __DEV__ && !KeyboardChatScrollView) {

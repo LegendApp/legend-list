@@ -48,7 +48,12 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const size = useValue$("totalSize");
     const minSize = useCommittedMinSize();
-    const [readyToRender, numColumns, otherAxisSize = 0] = useArr$(["readyToRender", "numColumns", "otherAxisSize"]);
+    const [readyToRender, numColumns, otherAxisSize = 0, footerSize] = useArr$([
+        "readyToRender",
+        "numColumns",
+        "otherAxisSize",
+        "footerSize",
+    ]);
     const isVisible = useFreshDataTransitionVisibility(!!readyToRender, freshDataTransitionEpoch);
 
     const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
@@ -96,8 +101,10 @@ const ContainersLayer = typedMemo(function ContainersLayer({
     return ContentExtent && !horizontal ? (
         <ContentExtent
             committedSize={renderRows ? (minSize ?? 0) : 0}
+            contentAlignItems={ctx.state.props.contentContainerAlignItems}
             contentRowGap={contentRowGap}
             footer={footer}
+            footerSize={footerSize}
             sizeAdjustment={renderRows ? endMargin : 0}
         >
             {layer}
