@@ -1,9 +1,11 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { holdInitialScrollAtEnd } from "@/core/bootstrapInitialScroll";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { cancelScroll } from "@/core/cancelScroll";
 import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { armAppScrollRearm, interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
@@ -32,7 +34,7 @@ import {
     set$,
 } from "@/state/state";
 import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
-import type { LegendListInternalRef, ScrollResolve } from "@/types.internal";
+import type { ContentInsetForScrollOptions, LegendListInternalRef, ScrollResolve } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { areKnownOrFixedItemSizesAvailable, getItemSizeAtIndex } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -253,12 +255,27 @@ export function createImperativeHandle(
         state.triggerCalculateItemsInView?.({ doMVCP: mode === "sizes", forceFullItemPositions: true });
     };
 
-    const reportContentInset = (inset: Parameters<LegendListInternalRef["reportContentInset"]>[0], follow = true) => {
+    const reportContentInset = (
+        inset: Parameters<LegendListInternalRef["reportContentInset"]>[0],
+        follow = true,
+        options?: ContentInsetForScrollOptions,
+    ) => {
         const didChange = setContentInsetOverride(ctx, inset);
         updateScroll(ctx, state.scroll, true, { markHasScrolled: false });
-        if (didChange && follow) {
+        if (!didChange) {
+            return;
+        }
+        if (follow) {
             const didRetargetInitial = retargetActiveInitialScrollAtEnd(ctx);
             if (!didRetargetInitial) doMaintainScrollAtEnd(ctx);
+        } else if (
+            options?.keepInitialScrollAtEnd &&
+            isEndOfContentTarget(state.initialScroll, state.props.data.length)
+        ) {
+            // The inset owner moves the content itself, but only from the offset it sees. An initial
+            // scroll-at-end keeps sending its own end, so that end has to include this inset.
+            if (!state.didFinishInitialScroll) retargetActiveInitialScrollAtEnd(ctx);
+            holdInitialScrollAtEnd(ctx);
         }
     };
 
@@ -331,7 +348,7 @@ export function createImperativeHandle(
             startBuffered: state.startBuffered,
         }),
         reportContentInset,
-        reportContentInsetForScrollInternal: (inset) => reportContentInset(inset, false),
+        reportContentInsetForScrollInternal: (inset, options) => reportContentInset(inset, false, options),
         reportViewabilityInsetEndInternal: (inset) => {
             const next = Number.isFinite(inset) ? Math.max(0, inset) : 0;
             if (next === (state.viewabilityInsetEnd ?? 0)) {

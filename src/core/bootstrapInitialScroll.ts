@@ -22,6 +22,8 @@ import { getStylePaddingEnd, peekLogicalHorizontalOffset } from "@/utils/rtl";
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES = 24;
+// An inset owner applies its own move within a frame or two of reporting the inset.
+const INSET_OWNER_SETTLE_MS = 100;
 const BOOTSTRAP_REVEAL_ABORT_WARNING =
     "LegendList bootstrap initial scroll aborted after exceeding convergence bounds.";
 
@@ -326,6 +328,59 @@ function getPreservedEndAnchorOffsetDiff(ctx: StateContext) {
             : getObservedBootstrapInitialScrollOffset(state);
 
     return resolveInitialScrollOffset(ctx, initialScroll) - currentOffset;
+}
+
+/*
+ * Hold an initial scroll-at-end at its end while an inset owner that moves the
+ * content itself settles. The owner moves the content once per inset change,
+ * from the offset it saw. It can apply the inset and that move a frame or two
+ * after reporting the inset, and a scroll the list sent before the move can
+ * land after it, so the list can look aligned in between. Until the window
+ * ends, a move away from the end that is not the reader's is corrected instead
+ * of releasing the target.
+ */
+export function holdInitialScrollAtEnd(ctx: StateContext) {
+    const state = ctx.state;
+    const correction: NonNullable<InternalState["preservedEndAnchorCorrection"]> = {};
+    state.preservedEndAnchorCorrection = correction;
+    const holdUntil = Date.now() + INSET_OWNER_SETTLE_MS;
+
+    const tick = () => {
+        if (state.preservedEndAnchorCorrection !== correction || state.isUnmounted) {
+            return;
+        }
+
+        const isHolding = Date.now() < holdUntil;
+        if (state.didFinishInitialScroll) {
+            const offsetDiff = getPreservedEndAnchorOffsetDiff(ctx);
+            const isAligned = offsetDiff !== undefined && Math.abs(offsetDiff) <= DEFAULT_BOOTSTRAP_REVEAL_EPSILON;
+            // A scroll sent before the owner applied its inset is clamped to the old range without
+            // a scroll event, so keep sending while holding. Afterwards only follow native movement.
+            const canCorrect = isHolding || (state.lastNativeScrollTime ?? 0) > (correction.lastRequestTime ?? 0);
+            if (offsetDiff === undefined || (isAligned ? !isHolding : !canCorrect)) {
+                state.preservedEndAnchorCorrection = undefined;
+                return;
+            }
+
+            if (!isAligned) {
+                correction.lastRequestTime = Date.now();
+                doScrollTo(ctx, {
+                    animated: false,
+                    horizontal: state.props.horizontal,
+                    offset: resolveInitialScrollOffset(ctx, state.initialScroll!),
+                });
+                // The correction moves before its scroll event; render the destination in the same frame.
+                state.triggerCalculateItemsInView?.();
+            }
+        } else if (!isHolding || !state.initialScroll) {
+            // The active scroll owns alignment until it finishes.
+            state.preservedEndAnchorCorrection = undefined;
+            return;
+        }
+
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
 }
 
 export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
