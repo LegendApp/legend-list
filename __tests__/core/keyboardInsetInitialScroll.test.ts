@@ -114,6 +114,20 @@ describe("keyboard insets during initialScrollAtEnd", () => {
         expect(ctx.state.scroll).toBe(1000);
     });
 
+    it("retargets an unfinished initial end scroll after the controller's scroll event", () => {
+        const { ctx, handle, scrollTo } = setup();
+        advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
+        // The controller already moved the content to 1000, but the scroll to 700 is still
+        // active and would keep retrying 700.
+        onScroll(ctx, { nativeEvent: { contentOffset: { x: 0, y: 1000 } } } as any);
+        scrollTo.mockClear();
+
+        handle.reportContentInsetForScrollInternal!({ bottom: 300 }, keepAtEnd);
+
+        expect(scrollTo.mock.calls).toEqual([[{ animated: false, x: 0, y: 1000 }]]);
+        expect(ctx.state.scrollingTo?.targetOffset).toBe(1000);
+    });
+
     it("holds the keyboard end after a retargeted initial scroll finishes", () => {
         const { ctx, handle, scrollTo } = setup();
         advanceCurrentInitialScrollSession(ctx, { forceScroll: true });

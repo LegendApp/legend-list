@@ -138,8 +138,11 @@ function advanceMeasuredInitialScroll(
     // An instant web request can be clamped before a footer's new extent commits.
     // Its optimistic cache is not evidence that the browser applied that offset.
     const observedOffset = options?.forceScroll && Platform.OS === "web" ? getObservedScrollOffset(ctx) : undefined;
+    // An active scroll to another offset keeps retrying it, even if something else already moved
+    // the list to the resolved offset.
     const isAlreadyAtDesiredInitialTarget =
         activeInitialTargetOffset !== undefined &&
+        !didActiveInitialTargetChange &&
         Math.abs(state.scroll - resolvedOffset) <= 1 &&
         Math.abs(state.scrollPending - resolvedOffset) <= 1 &&
         (observedOffset === undefined || Math.abs(observedOffset - resolvedOffset) <= 1);
