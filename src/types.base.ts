@@ -272,7 +272,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * - size (default: true) stabilizes during size/layout changes while scrolling.
      * - data (default: false) stabilizes when the data array changes.
      * - shouldRestorePosition can opt out specific items from data-change anchoring.
-     * - autoscrollToTopThreshold lets the native scroll view animate to the start after anchoring near the start.
+     * - autoscrollToTopThreshold animates to the start after anchoring near the start.
      * - undefined (default) enables scroll stabilization but skips data-change anchoring.
      * - true enables both JS behaviors; false disables both.
      * Native maintainVisibleContentPosition is enabled when either size or data stabilization is enabled.
@@ -505,9 +505,8 @@ export type LegendListPropsBase<
 
 export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     /**
-     * Forwarded to React Native's ScrollView. When it adjusts the offset, it animates
-     * to the start if the previous offset was at or within this threshold.
-     * Use with `data: true` to animate after prepending rows. Ignored on web.
+     * After anchoring, animates to the start if the pre-adjustment offset was at or within this threshold.
+     * Use with `data: true` to animate after prepending rows.
      */
     autoscrollToTopThreshold?: number;
     data?: boolean;

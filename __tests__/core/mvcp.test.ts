@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import { prepareMVCP, resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
@@ -252,6 +252,51 @@ describe("mvcp helpers", () => {
         expect(adjustFunction).toBeDefined();
         expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
     });
+
+    it.each([
+        { offset: 50, shouldAnimate: true, threshold: 50 },
+        { offset: 51, shouldAnimate: false, threshold: 50 },
+        { offset: 50, shouldAnimate: false, threshold: undefined },
+    ])(
+        "handles a web prepend at offset $offset with start threshold $threshold",
+        async ({ offset, shouldAnimate, threshold }) => {
+            Platform.OS = "web";
+            const ctx = createMockContext(
+                { readyToRender: true, totalSize: 300 },
+                {
+                    didContainersLayout: true,
+                    idsInView: ["first"],
+                    indexByKey: new Map([["first", 0]]),
+                    positions: [0],
+                    props: {
+                        data: ["first"],
+                        maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition({
+                            autoscrollToTopThreshold: threshold,
+                            data: true,
+                        }),
+                    },
+                    scroll: offset,
+                },
+            );
+            const scrollTo = mock(() => expect(ctx.state.scroll).toBe(offset + 300));
+            ctx.scrollTo = scrollTo;
+
+            const adjust = prepareMVCP(ctx, true);
+            ctx.state.props.data = ["new", "first"];
+            ctx.state.indexByKey.set("new", 0);
+            ctx.state.indexByKey.set("first", 1);
+            ctx.state.positions[1] = 300;
+            adjust!();
+            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+            expect(ctx.state.scroll).toBe(offset + 300);
+            if (shouldAnimate) {
+                expect(scrollTo).toHaveBeenCalledWith({ animated: true, offset: 0 });
+            } else {
+                expect(scrollTo).not.toHaveBeenCalled();
+            }
+        },
+    );
 
     it("does not refresh the web anchor lock while a scrollTo target is active", () => {
         Platform.OS = "web";

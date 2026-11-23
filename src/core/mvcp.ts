@@ -1,6 +1,8 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { getViewPositionOffset } from "@/core/calculateOffsetWithOffsetPosition";
 import { getContentInsetTop, getScrollRangeEnd } from "@/core/clampScrollOffset";
+import { hasNativeScrollToStart } from "@/core/nativeScrollToStart";
+import { getObservedScrollOffset } from "@/core/observedScroll";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
@@ -240,7 +242,12 @@ export function prepareMVCP(
     const state = ctx.state;
     const { idsInView, positions, props } = state;
     const {
-        maintainVisibleContentPosition: { data: mvcpData, size: mvcpScroll, shouldRestorePosition },
+        maintainVisibleContentPosition: {
+            autoscrollToTopThreshold,
+            data: mvcpData,
+            size: mvcpScroll,
+            shouldRestorePosition,
+        },
     } = props;
     const isWeb = Platform.OS === "web";
 
@@ -468,7 +475,7 @@ export function prepareMVCP(
             // Instant end following owns the end, rather than the visible row anchor. An anchor adjustment
             // would leave the list short of the end, or wait on native for a clamp that may never arrive.
             const follow = state.props.maintainScrollAtEnd;
-            if (
+            const shouldMaintainEnd =
                 follow &&
                 !follow.animated &&
                 (dataChanged
@@ -482,8 +489,8 @@ export function prepareMVCP(
                 !state.visibleContentAnchor &&
                 !state.scrollingTo &&
                 !ctx.scrollRequestTracker?.isWaitingToRun() &&
-                peek$(ctx, "isFollowingEnd")
-            ) {
+                peek$(ctx, "isFollowingEnd");
+            if (shouldMaintainEnd) {
                 const endOffset = getScrollRangeEnd(ctx);
                 if (state.scroll > endOffset) {
                     // The platform clamps shrinking content to its new end; keep JS there without a command.
@@ -537,7 +544,27 @@ export function prepareMVCP(
                         !ctx.scrollRequestTracker?.isWaitingToRun());
 
                 if (!shouldSkipAdjustForMaintainedEnd) {
-                    requestAdjust(ctx, positionDiff, dataChanged && mvcpData ? "data" : adjustmentSource);
+                    const isDataAdjustment = dataChanged && mvcpData;
+                    const autoscrollToStart =
+                        isWeb &&
+                        isDataAdjustment &&
+                        autoscrollToTopThreshold !== undefined &&
+                        !shouldMaintainEnd &&
+                        !state.scrollingTo &&
+                        !hasNativeScrollToStart(ctx) &&
+                        state.refScroller.current?.isScrollInRange?.() !== false &&
+                        getObservedScrollOffset(ctx, prevScroll) <= autoscrollToTopThreshold;
+
+                    requestAdjust(ctx, positionDiff, isDataAdjustment ? "data" : adjustmentSource);
+
+                    if (autoscrollToStart) {
+                        state.scheduledWork.frame(() => {
+                            if (!state.scrollingTo && !state.pendingScrollToEnd && !hasNativeScrollToStart(ctx)) {
+                                state.mvcpAnchorLock = undefined;
+                                ctx.scrollTo!({ animated: true, offset: 0 });
+                            }
+                        }, "mvcpAutoscrollToStart");
+                    }
                 }
             }
         };
