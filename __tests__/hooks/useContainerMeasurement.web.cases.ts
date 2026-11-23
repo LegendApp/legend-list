@@ -217,6 +217,29 @@ describe("useContainerMeasurement web", () => {
         calculateSpy.mockRestore();
     });
 
+    it("applies a shrink immediately when the row was resized on the other axis", () => {
+        const raf = mock((_callback: FrameRequestCallback) => 1);
+        globalThis.requestAnimationFrame = raf;
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        const ctx = createContext();
+        ctx.state.sizesKnown.set("item_0", 200);
+
+        // A wider row wraps its text onto fewer lines, so the shorter height is its real size.
+        batchItemSizeUpdates(() => {
+            processContainerLayout({
+                containerId: 0,
+                ctx,
+                rectangle: { height: 150, width: 500, x: 0, y: 0 },
+                ref: { current: null },
+                state: createMeasurementState("item_0", 200),
+            });
+        });
+
+        expect(raf).not.toHaveBeenCalled();
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(150);
+        calculateSpy.mockRestore();
+    });
+
     it("applies MVCP-active shrinks immediately in the observer batch", () => {
         const raf = mock((_callback: FrameRequestCallback) => 1);
         globalThis.requestAnimationFrame = raf;
