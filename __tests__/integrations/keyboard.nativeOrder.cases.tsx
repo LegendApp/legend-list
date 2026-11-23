@@ -14,11 +14,11 @@ import { StyleSheet, View } from "react-native";
 
 import { installListRegistry, type ListCtx } from "../../examples-shared/layoutInvariants";
 import { LegendList } from "../../src/components/LegendList";
-import { batchItemSizeUpdates } from "../../src/core/updateItemSizes";
 import { useCombinedRef } from "../../src/hooks/useCombinedRef";
-import { peek$, type StateContext } from "../../src/state/state";
+import type { StateContext } from "../../src/state/state";
 import { typedForwardRef } from "../../src/types.internal";
 import { registerReanimatedModuleMock } from "../__mocks__/reanimated";
+import { layoutEvent, measureFooter, measureMountedRows } from "../helpers/keyboardLayout";
 import TestRenderer, { act, type ReactTestRenderer, type ReactTestRendererNode } from "../helpers/testRenderer";
 
 const WIDTH = 300;
@@ -101,8 +101,6 @@ beforeEach(() => {
     });
 });
 
-const layoutEvent = (height: number) => ({ nativeEvent: { layout: { height, width: WIDTH, x: 0, y: 0 } } });
-
 // The test renderer has no Yoga: evaluate the vertical flow from the mounted styles.
 function readGeometry(json: ReturnType<ReactTestRenderer["toJSON"]>, layerOnly = false) {
     const tops = new Map<string, number>();
@@ -169,33 +167,9 @@ for (const order of ["restyle-drop", "layer-first"] as const) {
                             renderer = TestRenderer.create(renderList(["prefix", "anchor", "reply"]));
                         });
                         const list = [...lists][0] as StateContext;
-                        const measureRows = () =>
-                            act(() => {
-                                const views = renderer.root.findAll(
-                                    (node) =>
-                                        typeof node.type !== "string" &&
-                                        typeof node.props.id === "number" &&
-                                        !!node.props.refView,
-                                );
-                                batchItemSizeUpdates(() => {
-                                    for (const view of views) {
-                                        const key = peek$(list, `containerItemKey${view.props.id}`);
-                                        const size = key === undefined ? undefined : sizes.get(key);
-                                        if (size !== undefined) view.props.onLayout?.(layoutEvent(size));
-                                    }
-                                });
-                            });
-                        act(() => scrollProps.onLayout(layoutEvent(VIEWPORT)));
-                        if (withFooter) {
-                            const footerLayout = renderer.root.find(
-                                (node) =>
-                                    typeof node.type === "string" &&
-                                    node.children.some(
-                                        (child) => typeof child !== "string" && child.props.testID === "footer",
-                                    ),
-                            );
-                            act(() => footerLayout.props.onLayout(layoutEvent(FOOTER)));
-                        }
+                        const measureRows = () => measureMountedRows(renderer, list, sizes, WIDTH);
+                        act(() => scrollProps.onLayout(layoutEvent(WIDTH, VIEWPORT)));
+                        if (withFooter) measureFooter(renderer, WIDTH, FOOTER);
                         measureRows();
                         flushUIJobs();
                         for (const job of uiFrameJobs.splice(0)) job(0);
