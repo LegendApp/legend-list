@@ -123,7 +123,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
         ) {
             state.pendingMaintainScrollAtEnd = true;
             state.scrollPending = observed;
-            updateScroll(ctx, observed, true, { markHasScrolled: false });
+            updateScroll(ctx, observed, true, { fromLayoutClamp: true, markHasScrolled: false });
         }
     }
     if (options?.prepareOnly) return true;

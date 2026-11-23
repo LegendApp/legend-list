@@ -39,7 +39,15 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
     }
     if (contentSize > 0 && queuedInitialLayout) {
         const isContentLess = contentSize < scrollLength;
-        set$(ctx, "isAtEnd", isContentLess || distanceFromEnd <= EDGE_POSITION_EPSILON);
+        const isAtEnd = isContentLess || distanceFromEnd <= EDGE_POSITION_EPSILON;
+        // Committed measurements can grow the extent before the queued follow scroll runs.
+        const deferEndExit =
+            !isAtEnd &&
+            state.measuringContainersInLayout &&
+            (maintainingScrollAtEnd === "pending-instant" || maintainingScrollAtEnd === "pending-animated") &&
+            !state.endFollowInterrupted &&
+            peek$(ctx, "isAtEnd");
+        if (!deferEndExit) set$(ctx, "isAtEnd", isAtEnd);
         set$(ctx, "isNearEnd", isContentLess || distanceFromEnd <= onEndReachedThreshold! * scrollLength);
         set$(
             ctx,

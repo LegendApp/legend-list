@@ -41,6 +41,7 @@ export function updateScroll(
     newScroll: number,
     forceUpdate?: boolean,
     options?: {
+        fromLayoutClamp?: boolean;
         fromNativeScrollEvent?: boolean;
         markHasScrolled?: boolean;
         nativeGeometryChanged?: boolean;
@@ -206,7 +207,8 @@ export function updateScroll(
             state.pendingNativeMVCPAdjust = undefined;
             state.userScrollAnchorReset = { keys: new Set() };
             state.scheduledWork.cancel("mvcpRecalculate");
-            flushSync(runCalculateItems);
+            if (options?.fromLayoutClamp) runCalculateItems();
+            else flushSync(runCalculateItems);
             scheduleFullDrawDistancePrewarm(ctx);
         } else {
             runCalculateItems();

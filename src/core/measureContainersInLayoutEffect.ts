@@ -36,7 +36,14 @@ export function measureContainersInLayoutEffect(
     }
 
     if (measurements.length > 0) {
-        updateItemSizesBatch(ctx, measurements);
+        const layoutState = ctx.state;
+        const wasMeasuringInLayout = layoutState.measuringContainersInLayout;
+        layoutState.measuringContainersInLayout = true;
+        try {
+            updateItemSizesBatch(ctx, measurements);
+        } finally {
+            layoutState.measuringContainersInLayout = wasMeasuringInLayout;
+        }
         if (ctx.state.initialScrollSession?.kind !== "bootstrap" || !ctx.state.initialScrollSession.bootstrap) return;
         ctx.state.scheduledWork.microtask(() => {
             const state = ctx.state;

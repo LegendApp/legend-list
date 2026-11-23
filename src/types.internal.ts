@@ -268,6 +268,7 @@ export interface InternalState {
     layoutAdjustmentEpoch?: number;
     endFollowInterrupted?: boolean;
     visibleContentAnchor?: { key: string; offset: number; sizeOnly?: true };
+    measuringContainersInLayout?: boolean;
     maintainingScrollAtEnd?: MaintainingScrollAtEndState;
     positionRecalculationStartIndex: number | undefined;
     mvcpAnchorLock?: {
