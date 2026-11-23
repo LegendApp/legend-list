@@ -1,3 +1,4 @@
+import { Fragment, StrictMode } from "react";
 import { Text } from "react-native";
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
@@ -96,7 +97,10 @@ beforeEach(() => {
 });
 
 describe("LegendList numColumns reset", () => {
-    it("updates numColumns before the column-change reset runs", async () => {
+    it.each([
+        { mode: "normal", Wrapper: Fragment },
+        { mode: "Strict Mode", Wrapper: StrictMode },
+    ])("updates column layout after a mounted column count changes in $mode", async ({ Wrapper }) => {
         const data = [
             { id: "item-1", label: "Alpha" },
             { id: "item-2", label: "Beta" },
@@ -104,34 +108,27 @@ describe("LegendList numColumns reset", () => {
         ];
         const { LegendList } = await import("../../src/components/LegendList?num-columns-reset");
 
-        const rendered = render(
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                keyExtractor={(item: { id: string }) => item.id}
-                numColumns={2}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />,
-        );
-
-        await flushAsync();
-        checkResetContainersCalls = [];
-
-        await act(async () => {
-            rendered.rerender(
+        const keyExtractor = (item: { id: string }) => item.id;
+        const list = (numColumns: number) => (
+            <Wrapper>
                 <LegendList
                     data={data}
                     estimatedItemSize={100}
-                    keyExtractor={(item: { id: string }) => item.id}
-                    numColumns={3}
+                    keyExtractor={keyExtractor}
+                    numColumns={numColumns}
+                    recycleItems
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-                />,
-            );
-        });
+                />
+            </Wrapper>
+        );
+        const rendered = render(list(2));
+
+        await flushAsync();
+        checkResetContainersCalls = [];
+        rendered.rerender(list(3));
         await flushAsync();
 
         expect(checkResetContainersCalls).toContainEqual({ didColumnsChange: true, numColumns: 3 });
-
         rendered.unmount();
     });
 });

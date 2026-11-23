@@ -481,11 +481,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const isFirstLocal = state.isFirst;
     const previousAdaptiveRender = state.props.adaptiveRender;
     const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
-    const previousNumColumnsProp = state.props.numColumns;
+    const committedNumColumns = peek$(ctx, "numColumns");
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
 
     ctx.scrollAxisGap = nextScrollAxisGap;
-    state.didColumnsChange = numColumnsProp !== previousNumColumnsProp || didScrollAxisGapChange;
+    state.didColumnsChange = numColumnsProp !== committedNumColumns || didScrollAxisGapChange;
     const previousDataLength = state.props.data?.length ?? 0;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataKeyChangeLocal = state.props.dataKey !== dataKey;
