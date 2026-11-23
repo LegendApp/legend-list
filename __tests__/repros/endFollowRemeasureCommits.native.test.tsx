@@ -10,6 +10,7 @@ import { doScrollTo as doNativeScrollTo } from "../../src/core/doScrollTo.native
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { getContentSize } from "../../src/state/getContentSize";
 import { peek$, type StateContext, useStateContext } from "../../src/state/state";
+import type { LegendListRef } from "../../src/types";
 import { act, render } from "../helpers/testingLibrary";
 import { installFakeClock } from "../helpers/webScrollHarness";
 
@@ -101,8 +102,11 @@ async function remeasure(growth: number, before?: () => void) {
     return later.filter(Boolean);
 }
 
-it("a re-measure while following the end commits only in its own frame", async () => {
+function installNativeClock() {
     clock = installFakeClock();
+    scroll = 0;
+    appliedAdjust = 0;
+    pendingScroll = undefined;
     const now = spyOn(Date, "now").mockImplementation(() => clock.now);
     const perf = spyOn(performance, "now").mockImplementation(() => clock.now);
     const dispatch = spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
@@ -112,6 +116,10 @@ it("a re-measure while following the end commits only in its own frame", async (
         now.mockRestore();
         clock.restore();
     });
+}
+
+it("a re-measure while following the end commits only in its own frame", async () => {
+    installNativeClock();
     const ref = React.createRef<any>();
     const rendered = render(
         <React.Profiler id="follow" onRender={() => commits++}>
@@ -145,3 +153,88 @@ it("a re-measure while following the end commits only in its own frame", async (
     expect(scroll).toBeCloseTo(end(), 3);
     rendered.unmount();
 });
+
+// Known 3.x bug: the fresh-data lifecycle clears end following on refill, so the list reopens at 0.
+(it as typeof it & { failing: typeof it }).failing(
+    "keeps a pinned list at the end from the first painted frame after emptying and refilling",
+    async () => {
+        installNativeClock();
+        const initial = Array.from({ length: 40 }, (_, index) => ({ id: `refill-${index}` }));
+        for (const row of initial) sizes.set(row.id, 120);
+        const ref = React.createRef<LegendListRef>();
+        const refillCommits: boolean[] = [];
+        const pinned = { distanceFromEnd: 0, isAtEnd: true };
+        let refilling = false;
+        const keyExtractor = (row: { id: string }) => row.id;
+        const renderList = (data: typeof initial) => (
+            <React.Profiler
+                id="refill"
+                onRender={() => {
+                    if (refilling) refillCommits.push(ref.current!.getState().isAtEnd);
+                }}
+            >
+                <LegendList
+                    data={data}
+                    estimatedItemSize={120}
+                    keyExtractor={keyExtractor}
+                    maintainScrollAtEnd
+                    maintainVisibleContentPosition={false}
+                    recycleItems
+                    ref={ref}
+                    renderItem={({ item }) => <Text style={{ height: 120 }}>{item.id}</Text>}
+                    renderScrollComponent={(props: any) => <Surface {...props} />}
+                />
+            </React.Profiler>
+        );
+
+        const rendered = render(renderList(initial));
+        act(() => scrollProps.onLayout({ nativeEvent: { layout: { height: VIEWPORT, width: 400, x: 0, y: 0 } } }));
+        for (let i = 0; i < 40; i++) await frame();
+        let scrollToEnd: Promise<void>;
+        act(() => {
+            scrollToEnd = ref.current!.scrollToEnd({ animated: false });
+        });
+        for (let i = 0; i < 40; i++) await frame();
+        await scrollToEnd!;
+        expect(ref.current!.getState()).toMatchObject(pinned);
+        expect(scroll).toBe(4200);
+
+        rendered.rerender(renderList([]));
+        act(() => {
+            scroll = 0;
+            observe();
+        });
+        for (let i = 0; i < 38; i++) await frame();
+        expect(ref.current!.getState()).toMatchObject(pinned);
+
+        refilling = true;
+        rendered.rerender(renderList(initial.map((row) => ({ ...row }))));
+        await frame();
+        const firstFrame = ref.current!.getState();
+        // Native keeps the fresh layer hidden until its placement lands.
+        for (let i = 0; i < 8 && !peek$(ctx, "readyToRender"); i++) await frame();
+        expect(peek$(ctx, "readyToRender")).toBe(true);
+        const firstPaint = ref.current!.getState();
+        const firstPaintScroll = scroll;
+        for (let i = 0; i < 94; i++) await frame();
+        const settled = ref.current!.getState();
+
+        const readPin = ({ distanceFromEnd, isAtEnd }: typeof firstPaint) => ({ distanceFromEnd, isAtEnd });
+        expect({
+            commits: [...new Set(refillCommits)],
+            firstFrame: readPin(firstFrame),
+            firstPaint: { ...readPin(firstPaint), end: firstPaint.end },
+            firstPaintScroll,
+            settled: readPin(settled),
+            settledScroll: scroll,
+        }).toEqual({
+            commits: [true],
+            firstFrame: pinned,
+            firstPaint: { ...pinned, end: 39 },
+            firstPaintScroll: 4200,
+            settled: pinned,
+            settledScroll: 4200,
+        });
+        rendered.unmount();
+    },
+);
