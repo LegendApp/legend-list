@@ -17,7 +17,7 @@ const pause = async (count: number) => {
 const root = createRoot(document.getElementById("root")!);
 const resultElement = document.getElementById("results")!;
 
-async function run(name: string, next: Row[], removeFooter: boolean) {
+async function run(name: string, next: Row[], shrink: boolean, footer = shrink) {
     const ref = React.createRef<LegendListRef>();
     const endExits: string[] = [];
     const warnings: string[] = [];
@@ -34,7 +34,7 @@ async function run(name: string, next: Row[], removeFooter: boolean) {
     function List() {
         const [atEnd, setAtEnd] = React.useState(true);
         React.useEffect(() => {
-            if (removeFooter) return;
+            if (shrink) return;
             const state = ref.current!.getState();
             setAtEnd(state.isAtEnd);
             return state.listen("isAtEnd", (value) => {
@@ -50,9 +50,9 @@ async function run(name: string, next: Row[], removeFooter: boolean) {
                 estimatedItemSize={61}
                 initialScrollAtEnd
                 keyExtractor={keyExtractor}
-                ListFooterComponent={removeFooter && !didUpdate ? <div style={{ height: 2000 }} /> : undefined}
-                maintainScrollAtEnd={removeFooter || atEnd ? maintain : false}
-                maintainVisibleContentPosition={!removeFooter}
+                ListFooterComponent={footer && !didUpdate ? <div style={{ height: 2000 }} /> : undefined}
+                maintainScrollAtEnd={shrink || atEnd ? maintain : false}
+                maintainVisibleContentPosition={!shrink}
                 ref={ref}
                 renderItem={renderItem}
                 style={{ height: 500, width: 600 }}
@@ -85,7 +85,7 @@ async function run(name: string, next: Row[], removeFooter: boolean) {
                 Math.abs(before.gap) <= 1 &&
                 Math.abs(settled.gap) <= 1 &&
                 settled.isAtEnd &&
-                (removeFooter ? warnings.length === 0 : before.isAtEnd && endExits.length === 0),
+                (shrink ? warnings.length === 0 : before.isAtEnd && endExits.length === 0),
             settled,
             warnings,
         };
@@ -98,7 +98,14 @@ async function run(name: string, next: Row[], removeFooter: boolean) {
 try {
     const results = [
         await run("pinned data swap keeps isAtEnd", rows("swap", 195), false),
+        await run("pinned append keeps isAtEnd", [...base, ...rows("append", 1)], false),
+        await run(
+            "pinned replacement keeps isAtEnd",
+            [...base.map((row) => ({ ...row })), ...rows("replace", 3)],
+            false,
+        ),
         await run("footer shrink avoids a nested flushSync", base, true),
+        await run("emptying avoids a nested flushSync", [], true, false),
     ];
     resultElement.textContent = JSON.stringify({ results });
     resultElement.dataset.status = results.every((result) => result.passed) ? "passed" : "failed";

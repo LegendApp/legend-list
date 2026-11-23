@@ -1,5 +1,6 @@
-// Appending to, replacing or swapping a followed list's data must keep it at the end, including when
-// the app turns maintainScrollAtEnd off as soon as isAtEnd turns false.
+// Appending to, replacing or swapping a followed list's data, a tail row growing, or an optimistic
+// send and its ack must keep it at the end, including when the app turns maintainScrollAtEnd off as
+// soon as isAtEnd turns false.
 // Run with DATA_CHANGE_URL=http://127.0.0.1:PORT (example-web served by Vite).
 import assert from "node:assert/strict";
 
@@ -7,7 +8,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright")
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, headless: true });
 try {
     for (const gated of [false, true])
-    for (const action of ["append", "replace", "swap"]) {
+    for (const action of ["append", "replace", "swap", "grow", "ack"]) {
         const name = `${gated ? "gated" : "following"} ${action}`;
         const page = await browser.newPage({ viewport: { height: 900, width: 1200 } });
         const errors = [];

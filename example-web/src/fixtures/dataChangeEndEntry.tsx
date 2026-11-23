@@ -29,7 +29,25 @@ function App() {
         if (gated && state) return state.listen("isAtEnd", setAtEnd);
     }, []);
     const incoming = (count: number) => rows(`n${data.length}-`, count);
-    fixture.mutate = (action) =>
+    fixture.mutate = (action) => {
+        if (action === "grow") {
+            // A tail image decodes after the list landed at the end.
+            document.querySelector<HTMLElement>(`[data-id="${data.at(-1)!.id}"]`)!.style.minHeight = "300px";
+            return;
+        }
+        if (action === "ack") {
+            // An optimistic send, its server ack under a new key and size, then an incoming message.
+            const sent = { id: "optimistic", text: "Sending…" };
+            const acked = { id: "acked", text: texts[1]! };
+            flushSync(() => setData([...data, sent]));
+            requestAnimationFrame(() =>
+                requestAnimationFrame(() => {
+                    flushSync(() => setData([...data, acked]));
+                    requestAnimationFrame(() => flushSync(() => setData([...data, acked, ...incoming(1)])));
+                }),
+            );
+            return;
+        }
         flushSync(() =>
             setData(
                 action === "append"
@@ -39,6 +57,7 @@ function App() {
                       : rows("b", 120),
             ),
         );
+    };
     return (
         <LegendList
             alignItemsAtEnd
@@ -50,7 +69,11 @@ function App() {
             maintainScrollAtEnd={!gated || atEnd ? { animated: false } : false}
             maintainVisibleContentPosition
             ref={list}
-            renderItem={({ item }) => <div style={{ padding: "8px 16px", whiteSpace: "pre-wrap" }}>{item.text}</div>}
+            renderItem={({ item }) => (
+                <div data-id={item.id} style={{ padding: "8px 16px", whiteSpace: "pre-wrap" }}>
+                    {item.text}
+                </div>
+            )}
             style={{ height: 820, width: 820 }}
         />
     );
