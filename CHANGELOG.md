@@ -1,3 +1,9 @@
+## 3.8.0
+
+- Feat: `maintainVisibleContentPosition.autoscrollToTopThreshold` animates the list to the start after a prepend when the previous offset is at or within the threshold.
+- Fix: In `KeyboardAwareLegendList`, collapsing or deleting a row no longer drops the anchored message or detaches the footer from the rows while the list shrinks, with the keyboard open or closed. #595
+- Fix: Capped chats that trim old rows from the front keep following the end as new rows arrive. #462
+
 ## 3.7.3
 
 - Fix: scrollToOffset and scrollToIndex land at their target even when rows above are measured during the scroll.
