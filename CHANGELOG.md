@@ -1,3 +1,9 @@
+## 3.9.0
+
+- Feat: `showImmediately` renders rows on the first commit from an estimated viewport, before layout. It is opt-in; wrong size estimates or an initial scroll target can shift the first frame.
+- Fix: On web, lists following the end stay at the end while rows are measured, including after a large content shrink.
+- Fix: Changing `numColumns` takes effect when the list renders again before layout, as in Strict Mode.
+
 ## 3.8.0
 
 - Feat: `maintainVisibleContentPosition.autoscrollToTopThreshold` animates the list to the start after a prepend when the previous offset is at or within the threshold.
