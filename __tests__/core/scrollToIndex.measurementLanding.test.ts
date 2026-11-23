@@ -134,3 +134,38 @@ it.each(["ios", "android"] as const)(
         }
     },
 );
+
+// A vertical chat jumps to a row whose estimated prefix then measures taller, both before
+// and after the target, while the request is in flight. The row must land at the viewport top.
+for (const platform of ["ios", "android", "web"] as const) {
+    for (const animated of [false, true]) {
+        it(`lands a top-aligned chat index through late prefix growth on ${platform} (animated: ${animated})`, () => {
+            Platform.OS = platform;
+            if (platform !== "web") spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
+            const h = createWebScrollHarness({ itemCount: 300, itemSize: 60, scrollLength: 700 });
+            harness = h;
+            const now = spyOn(Date, "now").mockImplementation(() => h.clock.now);
+            try {
+                const index = 200;
+                h.state.didContainersLayout = true;
+                h.state.didFinishInitialScroll = true;
+                h.state.props.estimatedItemSize = 60;
+                for (let i = 0; i < 300; i++) h.state.sizesKnown.delete(`item_${i}`);
+                updateItemPositions(h.ctx, true);
+                void h.ref.scrollToIndex({ animated, index, viewPosition: 0 });
+                for (const changed of [index - 1, index - 6, index - 12, index + 1]) {
+                    updateOneItemSize(h.ctx, `item_${changed}`, { height: 180, width: 400 });
+                    updateItemPositions(h.ctx, false, { doMVCP: false, scrollBottomBuffered: -1, startIndex: changed });
+                }
+                h.browser.runToEnd();
+                h.clock.advance(2000);
+                h.browser.runToEnd();
+                h.clock.advance(1000);
+                expect(h.browser.offset).toBeCloseTo(h.state.positions[index]!, 5);
+                expect(h.state.scrollingTo).toBeUndefined();
+            } finally {
+                now.mockRestore();
+            }
+        });
+    }
+}
