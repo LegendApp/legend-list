@@ -108,6 +108,7 @@ interface ExtraPropsFromRN {
     contentInset?: { bottom?: number; left?: number; right?: number; top?: number };
     scrollEventThrottle?: number;
     ScrollComponent?: React.ComponentType<unknown>;
+    testID?: string;
 }
 
 const SCROLLBAR_HIDDEN_STYLE_ID = "legend-list-scrollbar-axis-hidden-style";
@@ -773,6 +774,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         ScrollComponent: _ScrollComponent,
         snapToOffsets,
         className: scrollViewClassNameProp,
+        testID,
         ...webProps
     } = props as ListComponentScrollViewProps & ExtraPropsFromRN & HTMLAttributes<HTMLDivElement>;
     const snapOffsets = !isExternalScroll ? getFiniteSnapOffsets(snapToOffsets) : [];
@@ -804,6 +806,8 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             className={scrollViewClassName}
             ref={scrollRef}
             {...(webProps as HTMLAttributes<HTMLDivElement>)}
+            // React Native's testID, rendered as react-native-web renders it for every other element
+            data-testid={testID}
             style={scrollViewStyle}
         >
             {refreshControl}
