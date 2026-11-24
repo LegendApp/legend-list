@@ -28,7 +28,8 @@ interface PositionViewStateProps {
 
 const isRNWeb = typeof document !== "undefined" && !!document.getElementById("react-native-stylesheet");
 const baseCss: CSSProperties = {
-    contain: "paint layout style",
+    // Not paint: paint containment clips what a row draws outside its box (shadows, focus rings); native does not
+    contain: "layout style",
     ...(isRNWeb
         ? {
               display: "flex",

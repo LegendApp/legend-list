@@ -109,7 +109,7 @@ describe("PositionView (web)", () => {
         const div = renderer!.root.findByType("div");
         expect(div.props["data-index"]).toBeUndefined();
         expect(div.props.style).toMatchObject({
-            contain: "paint layout style",
+            contain: "layout style",
             top: 32,
             width: 100,
         });
@@ -193,7 +193,7 @@ describe("PositionView (web)", () => {
 
             const div = renderer!.root.findByType("div");
             expect(div.props.style).toMatchObject({
-                contain: "paint layout style",
+                contain: "layout style",
                 display: "flex",
                 flexDirection: "column",
                 top: 32,
@@ -241,7 +241,7 @@ describe("PositionView (web)", () => {
         const div = renderer!.root.findByType("div");
         expect(div.props["data-index"]).toBeUndefined();
         expect(div.props.style).toMatchObject({
-            contain: "paint layout style",
+            contain: "layout style",
             position: "sticky",
             top: 10,
             width: 100,
