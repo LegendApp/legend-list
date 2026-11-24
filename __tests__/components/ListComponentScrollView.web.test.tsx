@@ -1706,17 +1706,23 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
-    it("does not pass the iOS-only scrollsToTop to the scroll element", async () => {
+    it("does not pass the native-only scrollsToTop and keyboardShouldPersistTaps to the scroll element", async () => {
         resetMocks();
         const { ListComponentScrollView } = await import(
-            "../../src/components/ListComponentScrollView?web-scroll-scrolls-to-top"
+            "../../src/components/ListComponentScrollView?web-scroll-native-only-props"
         );
         let renderer: TestRenderer.ReactTestRenderer | undefined;
 
         try {
             act(() => {
                 renderer = TestRenderer.create(
-                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} scrollsToTop={false} style={{}}>
+                    <ListComponentScrollView
+                        keyboardShouldPersistTaps="handled"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        scrollsToTop={false}
+                        style={{}}
+                    >
                         <div />
                     </ListComponentScrollView>,
                 );
@@ -1724,6 +1730,7 @@ describe("ListComponentScrollView (web)", () => {
 
             const divs = renderer!.root.findAllByType("div");
             expect(divs[0]?.props).not.toHaveProperty("scrollsToTop");
+            expect(divs[0]?.props).not.toHaveProperty("keyboardShouldPersistTaps");
         } finally {
             act(() => {
                 renderer?.unmount();
