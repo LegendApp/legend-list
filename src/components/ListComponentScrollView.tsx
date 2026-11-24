@@ -108,6 +108,7 @@ interface ExtraPropsFromRN {
     contentInset?: { bottom?: number; left?: number; right?: number; top?: number };
     scrollEventThrottle?: number;
     ScrollComponent?: React.ComponentType<unknown>;
+    scrollsToTop?: boolean;
     testID?: string;
 }
 
@@ -772,6 +773,8 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         contentInset: _contentInset,
         scrollEventThrottle: _scrollEventThrottle,
         ScrollComponent: _ScrollComponent,
+        // iOS only; react-native-web drops it, and on the div React would warn about an unknown prop
+        scrollsToTop: _scrollsToTop,
         snapToOffsets,
         className: scrollViewClassNameProp,
         testID,

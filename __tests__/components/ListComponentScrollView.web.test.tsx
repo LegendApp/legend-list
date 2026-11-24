@@ -1706,6 +1706,31 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    it("does not pass the iOS-only scrollsToTop to the scroll element", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-scrolls-to-top"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} scrollsToTop={false} style={{}}>
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props).not.toHaveProperty("scrollsToTop");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("disables browser scroll anchoring while MVCP is enabled", async () => {
         resetMocks();
         const { ListComponentScrollView } = await import(
