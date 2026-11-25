@@ -1,6 +1,7 @@
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { isSparePoolPending } from "@/utils/getEffectiveDrawDistance";
 
 export interface ContainerAllocation {
     containerIndex: number;
@@ -207,7 +208,7 @@ export function findAvailableContainers(
         }
     }
 
-    if (IS_DEV) {
+    if (IS_DEV && !isSparePoolPending(state)) {
         const numContainersPooled = peek$(ctx, "numContainersPooled") ?? Number.POSITIVE_INFINITY;
         if (nextNewContainerIndex > numContainersPooled) {
             console.warn(

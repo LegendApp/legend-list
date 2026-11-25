@@ -21,6 +21,7 @@ import * as setDidLayoutModule from "../../src/utils/setDidLayout";
 import { resetInitialRenderState } from "../../src/utils/setInitialRenderState";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
+import { installFakeClock } from "../helpers/webScrollHarness";
 
 describe("calculateItemsInView", () => {
     let mockCtx: StateContext;
@@ -1064,16 +1065,14 @@ describe("calculateItemsInView", () => {
                 mockState.props.drawDistance = 250;
                 mockState.props.estimatedItemSize = 100;
                 mockState.triggerCalculateItemsInView = () => calculateItemsInView(mockCtx, { scrollVelocity: 0 });
-                const frames: FrameRequestCallback[] = [];
-                const originalRAF = globalThis.requestAnimationFrame;
-                globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+                const clock = installFakeClock();
                 try {
                     mockCtx.values.set("readyToRender", true);
                     scheduleFullDrawDistancePrewarm(mockCtx);
                     calculateItemsInView(mockCtx, { scrollVelocity: 0 });
                     expect(mockState.endBuffered).toBe(13);
 
-                    frames[0]!(0);
+                    clock.advance(100);
                     expect(mockState.endBuffered).toBe(16);
 
                     mockState.scroll = 600;
@@ -1086,7 +1085,7 @@ describe("calculateItemsInView", () => {
                     calculateItemsInView(mockCtx, { scrollVelocity: 0 });
                     expect(mockState.endBuffered).toBe(13);
                 } finally {
-                    globalThis.requestAnimationFrame = originalRAF;
+                    clock.restore();
                 }
             });
         }

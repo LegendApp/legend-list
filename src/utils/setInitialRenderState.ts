@@ -66,6 +66,7 @@ export function setInitialRenderState(
         setAdaptiveRender(ctx, "normal", "ready");
 
         if (state.props.drawDistance > INITIAL_DRAW_DISTANCE) {
+            state.drawDistanceLimit = INITIAL_DRAW_DISTANCE;
             scheduleFullDrawDistancePrewarm(ctx);
         }
 

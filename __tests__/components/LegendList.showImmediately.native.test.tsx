@@ -1,8 +1,11 @@
 import { expect, it, spyOn } from "bun:test";
 import "../setup";
 
+import { Animated } from "react-native";
+
 import * as platformScroll from "../../src/core/doScrollTo";
 import { doScrollTo as doNativeScrollTo } from "../../src/core/doScrollTo.native";
+import { peek$ } from "../../src/state/state";
 import { Empty, mountList, positions } from "./LegendList.showImmediately.cases";
 
 it("mounts visible fixed rows at their final positions before Fabric layout", async () => {
@@ -86,6 +89,44 @@ it("mounts rows around the initial index on the first Fabric commit", async () =
     }
 });
 
+it("renders a disjoint fling viewport and its sticky header before draw-distance prewarm", async () => {
+    const list = await mountList("ios", {
+        drawDistance: 300,
+        showImmediately: false,
+        stickyHeaderIndices: [0, 14],
+    });
+    const animations = Animated.Value.prototype;
+    const originalInterpolate = animations.interpolate;
+    try {
+        animations.interpolate = ((config: unknown) => config) as typeof originalInterpolate;
+        list.mount();
+        list.layout(150);
+        list.tick();
+        const ctx = list.context();
+        const { state } = ctx;
+        expect(list.nativeContentStyle()?.opacity).toBe(1);
+        expect(state.startNoBuffer).toBe(0);
+        expect(peek$(ctx, "activeStickyIndex")).toBe(0);
+        expect(state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
+
+        list.emitScroll(0, "onScrollBeginDrag");
+        list.emitScroll(20, "onScrollEndDrag");
+        list.emitScroll(20, "onMomentumScrollBegin");
+        list.tick();
+        list.emitScroll(775);
+
+        expect([state.startNoBuffer, state.endNoBuffer]).toEqual([15, 18]);
+        expect(list.rows().filter(([, top]) => top! >= 750 && top! < 925)).toEqual(positions(15, 18));
+        expect(peek$(ctx, "activeStickyIndex")).toBe(14);
+        expect(state.didFullDrawDistancePrewarm).toBeFalsy();
+        expect(state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
+    } finally {
+        list.unmount();
+        if (originalInterpolate) animations.interpolate = originalInterpolate;
+        else Reflect.deleteProperty(animations, "interpolate");
+    }
+});
+
 it("retries a measured initial index with viewOffset before revealing it", async () => {
     spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
     const list = await mountList("ios", {
@@ -164,6 +205,50 @@ it("lets a drag take over from a silent Android initial-scroll retry", async () 
             ["10", 540],
             ["11", 590],
         ]);
+    } finally {
+        list.unmount();
+    }
+});
+
+it("keeps a surviving row anchored when a reversed fling loses its first fully visible row", async () => {
+    const data = Array.from({ length: 30 }, (_, index) => String(index));
+    const list = await mountList("ios", {
+        data,
+        drawDistance: 300,
+        estimatedItemSize: 50,
+        getFixedItemSize: (item) => (item === "10" ? undefined : 50),
+        maintainVisibleContentPosition: true,
+        recycleItems: true,
+        showImmediately: false,
+    });
+    try {
+        list.mount();
+        list.layout(150);
+        list.tick();
+        list.emitScroll(1100);
+        list.emitScroll(575);
+        const ctx = list.context();
+        expect(ctx.state.didFullDrawDistancePrewarm).toBeFalsy();
+        expect(list.rows()).toContainEqual(["12", 600]);
+        expect(list.rows()).toContainEqual(["13", 650]);
+
+        list.rerender({ data: ["older-a", "older-b", ...data.filter((item) => item !== "12")] });
+        expect(list.rows()).toContainEqual(["13", 700]);
+        // Moving the native adjustment spacer shifts the surface from 575px to 625px.
+        expect(peek$(ctx, "scrollAdjust")).toBe(50);
+        list.emitScroll(625);
+
+        list.measureRows((key) => (key === "10" ? 85 : undefined));
+        expect(peek$(ctx, "scrollAdjust")).toBe(85);
+        list.emitScroll(660);
+        for (let frame = 0; frame < 12; frame++) list.tick();
+
+        expect(list.nativeContentStyle()?.height).toBe(1585);
+        expect(list.state().scroll).toBe(660);
+        expect(list.rows()).toContainEqual(["8", 500]);
+        expect(list.rows()).toContainEqual(["13", 735]);
+        expect(list.rows().some(([key]) => key === "12")).toBe(false);
+        expect(list.scrollWrites).toEqual([]);
     } finally {
         list.unmount();
     }

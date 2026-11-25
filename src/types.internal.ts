@@ -216,6 +216,7 @@ export interface InternalState {
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
     didFullDrawDistancePrewarm?: boolean;
+    drawDistanceLimit?: number;
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;

@@ -20,7 +20,7 @@ import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getExpandedContainerPoolSize } from "@/utils/containerPool";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
-import { getEffectiveDrawDistance } from "@/utils/getEffectiveDrawDistance";
+import { getEffectiveDrawDistance, isSparePoolPending } from "@/utils/getEffectiveDrawDistance";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -904,7 +904,13 @@ export function calculateItemsInView(
                 if (numContainers !== prevNumContainers) {
                     set$(ctx, "numContainers", numContainers);
                     if (numContainers > peek$(ctx, "numContainersPooled")) {
-                        set$(ctx, "numContainersPooled", getExpandedContainerPoolSize(dataLength, numContainers));
+                        set$(
+                            ctx,
+                            "numContainersPooled",
+                            isSparePoolPending(state)
+                                ? numContainers
+                                : getExpandedContainerPoolSize(dataLength, numContainers),
+                        );
                     }
                 }
             }

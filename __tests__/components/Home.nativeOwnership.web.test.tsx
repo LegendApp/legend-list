@@ -344,6 +344,9 @@ for (const replacement of ["Home", "PageDown", "dispose"] as const) {
         act(() => h.clock.tick());
         act(() => h.clock.tick());
         expect(h.ctx.state.scheduledWork.has("nativeScrollToStart")).toBe(replacement === "Home");
-        expect(h.clock.pendingTimerCount()).toBe(replacement === "Home" ? 1 : 0);
+        // The large jump also queues the draw distance prewarm.
+        const prewarmPending = replacement !== "dispose";
+        expect(h.ctx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(prewarmPending);
+        expect(h.clock.pendingTimerCount()).toBe(Number(replacement === "Home") + Number(prewarmPending));
     });
 }

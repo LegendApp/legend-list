@@ -1928,7 +1928,8 @@ describe("LegendList bootstrap initial scroll", () => {
         let preservedTargetClearDelay: number | undefined;
         let queuedPreservedTargetClear: (() => void) | undefined;
         globalThis.setTimeout = ((callback: TimerHandler, delay?: number) => {
-            if (typeof delay === "number" && delay > 0) {
+            // Longer than the 100 ms draw distance prewarm.
+            if (typeof delay === "number" && delay > 100) {
                 preservedTargetClearDelay = delay;
                 queuedPreservedTargetClear = callback as () => void;
                 return 1 as any;
