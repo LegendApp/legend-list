@@ -100,6 +100,7 @@ describe("Containers native", () => {
             function GeometrySetup({ children }: { children: React.ReactNode }) {
                 ctx = useStateContext();
                 ctx.state = createMockState();
+                ctx.state.props.anchoredEndSpace = { anchorIndex: 0 } as any;
                 ctx.values.set("numColumns", 1);
                 ctx.values.set("numContainersPooled", 1);
                 ctx.values.set("readyToRender", true);
@@ -153,6 +154,40 @@ describe("Containers native", () => {
             unmount();
         });
     }
+
+    it("keeps the Fabric content extent off the Animated path without anchored end space", async () => {
+        mock.module("@/components/Container", () => ({ Container: () => null }));
+        const { Containers } = await import("../../src/components/Containers.native?no-anchored-end-space");
+        let ctx: StateContext;
+        function GeometrySetup({ children }: { children: React.ReactNode }) {
+            ctx = useStateContext();
+            if (!ctx.state) {
+                ctx.state = createMockState();
+                ctx.values.set("numColumns", 1);
+                ctx.values.set("numContainersPooled", 1);
+                ctx.values.set("readyToRender", true);
+                ctx.values.set("totalSize", 1000);
+            }
+            return children;
+        }
+        const { toJSON, unmount } = render(
+            <StateProvider>
+                <GeometrySetup>
+                    <Containers
+                        freshDataTransitionEpoch={0}
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        recycleItems={false}
+                    />
+                </GeometrySetup>
+            </StateProvider>,
+        );
+        // An Animated height would make every size change an extra native commit outside React.
+        expect((toJSON() as any).props.style.height).toBe(1000);
+        act(() => set$(ctx!, "totalSize", 1200));
+        expect((toJSON() as any).props.style.height).toBe(1200);
+        unmount();
+    });
 
     for (const horizontal of [false, true]) {
         it(`${horizontal ? "does not wrap a horizontal layer in" : "hands the committed extent to"} an integration's content extent wrapper`, async () => {
