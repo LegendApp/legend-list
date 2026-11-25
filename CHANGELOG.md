@@ -1,3 +1,7 @@
+## 3.9.1
+
+- Perf: Lists wait until after first paint to widen the initial render range, so first rows render as fast as before while fast scrolls still find rows ready.
+
 ## 3.9.0
 
 - Feat: `showImmediately` renders rows on the first commit from an estimated viewport, before layout. It is opt-in; wrong size estimates or an initial scroll target can shift the first frame.
