@@ -921,7 +921,8 @@ export function calculateItemsInView(
         }
 
         // Handle sticky container recycling
-        if (state.stickyContainerPool.size > 0) {
+        const hasStickyContainers = state.stickyContainerPool.size > 0;
+        if (hasStickyContainers) {
             handleStickyRecycling(
                 ctx,
                 stickyHeaderIndicesArr,
@@ -936,8 +937,19 @@ export function calculateItemsInView(
         const pendingRemovalSet = pendingRemoval.length > 0 ? new Set(pendingRemoval) : undefined;
         let didChangePositions = false;
         let didChangeIndex = false;
-        // Update top positions of all containers
+        // Grid spans and RTL positions can change independently of the row tops.
+        const canReuseContainerSync = numColumns === 1 && !isHorizontalRTL(state);
+        const syncOnlyChanged =
+            canReuseContainerSync &&
+            state.containerSyncAdjust === scrollAdjustPending &&
+            !dataChanged &&
+            !state.didDataChange &&
+            !forceFullItemPositions &&
+            !hasStickyContainers;
+        state.containerSyncAdjust = canReuseContainerSync ? scrollAdjustPending : undefined;
+
         for (let i = 0; i < numContainers; i++) {
+            if (syncOnlyChanged && !changedContainerIds?.has(i)) continue;
             const itemKey = peek$(ctx, `containerItemKey${i}`);
 
             // If it's pending removal, then it's not in view anymore

@@ -538,6 +538,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !didDataChangeLocal &&
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpace?.anchorIndex;
 
+    const wrappedGetItemType = useWrapIfItem(getItemType);
+    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
+    if (
+        didDataReferenceChangeLocal ||
+        state.props.getItemType !== wrappedGetItemType ||
+        state.props.itemsAreEqual !== itemsAreEqual ||
+        state.props.keyExtractor !== wrappedKeyExtractor
+    ) {
+        state.containerSyncAdjust = undefined;
+    }
+
     state.props = {
         adaptiveRender: experimental_adaptiveRender,
         alignItemsAtEnd,
@@ -559,13 +570,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         drawDistance,
         estimatedItemSize,
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
-        getItemType: useWrapIfItem(getItemType),
+        getItemType: wrappedGetItemType,
         hasExternalScroll,
         hasItemLayoutAnimationInternal,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
         itemsAreEqual,
-        keyExtractor: useWrapIfItem(keyExtractor),
+        keyExtractor: wrappedKeyExtractor,
         maintainScrollAtEnd: maintainScrollAtEndConfig,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,

@@ -303,6 +303,7 @@ export interface InternalState {
     runPendingScrollToEnd?: () => void;
     positions: Array<number | undefined>;
     positionsAreCurrent?: boolean;
+    containerSyncAdjust?: number;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
     queuedInitialLayout?: boolean | undefined;
