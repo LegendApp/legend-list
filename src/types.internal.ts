@@ -53,6 +53,7 @@ export interface LegendListScrollerRef {
 export interface MaintainVisibleContentPositionNormalized<ItemT = any> {
     autoscrollToTopThreshold?: number;
     data: boolean;
+    nativeAnchorRange?: number;
     size: boolean;
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }

@@ -12,6 +12,7 @@ export function normalizeMaintainVisibleContentPosition(
         return {
             autoscrollToTopThreshold: value.autoscrollToTopThreshold,
             data: value.data ?? false,
+            nativeAnchorRange: value.nativeAnchorRange,
             shouldRestorePosition: value.shouldRestorePosition,
             size: value.size ?? true,
         };
