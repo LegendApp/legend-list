@@ -471,6 +471,13 @@ export function calculateItemsInView(
             scrollBottom = Math.max(scrollStart, scroll + scrollLength + overscrollBeforeContent);
             scrollTopBuffered = scrollStart - scrollBufferTop + projectedBufferAdjustment;
             scrollBottomBuffered = scrollBottom + scrollBufferBottom + projectedBufferAdjustment;
+            if (scrollTopBuffered < 0 && state.didFullDrawDistancePrewarm) {
+                // After the first paint, prewarm rows below it so they are mounted before a fling.
+                scrollBottomBuffered = Math.max(
+                    scrollBottomBuffered,
+                    scrollLength + scrollBufferTop + scrollBufferBottom + (state.props.estimatedItemSize ?? 0),
+                );
+            }
         };
         updateScrollRange();
 

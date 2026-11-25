@@ -30,6 +30,7 @@ export function resetInitialRenderState(
         state.didFinishInitialScroll = false;
     }
 
+    state.didFullDrawDistancePrewarm = false;
     set$(ctx, "readyToRender", false);
     resetAdaptiveRender(ctx);
 }

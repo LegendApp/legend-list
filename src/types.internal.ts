@@ -214,6 +214,7 @@ export interface InternalState {
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
+    didFullDrawDistancePrewarm?: boolean;
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;

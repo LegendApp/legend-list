@@ -13,6 +13,7 @@ import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { getExpandedContainerPoolSize } from "../../src/utils/containerPool";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
+import { scheduleFullDrawDistancePrewarm } from "../../src/utils/getEffectiveDrawDistance";
 import { getId } from "../../src/utils/getId";
 import { getScrollVelocity } from "../../src/utils/getScrollVelocity";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -1038,6 +1039,40 @@ describe("calculateItemsInView", () => {
                     expect(getRenderedContainerKeys()).toHaveLength(end - mockState.startBuffered + 1);
                 },
             );
+        }
+
+        for (const os of ["ios", "web"] as const) {
+            it(`${os} widens the range near the top on the prewarm pass, not at first paint`, () => {
+                spyOn(Platform, "OS", "get").mockReturnValue(os);
+                setupFixedSizeItems(100, 100);
+                mockState.props.drawDistance = 250;
+                mockState.props.estimatedItemSize = 100;
+                mockState.triggerCalculateItemsInView = () => calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                const frames: FrameRequestCallback[] = [];
+                const originalRAF = globalThis.requestAnimationFrame;
+                globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+                try {
+                    mockCtx.values.set("readyToRender", true);
+                    scheduleFullDrawDistancePrewarm(mockCtx);
+                    calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                    expect(mockState.endBuffered).toBe(13);
+
+                    frames[0]!(0);
+                    expect(mockState.endBuffered).toBe(16);
+
+                    mockState.scroll = 600;
+                    calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                    expect(mockState.endBuffered).toBe(17);
+
+                    resetInitialRenderState(mockCtx, {});
+                    mockCtx.values.set("readyToRender", true);
+                    mockState.scroll = 0;
+                    calculateItemsInView(mockCtx, { scrollVelocity: 0 });
+                    expect(mockState.endBuffered).toBe(13);
+                } finally {
+                    globalThis.requestAnimationFrame = originalRAF;
+                }
+            });
         }
 
         it("should include buffered items beyond visible area", () => {

@@ -38,6 +38,7 @@ export function scheduleFullDrawDistancePrewarm(ctx: StateContext) {
                     : offset;
             }
         }
+        state.didFullDrawDistancePrewarm = peek$(ctx, "readyToRender");
         state.triggerCalculateItemsInView?.();
     }, "fullDrawDistancePrewarm");
 }
