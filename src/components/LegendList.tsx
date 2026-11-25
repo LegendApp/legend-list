@@ -222,13 +222,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const {
         anchoredEndSpaceOwnerInternal,
         contentExtentComponentInternal,
+        hasItemLayoutAnimationInternal,
         positionComponentInternal,
         stickyPositionComponentInternal,
         ...restProps
     } = rest as typeof rest &
         Pick<
             InternalState["props"],
-            "contentExtentComponentInternal" | "positionComponentInternal" | "stickyPositionComponentInternal"
+            | "contentExtentComponentInternal"
+            | "hasItemLayoutAnimationInternal"
+            | "positionComponentInternal"
+            | "stickyPositionComponentInternal"
         > & { anchoredEndSpaceOwnerInternal?: AnchoredEndSpaceOwner };
     const anchoredEndSpaceOwner = anchoredEndSpaceOwnerInternal ?? "list";
 
@@ -557,6 +561,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
         getItemType: useWrapIfItem(getItemType),
         hasExternalScroll,
+        hasItemLayoutAnimationInternal,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
         itemsAreEqual,

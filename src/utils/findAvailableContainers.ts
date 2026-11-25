@@ -45,7 +45,7 @@ export function findAvailableContainers(
     const { containerItemMetadata, stickyContainerPool } = state;
     const { data, getItemType } = state.props;
     const hasItemTypes = !!getItemType;
-    const shouldAvoidAssignedContainerReuse = state.props.recycleItems && !!state.props.positionComponentInternal;
+    const shouldAvoidAssignedContainerReuse = state.props.recycleItems && !!state.props.hasItemLayoutAnimationInternal;
     const pendingRemovalSet = pendingRemoval.length > 0 ? new Set(pendingRemoval) : undefined;
     // Recycling a focused web row would move focus onto another item and force the DOM sort
     // to carry every other row past it, so keep that row mounted while its item exists.
