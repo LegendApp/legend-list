@@ -44,14 +44,22 @@ function getProjectedBufferAdjustment(scrollVelocity: number, trailingBuffer: nu
 
 function scheduleRenderRangeProjectionSettle(ctx: StateContext) {
     const state = ctx.state;
-    state.scheduledWork.timeout(
-        () => {
+    const key = "renderRangeProjection";
+    state.renderRangeProjectionSettleAt = performance.now() + RENDER_RANGE_PROJECTION_SETTLE_DELAY;
+    if (state.scheduledWork.has(key)) {
+        return;
+    }
+
+    const settle = () => {
+        const remaining = Math.ceil(state.renderRangeProjectionSettleAt! - performance.now());
+        if (remaining > 0) {
+            state.scheduledWork.timeout(settle, remaining, key);
+        } else {
             state.scrollHistory.length = 0;
             state.triggerCalculateItemsInView?.();
-        },
-        RENDER_RANGE_PROJECTION_SETTLE_DELAY,
-        "renderRangeProjection",
-    );
+        }
+    };
+    state.scheduledWork.timeout(settle, RENDER_RANGE_PROJECTION_SETTLE_DELAY, key);
 }
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {

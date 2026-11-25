@@ -1,5 +1,5 @@
 import { Platform } from "@/platform/Platform";
-import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, jest, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { checkResetContainers } from "../../src/core/checkResetContainers";
@@ -1178,6 +1178,46 @@ describe("calculateItemsInView", () => {
             expect(mockState.endBuffered).toBe(6);
         });
 
+        it("keeps one projection timer pending until scrolling settles", () => {
+            setupFixedSizeItems(20, 100);
+            mockCtx.values.set("readyToRender", true);
+            mockState.props.drawDistance = 100;
+            mockState.scroll = 300;
+            mockState.scrollLength = 300;
+            const recalculate = mock();
+            mockState.triggerCalculateItemsInView = recalculate;
+            mockState.scrollHistory = [{ scroll: 300, time: Date.now() }];
+
+            jest.useFakeTimers();
+            const setTimer = spyOn(globalThis, "setTimeout");
+            const clearTimer = spyOn(globalThis, "clearTimeout");
+            try {
+                calculateItemsInView(mockCtx, { scrollVelocity: 4 });
+                for (let i = 0; i < 5; i++) {
+                    jest.advanceTimersByTime(16);
+                    calculateItemsInView(mockCtx, { scrollVelocity: 4 });
+                }
+
+                expect(setTimer).toHaveBeenCalledTimes(1);
+                expect(clearTimer).not.toHaveBeenCalled();
+                jest.advanceTimersByTime(20);
+                expect(setTimer).toHaveBeenCalledTimes(2);
+                expect(recalculate).not.toHaveBeenCalled();
+
+                jest.advanceTimersByTime(79);
+                expect(recalculate).not.toHaveBeenCalled();
+                jest.advanceTimersByTime(1);
+                expect(recalculate).toHaveBeenCalledTimes(1);
+                expect(mockState.scrollHistory).toHaveLength(0);
+                expect(mockState.scheduledWork.has("renderRangeProjection")).toBe(false);
+            } finally {
+                mockState.scheduledWork.dispose();
+                setTimer.mockRestore();
+                clearTimer.mockRestore();
+                jest.useRealTimers();
+            }
+        });
+
         for (const horizontal of [false, true]) {
             it(`follows the first reversal after a pause (horizontal=${horizontal})`, () => {
                 setupFixedSizeItems(100, 50);
@@ -1223,32 +1263,35 @@ describe("calculateItemsInView", () => {
                 mockState.scroll = 1000;
                 mockState.scrollLength = 300;
                 mockState.triggerCalculateItemsInView = () => calculateItemsInView(mockCtx);
-                const timeout = spyOn(mockState.scheduledWork, "timeout");
+                jest.useFakeTimers();
+                try {
+                    calculateItemsInView(mockCtx, { scrollVelocity: 4 });
+                    expect([mockState.startBuffered, mockState.endBuffered]).toEqual([20, 36]);
+                    jest.advanceTimersByTime(100);
+                    expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
+                    // A second idle calculation must not shift the buffer again.
+                    calculateItemsInView(mockCtx);
+                    expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
 
-                calculateItemsInView(mockCtx, { scrollVelocity: 4 });
-                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([20, 36]);
-                timeout.mock.calls.at(-1)![0]();
-                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
-                // A second idle calculation must not shift the buffer again.
-                calculateItemsInView(mockCtx);
-                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([17, 33]);
+                    calculateItemsInView(mockCtx, { scrollVelocity: -4 });
+                    jest.advanceTimersByTime(100);
+                    expect([mockState.startBuffered, mockState.endBuffered]).toEqual([12, 28]);
 
-                calculateItemsInView(mockCtx, { scrollVelocity: -4 });
-                timeout.mock.calls.at(-1)![0]();
-                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([12, 28]);
-
-                calculateItemsInView(mockCtx, { scrollVelocity: 4 });
-                mockState.scrollHistory = [
-                    { scroll: 900, time: Date.now() - 16 },
-                    { scroll: 1000, time: Date.now() },
-                ];
-                resetInitialRenderState(mockCtx, { resetLayout: true });
-                mockCtx.values.set("readyToRender", true);
-                expect(mockState.scheduledWork.has("renderRangeProjection")).toBe(false);
-                calculateItemsInView(mockCtx);
-                // A new dataset has no remembered direction: use initial placement.
-                expect([mockState.startBuffered, mockState.endBuffered]).toEqual([12, 28]);
-                timeout.mockRestore();
+                    calculateItemsInView(mockCtx, { scrollVelocity: 4 });
+                    mockState.scrollHistory = [
+                        { scroll: 900, time: Date.now() - 16 },
+                        { scroll: 1000, time: Date.now() },
+                    ];
+                    resetInitialRenderState(mockCtx, { resetLayout: true });
+                    mockCtx.values.set("readyToRender", true);
+                    expect(mockState.scheduledWork.has("renderRangeProjection")).toBe(false);
+                    calculateItemsInView(mockCtx);
+                    // A new dataset has no remembered direction: use initial placement.
+                    expect([mockState.startBuffered, mockState.endBuffered]).toEqual([12, 28]);
+                } finally {
+                    mockState.scheduledWork.dispose();
+                    jest.useRealTimers();
+                }
             });
         }
 
