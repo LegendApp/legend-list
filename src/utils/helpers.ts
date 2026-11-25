@@ -1,3 +1,4 @@
+import { PixelRatio } from "@/platform/PixelRatio";
 import type { ViewStyle } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
@@ -22,7 +23,10 @@ export function clearWarnDevOnceForTests() {
 }
 
 export function roundSize(size: number) {
-    return Math.floor(size * 8) / 8; // Round to nearest quater pixel to avoid accumulating rounding errors
+    // Whole physical pixels keep a prepend from moving the items and the MVCP anchor by different
+    // amounts. Float32 error can put a measured size just below a whole pixel, so round to nearest
+    const scale = PixelRatio.get();
+    return Math.round(size * scale) / scale;
 }
 
 export function isNullOrUndefined(value: unknown) {

@@ -6,8 +6,10 @@ import { useArr$, useStateContext } from "@/state/state";
 
 export function ScrollAdjust() {
     const ctx = useStateContext();
-    // Use a large bias to ensure this value never goes negative
-    const bias = 10_000_000;
+    // Yoga stores layout as float32. Near 1e6 dp the error is at most 1/32 dp, so the anchor lands
+    // on the same pixel as the items. At 1e7 dp the error reaches 1 dp, and each prepend shifts the
+    // list by 1 to 2 px
+    const bias = 1_000_000;
     const [scrollAdjust, scrollAdjustUserOffset] = useArr$(["scrollAdjust", "scrollAdjustUserOffset"]);
     const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0) + bias;
     const horizontal = !!ctx.state?.props.horizontal;
