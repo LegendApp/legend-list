@@ -318,10 +318,14 @@ export function peek$<T extends ListenerType>(
     return values.get(signalName);
 }
 
+// Listeners that set$ collects instead of calling, so the caller can call each one once.
+export type DeferredListeners = Map<(value: any) => void, any>;
+
 export function set$<T extends ListenerType>(
     ctx: StateContext,
     signalName: T,
     value: ListenerTypeValueMap[T] | undefined,
+    deferred?: DeferredListeners,
 ) {
     const { listeners, values } = ctx;
     if (values.get(signalName) !== value) {
@@ -329,7 +333,11 @@ export function set$<T extends ListenerType>(
         const setListeners = listeners.get(signalName);
         if (setListeners) {
             for (const listener of setListeners) {
-                listener(value);
+                if (deferred) {
+                    deferred.set(listener, value);
+                } else {
+                    listener(value);
+                }
             }
         }
     }

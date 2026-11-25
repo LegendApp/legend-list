@@ -89,6 +89,39 @@ describe("calculateItemsInView container sync", () => {
         list.clock.restore();
     });
 
+    it("notifies each container subscriber once per recycle", async () => {
+        const list = await renderScrollableList();
+        const calls = new Map<unknown, number>();
+        // One counting wrapper per subscriber, shared across its signals like the original.
+        const wrappers = new Map<(value: unknown) => void, (value: unknown) => void>();
+        for (const [name, listeners] of list.ctx.listeners) {
+            if (!name.startsWith("container")) continue;
+            for (const listener of [...listeners]) {
+                let wrapper = wrappers.get(listener);
+                if (!wrapper) {
+                    wrapper = (value) => {
+                        calls.set(listener, (calls.get(listener) ?? 0) + 1);
+                        listener(value);
+                    };
+                    wrappers.set(listener, wrapper);
+                }
+                listeners.delete(listener);
+                listeners.add(wrapper);
+            }
+        }
+
+        let repeats = 0;
+        for (let offset = 16; offset < SIZE * 60; offset += 16) {
+            calls.clear();
+            list.scrollTo(offset);
+            for (const count of calls.values()) repeats += count - 1;
+        }
+
+        expect(repeats).toBe(0);
+        list.result.unmount();
+        list.clock.restore();
+    });
+
     it("re-syncs every mounted container after an earlier row changes size", async () => {
         const list = await renderScrollableList({ getFixedItemSize: undefined, maintainVisibleContentPosition: false });
         list.scrollTo(SIZE * 40);

@@ -14,7 +14,7 @@ import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
-import { peek$, type StateContext, set$ } from "@/state/state";
+import { type DeferredListeners, peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState, ScrollAdjustmentSource } from "@/types.internal";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getExpandedContainerPoolSize } from "@/utils/containerPool";
@@ -754,6 +754,8 @@ export function calculateItemsInView(
             alwaysRenderIndicesSet.has(index) ||
             (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
+        // Container signals notify after the sync loop so each subscriber runs once per pass.
+        const deferred: DeferredListeners = new Map();
         // Place newly added items into containers
         if (
             (startBuffered !== null && endBuffered !== null) ||
@@ -864,13 +866,13 @@ export function calculateItemsInView(
                                 state.sizesKnown.has(id) ||
                                 resolveContainerItemMetadata(state, containerIndex, i, data[i]).fixedItemSize !==
                                     undefined;
-                            set$(ctx, `containerLayoutReady${containerIndex}`, isLayoutReady);
+                            set$(ctx, `containerLayoutReady${containerIndex}`, isLayoutReady, deferred);
                         }
                     }
 
-                    set$(ctx, `containerItemKey${containerIndex}`, id);
-                    set$(ctx, `containerItemIndex${containerIndex}`, i);
-                    set$(ctx, `containerItemData${containerIndex}`, data[i]);
+                    set$(ctx, `containerItemKey${containerIndex}`, id, deferred);
+                    set$(ctx, `containerItemIndex${containerIndex}`, i, deferred);
+                    set$(ctx, `containerItemData${containerIndex}`, data[i], deferred);
 
                     // Update cache when adding new item
                     containerItemKeys!.set(id, containerIndex);
@@ -881,12 +883,12 @@ export function calculateItemsInView(
                     const isSticky = stickyHeaderIndicesSet.has(i);
                     const isPinnedRender = isPinnedRenderIndex(i);
                     if (isSticky) {
-                        set$(ctx, containerSticky, true);
+                        set$(ctx, containerSticky, true, deferred);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
                     } else {
                         if (peek$(ctx, containerSticky)) {
-                            set$(ctx, containerSticky, false);
+                            set$(ctx, containerSticky, false, deferred);
                         }
                         if (isPinnedRender) {
                             // This pool also protects alwaysRender/internal pin containers from reuse.
@@ -967,28 +969,33 @@ export function calculateItemsInView(
 
                 // Clear sticky state if this was a sticky container
                 if (state.stickyContainerPool.has(i)) {
-                    set$(ctx, `containerSticky${i}`, false);
+                    set$(ctx, `containerSticky${i}`, false, deferred);
                     // Remove container from sticky pool
                     state.stickyContainerPool.delete(i);
                 }
 
-                set$(ctx, `containerItemKey${i}`, undefined);
-                set$(ctx, `containerItemIndex${i}`, undefined);
-                set$(ctx, `containerItemData${i}`, undefined);
-                set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
-                set$(ctx, `containerColumn${i}`, -1);
-                set$(ctx, `containerSpan${i}`, 1);
+                set$(ctx, `containerItemKey${i}`, undefined, deferred);
+                set$(ctx, `containerItemIndex${i}`, undefined, deferred);
+                set$(ctx, `containerItemData${i}`, undefined, deferred);
+                set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW, deferred);
+                set$(ctx, `containerColumn${i}`, -1, deferred);
+                set$(ctx, `containerSpan${i}`, 1, deferred);
             } else {
                 const itemIndex = indexByKey.get(itemKey);
                 if (itemIndex !== undefined) {
                     didChangeIndex ||= peek$(ctx, `containerItemIndex${i}`) !== itemIndex;
                     didChangePositions =
                         syncMountedContainer(ctx, i, itemIndex, {
+                            deferred,
                             scrollAdjustPending,
                             updateLayout: true,
                         }).didChangePosition || didChangePositions;
                 }
             }
+        }
+
+        for (const [listener, value] of deferred) {
+            listener(value);
         }
 
         if (changedContainerIds && (IsNewArchitecture || Platform.OS === "web")) {

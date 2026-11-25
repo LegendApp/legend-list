@@ -5,7 +5,7 @@ import { Animated } from "react-native";
 
 import * as platformScroll from "../../src/core/doScrollTo";
 import { doScrollTo as doNativeScrollTo } from "../../src/core/doScrollTo.native";
-import { peek$ } from "../../src/state/state";
+import { listen$, peek$ } from "../../src/state/state";
 import { Empty, mountList, positions } from "./LegendList.showImmediately.cases";
 
 it("mounts visible fixed rows at their final positions before Fabric layout", async () => {
@@ -206,6 +206,99 @@ it("lets a drag take over from a silent Android initial-scroll retry", async () 
             ["11", 590],
         ]);
     } finally {
+        list.unmount();
+    }
+});
+
+it("keeps recycled rows and their subscribers aligned through a prepend and a row resize", async () => {
+    const data = Array.from({ length: 30 }, (_, index) => String(index));
+    const list = await mountList("ios", {
+        data,
+        drawDistance: 100,
+        estimatedItemSize: 50,
+        getFixedItemSize: (item) => (item === "10" ? undefined : 50),
+        maintainVisibleContentPosition: true,
+        recycleItems: true,
+    });
+    const unsubscribe: (() => void)[] = [];
+    try {
+        list.mount();
+        list.layout(150);
+        for (let frame = 0; frame < 8; frame++) list.tick();
+        const ctx = list.context();
+        const firstAssignments = [...ctx.state.containerItemKeys];
+        list.emitScroll(550);
+        list.measureRows((key) => (key === "10" ? 50 : undefined));
+        list.tick();
+        expect(
+            firstAssignments.some(([key, slot]) => {
+                const nextKey = peek$(ctx, `containerItemKey${slot}`);
+                return nextKey !== undefined && nextKey !== key;
+            }),
+        ).toBe(true);
+
+        // Model the native offset shift as the ScrollAdjust spacer moves.
+        let nativeOffset = list.offset();
+        let previousAdjust = peek$(ctx, "scrollAdjust") ?? 0;
+        unsubscribe.push(
+            listen$(ctx, "scrollAdjust", (adjust) => {
+                nativeOffset += adjust - previousAdjust;
+                previousAdjust = adjust;
+            }),
+        );
+        const snapshots: [string | undefined, number | undefined, unknown, number | undefined][] = [];
+        for (let slot = 0; slot < peek$(ctx, "numContainersPooled"); slot++) {
+            const key = `containerItemKey${slot}` as const;
+            const index = `containerItemIndex${slot}` as const;
+            const item = `containerItemData${slot}` as const;
+            const position = `containerPosition${slot}` as const;
+            const observe = () =>
+                snapshots.push([peek$(ctx, key), peek$(ctx, index), peek$(ctx, item), peek$(ctx, position)]);
+            unsubscribe.push(
+                listen$(ctx, key, observe),
+                listen$(ctx, index, observe),
+                listen$(ctx, item, observe),
+                listen$(ctx, position, observe),
+            );
+        }
+
+        const paged = ["30", "31", "32", ...data];
+        const anchorSlot = ctx.state.containerItemKeys.get("11")!;
+        const resizedIndex = paged.indexOf("10");
+        const checkPage = (growth: number) => {
+            expect(list.nativeContentStyle()?.height).toBe(1650 + growth);
+            expect(nativeOffset).toBe(700 + growth);
+            expect(ctx.state.scroll).toBe(nativeOffset);
+            expect(ctx.state.containerItemKeys.get("11")).toBe(anchorSlot);
+            expect(list.rows().filter(([, top]) => top! >= nativeOffset && top! < nativeOffset + 150)).toEqual([
+                ["11", nativeOffset],
+                ["12", nativeOffset + 50],
+                ["13", nativeOffset + 100],
+            ]);
+            expect(snapshots.length).toBeGreaterThan(0);
+            for (const [key, index, item, position] of snapshots) {
+                if (index === undefined) {
+                    expect([key, item]).toEqual([undefined, undefined]);
+                } else {
+                    const expectedPosition = index * 50 + (index > resizedIndex ? growth : 0);
+                    expect([key, item, position]).toEqual([paged[index], paged[index], expectedPosition]);
+                }
+            }
+        };
+
+        expect(list.rows()).toContainEqual(["11", 550]);
+        list.rerender({ data: paged });
+        checkPage(0);
+        list.emitScroll(nativeOffset);
+        snapshots.length = 0;
+
+        list.measureRows((key) => (key === "10" ? 90 : undefined));
+        checkPage(40);
+        list.emitScroll(nativeOffset);
+        expect(ctx.state.scroll).toBe(740);
+        expect(ctx.state.sizesKnown.get("10")).toBe(90);
+    } finally {
+        for (const stop of unsubscribe) stop();
         list.unmount();
     }
 });
