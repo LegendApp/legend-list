@@ -254,6 +254,48 @@ it("keeps a surviving row anchored when a reversed fling loses its first fully v
     }
 });
 
+it("delivers each edge after crossing back from the middle by the last pixel", async () => {
+    const calls: Array<["start" | "end", number]> = [];
+    const list = await mountList("ios", {
+        maintainVisibleContentPosition: false,
+        onEndReached: ({ distanceFromEnd }) => calls.push(["end", distanceFromEnd]),
+        onEndReachedThreshold: 0.1,
+        onStartReached: ({ distanceFromStart }) => calls.push(["start", distanceFromStart]),
+        onStartReachedThreshold: 0.1,
+    });
+    try {
+        list.mount();
+        list.layout(150);
+        list.tick();
+        expect(calls).toEqual([["start", 0]]);
+
+        for (const offset of [550, 800, 1334]) list.emitScroll(offset);
+        expect(calls).toEqual([["start", 0]]);
+        list.emitScroll(1335);
+        expect(calls).toEqual([
+            ["start", 0],
+            ["end", 15],
+        ]);
+
+        // A short reversal leaves the hysteresis window and can rearm the same edge.
+        for (const offset of [1320, 1334, 1335, 1336, 550, 16]) list.emitScroll(offset);
+        expect(calls).toEqual([
+            ["start", 0],
+            ["end", 15],
+            ["end", 15],
+        ]);
+        list.emitScroll(15);
+        expect(calls).toEqual([
+            ["start", 0],
+            ["end", 15],
+            ["end", 15],
+            ["start", 15],
+        ]);
+    } finally {
+        list.unmount();
+    }
+});
+
 it("mounts an empty component, then allocates arriving data before Fabric layout", async () => {
     const list = await mountList("ios", { data: [], ListEmptyComponent: Empty });
     try {
