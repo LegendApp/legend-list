@@ -1,6 +1,8 @@
-import { expect, it } from "bun:test";
+import { expect, it, spyOn } from "bun:test";
 import "../setup";
 
+import * as platformScroll from "../../src/core/doScrollTo";
+import { doScrollTo as doNativeScrollTo } from "../../src/core/doScrollTo.native";
 import { Empty, mountList, positions } from "./LegendList.showImmediately.cases";
 
 it("mounts visible fixed rows at their final positions before Fabric layout", async () => {
@@ -79,6 +81,89 @@ it("mounts rows around the initial index on the first Fabric commit", async () =
         list.tick();
         expect(list.rows()).toEqual(positions(10, 13));
         expect(list.offset()).toBe(500);
+    } finally {
+        list.unmount();
+    }
+});
+
+it("retries a measured initial index with viewOffset before revealing it", async () => {
+    spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
+    const list = await mountList("ios", {
+        data: Array.from({ length: 10 }, (_, index) => String(index)),
+        drawDistance: 300,
+        estimatedItemSize: 50,
+        getFixedItemSize: undefined,
+        initialScrollIndex: { index: 4, viewOffset: 13, viewPosition: 0.5 },
+        showImmediately: false,
+    });
+    try {
+        list.mount();
+        const seed = list.offset();
+        expect(seed).toBe(137);
+        list.layout(150);
+        expect(list.nativeContentStyle()?.opacity).toBe(0);
+        expect(list.scrollWrites).toEqual([]);
+
+        const heights = [40, 70, 55, 65, 90, 60, 45, 70, 60, 50];
+        list.measureRows((key) => heights[Number(key)]);
+        for (let frame = 0; frame < 6 && !list.scrollWrites.length; frame++) list.tick();
+        // Row 4 starts at 230. Centering a 90px row in 150px leaves 30px, plus the 13px viewOffset.
+        expect(list.scrollWrites).toEqual([187]);
+        list.emitScroll(seed);
+        list.tick();
+        const writesBeforeResize = list.scrollWrites.length;
+        list.measureRows((key) => (key === "4" ? 130 : undefined));
+
+        for (let frame = 0; frame < 8 && list.scrollWrites.length === writesBeforeResize; frame++) list.tick();
+        expect(list.scrollWrites.slice(writesBeforeResize)).toEqual([207]);
+        expect(list.nativeContentStyle()?.opacity).toBe(0);
+        list.emitScroll(list.offset());
+        list.tick();
+
+        expect(list.nativeContentStyle()?.opacity).toBe(1);
+        expect(list.state().scroll).toBe(207);
+        expect(list.state().sizesKnown.get("4")).toBe(130);
+        const targetTop = list.rows().find(([key]) => key === "4")?.[1];
+        expect(targetTop).toBe(230);
+        expect(targetTop! - list.offset()).toBe(23);
+    } finally {
+        list.unmount();
+    }
+});
+
+it("lets a drag take over from a silent Android initial-scroll retry", async () => {
+    spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
+    const list = await mountList("android", {
+        drawDistance: 300,
+        estimatedItemSize: 50,
+        getFixedItemSize: undefined,
+        initialScrollIndex: { index: 4, viewOffset: 13, viewPosition: 0.5 },
+        showImmediately: false,
+    });
+    try {
+        list.mount();
+        list.layout(150);
+        list.measureRows((key) => (key === "4" ? 90 : 50));
+        for (let frame = 0; frame < 8 && list.scrollWrites.length < 2; frame++) list.tick();
+        // The measured destination is 157px. Android nudges by 1px when the dispatch is silent.
+        expect(list.scrollWrites).toEqual([157, 156]);
+        expect(list.nativeContentStyle()?.opacity).toBe(0);
+
+        list.emitScroll(156, "onScrollBeginDrag");
+        list.emitScroll(425);
+        list.tick();
+        list.emitScroll(475, "onScrollEndDrag");
+        for (let frame = 0; frame < 8; frame++) list.tick();
+
+        expect(list.scrollWrites).toEqual([157, 156]);
+        expect(list.nativeContentStyle()?.opacity).toBe(1);
+        expect(list.state().scroll).toBe(475);
+        expect(list.rows().filter(([, top]) => top! > 425 && top! < 625)).toEqual([
+            ["8", 440],
+            ["9", 490],
+            ["10", 540],
+            ["11", 590],
+        ]);
     } finally {
         list.unmount();
     }

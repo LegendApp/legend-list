@@ -19,7 +19,7 @@ const Empty = () => <div data-empty />;
 type Props = Partial<Extract<LegendListPropsBase<string, LooseScrollViewProps>, { data: readonly string[] }>>;
 type ScrollPhase = "onScroll" | "onScrollBeginDrag" | "onScrollEndDrag" | "onMomentumScrollBegin";
 
-export async function mountList(platform: "ios" | "web", overrides: Props = {}, legacy = false) {
+export async function mountList(platform: "android" | "ios" | "web", overrides: Props = {}, legacy = false) {
     Platform.OS = platform;
     const clock = installFakeClock();
     const emitResize = { current: undefined as ((entry: ResizeObserverEntry) => void) | undefined };

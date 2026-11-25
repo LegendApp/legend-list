@@ -195,7 +195,8 @@ export interface LegendListInternalRef extends LegendListRef {
 
 export interface InternalState {
     viewabilityInsetEnd?: number;
-    adjustingFromInitialMount?: number;
+    /** Adjustments requested before the list was ready, applied on the next frame or when it becomes ready. */
+    initialMountAdjusts?: Array<() => void>;
     anchoredEndSpacePendingReady?: boolean;
     anchoredEndSpaceReadyAnchorIndex?: number;
     anchoredEndSpaceReadyAnchorKey?: string;

@@ -14,6 +14,10 @@ export function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: Activ
     );
 }
 
+export function isIndexScrollTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    return !scrollingTo.isInitialScroll || ctx.state.initialScrollSession?.kind === "bootstrap";
+}
+
 export function getCommittedWebEndOffset(ctx: StateContext) {
     // The adjustment spacer extends browser range for one frame; it is not committed content.
     ctx.clearTemporaryScrollAdjust?.();
@@ -44,14 +48,14 @@ export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScr
         : scrollingTo.index === undefined
           ? undefined
           : clampScrollIndex(scrollingTo.index, ctx.state.props.data.length);
-    // Explicit index requests follow measured positions and sizes on every platform.
-    // Initial placement keeps its own completion policy.
-    const isRetargetingWebScroll =
-        Platform.OS === "web" && (!scrollingTo.isInitialScroll || ctx.state.initialScrollSession?.kind === "bootstrap");
+    // Index requests, including initial placement at an index, follow measured positions and sizes on every
+    // platform. An initial offset keeps its own completion policy.
+    const followsIndex = isIndexScrollTarget(ctx, scrollingTo);
+    const isRetargetingWebScroll = Platform.OS === "web" && followsIndex;
     const requestedTargetOffset =
         index !== undefined &&
         ctx.state.positions[index] !== undefined &&
-        (!scrollingTo.isInitialScroll || isRetargetingWebScroll || isEndAlignedLastItemTarget(ctx, scrollingTo))
+        (followsIndex || isEndAlignedLastItemTarget(ctx, scrollingTo))
             ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), { ...scrollingTo, index })
             : isRetargetingWebScroll
               ? calculateOffsetWithOffsetPosition(ctx, scrollingTo.offset, scrollingTo)

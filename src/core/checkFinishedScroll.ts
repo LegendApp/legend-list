@@ -3,7 +3,7 @@ import { cancelScroll } from "@/core/cancelScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { getCurrentTargetOffset, isEndAlignedLastItemTarget } from "@/core/getCurrentTargetOffset";
+import { getCurrentTargetOffset, isEndAlignedLastItemTarget, isIndexScrollTarget } from "@/core/getCurrentTargetOffset";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { Platform } from "@/platform/Platform";
@@ -86,6 +86,15 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     );
 }
 
+/** The target follows its item's measured position; see getCurrentTargetOffset. */
+function isMeasuredIndexTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    return (
+        isIndexScrollTarget(ctx, scrollingTo) &&
+        scrollingTo.index !== undefined &&
+        ctx.state.positions[scrollingTo.index] !== undefined
+    );
+}
+
 function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const { state } = ctx;
     const isWebInitialScroll = Platform.OS === "web" && scrollingTo.isInitialScroll;
@@ -96,10 +105,7 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
     const diff1 = Math.abs(scroll - clampedTargetOffset);
     const adjustedTargetOffset = clampedTargetOffset + adjust;
     const diff2 = Math.abs(scroll - adjustedTargetOffset);
-    const hasMeasuredIndexTarget =
-        !scrollingTo.isInitialScroll &&
-        scrollingTo.index !== undefined &&
-        state.positions[scrollingTo.index] !== undefined;
+    const hasMeasuredIndexTarget = isMeasuredIndexTarget(ctx, scrollingTo);
     // The current index offset already includes measurement changes; adding the
     // applied MVCP adjustment again would accept a second, incorrect landing.
     const canUseAdjustedCompletion =
@@ -154,7 +160,25 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 }
 
 function scrollToFallbackOffset(ctx: StateContext, offset: number, animated = false) {
+    if (Platform.OS !== "web") {
+        // Like doScrollTo, the offset already includes every queued adjustment.
+        ctx.state.initialMountAdjusts = undefined;
+    }
     ctx.state.refScroller.current?.scrollTo({ animated, ...getNativeScrollPoint(ctx, offset) });
+}
+
+/** Initial-scroll retries target the index's current offset, or the offset the session was asked for. */
+function getRetryTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const state = ctx.state;
+    const watchdog = initialScrollWatchdog.get(state);
+    const targetOffset =
+        Platform.OS === "web" || isMeasuredIndexTarget(ctx, scrollingTo)
+            ? getCurrentTargetOffset(ctx, scrollingTo)
+            : (watchdog?.targetOffset ?? scrollingTo.targetOffset ?? state.scrollPending);
+    if (watchdog) {
+        watchdog.targetOffset = targetOffset;
+    }
+    return targetOffset;
 }
 
 // In case checkFinishedScroll does not work correctly, set a maximum timeout
@@ -237,16 +261,16 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 numChecks = 0;
                 scheduleFallbackCheck(100);
             } else if (shouldRetrySilentInitialNativeScroll) {
-                const targetOffset =
-                    initialScrollWatchdog.get(state)?.targetOffset ?? isStillScrollingTo.targetOffset ?? 0;
+                const targetOffset = getRetryTargetOffset(ctx, isStillScrollingTo);
                 const jiggleOffset =
                     targetOffset >= SILENT_INITIAL_SCROLL_TARGET_EPSILON
                         ? targetOffset - SILENT_INITIAL_SCROLL_TARGET_EPSILON
                         : targetOffset + SILENT_INITIAL_SCROLL_TARGET_EPSILON;
                 initialScrollCompletion.markSilentInitialScrollRetry(state);
                 scrollToFallbackOffset(ctx, jiggleOffset);
+                // Adjustments can move the target while the nudge is pending, so return to its current offset.
                 state.scheduledWork.frame(
-                    () => scrollToFallbackOffset(ctx, targetOffset),
+                    () => scrollToFallbackOffset(ctx, getRetryTargetOffset(ctx, isStillScrollingTo)),
                     "checkFinishedScrollRetryFrame",
                 );
                 scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
@@ -275,15 +299,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 }
             } else {
                 if (isNativeInitialPending || shouldRetryUnalignedInitialScroll) {
-                    const watchdog = initialScrollWatchdog.get(state);
-                    const targetOffset =
-                        Platform.OS === "web"
-                            ? completionState.clampedTargetOffset
-                            : (watchdog?.targetOffset ?? isStillScrollingTo.targetOffset ?? state.scrollPending);
-                    if (Platform.OS === "web" && watchdog) {
-                        watchdog.targetOffset = targetOffset;
-                    }
-                    scrollToFallbackOffset(ctx, targetOffset);
+                    scrollToFallbackOffset(ctx, getRetryTargetOffset(ctx, isStillScrollingTo));
                 }
                 scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
             }

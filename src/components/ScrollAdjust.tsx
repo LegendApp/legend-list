@@ -105,7 +105,7 @@ export function ScrollAdjust() {
                     const nextScroll = parentScroll + scrollDelta;
                     const needsTemporaryPadding =
                         scrollDelta > 0 &&
-                        !ctx.state.adjustingFromInitialMount &&
+                        !ctx.state.initialMountAdjusts?.length &&
                         totalSize < nextScroll + viewportSize;
 
                     if (needsTemporaryPadding) {

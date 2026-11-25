@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { doScrollTo } from "../../src/core/doScrollTo.native";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { requestAdjust } from "../../src/utils/requestAdjust";
+import { setInitialRenderState } from "../../src/utils/setInitialRenderState";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("requestAdjust", () => {
@@ -183,6 +185,75 @@ describe("requestAdjust", () => {
             rafCallbacks[0]();
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(25);
+        });
+
+        it("applies an adjustment queued before the list was ready in the pass that reveals it", () => {
+            // An item above the initial scroll target measured smaller than its estimate while the list was hidden
+            mockState.didFinishInitialScroll = false;
+            mockCtx.values.set("readyToRender", false);
+            const adjustCountsAtLoad: number[] = [];
+            mockState.props.onLoad = () => adjustCountsAtLoad.push(scrollAdjustHandlerCalls.length);
+
+            requestAdjust(mockCtx, -45, "item-size");
+            setInitialRenderState(mockCtx, { didInitialScroll: true });
+
+            // Ready in the same call, without waiting for the queued frame, and the adjustment already applied
+            expect(mockCtx.values.get("readyToRender")).toBe(true);
+            expect(scrollAdjustHandlerCalls).toEqual([-45]);
+            expect(adjustCountsAtLoad).toEqual([1]);
+
+            rafCallbacks[0]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([-45]);
+        });
+
+        it("applies several queued adjustments in order on the next frame", () => {
+            mockCtx.values.set("readyToRender", false);
+
+            requestAdjust(mockCtx, 10);
+            requestAdjust(mockCtx, 5);
+            expect(rafCallbacks).toHaveLength(1);
+            rafCallbacks[0]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([10, 5]);
+            expect(mockState.initialMountAdjusts).toEqual([]);
+        });
+
+        it("skips a deferred adjustment that a later native scroll already includes", () => {
+            // Positions move right away, so a native scroll issued before the frame already targets the
+            // adjusted offset. Moving the anchor as well would shift the list a second time.
+            mockCtx.values.set("readyToRender", false);
+            mockState.refScroller = { current: { scrollTo: () => {} } } as any;
+
+            requestAdjust(mockCtx, -36, "item-size");
+            doScrollTo(mockCtx, { offset: mockState.scroll });
+            rafCallbacks[0]();
+            setInitialRenderState(mockCtx, { didInitialScroll: true });
+
+            expect(scrollAdjustHandlerCalls).toHaveLength(0);
+            expect(mockCtx.values.get("readyToRender")).toBe(true);
+        });
+
+        it("applies the remaining adjustment when a queued adjustment is skipped", () => {
+            mockCtx.values.set("readyToRender", false);
+
+            requestAdjust(mockCtx, 10, "item-size");
+            requestAdjust(mockCtx, 5, "data");
+            mockState.scrollingTo = { animated: false, offset: 120 };
+            rafCallbacks[0]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([5]);
+        });
+
+        it("applies a deferred adjustment when no native scroll lands before its frame", () => {
+            mockCtx.values.set("readyToRender", false);
+            mockState.refScroller = { current: { scrollTo: () => {} } } as any;
+
+            doScrollTo(mockCtx, { offset: mockState.scroll });
+            requestAdjust(mockCtx, -36, "item-size");
+            rafCallbacks[0]();
+
+            expect(scrollAdjustHandlerCalls).toEqual([-36]);
         });
 
         it("should handle undefined readyToRender as falsy", () => {
@@ -502,7 +573,8 @@ describe("requestAdjust", () => {
 
             const duration = performance.now() - start;
             expect(duration).toBeLessThan(10);
-            expect(rafCallbacks).toHaveLength(100);
+            // One frame applies the whole queue
+            expect(rafCallbacks).toHaveLength(1);
             expect(scrollAdjustHandlerCalls).toHaveLength(0); // None executed yet
         });
     });
