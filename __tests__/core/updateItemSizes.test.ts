@@ -110,6 +110,12 @@ describe("updateItemSizes", () => {
         updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
         expect(mockState.positionsAreCurrent).toBe(true);
 
+        // Native layout reports a row that matches its estimate as slightly under it
+        mockState.sizes.set("item_2", 100);
+        expect(updateOneItemSize(mockCtx, "item_2", { height: 99.9999, width: 400 })).toBe(0);
+        expect(mockState.sizesKnown.get("item_2")).toBe(100);
+        expect(mockState.positionsAreCurrent).toBe(true);
+
         mockState.sizes.set("item_1", 100);
         updateOneItemSize(mockCtx, "item_1", { height: 101, width: 400 });
         expect(mockState.positionsAreCurrent).toBe(false);
