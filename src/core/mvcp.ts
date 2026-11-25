@@ -250,6 +250,10 @@ export function prepareMVCP(
         },
     } = props;
     const isWeb = Platform.OS === "web";
+    // A list aligned to and kept at its end is read from the bottom, so the last visible item stays in place and
+    // changes move the content above it.
+    const anchorCandidateIds =
+        props.alignItemsAtEnd && props.maintainScrollAtEnd ? [...idsInView].reverse() : idsInView;
 
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
@@ -310,14 +314,13 @@ export function prepareMVCP(
             // If we're currently scrolling to a target index, do MVCP for its position
             targetId = scrollingTo?.key ?? getId(state, scrollTarget);
         } else if (idsInView.length > 0 && state.didContainersLayout && !dataChanged) {
-            // Do MVCP for the first item fully in view
-            targetId = idsInView.find((id) => indexByKey.get(id) !== undefined);
+            // Do MVCP for the first item fully in view, or the last one when read from the bottom
+            targetId = anchorCandidateIds.find((id) => indexByKey.get(id) !== undefined);
         }
 
         if (dataChanged && idsInView.length > 0 && state.didContainersLayout) {
             // Capture visible anchors for fallback in case the primary anchor disappears after data updates.
-            for (let i = 0; i < idsInView.length; i++) {
-                const id = idsInView[i];
+            for (const id of anchorCandidateIds) {
                 const index = previousIndexByKey.get(id);
                 if (index !== undefined) {
                     const position = positions[index];
