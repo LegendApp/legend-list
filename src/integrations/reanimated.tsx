@@ -271,6 +271,31 @@ interface LegendListForwardedRefProps<ItemT> extends AnimatedLegendListPropsBase
      */
     animatedPropsInternal?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
     refLegendList: (r: LegendListRef | null) => void;
+    /**
+     * Internal: comma-joined event props Reanimated replaced with its empty listener; see getWorkletEventNames.
+     * A string keeps the memoized shell's props equal across renders.
+     */
+    workletEventNamesInternal?: string;
+}
+
+// Reanimated registers native worklet event handlers on the scroll view and passes an empty listener
+// down in their place. LegendList would otherwise throttle that no-op on every scroll event.
+function getWorkletEventNames(props: Record<string, unknown>) {
+    const names: string[] = [];
+    for (const key in props) {
+        const handler = (props[key] as { workletEventHandler?: { eventNames: string[] } } | null | undefined)
+            ?.workletEventHandler;
+        // Web handlers carry JS listeners, which LegendList must still receive.
+        if (handler && !("listeners" in handler)) {
+            for (const name of handler.eventNames.length > 0 ? handler.eventNames : [key]) {
+                // A JS handler passed under the same name can win over the placeholder; leave it alone.
+                if (typeof props[name] !== "function") {
+                    names.push(name);
+                }
+            }
+        }
+    }
+    return names.length > 0 ? names.join(",") : undefined;
 }
 
 function setSharedValueValue<T>(sharedValue: SharedValue<T> | undefined, value: T) {
@@ -359,7 +384,17 @@ const LegendListForwardedRef = typedMemo(
         props: LegendListForwardedRefProps<ItemT>,
         ref: React.Ref<AnimatedScrollView>,
     ) {
-        const { itemLayoutAnimation, refLegendList, renderScrollComponent, sharedValues, ...rest } = props;
+        const {
+            itemLayoutAnimation,
+            refLegendList,
+            renderScrollComponent,
+            sharedValues,
+            workletEventNamesInternal,
+            ...rest
+        } = props;
+        for (const name of workletEventNamesInternal?.split(",") ?? []) {
+            delete (rest as Record<string, unknown>)[name];
+        }
 
         const internalScrollOffset = useSharedValue(0);
         const scrollOffset = sharedValues?.scrollOffset ?? internalScrollOffset;
@@ -455,9 +490,13 @@ const AnimatedLegendList = typedMemo(
         );
         useAnimatedLegendListSharedValuesSync(legendList, sharedValues);
         const forwardedProps = {
-            ...(rest as Omit<LegendListForwardedRefProps<ItemT>, "animatedPropsInternal" | "refLegendList">),
+            ...(rest as Omit<
+                LegendListForwardedRefProps<ItemT>,
+                "animatedPropsInternal" | "refLegendList" | "workletEventNamesInternal"
+            >),
             animatedPropsInternal: animatedProps,
             refLegendList: combinedRef,
+            workletEventNamesInternal: getWorkletEventNames(rest),
         };
 
         return <AnimatedLegendListComponentTyped {...forwardedProps} ref={refScrollView} />;
