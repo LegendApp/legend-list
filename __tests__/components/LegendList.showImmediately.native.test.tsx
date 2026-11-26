@@ -210,6 +210,31 @@ it("lets a drag take over from a silent Android initial-scroll retry", async () 
     }
 });
 
+it("does not deliver an older trailing onScroll event after throttling is turned off", async () => {
+    const received: number[] = [];
+    const list = await mountList("ios", {
+        onScroll: (event) => received.push(event.nativeEvent.contentOffset.y),
+        scrollEventThrottle: 64,
+    });
+    const now = spyOn(Date, "now").mockReturnValue(1000);
+    try {
+        list.mount();
+        list.layout(150);
+        list.emitScroll(50);
+        list.emitScroll(100);
+        expect(received).toEqual([50]);
+
+        list.rerender({ scrollEventThrottle: 0 });
+        list.emitScroll(150);
+        for (let frame = 0; frame < 5; frame++) list.tick();
+
+        expect(received).toEqual([50, 150]);
+    } finally {
+        now.mockRestore();
+        list.unmount();
+    }
+});
+
 it("keeps recycled rows and their subscribers aligned through a prepend and a row resize", async () => {
     const data = Array.from({ length: 30 }, (_, index) => String(index));
     const list = await mountList("ios", {

@@ -137,7 +137,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     useEffect(subscribeScreenReader, []);
-    const noopOnScroll = useCallback((_event: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
     if (props.recycleItems === undefined) {
         warnDevOnce(
             "recycleItems-omitted",
@@ -531,8 +530,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
     const dataChangeEpoch = state.dataChangeEpoch;
     const freshDataTransitionEpoch = state.freshDataTransitionEpoch;
-    const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
-    const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
+    const throttleScrollFn = useThrottledOnScroll(onScrollProp, scrollEventThrottle ?? 0);
     const didAnchoredEndSpaceAnchorIndexChange =
         !isFirstLocal &&
         !didDataChangeLocal &&
