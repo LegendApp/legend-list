@@ -42,34 +42,29 @@ export function resetAdaptiveRender(ctx: StateContext) {
 export function updateAdaptiveRender(ctx: StateContext, scrollVelocity: number, options?: { forceLight?: boolean }) {
     const state = ctx.state;
     const adaptiveRender = state.props.adaptiveRender;
+    // Removing the prop resets the mode in LegendList, so lists without it have nothing to update per scroll.
+    if (!adaptiveRender || !peek$(ctx, "readyToRender")) {
+        return;
+    }
     const currentMode = peek$(ctx, "adaptiveRender");
+    const isWeb = Platform.OS === "web";
+    const enterVelocity =
+        adaptiveRender.enterVelocity ??
+        (isWeb ? DEFAULT_WEB_ADAPTIVE_RENDER_ENTER_VELOCITY : DEFAULT_ADAPTIVE_RENDER_ENTER_VELOCITY);
+    const exitVelocity =
+        adaptiveRender.exitVelocity ??
+        (isWeb ? DEFAULT_WEB_ADAPTIVE_RENDER_EXIT_VELOCITY : DEFAULT_ADAPTIVE_RENDER_EXIT_VELOCITY);
+    const exitDelay =
+        adaptiveRender.exitDelay ??
+        (isWeb ? DEFAULT_WEB_ADAPTIVE_RENDER_EXIT_DELAY : DEFAULT_ADAPTIVE_RENDER_EXIT_DELAY);
+    const threshold = currentMode === "light" ? exitVelocity : enterVelocity;
+    const nextMode = options?.forceLight || Math.abs(scrollVelocity) > threshold ? "light" : "normal";
+    const previousMode = state.scheduledWork.has("adaptiveRender") ? "normal" : currentMode;
 
-    if (peek$(ctx, "readyToRender")) {
-        if (adaptiveRender) {
-            const isWeb = Platform.OS === "web";
-            const enterVelocity =
-                adaptiveRender.enterVelocity ??
-                (isWeb ? DEFAULT_WEB_ADAPTIVE_RENDER_ENTER_VELOCITY : DEFAULT_ADAPTIVE_RENDER_ENTER_VELOCITY);
-            const exitVelocity =
-                adaptiveRender.exitVelocity ??
-                (isWeb ? DEFAULT_WEB_ADAPTIVE_RENDER_EXIT_VELOCITY : DEFAULT_ADAPTIVE_RENDER_EXIT_VELOCITY);
-            const exitDelay =
-                adaptiveRender.exitDelay ??
-                (isWeb ? DEFAULT_WEB_ADAPTIVE_RENDER_EXIT_DELAY : DEFAULT_ADAPTIVE_RENDER_EXIT_DELAY);
-            const threshold = currentMode === "light" ? exitVelocity : enterVelocity;
-            const nextMode = options?.forceLight || Math.abs(scrollVelocity) > threshold ? "light" : "normal";
-            const previousMode = state.scheduledWork.has("adaptiveRender") ? "normal" : currentMode;
-
-            if (nextMode !== previousMode) {
-                if (nextMode === "light") {
-                    setAdaptiveRender(ctx, "light", "scroll");
-                    scheduleAdaptiveRenderExit(ctx, exitDelay);
-                } else if (currentMode === "light") {
-                    scheduleAdaptiveRenderExit(ctx, exitDelay);
-                }
-            }
-        } else {
-            resetAdaptiveRender(ctx);
+    if (nextMode !== previousMode && (nextMode === "light" || currentMode === "light")) {
+        if (nextMode === "light") {
+            setAdaptiveRender(ctx, "light", "scroll");
         }
+        scheduleAdaptiveRenderExit(ctx, exitDelay);
     }
 }

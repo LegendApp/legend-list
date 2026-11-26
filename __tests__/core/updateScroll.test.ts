@@ -10,6 +10,7 @@ import type { StateContext } from "@/state/state";
 import { peek$ } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
+import * as getScrollVelocityModule from "@/utils/getScrollVelocity";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { installFakeClock } from "../helpers/webScrollHarness";
@@ -998,5 +999,28 @@ describe("updateScroll user scroll ownership", () => {
 
         updateScroll(ctx, 600, true, { fromNativeScrollEvent: true });
         expect(ctx.state.visibleContentAnchor).toBeUndefined();
+    });
+});
+
+describe("updateScroll per-event work", () => {
+    it("skips adaptive-render and velocity work when adaptive render is off and the range does not recalculate", () => {
+        Platform.OS = "ios";
+        const ctx = createMockContext(
+            { readyToRender: true },
+            { scroll: 100, scrollLastCalculate: 100, scrollLength: 100 },
+        );
+        const cancelSpy = spyOn(ctx.state.scheduledWork, "cancel");
+        const velocitySpy = spyOn(getScrollVelocityModule, "getScrollVelocity");
+        try {
+            for (const offset of [100.5, 101, 101.5, 102]) {
+                updateScroll(ctx, offset, false, { fromNativeScrollEvent: true });
+            }
+            expect(cancelSpy).not.toHaveBeenCalledWith("adaptiveRender");
+            expect(velocitySpy).not.toHaveBeenCalled();
+            expect(peek$(ctx, "adaptiveRender")).toBe("normal");
+        } finally {
+            cancelSpy.mockRestore();
+            velocitySpy.mockRestore();
+        }
     });
 });
