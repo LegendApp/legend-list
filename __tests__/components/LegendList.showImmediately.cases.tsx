@@ -5,6 +5,7 @@ import { batchItemSizeUpdates } from "@/core/updateItemSizes";
 import { Platform } from "@/platform/Platform";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, useStateContext } from "@/state/state";
+import type { LegendListRef } from "@/types.base";
 import type { LegendListPropsBase } from "@/types.internal";
 import { expect, mock } from "bun:test";
 import TestRenderer, { act, type ReactTestRenderer } from "../helpers/testRenderer";
@@ -58,6 +59,7 @@ export async function mountList(platform: "android" | "ios" | "web", overrides: 
     expect(IsNewArchitecture).toBe(!legacy);
 
     const { LegendList } = await import("../../src/components/LegendList?show-immediately");
+    const listRef = React.createRef<LegendListRef>();
     const scrollWrites: number[] = [];
     let scroll = 0;
     let nativeProps: LooseScrollViewProps;
@@ -116,6 +118,7 @@ export async function mountList(platform: "android" | "ios" | "web", overrides: 
             getFixedItemSize={getFixedItemSize}
             keyExtractor={keyExtractor}
             recycleItems={false}
+            ref={listRef}
             renderItem={({ item }: { item: string }) => <Row item={item} />}
             renderScrollComponent={(scrollProps: LooseScrollViewProps) => <Surface {...scrollProps} />}
             showImmediately
@@ -185,6 +188,7 @@ export async function mountList(platform: "android" | "ios" | "web", overrides: 
             return Array.isArray(tree) ? tree.find((node) => node.type === "AnimatedView")?.props.style : undefined;
         },
         offset: () => scroll,
+        ref: listRef,
         renderedRange: () => [ctx.state.startBuffered, ctx.state.endBuffered],
         rerender: (props: Props) => act(() => mounted!.update(list({ ...overrides, ...props }))),
         rows: () => snapshot(),

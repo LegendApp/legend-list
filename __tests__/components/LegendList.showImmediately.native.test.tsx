@@ -6,6 +6,7 @@ import { Animated } from "react-native";
 import * as platformScroll from "../../src/core/doScrollTo";
 import { doScrollTo as doNativeScrollTo } from "../../src/core/doScrollTo.native";
 import { listen$, peek$ } from "../../src/state/state";
+import { act } from "../helpers/testRenderer";
 import { Empty, mountList, positions } from "./LegendList.showImmediately.cases";
 
 it("mounts visible fixed rows at their final positions before Fabric layout", async () => {
@@ -367,6 +368,53 @@ it("keeps a surviving row anchored when a reversed fling loses its first fully v
         expect(list.rows()).toContainEqual(["13", 735]);
         expect(list.rows().some(([key]) => key === "12")).toBe(false);
         expect(list.scrollWrites).toEqual([]);
+    } finally {
+        list.unmount();
+    }
+});
+
+it("lands an absolute scroll when a preceding data shrink is still waiting for the native clamp", async () => {
+    spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
+    const data = Array.from({ length: 30 }, (_, index) => String(index));
+    const visible: string[] = [];
+    const list = await mountList("ios", {
+        data,
+        maintainVisibleContentPosition: true,
+        onFirstVisibleItemChanged: ({ item }) => visible.push(item),
+        recycleItems: true,
+    });
+    try {
+        list.mount();
+        list.layout(150);
+        list.tick();
+        list.emitScroll(1200);
+        list.rerender({ data: data.slice(5) });
+        expect(list.nativeContentStyle()?.height).toBe(1250);
+        // The trim displaced the anchor by 250px. The list applies 150px and waits for the clamp.
+        const ctx = list.context();
+        expect(peek$(ctx, "scrollAdjust")).toBe(-150);
+        expect(list.scrollWrites).toEqual([]);
+
+        visible.length = 0;
+        const handle = list.ref.current!;
+        let landing!: Promise<void>;
+        act(() => {
+            landing = handle.scrollToOffset({ animated: false, offset: 500 });
+        });
+        for (let frame = 0; frame < 10 && !list.scrollWrites.length; frame++) list.tick();
+        expect(list.scrollWrites).toEqual([500]);
+        expect(visible).toEqual(["15"]);
+        list.emitScroll(500);
+        list.tick();
+
+        expect(peek$(ctx, "scrollAdjust")).toBe(-150);
+        expect(handle.getState().scroll).toBe(500);
+        expect(list.rows().filter(([, top]) => top! >= 500 && top! < 650)).toEqual([
+            ["15", 500],
+            ["16", 550],
+            ["17", 600],
+        ]);
+        await landing;
     } finally {
         list.unmount();
     }
