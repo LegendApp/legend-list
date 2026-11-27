@@ -38,8 +38,22 @@ export function getScrollAdjustTarget(ctx: StateContext, contentNode: HTMLElemen
     return scrollElement ? { contentNode: resolvedContentNode, scrollElement } : null;
 }
 
-export function scrollAdjustBy(el: HTMLElement, left: number, top: number) {
-    el.scrollBy({ behavior: "auto", left, top });
+export function scrollAdjustBy(el: HTMLElement, left: number, top: number, interruptMomentum = false) {
+    if (!interruptMomentum) {
+        el.scrollBy({ behavior: "auto", left, top });
+        return;
+    }
+    // iOS WebKit can restore the pre-prepend offset on its next momentum frame.
+    const before = el.scrollTop;
+    const previousOverflow = el.style.overflowY;
+    el.style.overflowY = "hidden";
+    try {
+        // Reading the offset commits the overflow change and accounts for a clamped rubber-band offset.
+        el.scrollBy({ behavior: "auto", left, top: top + before - el.scrollTop });
+        void el.offsetHeight;
+    } finally {
+        el.style.overflowY = previousOverflow;
+    }
 }
 
 export function ScrollAdjust() {
@@ -90,7 +104,18 @@ export function ScrollAdjust() {
                 const scrollDelta = intendedScroll - currentScroll;
                 const shouldScroll = !isOutsideList && Math.abs(scrollDelta) > 0.01;
                 const scrollBy = () => {
-                    scrollAdjustBy(el, axis.x * scrollDelta, axis.y * scrollDelta);
+                    const isVerticalPrepend =
+                        isRelative &&
+                        userOffsetDelta === 0 &&
+                        ctx.state.scrollAdjustHandler.webAdjustSource === "data" &&
+                        !horizontal &&
+                        !isExternal &&
+                        scrollDelta > 0;
+                    const interruptMomentum =
+                        isVerticalPrepend &&
+                        typeof CSS !== "undefined" &&
+                        CSS.supports("-webkit-touch-callout", "none");
+                    scrollAdjustBy(el, axis.x * scrollDelta, axis.y * scrollDelta, interruptMomentum);
                     const after =
                         (isExternal ? scroller?.getCurrentScrollOffset?.() : undefined) ??
                         (horizontal ? el.scrollLeft : el.scrollTop);

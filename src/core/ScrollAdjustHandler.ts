@@ -6,7 +6,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
-import type { ScrollTarget } from "@/types.internal";
+import type { ScrollAdjustmentSource, ScrollTarget } from "@/types.internal";
 
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;
@@ -14,6 +14,7 @@ export class ScrollAdjustHandler {
     private supersededAdjust = 0;
     private ctx: StateContext;
     private webAdjustSignal?: number;
+    webAdjustSource?: ScrollAdjustmentSource;
     private webAdjustment?: { expected: number; observed: number };
 
     constructor(ctx: StateContext) {
@@ -30,7 +31,7 @@ export class ScrollAdjustHandler {
         // remains credit for the next relative correction.
         this.webAdjustment = { expected: Math.abs(expected - observed) < 1 ? expected : observed, observed };
     }
-    requestAdjust(add: number) {
+    requestAdjust(add: number, source?: ScrollAdjustmentSource) {
         const scrollingTo = this.ctx.state.scrollingTo;
 
         if (PlatformAdjustBreaksScroll && scrollingTo?.animated && !scrollingTo.isInitialScroll) {
@@ -38,7 +39,10 @@ export class ScrollAdjustHandler {
             set$(this.ctx, "scrollAdjustPending", this.pendingAdjust);
         } else {
             this.appliedAdjust += add;
-            if (Platform.OS === "web") this.webAdjustSignal = this.appliedAdjust;
+            if (Platform.OS === "web") {
+                this.webAdjustSignal = this.appliedAdjust;
+                this.webAdjustSource = source;
+            }
             set$(this.ctx, "scrollAdjust", this.appliedAdjust);
         }
 
