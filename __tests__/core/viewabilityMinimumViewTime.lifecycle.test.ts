@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from "bun:test";
+import { setLayoutValues } from "../helpers/layoutStore";
 import "../setup";
 
 import { setupViewability, updateViewableItems } from "../../src/core/viewability";
@@ -21,13 +22,17 @@ function probe(configs: ViewabilityConfig[] = [{ id: "dwell", minimumViewTime: 2
         ctx.state.props.numColumns = columns;
         ctx.state.idCache = keys.slice();
         ctx.state.indexByKey = new Map(keys.map((key, index) => [key, index]));
-        ctx.state.positions = keys.map((_, index) => Math.floor(index / columns) * 100);
+        setLayoutValues(
+            ctx.state,
+            "positions",
+            keys.map((_, index) => Math.floor(index / columns) * 100),
+        );
         ctx.state.sizes = new Map(keys.map((key) => [key, 100]));
     };
     const refresh = (offset = 0, start = 0, end = ctx.state.props.data.length - 1) => {
         Object.assign(ctx.state, { endNoBuffer: end, scroll: offset, scrollLength: 200, startNoBuffer: start });
         ctx.state.viewabilityConfigCallbackPairs = pairs;
-        updateViewableItems(ctx.state, ctx, pairs, 200, start, end);
+        updateViewableItems(ctx, pairs, 200, start, end);
     };
     data(["a", "b", "c", "d", "e", "f"]);
     return { calls, ctx, data, pairs, refresh };
@@ -212,14 +217,22 @@ describe("minimumViewTime lifecycle boundaries", () => {
             ...list.pairs[0],
             viewabilityConfig: { ...list.pairs[0].viewabilityConfig, itemVisiblePercentThreshold: 50 },
         };
-        setupViewability({ viewabilityConfigCallbackPairs: list.pairs }, list.ctx);
+        list.ctx.state.viewabilityConfigCallbackPairs = setupViewability(
+            { viewabilityConfigCallbackPairs: list.pairs },
+            list.ctx,
+        );
+        list.refresh(60);
         jest.advanceTimersByTime(50);
         expect(entered(list.calls[0])).toEqual(["b", "c"]);
         list.pairs[0] = {
             ...list.pairs[0],
             viewabilityConfig: { ...list.pairs[0].viewabilityConfig, itemVisiblePercentThreshold: 25 },
         };
-        setupViewability({ viewabilityConfigCallbackPairs: list.pairs }, list.ctx);
+        list.ctx.state.viewabilityConfigCallbackPairs = setupViewability(
+            { viewabilityConfigCallbackPairs: list.pairs },
+            list.ctx,
+        );
+        list.refresh(60);
         jest.advanceTimersByTime(249);
         expect(entered(list.calls[0])).toEqual(["b", "c"]);
         jest.advanceTimersByTime(1);

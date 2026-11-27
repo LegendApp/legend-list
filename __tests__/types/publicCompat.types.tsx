@@ -81,6 +81,8 @@ const keyboardLegacy = <KeyboardAvoidingLegendList {...keyboardLegacyProps} />;
 // A handwritten v3 ref need not implement the newly added interaction method.
 declare const state: LegendListState;
 const mockRef: LegendListRef = {
+    anchorVisibleContent: () => undefined,
+    cancelScroll() {},
     clearCaches() {},
     flashScrollIndicators() {},
     getAnimatableRef: () => null!,
@@ -94,6 +96,7 @@ const mockRef: LegendListRef = {
     scrollToEnd: async () => {},
     scrollToIndex: async () => {},
     scrollToItem: async () => {},
+    scrollToKey: async () => {},
     scrollToOffset: async () => {},
     setItemSize() {},
     setScrollProcessingEnabled() {},

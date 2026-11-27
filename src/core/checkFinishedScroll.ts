@@ -5,13 +5,12 @@ import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { getCurrentTargetOffset, isEndAlignedLastItemTarget, isIndexScrollTarget } from "@/core/getCurrentTargetOffset";
 import { getDataLength } from "@/core/IndexedData";
-import { getLayoutOffset } from "@/core/layoutAccessors";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 export { getCurrentTargetOffset };
 

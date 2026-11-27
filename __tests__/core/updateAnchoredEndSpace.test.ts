@@ -4,13 +4,13 @@ import { getNativeScrollPoint } from "../../src/core/doScrollParams";
 import { onScroll } from "../../src/core/onScroll";
 import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { setContentInsetOverride, setFooterSize } from "../../src/core/updateContentMetrics";
-import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { Platform } from "../../src/platform/Platform";
 import { getContentInsetEnd } from "../../src/state/getContentInsetEnd";
 import { peek$, type StateContext, set$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { getLayoutValue, rebuildTestLayout, setLayoutValues } from "../helpers/layoutStore";
 
 describe("updateAnchoredEndSpace", () => {
     let mockCtx: StateContext;
@@ -45,13 +45,13 @@ describe("updateAnchoredEndSpace", () => {
             mockState.props.anchoredEndSpace = { anchorIndex: 1, anchorOffset: offset };
             mockState.props.anchoredEndSpaceOwner = "list";
             mockState.props.contentInset = { bottom: 40, left: 0, right: 0, top: 0 };
-            mockState.positions = [0, 100, 220];
+            setLayoutValues(mockState, "positions", [0, 100, 220]);
             mockState.totalSize = 300;
             set$(mockCtx, "totalSize", 300);
 
             maybeUpdateAnchoredEndSpace(mockCtx);
 
-            expect(mockState.positions[1]! - getScrollRangeEnd(mockCtx)).toBe(offset);
+            expect(getLayoutValue(mockState, "positions", 1)! - getScrollRangeEnd(mockCtx)).toBe(offset);
             expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(60 - offset);
         } finally {
             Platform.OS = previousPlatform;
@@ -91,7 +91,7 @@ describe("updateAnchoredEndSpace", () => {
                 },
             );
             try {
-                updateItemPositions(ctx, true);
+                rebuildTestLayout(ctx);
                 expect(maybeUpdateAnchoredEndSpace(ctx)).toBe(500);
                 expect(maybeUpdateAnchoredEndSpace(ctx)).toBe(500);
                 expect(onSizeChanged).toHaveBeenCalledTimes(1);
@@ -125,7 +125,7 @@ describe("updateAnchoredEndSpace", () => {
                 mockState.props.anchoredEndSpace = { anchorIndex: 1 };
                 mockState.props.anchoredEndSpaceOwner = "list";
                 if (source === "native observation") mockState.props.contentInset = undefined;
-                mockState.positions = [0, 100, 220];
+                setLayoutValues(mockState, "positions", [0, 100, 220]);
                 mockState.totalSize = 300;
                 mockState.scroll = mockState.scrollPending = 100;
                 set$(mockCtx, "totalSize", 300);
@@ -146,7 +146,7 @@ describe("updateAnchoredEndSpace", () => {
                 }
 
                 expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(60);
-                expect(mockState.positions[1]! - getScrollRangeEnd(mockCtx)).toBe(0);
+                expect(getLayoutValue(mockState, "positions", 1)! - getScrollRangeEnd(mockCtx)).toBe(0);
                 expect(mockState.scroll).toBe(100);
             } finally {
                 Platform.OS = previousPlatform;

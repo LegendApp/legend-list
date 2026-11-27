@@ -11,10 +11,9 @@ export function measureContainersInLayoutEffect(
 ) {
     const dataChangeEpoch = ctx.state.dataChangeEpoch;
     const measurements: (ItemSizeMeasurement & { containerId: number; generation: number })[] = [];
-    const containerIds =
-        ctx.state.initialScrollSession?.kind === "bootstrap" && ctx.state.initialScrollSession.bootstrap
-            ? ctx.viewRefs.keys()
-            : (targetContainerIds ?? ctx.viewRefs.keys());
+    const containerIds = ctx.state.initialScroll?.bootstrap
+        ? ctx.viewRefs.keys()
+        : (targetContainerIds ?? ctx.viewRefs.keys());
 
     for (const containerId of containerIds) {
         const viewRef = ctx.viewRefs.get(containerId);
@@ -44,11 +43,10 @@ export function measureContainersInLayoutEffect(
         } finally {
             layoutState.measuringContainersInLayout = wasMeasuringInLayout;
         }
-        if (ctx.state.initialScrollSession?.kind !== "bootstrap" || !ctx.state.initialScrollSession.bootstrap) return;
+        if (!ctx.state.initialScroll?.bootstrap) return;
         ctx.state.scheduledWork.microtask(() => {
             const state = ctx.state;
-            const bootstrap =
-                state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+            const bootstrap = state.initialScroll?.bootstrap;
             if (bootstrap?.visibleIndices?.length && state.dataChangeEpoch === dataChangeEpoch) {
                 const measuredKeys = new Set<string>();
                 for (const { containerId, generation, itemKey } of measurements) {

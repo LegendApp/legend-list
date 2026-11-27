@@ -8,11 +8,13 @@ export function createViewabilityClock(work: ScheduledWork) {
     const pending = new Map<ScheduledWorkKey, { at: number; callback: () => void }>();
     const originalTimeout = work.timeout.bind(work);
     const originalCancel = work.cancel.bind(work);
-    const date = spyOn(Date, "now").mockImplementation(() => now);
+    const originalHas = work.has.bind(work);
+    const date = spyOn(performance, "now").mockImplementation(() => now);
     const cancel = spyOn(work, "cancel").mockImplementation((key) => {
         pending.delete(key);
         originalCancel(key);
     });
+    const has = spyOn(work, "has").mockImplementation((key) => pending.has(key) || originalHas(key));
     const timeout = spyOn(work, "timeout").mockImplementation((callback, delay, key) => {
         if (key?.startsWith("viewability:")) {
             originalCancel(key);
@@ -36,6 +38,7 @@ export function createViewabilityClock(work: ScheduledWork) {
         restore() {
             pending.clear();
             timeout.mockRestore();
+            has.mockRestore();
             cancel.mockRestore();
             date.mockRestore();
         },

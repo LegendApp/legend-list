@@ -18,7 +18,8 @@ export function didThresholdDataChange(snapshot: ThresholdSnapshot | undefined, 
         !!snapshot &&
         !snapshot.isRequestPending &&
         (snapshot.dataLength !== context.dataLength ||
-            (snapshot.data !== context.data && snapshot.contentSize !== context.contentSize))
+            ((snapshot.data !== context.data || snapshot.dataRevision !== context.dataRevision) &&
+                snapshot.contentSize !== context.contentSize))
     );
 }
 

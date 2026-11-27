@@ -23,8 +23,10 @@ import {
     syncLayoutStoreStructure,
 } from "@/core/layoutStoreLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
+import { getObservedScrollOffset } from "@/core/observedScroll";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { scheduleContainerLayout, triggerMountedContainerLayouts } from "@/core/scheduleContainerLayout";
+import { reconcileActiveScrollTarget } from "@/core/scrollTo";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { getViewabilityStartOffset, hasViewabilityConsumers, updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -425,7 +427,7 @@ export function schedulePendingDataChangeLayout(ctx: StateContext) {
     state.scheduledWork.microtask(() => {
         // A normal commit handles this before the microtask. Suspense can keep its
         // layout effects disconnected while the visible list still receives scrolls.
-        if (!state.isUnmounted && state.didDataChange && state.previousIndexByKey !== state.indexByKey) {
+        if (!state.isUnmounted && state.didDataChange && state.layoutDataChangeEpoch !== state.dataChangeEpoch) {
             calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
         }
     }, "dataChangeLayout");
@@ -439,23 +441,32 @@ export function calculateItemsInView(
         didMeasureEstimatedLayout?: boolean;
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
+        refreshFixedSizes?: boolean;
         mvcpAdjustmentSource?: ScrollAdjustmentSource;
         initialLayout?: boolean;
         scrollVelocity?: number;
     } = {},
 ) {
     const state = ctx.state;
-    // Render refreshes key lookups before the parent's data-change layout pass.
-    // If keys moved, preserve the old positions/slots until that pass captures MVCP.
-    // Stable indices (such as an append) can still update while Suspense hides effects.
-    if (state.didDataChange && !state.isFirst && !params.dataChanged && state.previousIndexByKey !== state.indexByKey) {
-        if (!state.previousIndexByKey) return;
-        for (const [key, index] of state.previousIndexByKey) {
-            if (state.indexByKey.get(key) !== index) {
+    // Measure against the existing layout until the data-change pass reconciles moved keys.
+    if (
+        state.didDataChange &&
+        !state.isFirst &&
+        !params.dataChanged &&
+        state.layoutDataChangeEpoch !== state.dataChangeEpoch &&
+        !state.dataSourceMutationApplied
+    ) {
+        const indexedData = getIndexedData(state);
+        const count = indexedData.getLength();
+        for (const key of state.containerItemKeys.keys()) {
+            const index = state.indexByKey.get(key);
+            if (index === undefined || index >= count || indexedData.getKey(index) !== key) {
                 schedulePendingDataChangeLayout(ctx);
                 return;
             }
         }
+        // Appends leave existing indices in place, so they can reconcile in this pass.
+        params = { ...params, dataChanged: true, doMVCP: true };
     }
     batchedUpdates(() => {
         const {
@@ -476,7 +487,9 @@ export function calculateItemsInView(
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || EMPTY_INDEX_SET;
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
-        const { dataChanged, didMeasureEstimatedLayout, forceFullItemPositions, initialLayout } = params;
+        const { didMeasureEstimatedLayout, forceFullItemPositions, initialLayout } = params;
+        const dataChanged =
+            params.dataChanged && (!state.didDataChange || state.layoutDataChangeEpoch !== state.dataChangeEpoch);
         const { hasEstimatedInitialLayout } = state;
         const didDataChange = !!dataChanged;
         const isInitialLayout = !!initialLayout;
@@ -484,10 +497,16 @@ export function calculateItemsInView(
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (scrollLength === 0 || !prevNumContainers) {
+            if (didDataChange && !state.isFirst && !state.dataSourceMutationApplied) {
+                syncLayoutStoreStructure(ctx);
+                reconcileLayoutStoreDataChange(ctx);
+                syncLayoutStoreState(ctx);
+                state.layoutDataChangeEpoch = state.dataChangeEpoch;
+            }
             return;
         }
         const dataLength = indexedData.getLength();
-        syncLayoutStoreStructure(ctx);
+        if (!didDataChange || !getActiveLayoutStore(ctx)) syncLayoutStoreStructure(ctx);
         const scrollTargetPinnedRange = state.scrollTargetPinnedRange;
         let scrollTargetPinnedStart = 0;
         let scrollTargetPinnedEnd = -1;
@@ -506,7 +525,7 @@ export function calculateItemsInView(
         if ((didDataChange || isInitialLayout) && state.isFirst) {
             syncLayoutStoreState(ctx);
         }
-        if (syncActiveRowLayoutStoreSpans(ctx)) {
+        if (!didDataChange && syncActiveRowLayoutStoreSpans(ctx)) {
             syncLayoutStoreState(ctx);
         }
 
@@ -694,10 +713,20 @@ export function calculateItemsInView(
                 ? prepareMVCP(ctx, didDataChange, mvcpAdjustmentSource)
                 : undefined;
 
-        const hasActiveLayoutStore = !!getActiveLayoutStore(ctx);
+        if (didDataChange) {
+            syncLayoutStoreStructure(ctx);
+            syncActiveRowLayoutStoreSpans(ctx);
+        }
+        if (params.refreshFixedSizes) {
+            rebuildLayoutStoreExact(ctx);
+            // The array API refreshes explicit fixed sizes after extraData changes.
+            // A source continues to resolve sizes only as its indices are requested.
+            if (legacyData) materializeFixedLayoutStoreRange(ctx, 0, dataLength - 1);
+        }
+        layout = getActiveLayoutStore(ctx);
+        const hasActiveLayoutStore = !!layout;
         const didApplyDataSourceMutation = !!state.dataSourceMutationApplied && !state.dataSourceNeedsReset;
         const canReconcileLayoutStoreDataChange =
-            !forceFullItemPositions &&
             didDataChange &&
             !state.isFirst &&
             hasActiveLayoutStore &&
@@ -718,9 +747,6 @@ export function calculateItemsInView(
             });
         }
 
-        if (didApplyDataSourceMutation) {
-            layout = getActiveLayoutStore(ctx);
-        }
         const shouldMaterializeLayoutStoreRange =
             hasActiveLayoutStore && (!didDataChange || didApplyDataSourceMutation);
         let layoutStoreMaterializedRange = shouldMaterializeLayoutStoreRange
@@ -761,8 +787,8 @@ export function calculateItemsInView(
 
         syncLayoutStoreState(ctx);
         // Advance the position snapshot for later pending renders and the eventual commit.
-        if (state.previousIndexByKey) {
-            state.previousIndexByKey = indexByKey;
+        if (didDataChange) {
+            state.layoutDataChangeEpoch = state.dataChangeEpoch;
         }
 
         // Appends can grow content size while the scroll offset is unchanged. Refresh the
@@ -804,7 +830,8 @@ export function calculateItemsInView(
         }
         const scrollBeforeMVCP = state.scroll;
         const scrollAdjustPendingBeforeMVCP = peek$(ctx, "scrollAdjustPending") ?? 0;
-        checkMVCP?.();
+        const didRetargetScroll = didDataChange && reconcileActiveScrollTarget(ctx);
+        if (!didRetargetScroll) checkMVCP?.();
         const didMVCPAdjustScroll =
             !!checkMVCP &&
             (state.scroll !== scrollBeforeMVCP ||
@@ -812,6 +839,33 @@ export function calculateItemsInView(
         if (didMVCPAdjustScroll) {
             updateScroll(state.scroll);
             updateScrollRange();
+        }
+        // Native may already have applied and clamped a measurement adjustment before
+        // its scroll event arrives. Keep that viewport covered alongside the modeled one.
+        const observedNativeScroll =
+            Platform.OS !== "web" &&
+            mvcpAdjustmentSource === "item-size" &&
+            !state.scrollingTo &&
+            state.refScroller.current?.getCurrentScrollOffset
+                ? getObservedScrollOffset(ctx)
+                : undefined;
+        const observedItemOffset =
+            observedNativeScroll === undefined
+                ? scroll
+                : getItemSpaceOffset(ctx, observedNativeScroll, scrollAdjustPending, topPad);
+        if (
+            didMVCPAdjustScroll ||
+            (observedNativeScroll !== undefined &&
+                (observedItemOffset < scrollTopBuffered || observedItemOffset + scrollLength > scrollBottomBuffered))
+        ) {
+            scrollTopBuffered = Math.min(scrollTopBuffered, observedItemOffset);
+            scrollBottomBuffered = Math.max(scrollBottomBuffered, observedItemOffset + scrollLength);
+            layoutStoreMaterializedRange = materializeLayoutStoreOffsetRange(
+                ctx,
+                scrollTopBuffered,
+                scrollBottomBuffered,
+            );
+            totalSize = getContentSize(ctx, includeContentContainerMinSize);
         }
         firstVisibleScroll =
             firstVisibleItemStartOffset >= scrollLength
@@ -1077,8 +1131,8 @@ export function calculateItemsInView(
                             // we would otherwise hide.
                             const isLayoutReady =
                                 state.sizesKnown.has(id) ||
-                                resolveContainerItemMetadata(state, containerIndex, i, indexedData.getItem(i)).fixedItemSize !==
-                                    undefined;
+                                resolveContainerItemMetadata(state, containerIndex, i, indexedData.getItem(i))
+                                    .fixedItemSize !== undefined;
                             set$(ctx, `containerLayoutReady${containerIndex}`, isLayoutReady, deferred);
                         }
                     }

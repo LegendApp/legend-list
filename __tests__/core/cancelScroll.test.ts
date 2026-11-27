@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import { cancelScroll, interruptUserScroll } from "../../src/core/cancelScroll";
-import { setInitialScrollSession } from "../../src/core/initialScrollSession";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -163,8 +162,7 @@ describe("cancelScroll", () => {
             });
             const { ctx } = createScrollingContext(undefined, { onScroll });
             ctx.values.set("isScrollActive", true);
-            ctx.state.initialScroll = { index: 0, viewOffset: 0 } as any;
-            setInitialScrollSession(ctx.state, { kind: "bootstrap" });
+            ctx.state.initialScroll = { index: 0, kind: "index", previousDataLength: 0, viewOffset: 0 };
             ctx.state.deferredPublicOnScrollEvent = { nativeEvent: { contentOffset: { x: 0, y: 0 } } } as any;
 
             cancelScroll(ctx);

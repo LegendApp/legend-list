@@ -1,4 +1,5 @@
 import { getDataItem } from "@/core/IndexedData";
+import { setLayoutStoreMeasuredSize } from "@/core/layoutStoreLifecycle";
 import { setSize } from "@/core/setSize";
 import type { StateContext } from "@/state/state";
 import { normalizeLayoutSize } from "@/utils/layoutMeasurement";
@@ -53,7 +54,12 @@ function getKnownOrFixedSize(
 
 export function getKnownOrFixedItemSize(ctx: StateContext, index: number) {
     const key = getId(ctx.state, index);
-    return getKnownOrFixedSize(ctx, key, index, getDataItem(ctx.state, index));
+    const wasKnown = ctx.state.sizesKnown.has(key);
+    const size = getKnownOrFixedSize(ctx, key, index, getDataItem(ctx.state, index));
+    if (!wasKnown && size !== undefined) {
+        setLayoutStoreMeasuredSize(ctx, index, size);
+    }
+    return size;
 }
 
 export function areKnownOrFixedItemSizesAvailable(ctx: StateContext, startIndex: number, endIndex: number) {

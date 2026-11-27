@@ -35,7 +35,7 @@ export function clampScrollOffset(ctx: StateContext, offset: number, scrollTarge
         const isRawOffset =
             scrollTarget?.offset !== undefined &&
             (scrollTarget.index === undefined ||
-                (scrollTarget.isInitialScroll && state.initialScrollSession?.kind === "offset"));
+                (scrollTarget.isInitialScroll && state.initialScroll?.kind === "offset"));
         const maxOffset = Math.max(isRawOffset ? 0 : minOffset, baseMaxOffset + extraEndOffset);
         clampedOffset = Math.min(offset, maxOffset);
     }

@@ -28,8 +28,8 @@ afterEach(() => {
 });
 
 function getBootstrapSession() {
-    const session = ctx.state.initialScrollSession;
-    return session?.kind === "bootstrap" ? session.bootstrap : undefined;
+    const session = ctx.state.initialScroll;
+    return session?.bootstrap;
 }
 
 async function settle() {

@@ -104,3 +104,20 @@ export function getDataLength(state: InternalState) {
 export function getLegacyData(state: InternalState) {
     return getIndexedData(state).getLegacyData();
 }
+
+export function findIndexForKey(state: InternalState, key: string) {
+    const data = getIndexedData(state);
+    const length = data.getLength();
+    const prepared = state.indexByKey.get(key);
+    if (prepared !== undefined && prepared < length && (!state.didDataChange || data.getKey(prepared) === key)) {
+        return prepared;
+    }
+    if (data.kind === "dataSource") return;
+    if (!state.props.keyExtractor) {
+        const index = Number(key);
+        return Number.isInteger(index) && String(index) === key && index >= 0 && index < length ? index : undefined;
+    }
+    for (let index = 0; index < length; index++) {
+        if (data.getKey(index) === key) return index;
+    }
+}

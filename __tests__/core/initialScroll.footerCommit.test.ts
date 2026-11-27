@@ -29,12 +29,13 @@ describe("footer commit during the final initial end scroll", () => {
                 initialScroll: {
                     contentOffset: 450,
                     index: 6,
+                    kind: "index",
                     preserveForBottomPadding: true,
                     preserveForFooterLayout: false,
+                    previousDataLength: 7,
                     viewOffset: -50,
                     viewPosition: 1,
                 },
-                initialScrollSession: { kind: "bootstrap", previousDataLength: 7 },
                 positions: data.map((_, index) => index * 100),
                 props: { data, estimatedItemSize: 100 },
                 queuedInitialLayout: true,
@@ -142,7 +143,7 @@ describe("footer commit during the final initial end scroll", () => {
     });
 
     it("does not replace an offset-based initial scroll with an end target", () => {
-        ctx.state.initialScrollSession = { kind: "offset" };
+        ctx.state.initialScroll = { ...ctx.state.initialScroll, kind: "offset" };
         handleBootstrapInitialScrollFooterLayout(ctx, {
             dataLength: 7,
             footerSize: 50,

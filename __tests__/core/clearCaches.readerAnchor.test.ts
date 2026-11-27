@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
+import { getLayoutOffsets, getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
 import "../setup";
 
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
@@ -7,7 +8,6 @@ import { rearmEndFollowIfSettled } from "../../src/core/finishMaintainScrollAtEn
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { restoreItemSizeEstimates, saveItemSizeEstimates } from "../../src/core/itemSizeCache";
 import { prepareMVCP } from "../../src/core/mvcp";
-import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { Platform } from "../../src/platform/Platform";
 import { listen$ } from "../../src/state/state";
@@ -94,9 +94,17 @@ describe("size-cache invalidation reader anchoring", () => {
     it("refreshes authoritative fixed sizes ahead of retained estimates", () => {
         let fixedSize = 80;
         const ctx = createMockContext(
-            { numColumns: 1 },
+            { numColumns: 1, numContainers: 2, numContainersPooled: 2, readyToRender: true },
             {
-                props: { data: [0, 1], estimatedItemSize: 72, getFixedItemSize: () => fixedSize },
+                didFinishInitialScroll: true,
+                idCache: ["item_0", "item_1"],
+                props: {
+                    data: [0, 1],
+                    estimatedItemSize: 72,
+                    getFixedItemSize: () => fixedSize,
+                    keyExtractor: (_, index) => `item_${index}`,
+                },
+                scrollLength: 400,
                 sizes: new Map([
                     ["item_0", 80],
                     ["item_1", 80],
@@ -108,16 +116,11 @@ describe("size-cache invalidation reader anchoring", () => {
                 totalSize: 160,
             },
         );
+        ctx.state.triggerCalculateItemsInView = () => calculateItemsInView(ctx, { forceFullItemPositions: true });
         const handle = createImperativeHandle(ctx);
         fixedSize = 120;
         handle.clearCaches();
-        updateItemPositions(ctx, false, {
-            doMVCP: false,
-            forceFullUpdate: true,
-            scrollBottomBuffered: 0,
-            startIndex: 0,
-        });
-        expect(ctx.state.positions).toEqual([0, 120]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 120]);
         expect(ctx.state.totalSize).toBe(240);
         expect(ctx.state.sizesKnown.get("item_0")).toBe(120);
     });
@@ -163,7 +166,7 @@ describe("size-cache invalidation reader anchoring", () => {
                     ctx.state.indexByKey.clear();
                     for (const [index, item] of nextData.entries()) {
                         ctx.state.indexByKey.set(item.id, index);
-                        ctx.state.positions[index] = index * 100;
+                        setLayoutValue(ctx.state, "positions", index, index * 100);
                     }
                     adjust?.();
 
@@ -218,7 +221,7 @@ describe("size-cache invalidation reader anchoring", () => {
             for (const scale of [1.4, 1]) {
                 handle.clearCaches({ mode: "sizes" });
                 expect(ctx.state.sizesKnown.size).toBe(0);
-                expect(ctx.state.scroll - ctx.state.positions[16]!).toBe(25);
+                expect(ctx.state.scroll - getLayoutValue(ctx.state, "positions", 16)!).toBe(25);
                 // Independent committed batches arrive below, at, and above the reader.
                 for (const indices of [[17, 18, 19], [16], [14, 15]]) {
                     updateItemSizesBatch(
@@ -228,7 +231,7 @@ describe("size-cache invalidation reader anchoring", () => {
                             size: { height: Math.round(heights[index] * scale), width: 400 },
                         })),
                     );
-                    expect(ctx.state.scroll - ctx.state.positions[16]!).toBe(25);
+                    expect(ctx.state.scroll - getLayoutValue(ctx.state, "positions", 16)!).toBe(25);
                     expect(handle.anchorVisibleContent({ hold: false })).toEqual({ key: "row-16", offset: 25 });
                 }
             }

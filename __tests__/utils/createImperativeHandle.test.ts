@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
 import "../setup";
 
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
@@ -1470,9 +1471,8 @@ describe("createImperativeHandle visible anchors", () => {
         try {
             const handle = createImperativeHandle(ctx);
             expect(handle.anchorVisibleContent({ key: "missing" })).toBeUndefined();
-            ctx.state.positions[1] = undefined;
+            ctx.state.layoutStoreRuntime = undefined;
             expect(handle.anchorVisibleContent({ key: "1" })).toBeUndefined();
-            ctx.state.positions.length = 0;
             expect(handle.anchorVisibleContent()).toBeUndefined();
             expect(ctx.state.visibleContentAnchor).toBe(existing);
             expect(ctx.state.scroll).toBe(110);
@@ -1599,7 +1599,7 @@ describe("createImperativeHandle.anchorVisibleContent", () => {
             },
         );
         ctx.state.indexByKey.set("reader", 0);
-        ctx.state.positions[0] = 0;
+        setLayoutValue(ctx.state, "positions", 0, 0);
         return ctx;
     };
 
@@ -1675,7 +1675,7 @@ describe("createImperativeHandle.anchorVisibleContent", () => {
 
             grow("item_5", 160);
             grow("item_6", 140);
-            expect(ctx.state.scroll - ctx.state.positions[6]!).toBe(80);
+            expect(ctx.state.scroll - getLayoutValue(ctx.state, "positions", 6)!).toBe(80);
             expect(ctx.state.scroll).toBe(740);
             expect(ctx.values.get("isFollowingEnd")).toBe(false);
             expect(scrollToEndSpy).not.toHaveBeenCalled();
@@ -1817,7 +1817,7 @@ describe("createImperativeHandle.scrollIndexIntoView oversized rows", () => {
             });
 
             expect(scrollTo).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 990 });
-            expect(ctx.state.positions[10]! - observedOffset).toBe(10);
+            expect(getLayoutValue(ctx.state, "positions", 10)! - observedOffset).toBe(10);
             finishScrollTo(ctx);
             expect(await pending).toBeUndefined();
         });
@@ -1954,6 +1954,7 @@ describe("indexed imperative item lookup", () => {
                     {
                         didFinishInitialScroll: true,
                         endNoBuffer: 1,
+                        positions: [0, 100, 200, 300],
                         props:
                             mode === "array"
                                 ? { data: items }
@@ -1966,17 +1967,27 @@ describe("indexed imperative item lookup", () => {
                                           subscribe: () => () => {},
                                       },
                                   },
+                        scroll: 100,
+                        scrollLength: 100,
                         startNoBuffer: 1,
                     },
                 );
                 const scroll = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation(() => undefined);
                 try {
                     const handle = createImperativeHandle(ctx);
-                    await handle[method]({ animated: false, item: items[2], viewOffset: 7 });
-                    expect(scroll).toHaveBeenCalledWith(
-                        ctx,
-                        expect.objectContaining({ animated: false, index: 2, viewOffset: 7 }),
-                    );
+                    if (method === "scrollToItem") {
+                        await handle.scrollToItem({ animated: false, item: items[2], viewOffset: 7 });
+                        expect(scroll).toHaveBeenCalledWith(
+                            ctx,
+                            expect.objectContaining({ animated: false, index: 2, viewOffset: 7 }),
+                        );
+                    } else {
+                        await handle.scrollItemIntoView({ animated: false, item: items[2] });
+                        expect(scroll).toHaveBeenCalledWith(
+                            ctx,
+                            expect.objectContaining({ animated: false, index: 2, viewPosition: 1 }),
+                        );
+                    }
                     if (mode === "source") expect(getItem.mock.calls.map(([index]) => index)).toEqual([0, 1, 2]);
                     scroll.mockClear();
                     getItem.mockClear();
@@ -1997,8 +2008,11 @@ describe("indexed imperative item lookup", () => {
             {},
             {
                 didFinishInitialScroll: true,
-                endNoBuffer: 2,
+                endNoBuffer: 1,
+                positions: [0, 100, 200],
                 props: { data: items },
+                scroll: 100,
+                scrollLength: 100,
                 startNoBuffer: 1,
             },
         );

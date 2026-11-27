@@ -1,11 +1,12 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
-import { getDataLength, getLegacyData } from "@/core/IndexedData";
+import { getDataLength } from "@/core/IndexedData";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import {
     canDispatchReachedEdge,
     dispatchReachedEdge,
+    getThresholdSnapshot,
     type ReachedEdge,
     resetSharedEdgeGateIfOutsideHysteresis,
 } from "@/utils/edgeReachedGate";
@@ -71,7 +72,7 @@ export function checkAtBottom(ctx: StateContext, allowedEdge?: ReachedEdge, allo
                 onEndReachedThreshold! * scrollLength,
                 state.isEndReached,
                 state.endReachedSnapshot,
-                { contentSize, data: getLegacyData(state), dataLength, scroll },
+                getThresholdSnapshot(ctx, contentSize),
                 (distance) => {
                     if (
                         state.props.onEndReached &&

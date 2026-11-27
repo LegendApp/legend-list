@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { setLayoutValue } from "../helpers/layoutStore";
 import "../setup";
 
 import * as React from "react";
@@ -874,7 +875,7 @@ describe("animated end scroll with frozen keyboard close", () => {
                     const state = harness.ctx!.state;
                     const append = () => {
                         const index = state.props.data.length;
-                        state.positions.push(index * 100);
+                        setLayoutValue(state, "positions", index, index * 100);
                         state.sizes.set(`item_${index}`, 100);
                         state.props.data = [...state.props.data, index];
                         harness.ctx!.values.set("totalSize", state.props.data.length * 100);

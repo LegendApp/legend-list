@@ -23,7 +23,7 @@ function createScenario() {
     let now = 0,
         nextId = 0;
     const pending = new Map<number, { at: number; callback: () => void }>();
-    const clock = spyOn(Date, "now").mockImplementation(() => now);
+    const clock = spyOn(performance, "now").mockImplementation(() => now);
     const timeout = spyOn(globalThis, "setTimeout").mockImplementation(((callback: () => void, delay: number) => {
         const id = ++nextId;
         pending.set(id, { at: now + delay, callback });

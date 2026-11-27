@@ -97,6 +97,7 @@ describe("checkFinishedScrollFallback", () => {
                     didContainersLayout: true,
                     didFinishInitialScroll: true,
                     hasScrolled: true,
+                    idCache: ["item_0"],
                     lastNativeScrollTime: hasRecentProgress ? Date.now() : 0,
                     positions: [0],
                     props: { data: ["row"], getFixedItemSize: () => 1000 },
@@ -105,6 +106,7 @@ describe("checkFinishedScrollFallback", () => {
                     scrollingTo: { animated: true, index: 0, offset: 0, targetOffset: 800, viewPosition: 1 },
                     scrollLength: 200,
                     scrollPending: 400,
+                    sizesKnown: new Map([["item_0", 1000]]),
                 },
             );
             checkFinishedScrollFallback(ctx);
@@ -893,7 +895,7 @@ describe("checkFinishedScrollFallback", () => {
             {
                 didContainersLayout: true,
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         didDispatchNativeScroll: true,
                         watchdog: {
@@ -960,14 +962,14 @@ describe("checkFinishedScrollFallback", () => {
             {
                 didContainersLayout: true,
                 hasScrolled: false,
-                initialScrollSession: {
+                initialScroll: {
                     completion: {
                         didDispatchNativeScroll: true,
                         watchdog: {
                             targetOffset: 220,
                         },
                     },
-                    kind: "bootstrap",
+                    kind: "index",
                     previousDataLength: 0,
                 } as any,
                 positions: Object.assign([], { 99: 220 }),
@@ -996,7 +998,7 @@ describe("checkFinishedScrollFallback", () => {
             expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 219 }]);
 
             // Rows above the target measure smaller while the nudge is pending, which moves the target up.
-            ctx.state.positions[99] = 184;
+            setLayoutValue(ctx.state, "positions", 99, 184);
             requestAdjust(ctx, -36, "item-size");
             for (const frame of frames.splice(0)) {
                 frame(0);
@@ -1021,9 +1023,9 @@ describe("checkFinishedScrollFallback", () => {
             {
                 didContainersLayout: true,
                 hasScrolled: true,
-                initialScrollSession: {
+                initialScroll: {
                     completion: { watchdog: { startScroll: 0, targetOffset: 1578 } },
-                    kind: "bootstrap",
+                    kind: "index",
                     previousDataLength: 0,
                 } as any,
                 positions: Object.assign([], { 37: 1618 }),
@@ -1047,7 +1049,7 @@ describe("checkFinishedScrollFallback", () => {
         );
 
         // Rows above item 37 measure 36 points smaller after native landed on the first target
-        ctx.state.positions[37] = 1582;
+        setLayoutValue(ctx.state, "positions", 37, 1582);
         requestAdjust(ctx, -36, "item-size");
         checkFinishedScrollFallback(ctx);
         flushTimers(1);
@@ -1055,7 +1057,7 @@ describe("checkFinishedScrollFallback", () => {
         expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 1542 }]);
         // The retry already lands on the adjusted target, so the queued adjustment must not shift it again
         expect(ctx.state.initialMountAdjusts).toBeUndefined();
-        expect(ctx.state.initialScrollSession?.completion?.watchdog?.targetOffset).toBe(1542);
+        expect(ctx.state.initialScroll?.completion?.watchdog?.targetOffset).toBe(1542);
         expect(ctx.state.scrollingTo).toBeDefined();
     });
 

@@ -28,8 +28,7 @@ export type ScheduledWorkKey =
     | "stickySettle"
     | "preservedInitialScroll"
     | "reachedEdgeSettle"
-    | "renderRangeProjection"
-    | `viewability${string}`;
+    | "renderRangeProjection";
 
 interface Work {
     callback?: () => void;

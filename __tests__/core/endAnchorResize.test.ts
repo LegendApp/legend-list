@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { getLayoutValue } from "../helpers/layoutStore";
 import "../setup";
 
 import { checkLayoutInvariants } from "../../examples-shared/layoutInvariants";
@@ -262,7 +263,8 @@ describe.each(["web", "ios", "android"] as const)("end anchoring across a late v
             if (queued) schedulePreservedEndAnchorCorrection(ctx);
 
             state.props.data = state.props.data.slice(0, -2);
-            state.idCache.length = state.positions.length = state.props.data.length;
+            state.idCache.length = state.props.data.length;
+            state.layoutStoreRuntime!.store.resize(state.props.data.length);
             state.totalSize = 600;
             values.set("totalSize", 600);
             state.scroll = state.lastNativeScroll = 200;
@@ -271,7 +273,7 @@ describe.each(["web", "ios", "android"] as const)("end anchoring across a late v
             values.set("numContainers", 4);
             for (let id = 0; id < 4; id++) {
                 values.set(`containerItemKey${id}`, state.idCache[id + 2]);
-                values.set(`containerPosition${id}`, state.positions[id + 2]);
+                values.set(`containerPosition${id}`, getLayoutValue(state, "positions", id + 2));
             }
             expect(checkLayoutInvariants(ctx, { scrollOffset: observed() })).toEqual([]);
             if (!queued) schedulePreservedEndAnchorCorrection(ctx);
@@ -284,7 +286,7 @@ describe.each(["web", "ios", "android"] as const)("end anchoring across a late v
                 expect(state.scroll).toBe(200);
             }
             expect(scrollTo).not.toHaveBeenCalled();
-            expect(state.preservedEndAnchorCorrection).toBeUndefined();
+            expect(state.scheduledWork.has("initialScrollAlignment")).toBe(false);
         });
     }
 

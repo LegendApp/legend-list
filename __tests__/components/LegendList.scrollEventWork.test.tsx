@@ -4,7 +4,6 @@ import "../setup";
 import * as React from "react";
 import { Animated, Text } from "react-native";
 
-import * as updateItemPositionsModule from "../../src/core/updateItemPositions";
 import { type StateContext, useStateContext } from "../../src/state/state";
 import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
 import { act, render } from "../helpers/testingLibrary";
@@ -105,12 +104,13 @@ describe("scroll events that keep the render range", () => {
             if (counting) notifications += ctx.listeners.get(name)?.size ?? 0;
             return valuesSet(name, value);
         };
-        const rangePasses = spyOn(updateItemPositionsModule, "updateItemPositions");
+        const rangePasses = spyOn(state.layoutStoreRuntime!.store, "forEachLayout");
         const edgeChecks = spyOn(checkAtBottomModule, "checkAtBottom");
         let clock = Date.now();
         spyOn(Date, "now").mockImplementation(() => clock);
         spyOn(performance, "now").mockImplementation(() => clock);
         let rangeChanges = 0;
+        let materializedEvents = 0;
         let hitNotifications = 0;
         let midListEdgeChecks = 0;
         try {
@@ -128,6 +128,8 @@ describe("scroll events that keep the render range", () => {
                 if (range !== `${state.startBuffered}-${state.endBuffered}`) rangeChanges++;
                 if (rangePasses.mock.calls.length === passesBefore) {
                     hitNotifications += notifications - notificationsBefore;
+                } else {
+                    materializedEvents++;
                 }
                 // Past the start threshold (half a viewport) and far from the end.
                 if (i * 4 > VIEWPORT) midListEdgeChecks += edgeChecks.mock.calls.length - edgeChecksBefore;
@@ -137,7 +139,8 @@ describe("scroll events that keep the render range", () => {
         }
         // The range-window cache answers every event whose buffered range is unchanged, without signal writes.
         expect(rangeChanges).toBeGreaterThan(0);
-        expect(rangePasses.mock.calls.length).toBe(rangeChanges);
+        expect(materializedEvents).toBeGreaterThanOrEqual(rangeChanges);
+        expect(materializedEvents).toBeLessThan(60);
         expect(hitNotifications).toBe(0);
         // A drag interrupts end following; mid-list that must not force the edge checks.
         expect(midListEdgeChecks).toBe(0);

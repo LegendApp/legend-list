@@ -1,8 +1,8 @@
-import { schedulePreservedEndAnchorCorrection } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView, schedulePendingDataChangeLayout } from "@/core/calculateItemsInView";
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
-import { getDataItem } from "@/core/IndexedData";
+import { findIndexForKey, getDataItem, getDataKey, getDataLength } from "@/core/IndexedData";
+import { schedulePreservedEndAnchorCorrection } from "@/core/initialScrollAnchor";
 import {
     getActiveLayoutStore,
     maybeFlushInitialLayoutStoreEstimate,
@@ -16,7 +16,6 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { checkThresholds } from "@/utils/checkThresholds";
-import { getId } from "@/utils/getId";
 import { getItemSize, type ResolvedItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 import { isNativeLayoutNoise, normalizeLayoutSize } from "@/utils/layoutMeasurement";
@@ -107,7 +106,7 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     const state = ctx.state;
     // The parent's data-change layout pass consumes these sizes and preserves the
     // old positions for MVCP. A child measurement must not overwrite them first.
-    if (state.didDataChange && !state.isFirst && state.previousIndexByKey !== state.indexByKey) {
+    if (state.didDataChange && !state.isFirst && state.layoutDataChangeEpoch !== state.dataChangeEpoch) {
         schedulePendingDataChangeLayout(ctx);
         if (result.shouldMaintainScrollAtEnd) {
             state.scheduledWork.microtask(
@@ -166,7 +165,13 @@ export function isContainerItemCurrent(ctx: StateContext, containerId: number, i
     if (peek$(ctx, `containerItemKey${containerId}`) !== itemKey) return false;
     const state = ctx.state;
     const index = state.indexByKey.get(itemKey);
-    if (index !== undefined && index < state.props.data.length && getId(state, index) === itemKey) return true;
+    if (
+        index !== undefined &&
+        index < getDataLength(state) &&
+        (state.idCache[index] ?? getDataKey(state, index)) === itemKey &&
+        (!state.didDataChange || getDataKey(state, index) === itemKey)
+    )
+        return true;
 
     // The parent refreshes the index map after child layout effects. Remeasure the
     // committed slot afterward, including when recycling has changed its assignment.
@@ -188,7 +193,8 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
             const { height, width } = measurement.size;
             // Fabric's measure() can report NaN for a container with no layout yet. A NaN size would make
             // totalSize NaN, which never equals itself and re-renders forever; onLayout reports it later.
-            if (!Number.isFinite(height) || !Number.isFinite(width)) continue;
+            if (measurement.containerId !== undefined && (!Number.isFinite(height) || !Number.isFinite(width)))
+                continue;
             // Recheck ownership after collection: recycling or invalidation can happen during a batch.
             // Explicit imperative sizes have no container id and bypass the assignment check.
             const ownsMeasuredItem =
@@ -197,7 +203,14 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
                     (measurement.generation === undefined ||
                         (state.containerItemGenerations[measurement.containerId] ?? 0) === measurement.generation));
             if (ownsMeasuredItem) {
-                const index = state.indexByKey.get(measurement.itemKey);
+                let index = state.indexByKey.get(measurement.itemKey);
+                if (index === undefined && measurement.containerId === undefined) {
+                    index = findIndexForKey(state, measurement.itemKey);
+                    if (index !== undefined) {
+                        state.indexByKey.set(measurement.itemKey, index);
+                        state.idCache[index] = measurement.itemKey;
+                    }
+                }
                 const itemData = index === undefined ? undefined : getDataItem(state, index);
                 const metadata =
                     measurement.containerId !== undefined && index !== undefined && itemData !== undefined
@@ -212,21 +225,13 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
         // Publish before scroll recalculation, including when an item callback interrupts the batch.
         // An unchanged total can include old-architecture pending shrink or temporary padding;
         // leave those published sizes alone.
+        // Read web end-follow geometry before the total-size notification can commit.
+        if (result.shouldMaintainScrollAtEnd && Platform.OS === "web") {
+            doMaintainScrollAtEnd(ctx, { prepareOnly: true });
+        }
         if (state.totalSize !== previousTotalSize) {
             set$(ctx, "totalSize", state.totalSize);
         }
-    }
-
-    // Total-size subscribers can commit synchronously, hiding a browser end clamp.
-    // Capture it before publishing; the follow microtask uses the committed geometry.
-    if (result.shouldMaintainScrollAtEnd && Platform.OS === "web") {
-        doMaintainScrollAtEnd(ctx, { prepareOnly: true });
-    }
-
-    // Publish the batch total before recalculating scroll positions. If the total is unchanged,
-    // preserve any published old-architecture pending shrink or temporary padding compensation.
-    if (state.totalSize !== previousTotalSize) {
-        set$(ctx, "totalSize", state.totalSize);
     }
 
     flushItemSizeUpdates(ctx, result);
@@ -282,8 +287,8 @@ function applyItemSize(
         : undefined;
     const diff = updateOneItemSize(ctx, itemKey, sizeObj, resolvedMeasurementItem, false);
 
-    if (diff !== 0) {
-        const size = state.sizesKnown.get(itemKey)!;
+    const size = sizesKnown.get(itemKey);
+    if (diff !== 0 && size !== undefined) {
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;
@@ -297,8 +302,6 @@ function applyItemSize(
             previous: size - diff,
             size,
         });
-
-        state.containerSyncAdjust = undefined;
     }
     updateOtherAxisSizeIfNeeded(ctx, sizeObj, horizontal);
 
@@ -417,9 +420,7 @@ export function updateOneItemSize(
     // equal-to-estimate measurements so future estimate flushes do not reclassify
     // real measured rows as estimated rows.
     if (didSizeChange || didSetPrefixLayoutStoreSize) {
-        if (!didSetPrefixLayoutStoreSize) {
-            setSize(ctx, itemKey, size, notifyTotalSize);
-        }
+        setSize(ctx, itemKey, size, notifyTotalSize);
         maybeFlushInitialLayoutStoreEstimate(ctx, notifyTotalSize);
         return didSizeChange ? size - prevSize : 0;
     }

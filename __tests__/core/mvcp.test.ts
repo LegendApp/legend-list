@@ -8,7 +8,7 @@ import type { StateContext } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { setLayoutValue } from "../helpers/layoutStore";
+import { getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
 
 const originalPlatform = Platform.OS;
 
@@ -113,7 +113,7 @@ describe("mvcp helpers", () => {
         try {
             const adjust = prepareMVCP(ctx);
             ctx.state.totalSize = 100;
-            ctx.state.positions[1] = 0;
+            setLayoutValue(ctx.state, "positions", 1, 0);
             adjust?.();
             expect(ctx.state.scroll).toBe(end);
             expect(ctx.state.scrollPending).toBe(end);
@@ -148,10 +148,10 @@ describe("mvcp helpers", () => {
         const adjust = prepareMVCP(ctx, true);
         ctx.state.indexByKey.clear();
         for (const [index, item] of ctx.state.props.data.entries()) ctx.state.indexByKey.set(item.id, index);
-        ctx.state.positions.splice(0, 0, 0);
-        ctx.state.positions[1] = 100;
-        ctx.state.positions[2] = 200;
-        ctx.state.positions[3] = 300;
+
+        setLayoutValue(ctx.state, "positions", 1, 100);
+        setLayoutValue(ctx.state, "positions", 2, 200);
+        setLayoutValue(ctx.state, "positions", 3, 300);
         adjust?.();
         expect(ctx.state.scrollingTo?.index).toBe(2);
         expect(ctx.state.scroll).toBe(200);
@@ -181,7 +181,7 @@ describe("mvcp helpers", () => {
         );
         for (const dataChanged of [false, true]) {
             const adjust = prepareMVCP(ctx, dataChanged);
-            ctx.state.positions[1] += 50;
+            setLayoutValue(ctx.state, "positions", 1, getLayoutValue(ctx.state, "positions", 1)! + 50);
             adjust?.();
             expect(ctx.state.scroll).toBe(120);
             expect(ctx.values.get("scrollAdjust")).toBe(0);
@@ -213,9 +213,9 @@ describe("mvcp helpers", () => {
                 },
             );
             const adjust = prepareMVCP(ctx, dataChanged);
-            ctx.state.positions[1] += 50;
+            setLayoutValue(ctx.state, "positions", 1, getLayoutValue(ctx.state, "positions", 1)! + 50);
             adjust?.();
-            expect(ctx.state.scroll - ctx.state.positions[1]!).toBe(20);
+            expect(ctx.state.scroll - getLayoutValue(ctx.state, "positions", 1)!).toBe(20);
             expect(ctx.state.pendingNativeMVCPAdjust).toBeUndefined();
             ctx.state.scheduledWork.dispose();
         }
@@ -287,7 +287,7 @@ describe("mvcp helpers", () => {
             ctx.state.props.data = ["new", "first"];
             ctx.state.indexByKey.set("new", 0);
             ctx.state.indexByKey.set("first", 1);
-            ctx.state.positions[1] = 300;
+            setLayoutValue(ctx.state, "positions", 1, 300);
             adjust!();
             await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 

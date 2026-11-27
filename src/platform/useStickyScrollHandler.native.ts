@@ -2,6 +2,7 @@ import { type Ref, useCallback, useEffect, useRef } from "react";
 import { Animated, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 
 import { USER_MOMENTUM_WAIT_TIMEOUT_MS } from "@/constants";
+import { getDataLength } from "@/core/IndexedData";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useLatestRef } from "@/hooks/useLatestRef";
 import type { LooseScrollView } from "@/platform/scrollview-types";
@@ -40,7 +41,7 @@ export function useStickyScrollHandler(
     const targetRef = useRef<unknown>(undefined);
     const generationRef = useRef(0);
     const lastOffsetRef = useRef<number | undefined>(undefined);
-    const hasStickyItems = stickyHeaderIndices?.some((index) => index >= 0 && index < ctx.state.props.data.length);
+    const hasStickyItems = stickyHeaderIndices?.some((index) => index >= 0 && index < getDataLength(ctx.state));
     const shouldUseRnAnimatedEngine = !ctx.state.props.stickyPositionComponentInternal;
     const isNativeSticky = hasStickyItems && shouldUseRnAnimatedEngine;
     const detach = useCallback(() => {

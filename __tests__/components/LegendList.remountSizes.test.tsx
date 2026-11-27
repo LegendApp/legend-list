@@ -2,6 +2,7 @@ import { expect, it, mock } from "bun:test";
 import { handleLayout } from "../../src/core/handleLayout";
 import { updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
+import { getLayoutValue } from "../helpers/layoutStore";
 import { act, render } from "../helpers/testingLibrary";
 
 it("reuses measurements as estimates on remount without treating them as current measurements", async () => {
@@ -43,7 +44,7 @@ it("reuses measurements as estimates on remount without treating them as current
     first.unmount();
 
     const separated = render(list(data, 320, 0, keyExtractor, () => null));
-    expect(ctx!.state.sizes.get("row-1")).toBe(50);
+    expect(ctx!.state.layoutStoreRuntime?.store.getSize(1)).toBe(50);
     act(() => updateOneItemSize(ctx!, "row-1", { height: 500, width: 320 }));
     separated.unmount();
 
@@ -53,7 +54,7 @@ it("reuses measurements as estimates on remount without treating them as current
             act(() => handleLayout(ctx!, { height: 200, width: 320, x: 0, y: 0 }, () => {}));
             delayed.rerender(list([...data]));
             expect(ctx!.state.sizes.get("row-0")).toBe(400);
-            expect(ctx!.state.positions[1]).toBe(400);
+            expect(getLayoutValue(ctx!.state, "positions", 1)).toBe(400);
             expect(ctx!.state.sizesKnown.size).toBe(0);
             expect(ctx!.state.endBuffered).toBeLessThan(3);
             delayed.unmount();
@@ -62,7 +63,7 @@ it("reuses measurements as estimates on remount without treating them as current
 
     const reopened = render(list([...data]));
     expect(ctx!.state.sizes.get("row-0")).toBe(400);
-    expect(ctx!.state.positions[1]).toBe(400);
+    expect(getLayoutValue(ctx!.state, "positions", 1)).toBe(400);
     expect(ctx!.state.sizesKnown.size).toBe(0);
     act(() => handleLayout(ctx!, { height: 200, width: 320, x: 0, y: 0 }, () => {}));
     expect(ctx!.state.endBuffered).toBeLessThan(3);
@@ -70,7 +71,7 @@ it("reuses measurements as estimates on remount without treating them as current
     reopened.rerender(list([...data]));
     act(() => ref.current.clearCaches({ mode: "full" }));
     reopened.rerender(list([...data, { id: "new-row" }]));
-    expect(ctx!.state.sizes.get("row-1")).toBe(50);
+    expect(ctx!.state.layoutStoreRuntime?.store.getSize(1)).toBe(50);
     act(() => updateOneItemSize(ctx!, "row-0", { height: 300, width: 320 }));
     expect(ctx!.state.sizesKnown.get("row-0")).toBe(300);
     reopened.rerender(list([...data, { id: "new-row" }]));
@@ -84,16 +85,16 @@ it("reuses measurements as estimates on remount without treating them as current
     sameArray.unmount();
 
     const afterDefaultClear = render(list());
-    expect(ctx!.state.sizes.get("row-0")).toBe(50);
+    expect(ctx!.state.layoutStoreRuntime?.store.getSize(0)).toBe(50);
     afterDefaultClear.unmount();
 
     const resized = render(list(data, 640));
-    expect(ctx!.state.sizes.get("row-1")).toBe(50);
+    expect(ctx!.state.layoutStoreRuntime?.store.getSize(1)).toBe(50);
     resized.unmount();
     const revised = render(list(data, 320, 1));
-    expect(ctx!.state.sizes.get("row-1")).toBe(50);
+    expect(ctx!.state.layoutStoreRuntime?.store.getSize(1)).toBe(50);
     revised.unmount();
     const unrelated = render(list(data.map((item) => ({ id: `other-${item.id}` }))));
-    expect(ctx!.state.sizes.get("other-row-1")).toBe(50);
+    expect(ctx!.state.layoutStoreRuntime?.store.getSize(1)).toBe(50);
     unrelated.unmount();
 });

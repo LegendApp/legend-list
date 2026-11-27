@@ -17,7 +17,12 @@ export function syncMountedContainer(
     ctx: StateContext,
     containerIndex: number,
     itemIndex: number,
-    options?: { deferred?: DeferredListeners; layout?: LayoutStore; scrollAdjustPending?: number; updateLayout?: boolean },
+    options?: {
+        deferred?: DeferredListeners;
+        layout?: LayoutStore;
+        scrollAdjustPending?: number;
+        updateLayout?: boolean;
+    },
 ) {
     const state = ctx.state;
     const {

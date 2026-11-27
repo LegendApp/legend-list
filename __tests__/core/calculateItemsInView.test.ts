@@ -1,5 +1,5 @@
 import { Platform } from "@/platform/Platform";
-import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, jest, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { checkResetContainers } from "../../src/core/checkResetContainers";
@@ -14,14 +14,18 @@ import type { InternalState } from "../../src/types.internal";
 import { getExpandedContainerPoolSize } from "../../src/utils/containerPool";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
 import { scheduleFullDrawDistancePrewarm } from "../../src/utils/getEffectiveDrawDistance";
-import { getId } from "../../src/utils/getId";
 import { getScrollVelocity } from "../../src/utils/getScrollVelocity";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import * as setDidLayoutModule from "../../src/utils/setDidLayout";
 import { resetInitialRenderState } from "../../src/utils/setInitialRenderState";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { clearLayoutValues, countLayoutValues, getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
-import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
+import {
+    clearLayoutValues,
+    countLayoutValues,
+    getLayoutOffsets,
+    getLayoutValue,
+    setLayoutValue,
+} from "../helpers/layoutStore";
 import { installFakeClock } from "../helpers/webScrollHarness";
 
 describe("calculateItemsInView", () => {
@@ -97,6 +101,7 @@ describe("calculateItemsInView", () => {
                 const rows = Array.from({ length: 100 }, (_, i) => ({ id: `row-${i}` }));
                 mockState.props.data = rows;
                 mockState.props.keyExtractor = (item: { id: string }) => item.id;
+                mockState.props.estimatedItemSize = 50;
                 mockState.props.getFixedItemSize = () => 50;
                 mockState.props.drawDistance = 100;
                 mockState.props.recycleItems = true;
@@ -110,31 +115,24 @@ describe("calculateItemsInView", () => {
 
                 const slots = new Map(mockState.containerItemKeys);
                 const commitData = (data: typeof rows, expectedScroll: number) => {
-                    // LegendList refreshes key lookups during render so child measurements
-                    // see current indices; positions remain from the previous committed data.
+                    // The incoming array changes before the committed key index and geometry.
                     mockState.previousData = mockState.props.data;
-                    mockState.previousIndexByKey = mockState.indexByKey;
+                    mockState.dataChangeEpoch++;
                     mockState.props.data = data;
                     mockState.didDataChange = true;
-                    mockState.indexByKey = new Map();
-                    mockState.idCache.length = data.length;
-                    for (let i = 0; i < data.length; i++) {
-                        mockState.indexByKey.set(getId(mockState, i), i);
-                    }
-                    const positions = [...mockState.positions];
+                    const positions = [...getLayoutOffsets(mockState)];
                     const idsInView = [...mockState.idsInView];
 
                     // A child layout or queued scroll pass runs before the parent effect.
                     for (const doMVCP of [false, true]) {
                         calculateItemsInView(mockCtx, { doMVCP, scrollVelocity: 0 });
                         expect(mockState.containerItemKeys).toEqual(slots);
-                        expect(mockState.positions).toEqual(positions);
+                        expect(getLayoutOffsets(mockState)).toEqual(positions);
                         expect(mockState.idsInView).toEqual(idsInView);
                     }
 
                     checkResetContainers(mockCtx, data);
                     mockState.didDataChange = false;
-                    mockState.previousIndexByKey = undefined;
                     expect(mockState.scroll).toBe(expectedScroll);
                     for (const [key, slot] of slots) {
                         expect(mockState.containerItemKeys.get(key)).toBe(slot);
@@ -160,6 +158,7 @@ describe("calculateItemsInView", () => {
         const rows = Array.from({ length: 100 }, (_, i) => ({ id: `row-${i}` }));
         mockState.props.data = rows;
         mockState.props.keyExtractor = (item: { id: string }) => item.id;
+        mockState.props.estimatedItemSize = 50;
         mockState.props.getFixedItemSize = () => 50;
         mockState.props.drawDistance = 100;
         mockState.props.recycleItems = true;
@@ -171,21 +170,18 @@ describe("calculateItemsInView", () => {
         calculateItemsInView(mockCtx, { dataChanged: true, scrollVelocity: 0 });
 
         mockState.previousData = rows;
-        mockState.previousIndexByKey = mockState.indexByKey;
+        mockState.dataChangeEpoch++;
         mockState.props.data = [{ id: "older" }, ...rows];
         mockState.didDataChange = true;
-        mockState.indexByKey = new Map();
-        mockState.idCache.length = mockState.props.data.length;
-        for (let i = 0; i < mockState.props.data.length; i++) mockState.indexByKey.set(getId(mockState, i), i);
-        const positions = [...mockState.positions];
+        const positions = [...getLayoutOffsets(mockState)];
         mockState.scroll = 2500;
         calculateItemsInView(mockCtx, { scrollVelocity: 0 });
-        expect(mockState.positions).toEqual(positions);
+        expect(getLayoutOffsets(mockState)).toEqual(positions);
 
         // A suspended parent never runs its data-change effect in this turn.
         await Promise.resolve();
         expect(mockState.containerItemKeys.has("row-50")).toBe(true);
-        expect(mockState.previousIndexByKey).toBe(mockState.indexByKey);
+        expect(mockState.layoutDataChangeEpoch).toBe(mockState.dataChangeEpoch);
         const scroll = mockState.scroll;
         const slots = new Map(mockState.containerItemKeys);
 
@@ -198,6 +194,7 @@ describe("calculateItemsInView", () => {
     it("preserves newly appended slots if another pending render inserts before them", () => {
         const rows = Array.from({ length: 10 }, (_, i) => ({ id: `row-${i}` }));
         mockState.props.keyExtractor = (item: { id: string }) => item.id;
+        mockState.props.estimatedItemSize = 50;
         mockState.props.getFixedItemSize = () => 50;
         mockState.props.drawDistance = 0;
         mockState.props.recycleItems = true;
@@ -210,12 +207,9 @@ describe("calculateItemsInView", () => {
 
         const publishData = (data: typeof rows) => {
             mockState.previousData = mockState.props.data;
-            mockState.previousIndexByKey ??= mockState.indexByKey;
+            mockState.dataChangeEpoch++;
             mockState.props.data = data;
             mockState.didDataChange = true;
-            mockState.indexByKey = new Map();
-            mockState.idCache.length = data.length;
-            for (let i = 0; i < data.length; i++) mockState.indexByKey.set(getId(mockState, i), i);
         };
         mockState.props.data = rows;
         calculateItemsInView(mockCtx, { dataChanged: true, scrollVelocity: 0 });
@@ -338,7 +332,7 @@ describe("calculateItemsInView", () => {
             // A scroll-driven pass runs before the deferred frame.
             calculateItemsInView(mockCtx, { scrollVelocity: 0 });
 
-            expect(prepareMVCPSpy).toHaveBeenCalledWith(mockCtx, undefined, "item-size");
+            expect(prepareMVCPSpy).toHaveBeenCalledWith(mockCtx, false, "item-size");
             expect(mockState.scheduledWork.has("mvcpRecalculate")).toBe(false);
         } finally {
             prepareMVCPSpy.mockRestore();
@@ -2299,7 +2293,7 @@ describe("calculateItemsInView", () => {
                 expect(countLayoutValues(mockState, "positions")).toBe(0);
                 expect(mockState.layoutStoreRuntime?.store.getOffset(0)).toBe(0);
                 expect(mockState.layoutStoreRuntime?.store.getOffset(3)).toBe(300);
-                expect(getLayoutValue(mockState, "positions", 20)).toBeUndefined();
+                expect(mockState.containerItemKeys.has("item_20")).toBe(false);
                 expect(mockState.totalSize).toBe(1000000);
             } finally {
             }
@@ -2321,7 +2315,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(countLayoutValues(mockState, "positions")).toBe(0);
-                expect(getLayoutValue(mockState, "positions", 20)).toBeUndefined();
+                expect(mockState.containerItemKeys.has("item_20")).toBe(false);
                 expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 2000]);
             } finally {
             }
@@ -2431,7 +2425,7 @@ describe("calculateItemsInView", () => {
                 expect(mockState.endBuffered).toBe(3);
                 expect(mockState.idsInView).toEqual(["item_0", "item_1", "item_2", "item_3"]);
                 expect(mockState.containerItemKeys.size).toBe(4);
-                expect(getLayoutValue(mockState, "positions", 1000)).toBeUndefined();
+                expect(mockState.idCache[1000]).toBeUndefined();
                 expect(keyExtractor.mock.calls.length).toBeLessThan(50);
             } finally {
                 prepareMVCPSpy.mockRestore();
@@ -2464,7 +2458,7 @@ describe("calculateItemsInView", () => {
 
                 expect(countLayoutValues(mockState, "positions")).toBe(0);
                 expect(mockState.layoutStoreRuntime?.store.getOffset(3)).toBe(300);
-                expect(getLayoutValue(mockState, "positions", 20)).toBeUndefined();
+                expect(mockState.containerItemKeys.has("item_20")).toBe(false);
                 expect(positionUpdates).toEqual([300]);
             } finally {
             }
@@ -2488,7 +2482,7 @@ describe("calculateItemsInView", () => {
                 expect(countLayoutValues(mockState, "positions")).toBe(0);
                 expect(store.getOffset(0)).toBe(0);
                 expect(store.getOffset(1)).toBe(150);
-                expect(getLayoutValue(mockState, "positions", 20)).toBeUndefined();
+                expect(mockState.containerItemKeys.has("item_20")).toBe(false);
                 expect(store.getOffset(20)).toBe(2050);
             } finally {
             }
@@ -2511,7 +2505,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(countLayoutValues(mockState, "positions")).toBe(0);
-                expect(getLayoutValue(mockState, "positions", 20)).toBeUndefined();
+                expect(mockState.containerItemKeys.has("item_20")).toBe(false);
                 expect(store.getOffset(20)).toBe(2050);
                 expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
             } finally {

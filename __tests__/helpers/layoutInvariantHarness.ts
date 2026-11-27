@@ -9,6 +9,7 @@ const invariants = () =>
 // wrappers in testRenderer/testingLibrary check the layout invariants after each act.
 const liveLists = new Set<ListCtx>();
 let enabled = true;
+let actDepth = 0;
 
 export function installLayoutInvariantHarness() {
     invariants().installListRegistry(liveLists);
@@ -40,22 +41,38 @@ export function assertLayoutInvariants(lists: Iterable<ListCtx> = liveLists) {
 export function withLayoutInvariants<T extends (callback: any) => any>(act: T): T {
     return ((callback: () => unknown) => {
         let isAsync = false;
-        const result = act(() => {
-            const value = callback();
-            isAsync = !!value && typeof (value as PromiseLike<unknown>).then === "function";
-            return value;
-        });
+        actDepth++;
+        const finish = () => --actDepth;
         const check = () => {
-            if (enabled) assertLayoutInvariants();
+            // A nested act does not commit its caller's queued updates.
+            if (finish() === 0 && enabled) assertLayoutInvariants();
         };
-        if (isAsync) {
-            // act() returns a non-chainable thenable.
-            return Promise.resolve(result).then((value: unknown) => {
-                check();
+        try {
+            const result = act(() => {
+                const value = callback();
+                isAsync = !!value && typeof (value as PromiseLike<unknown>).then === "function";
                 return value;
             });
+            if (isAsync) {
+                // act() returns a non-chainable thenable.
+                return Promise.resolve(result).then(
+                    (value: unknown) => {
+                        check();
+                        return value;
+                    },
+                    (error) => {
+                        finish();
+                        throw error;
+                    },
+                );
+            }
+            return result;
+        } catch (error) {
+            isAsync = true;
+            finish();
+            throw error;
+        } finally {
+            if (!isAsync) check();
         }
-        check();
-        return result;
     }) as T;
 }

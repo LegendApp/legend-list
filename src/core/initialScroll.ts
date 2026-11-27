@@ -1,6 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { clampScrollOffset, getScrollRangeEnd } from "@/core/clampScrollOffset";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearInitialScrollAnchor, finishInitialScroll } from "@/core/finishInitialScroll";
 import { materializeFixedLayoutStoreIndex, materializeFixedLayoutStorePrefix } from "@/core/fixedLayoutMaterialization";
@@ -8,8 +8,6 @@ import { getDataLength } from "@/core/IndexedData";
 import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scrollTo } from "@/core/scrollTo";
-import { clampScrollIndex } from "@/core/scrollToIndex";
-import { getContentSize } from "@/state/getContentSize";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -36,8 +34,7 @@ export function dispatchInitialScroll(
     scrollTo(ctx, {
         animated: false,
         clampToContentContainerMinSize:
-            ctx.state.initialScroll?.kind === "offset" ||
-            isEndOfContentTarget(target, ctx.state.props.data.length),
+            ctx.state.initialScroll?.kind === "offset" || isEndOfContentTarget(target, getDataLength(ctx.state)),
         forceScroll,
         index: index !== undefined && index >= 0 ? index : undefined,
         isInitialScroll: true,
@@ -73,8 +70,7 @@ export function resolveInitialScrollOffset(
     ctx: StateContext,
     initialScroll: ScrollIndexWithOffset & { kind?: "offset" | "index" | "end" },
 ) {
-    const state = ctx.state;
-    if ((initialScroll.kind ?? state.initialScroll?.kind) === "offset") {
+    if ((initialScroll.kind ?? ctx.state.initialScroll?.kind) === "offset") {
         return (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
     }
 
@@ -83,11 +79,11 @@ export function resolveInitialScrollOffset(
     if (materialize(ctx, initialScroll.index)) {
         syncLayoutStoreState(ctx);
     }
-    if (initialScroll.kind === "end") return Math.max(0, getContentSize(ctx) - state.scrollLength);
+    if (initialScroll.kind === "end") return getScrollRangeEnd(ctx);
     const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
     const target = {
         ...initialScroll,
-        clampToContentContainerMinSize: isEndOfContentTarget(initialScroll, state.props.data.length),
+        clampToContentContainerMinSize: isEndOfContentTarget(initialScroll, getDataLength(ctx.state)),
     };
     const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, target);
     return clampScrollOffset(ctx, resolvedOffset, target);
@@ -113,7 +109,7 @@ export function advanceCurrentInitialScrollSession(ctx: StateContext, options?: 
         initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - resolvedOffset) > 1;
     if (
         !isOffset &&
-        !options?.forceScroll &&
+        (!options?.forceScroll || Platform.OS !== "web") &&
         !didOffsetChange &&
         isInitialScrollInProgress &&
         Math.abs(activeOffset! - resolvedOffset) <= 1

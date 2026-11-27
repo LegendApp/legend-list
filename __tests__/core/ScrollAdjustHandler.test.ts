@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import "../setup"; // Import global test setup
+import "../setup";
 
+import { finishScrollTo } from "../../src/core/finishScrollTo"; // Import global test setup
 import { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
@@ -121,7 +122,7 @@ describe("ScrollAdjustHandler", () => {
             expect(mockCtx.values.get("scrollAdjust")).toBe(0);
             expect(mockCtx.values.get("scrollAdjustPending")).toBe(19);
 
-            handler.commitPendingAdjust(scrollTarget);
+            finishScrollTo(mockCtx);
 
             expect((handler as any).appliedAdjust).toBe(19);
             expect((handler as any).pendingAdjust).toBe(0);

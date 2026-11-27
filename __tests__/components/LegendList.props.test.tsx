@@ -11,16 +11,15 @@ let scrollToCalls: any[] = [];
 let suppressScrollToImplementation = true;
 
 import { MutationDataSource } from "../../example/screens/fixtures/MutationDataSource";
-import { spyOn } from "bun:test";
 import * as calculateModule from "../../src/core/calculateItemsInView";
 import * as allocationModule from "../../src/core/doInitialAllocateContainers";
 import * as followModule from "../../src/core/doMaintainScrollAtEnd";
 import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
-import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
-import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import { getDataLength } from "../../src/core/IndexedData";
+import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { updateScroll } from "../../src/core/updateScroll";
@@ -32,7 +31,7 @@ import { getKnownOrFixedItemSize } from "../../src/utils/getItemSize";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 import { skipLayoutInvariants } from "../helpers/layoutInvariantHarness";
-import { setLayoutValue } from "../helpers/layoutStore";
+import { getLayoutOffsets, setLayoutValue } from "../helpers/layoutStore";
 
 const handlerInstances: ScrollAdjustHandler[] = [];
 const layoutEvent = {
@@ -3402,7 +3401,7 @@ describe("LegendList props behavior", () => {
         expect(scrollToCalls).toContainEqual(expect.objectContaining({ isInitialScroll: true, offset: -96 }));
         act(() => updateScroll(ctx, lastListProps.initialContentOffset, true, { fromNativeScrollEvent: true }));
         expect(ctx.state.scroll).toBe(-96);
-        expect(ctx.state.positions).toEqual([]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([]);
         rendered.unmount();
     });
 
@@ -3430,7 +3429,7 @@ describe("LegendList props behavior", () => {
         await flushAsync();
         expect(peek$(ctx, "alignItemsAtEndPadding")).toBe(40);
         expect(ctx.state.scroll).toBe(-96);
-        expect(ctx.state.positions).toEqual([0, 20]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 20]);
         rendered.unmount();
     });
 
@@ -3551,16 +3550,16 @@ describe("LegendList props behavior", () => {
             ]),
         );
         await flushAsync();
-        expect(ctx.state.positions).toEqual([0, 80, 180]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 80, 180]);
         rendered.rerender(list(true));
         await flushAsync();
-        expect(ctx.state.positions).toEqual([0, 80, 230]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 80, 230]);
         expect(ctx.state.sizesKnown.get("a")).toBe(80);
         rendered.rerender(list(false));
         act(() => updateItemSizesBatch(ctx, [{ itemKey: "b", size: { height: 100, width: 320 } }]));
         await flushAsync();
         expect(ctx.state.sizesKnown.get("a")).toBe(80);
-        expect(ctx.state.positions).toEqual([0, 80, 180]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 80, 180]);
         rendered.unmount();
     });
 
@@ -3592,7 +3591,7 @@ describe("LegendList props behavior", () => {
         await flushAsync();
         expect(ctx.state.sizesKnown.get("a")).toBe(80);
         expect(ctx.state.sizesKnown.get("b")).toBe(150);
-        expect(ctx.state.positions).toEqual([0, 150, 230]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 150, 230]);
         rendered.unmount();
     });
 
@@ -3625,7 +3624,7 @@ describe("LegendList props behavior", () => {
             rendered.rerender(list(2, true));
             await flushAsync();
             expect(fixed).toHaveBeenCalledWith("a", 0, "");
-            expect(ctx.state.positions).toEqual([0, 100, 200]);
+            expect(getLayoutOffsets(ctx.state)).toEqual([0, 100, 200]);
             expect(calculate.mock.calls.some(([, options]) => options?.forceFullItemPositions)).toBe(true);
         } finally {
             calculate.mockRestore();
@@ -3658,7 +3657,7 @@ describe("LegendList props behavior", () => {
         requestAdjustCalls = [];
         size = 150;
         rendered.rerender(list(1));
-        expect(ctx.state.positions).toEqual([0, 150, 250]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 150, 250]);
         expect(requestAdjustCalls).toContain(50);
         rendered.unmount();
     });
@@ -3719,19 +3718,18 @@ describe("LegendList props behavior", () => {
             });
             await flushAsync();
 
-            expect(ctx.state.positions).toEqual([0, 100, 200]);
-            expect(ctx.state.positionsAreCurrent).toBe(true);
+            expect(getLayoutOffsets(ctx.state)).toEqual([0, 100, 200]);
             expect([...ctx.state.containerItemKeys.keys()]).not.toContain("c");
             expect(ctx.state.sizesKnown.has("c")).toBe(false);
 
             fixedSize = 150;
             rendered.rerender(list(1));
-            expect(ctx.state.positions).toEqual([0, 150, 300]);
+            expect(getLayoutOffsets(ctx.state)).toEqual([0, 150, 300]);
             expect(ctx.state.totalSize).toBe(450);
 
             fixedSize = 200;
             rendered.rerender(list(2));
-            expect(ctx.state.positions).toEqual([0, 200, 400]);
+            expect(getLayoutOffsets(ctx.state)).toEqual([0, 200, 400]);
             expect(ctx.state.totalSize).toBe(600);
             rendered.unmount();
         });
@@ -3764,7 +3762,7 @@ describe("LegendList props behavior", () => {
             ]);
         });
         await flushAsync();
-        expect(ctx.state.positions).toEqual([0, 125, 225]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 125, 225]);
         expect(ctx.state.sizesKnown.get("a")).toBe(125);
         expect(ctx.state.sizesKnown.get("c")).toBe(175);
         expect([...ctx.state.containerItemKeys.keys()]).not.toContain("c");
@@ -3774,7 +3772,7 @@ describe("LegendList props behavior", () => {
         expect(ctx.state.sizesKnown.get("a")).toBe(125);
         expect(ctx.state.sizesKnown.get("b")).toBe(150);
         expect(ctx.state.sizesKnown.get("c")).toBe(175);
-        expect(ctx.state.positions).toEqual([0, 125, 275]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 125, 275]);
         expect(ctx.state.totalSize).toBe(450);
         rendered.unmount();
     });
@@ -3802,14 +3800,14 @@ describe("LegendList props behavior", () => {
         await flushAsync();
         expect(ctx.state.startBuffered).toBeGreaterThan(0);
         expect([...ctx.state.containerItemKeys.keys()]).not.toContain("a");
-        expect(ctx.state.positions).toEqual([0, 100, 200]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 100, 200]);
 
         act(() => {
             fixedSize = 150;
             expect(getKnownOrFixedItemSize(ctx, 0)).toBe(150);
             ctx.state.triggerCalculateItemsInView!();
         });
-        expect(ctx.state.positions).toEqual([0, 150, 250]);
+        expect(getLayoutOffsets(ctx.state)).toEqual([0, 150, 250]);
         expect(ctx.state.totalSize).toBe(350);
         rendered.unmount();
     });

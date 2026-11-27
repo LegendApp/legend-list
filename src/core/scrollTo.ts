@@ -1,16 +1,21 @@
+import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
+import { cancelScroll } from "@/core/cancelScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
+import { finishScrollTo } from "@/core/finishScrollTo";
 import { materializeFixedLayoutStoreRangeAtOffsets } from "@/core/fixedLayoutMaterialization";
 import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
+import { getDataLength } from "@/core/IndexedData";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { getActiveLayoutStore, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { cancelNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
+import { getItemSizeAtIndex } from "@/utils/getItemSize";
 
 type InternalScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 
@@ -142,5 +147,33 @@ export function scrollTo(
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });
     } else {
         state.scroll = targetOffset;
+    }
+}
+
+export function reconcileActiveScrollTarget(ctx: StateContext) {
+    const { state } = ctx;
+    const target = state.scrollingTo;
+    if (!target || target.isInitialScroll) return;
+    const count = getDataLength(state);
+    const index = target.isScrollToEnd
+        ? count - 1
+        : target.key === undefined
+          ? target.index
+          : state.indexByKey.get(target.key);
+    if ((index === undefined && target.key !== undefined) || (index !== undefined && (index < 0 || index >= count))) {
+        if (ctx.scrollRequestTracker?.isWaitingToRun()) finishScrollTo(ctx);
+        else cancelScroll(ctx);
+    } else if (index !== undefined && index !== target.index) {
+        target.index = index;
+        state.scheduledWork.microtask(() => {
+            if (state.scrollingTo !== target) return;
+            scrollTo(ctx, {
+                ...target,
+                itemSize: getItemSizeAtIndex(ctx, index),
+                offset: calculateOffsetForIndex(ctx, index),
+                precomputedWithViewOffset: false,
+            });
+        }, "scrollTargetRetarget");
+        return true;
     }
 }

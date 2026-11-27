@@ -9,7 +9,7 @@ import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainS
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { setLayoutValue, setLayoutValues } from "../helpers/layoutStore";
+import { getLayoutOffsets, getLayoutValue, setLayoutValue, setLayoutValues } from "../helpers/layoutStore";
 
 describe("prepareMVCP", () => {
     let mockCtx: StateContext;
@@ -294,9 +294,9 @@ describe("prepareMVCP", () => {
                 mockState.idCache.shift();
                 mockState.indexByKey.clear();
                 mockState.idCache.forEach((id, index) => mockState.indexByKey.set(id, index));
-                mockState.positions.shift();
-                for (let i = 0; i < mockState.positions.length; i++)
-                    mockState.positions[i] = mockState.positions[i]! - 100;
+                setLayoutValues(mockState, "positions", getLayoutOffsets(mockState).slice(1));
+                for (let i = 0; i < getLayoutOffsets(mockState).length; i++)
+                    setLayoutValue(mockState, "positions", i, getLayoutValue(mockState, "positions", i)! - 100);
                 mockState.totalSize += delta;
             };
 

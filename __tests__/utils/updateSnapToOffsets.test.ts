@@ -3,14 +3,13 @@ import "../setup"; // Import global test setup
 
 import { onScroll } from "../../src/core/onScroll";
 import { syncMountedContainer } from "../../src/core/syncMountedContainer";
-import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import * as stateModule from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { updateSnapToOffsets } from "../../src/utils/updateSnapToOffsets";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { setLayoutValue, setLayoutValues } from "../helpers/layoutStore";
+import { getLayoutValue, rebuildTestLayout, setLayoutValue, setLayoutValues } from "../helpers/layoutStore";
 
 describe("native RTL snap minimums", () => {
     it.each([
@@ -46,8 +45,8 @@ describe("native RTL snap minimums", () => {
                 },
             );
             try {
-                updateItemPositions(ctx, true);
-                expect(ctx.state.positions[3]).toBe(3 * itemSize);
+                rebuildTestLayout(ctx);
+                expect(getLayoutValue(ctx.state, "positions", 3)).toBe(3 * itemSize);
                 ctx.values.set("containerItemData0", ctx.state.props.data[3]);
                 syncMountedContainer(ctx, 0, 3);
                 const emitted = ctx.values.get("snapToOffsets") as number[];
@@ -184,7 +183,11 @@ describe("updateSnapToOffsets", () => {
                 Platform.OS = "web";
                 mockState.horizontalRTLScrollType = mode;
                 mockState.scrollLength = 600;
-                mockState.positions = Array.from({ length: 10 }, (_, index) => index * itemSize);
+                setLayoutValues(
+                    mockState,
+                    "positions",
+                    Array.from({ length: 10 }, (_, index) => index * itemSize),
+                );
                 mockState.props.data = Array.from({ length: 10 }, (_, index) => ({ id: `item_${index}` }));
                 mockState.props.snapToIndices = [3];
                 mockState.props.contentContainerMinSize = 1000;

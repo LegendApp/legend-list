@@ -5,6 +5,7 @@ import type { StateContext } from "../../src/state/state";
 import type { LegendListRef } from "../../src/types";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { clearLayoutValues, getLayoutValue, setLayoutValue } from "./layoutStore";
 
 type Listener = (...args: any[]) => void;
 
@@ -129,12 +130,12 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
         let position = 0;
         state.idCache.length = 0;
         state.indexByKey.clear();
-        state.positions.length = 0;
+        clearLayoutValues(state, "positions");
         for (let index = 0; index < state.props.data.length; index++) {
             const id = `item_${index}`;
             state.idCache[index] = id;
             state.indexByKey.set(id, index);
-            state.positions[index] = position;
+            setLayoutValue(state, "positions", index, position);
             state.sizes.set(id, sizes[index]!);
             state.sizesKnown.set(id, sizes[index]!);
             position += sizes[index]!;
@@ -310,7 +311,7 @@ export function createWebScrollHarness(options: WebScrollHarnessOptions = {}) {
         },
         state,
         targetOffsetForIndex(index: number) {
-            return clamp(state.positions[index]!);
+            return clamp(getLayoutValue(state, "positions", index)!);
         },
     };
 }

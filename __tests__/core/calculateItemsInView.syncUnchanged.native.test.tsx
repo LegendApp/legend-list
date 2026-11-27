@@ -1,4 +1,5 @@
 import { describe, expect, it, spyOn } from "bun:test";
+import { getLayoutValue } from "../helpers/layoutStore";
 import "../setup";
 import * as React from "react";
 
@@ -135,7 +136,7 @@ describe("calculateItemsInView container sync", () => {
             const itemKey = stateModule.peek$(ctx, `containerItemKey${i}`);
             if (itemKey === undefined) continue;
             const index = ctx.state.indexByKey.get(itemKey)!;
-            expect(stateModule.peek$(ctx, `containerPosition${i}`)).toBe(ctx.state.positions[index]);
+            expect(stateModule.peek$(ctx, `containerPosition${i}`)).toBe(getLayoutValue(ctx.state, "positions", index));
         }
         list.result.unmount();
         list.clock.restore();

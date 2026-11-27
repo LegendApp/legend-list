@@ -1,18 +1,14 @@
+import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearInitialScrollAnchor } from "@/core/finishInitialScroll";
 import { getDataLength } from "@/core/IndexedData";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
+import { getObservedScrollOffset } from "@/core/observedScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
-import { requestAdjust } from "@/utils/requestAdjust";
 
 type Target = NonNullable<InternalState["initialScroll"]>;
-
-export function getObservedScrollOffset(state: InternalState) {
-    const observed = state.refScroller.current?.getCurrentScrollOffset?.();
-    return typeof observed === "number" && Number.isFinite(observed) ? observed : (state.scrollPending ?? state.scroll);
-}
 
 export function retargetInitialScroll(
     target: Target,
@@ -35,63 +31,77 @@ export function retargetInitialScroll(
     };
 }
 
+function canCorrectAnchor(ctx: StateContext, anchor: Target) {
+    const { state } = ctx;
+    const length = getDataLength(state);
+    return (
+        !state.isUnmounted &&
+        !state.scrollingTo &&
+        !state.pendingScrollResolve &&
+        !state.maintainingScrollAtEnd &&
+        !state.isDragging &&
+        length > 0 &&
+        (anchor.index === undefined || anchor.index < length)
+    );
+}
+
 export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
     const { state } = ctx;
     const anchor = state.initialScrollAnchor;
-    if (
-        !anchor ||
-        state.scrollingTo ||
-        state.pendingScrollResolve ||
-        state.maintainingScrollAtEnd ||
-        state.isDragging ||
-        getDataLength(state) === 0
-    )
-        return false;
+    if (!anchor || state.scheduledWork.has("initialScrollAlignment") || !canCorrectAnchor(ctx, anchor)) return false;
     // Layout can change while an adjustment is in flight. Keep its acknowledgement
     // boundary so the next frame cannot apply the outstanding delta twice.
     const correct = () => {
-        if (
-            state.initialScrollAnchor !== anchor ||
-            state.scrollingTo ||
-            state.pendingScrollResolve ||
-            state.maintainingScrollAtEnd ||
-            state.isDragging
-        )
-            return;
+        if (state.initialScrollAnchor !== anchor || !canCorrectAnchor(ctx, anchor)) return;
         const observed =
             Platform.OS !== "web" &&
             typeof state.lastNativeScroll === "number" &&
             Number.isFinite(state.lastNativeScroll)
                 ? state.lastNativeScroll
-                : getObservedScrollOffset(state);
+                : getObservedScrollOffset(ctx, state.scrollPending);
         const offset = resolveInitialScrollOffset(ctx, anchor);
-        const diff = offset - observed;
-        if (Math.abs(diff) <= 1) return;
-        if (anchor.lastRequestTime === undefined || (state.lastNativeScrollTime ?? 0) > anchor.lastRequestTime) {
+        if (Math.abs(offset - observed) <= 1) {
+            anchor.lastRequestOffset = undefined;
+            anchor.lastRequestTime = undefined;
+            return;
+        }
+        const scroller = state.refScroller.current;
+        if (!scroller) return;
+        if (
+            Platform.OS === "web" ||
+            anchor.lastRequestTime === undefined ||
+            (state.lastNativeScrollTime ?? 0) > anchor.lastRequestTime
+        ) {
             anchor.lastRequestTime = Date.now();
             anchor.lastRequestOffset = observed;
             anchor.contentOffset = offset;
-            if (Platform.OS === "web") state.scroll = observed;
-            requestAdjust(ctx, diff);
+            // An absolute request stays correct if layout already clamped the viewport.
+            state.scroll = offset;
+            scroller.scrollTo({ animated: false, ...getNativeScrollPoint(ctx, offset) });
+            state.triggerCalculateItemsInView?.();
         }
-        state.scheduledWork.frame(correct, "initialScrollAlignment");
+        if (state.initialScrollAnchor === anchor) state.scheduledWork.frame(correct, "initialScrollAlignment");
     };
-    state.scheduledWork.frame(correct, "initialScrollAlignment");
+    // Wait for React to commit the DOM extent, then retry any silent clamp on a frame.
+    if (Platform.OS === "web") state.scheduledWork.microtask(correct, "initialScrollAlignment");
+    else state.scheduledWork.frame(correct, "initialScrollAlignment");
     return true;
 }
 
-export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateContext, observedOffset?: number) {
+export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(
+    ctx: StateContext,
+    observedOffset?: number,
+    nativeGeometryChanged?: boolean,
+) {
     const { state } = ctx;
     const anchor = state.initialScrollAnchor;
     if (!anchor || state.scrollingTo) return;
-    const observed = observedOffset ?? getObservedScrollOffset(state);
+    const observed = observedOffset ?? getObservedScrollOffset(ctx, state.scrollPending);
     const target = anchor.contentOffset ?? resolveInitialScrollOffset(ctx, anchor);
-    // Native clamping and MVCP can overshoot a resize correction. Drag handlers
-    // release ownership explicitly; an offset during native alignment is ambiguous.
-    // Web acknowledgements stay inside the outstanding request's interval.
+    // A correction may report an intermediate offset or a clamp as native geometry changes.
     if (
         state.scheduledWork.has("initialScrollAlignment") &&
-        (Platform.OS !== "web" ||
+        (nativeGeometryChanged ||
             (anchor.lastRequestOffset !== undefined &&
                 observed >= Math.min(anchor.lastRequestOffset, target) - 1 &&
                 observed <= Math.max(anchor.lastRequestOffset, target) + 1))
@@ -131,7 +141,10 @@ export function updateInitialScrollAnchor(
     )
         return;
     if (
-        Math.abs(getObservedScrollOffset(state) - (target.contentOffset ?? resolveInitialScrollOffset(ctx, target))) > 1
+        Math.abs(
+            getObservedScrollOffset(ctx, state.scrollPending) -
+                (target.contentOffset ?? resolveInitialScrollOffset(ctx, target)),
+        ) > 1
     ) {
         if (target.preserveForFooterLayout) {
             target.preserveForFooterLayout = undefined;
@@ -150,7 +163,8 @@ export function updateInitialScrollAnchor(
         if (footerSize !== undefined && next.index === target.index && next.viewOffset === target.viewOffset) {
             next.preserveForFooterLayout = undefined;
         }
-        next.contentOffset = target.contentOffset;
+        next.contentOffset = target.contentOffset ?? getObservedScrollOffset(ctx, state.scrollPending);
+        state.scheduledWork.cancel("initialScrollAlignment");
         state.initialScrollAnchor = next;
         schedulePreservedEndAnchorCorrection(ctx);
     }

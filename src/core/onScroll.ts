@@ -1,8 +1,8 @@
+import { interruptUserScroll } from "@/core/cancelScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { clearFinishedBootstrapInitialScrollTargetIfMovedAway } from "@/core/initialScrollAnchor";
-import { interruptUserScroll } from "@/core/cancelScroll";
 import { armAppScrollRearm } from "@/core/finishMaintainScrollAtEnd";
+import { clearFinishedBootstrapInitialScrollTargetIfMovedAway } from "@/core/initialScrollAnchor";
 import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
@@ -201,7 +201,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     });
     if (didInteract) recordViewabilityInteraction(ctx);
     trackInitialScrollNativeProgress(state, newScroll);
-    clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx, newScroll);
+    clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx, newScroll, nativeGeometryChanged);
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);

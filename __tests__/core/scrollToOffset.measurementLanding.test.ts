@@ -3,7 +3,6 @@ import "../setup";
 
 import * as platformScroll from "@/core/doScrollTo";
 import { doScrollTo as doNativeScrollTo } from "@/core/doScrollTo.native";
-import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { scrollTo } from "@/core/scrollTo";
 import { Platform } from "@/platform/Platform";
@@ -37,8 +36,7 @@ for (const platform of ["ios", "android", "web"] as const) {
                 h.state.didFinishInitialScroll = !initial;
                 h.browser.moveTo(3000);
                 if (initial) {
-                    h.state.initialScroll = { offset };
-                    setInitialScrollSession(h.state, { kind: "offset", previousDataLength: 100 });
+                    h.state.initialScroll = { contentOffset: offset, kind: "offset", previousDataLength: 100 };
                 }
                 scrollTo(h.ctx, { animated: true, forceScroll: true, isInitialScroll: initial, offset });
                 // A previous selected slot shrinks while the absolute request is still moving.

@@ -49,7 +49,9 @@ export function setupViewability(
     ctx?: StateContext,
 ): ViewabilityConfigCallbackPairs<any> {
     const { viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged } = props;
+    let missingPairIds = 0;
     const pairs = (viewabilityConfigCallbackPairs ?? []).map((pair, index) => {
+        if (pair.viewabilityConfig.id === undefined) missingPairIds++;
         const normalizedConfig = normalizeViewabilityConfig(pair.viewabilityConfig, `pair-${index}`);
         return normalizedConfig === pair.viewabilityConfig ? pair : { ...pair, viewabilityConfig: normalizedConfig };
     });
@@ -59,13 +61,12 @@ export function setupViewability(
         viewabilityConfig: normalizeViewabilityConfig(viewabilityConfig, ""),
     });
 
-    const configIds = new Set<string>();
-    for (const pair of pairs) {
-        const id = pair.viewabilityConfig.id!;
-        if (configIds.has(id)) {
-            warnDevOnce("viewability-duplicate-config-id", "Each viewability config must have a unique id.");
-        }
-        configIds.add(id);
+    const configIds = new Set(pairs.map(({ viewabilityConfig: config }) => config.id!));
+    if (missingPairIds > 1 || configIds.size !== pairs.length) {
+        warnDevOnce(
+            "viewability-duplicate-config-id",
+            "Each viewability config must have a unique id when using multiple configs.",
+        );
     }
     if (ctx) {
         for (const id of ctx.mapViewabilityConfigStates.keys()) {
@@ -176,7 +177,7 @@ function updateViewableItemsWithConfig(
 
     // Credit only uninterrupted time above the threshold for this key and config.
     // One timer per configuration wakes the earliest pending row; exits clear its clock.
-    const minimumViewTime = Math.max(0, viewabilityConfig.minimumViewTime ?? 0);
+    const minimumViewTime = Math.max(0, Number(viewabilityConfig.minimumViewTime) || 0);
     const timerKey = `viewability:${configId}` as const;
     let timing = viewabilityState.minimumViewTime;
     if (minimumViewTime > 0) {
@@ -184,7 +185,8 @@ function updateViewableItemsWithConfig(
             !timing ||
             timing.dataSource !== state.props.dataSource ||
             timing.dataKey !== state.props.dataKey ||
-            !areViewabilityConfigsEqual(timing.config, viewabilityConfig)
+            timing.config.minimumViewTime !== viewabilityConfig.minimumViewTime ||
+            timing.config.waitForInteraction !== viewabilityConfig.waitForInteraction
         ) {
             state.scheduledWork.cancel(timerKey);
             timing = viewabilityState.minimumViewTime = {
@@ -193,12 +195,14 @@ function updateViewableItemsWithConfig(
                 dataSource: state.props.dataSource,
                 since: new Map(),
             };
+        } else {
+            timing.config = viewabilityConfig;
         }
     } else if (timing) {
         state.scheduledWork.cancel(timerKey);
         timing = viewabilityState.minimumViewTime = undefined;
     }
-    const now = timing ? Date.now() : 0;
+    const now = timing ? performance.now() : 0;
     const visibleKeys = timing ? new Set<string>() : undefined;
     let nextDeadline: number | undefined;
 
@@ -316,10 +320,10 @@ function updateViewableItemsWithConfig(
         for (const key of timing.since.keys()) {
             if (!visibleKeys!.has(key)) timing.since.delete(key);
         }
-        if (nextDeadline !== timing.deadline) {
+        if (nextDeadline !== timing.deadline || (nextDeadline !== undefined && !state.scheduledWork.has(timerKey))) {
             state.scheduledWork.cancel(timerKey);
             timing.deadline = nextDeadline;
-            if (nextDeadline !== undefined) {
+            if (nextDeadline !== undefined && Number.isFinite(nextDeadline)) {
                 const scheduledTiming = timing;
                 state.scheduledWork.timeout(
                     () => {
@@ -341,7 +345,7 @@ function updateViewableItemsWithConfig(
                             );
                         }
                     },
-                    Math.max(0, nextDeadline - now),
+                    Math.min(2147483647, Math.max(0, nextDeadline - now)),
                     timerKey,
                 );
             }
@@ -449,7 +453,10 @@ function computeViewability(
     const percentOfScroller = effectiveScrollSize > 0 ? 100 * (sizeVisible / effectiveScrollSize) : 0;
     const percent = isEntirelyVisible ? 100 : viewAreaMode ? percentOfScroller : percentVisible;
 
-    const isViewable = sizeVisible > 0 && percent >= (viewablePercentThreshold ?? 0);
+    const isViewable =
+        effectiveScrollSize > 0 &&
+        (sizeVisible > 0 || (sizeVisible === 0 && startOffset === 0 && !state.viewabilityInsetEnd)) &&
+        percent >= (viewablePercentThreshold ?? 0);
 
     const value: ViewAmountToken = {
         containerId,

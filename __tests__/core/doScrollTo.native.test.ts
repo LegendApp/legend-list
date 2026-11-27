@@ -5,10 +5,10 @@ import "../setup";
 import * as platformScroll from "@/core/doScrollTo";
 import { doScrollTo } from "@/core/doScrollTo.native";
 import { onScroll } from "@/core/onScroll";
-import { updateItemPositions } from "@/core/updateItemPositions";
 import { Platform } from "@/platform/Platform";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { rebuildTestLayout } from "../helpers/layoutStore";
 import { flushMicrotasks, installFakeClock, trackScroll } from "../helpers/webScrollHarness";
 
 describe("doScrollTo (native)", () => {
@@ -42,7 +42,7 @@ describe("doScrollTo (native)", () => {
                         },
                     );
                     try {
-                        updateItemPositions(ctx, true);
+                        rebuildTestLayout(ctx);
                         const ref = createImperativeHandle(ctx);
                         const index = atContentEnd ? 3 : 2;
                         const target = atContentEnd ? 3500 : 2270;

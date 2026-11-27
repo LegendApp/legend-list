@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
+import { setLayoutValues } from "../helpers/layoutStore";
 import "../setup";
 
 import {
@@ -50,8 +50,7 @@ describe("bootstrapInitialScroll", () => {
                 {},
                 {
                     didFinishInitialScroll: false,
-                    initialScroll: { index: 2, viewPosition: 0 },
-                    initialScrollSession: { kind: "bootstrap", previousDataLength },
+                    initialScroll: { index: 2, kind: "index", previousDataLength, viewPosition: 0 },
                     positions: [0, 100, 200, 300],
                     props: { data: Array.from({ length: dataLength }, (_, i) => i), estimatedItemSize: 100 },
                     scrollLength: 100,
@@ -64,7 +63,7 @@ describe("bootstrapInitialScroll", () => {
                 previousDataLength,
                 stylePaddingEnd: 0,
             });
-            expect(!!ctx.state.initialScrollSession?.bootstrap).toBe(previousDataLength === 0 && dataLength > 0);
+            expect(!!ctx.state.initialScroll?.bootstrap).toBe(previousDataLength === 0 && dataLength > 0);
             ctx.state.scheduledWork.dispose();
         });
     }
@@ -75,10 +74,10 @@ describe("bootstrapInitialScroll", () => {
             const ctx = createMockContext(
                 {},
                 {
-                    initialScroll: { index: 4 },
-                    initialScrollSession: {
+                    initialScroll: {
                         bootstrap: { mountFrameCount: 1, passCount: 2, scroll: 100, seedContentOffset: 100 },
-                        kind: "bootstrap",
+                        index: 4,
+                        kind: "index",
                         previousDataLength: 5,
                     },
                     positions: [0, 100, 200, 300, 400],
@@ -87,7 +86,7 @@ describe("bootstrapInitialScroll", () => {
                 },
             );
             startBootstrapInitialScrollOnMount(ctx, { initialScrollAtEnd: false, target: { index: 4 } });
-            expect(ctx.state.initialScrollSession?.bootstrap).toMatchObject({
+            expect(ctx.state.initialScroll?.bootstrap).toMatchObject({
                 mountFrameCount: 1,
                 scroll: 400,
                 seedContentOffset: os === "web" ? 0 : 400,
@@ -100,14 +99,13 @@ describe("bootstrapInitialScroll", () => {
         const ctx = createMockContext(
             {},
             {
-                initialScroll: { contentOffset: 200, index: 0 },
-                initialScrollSession: { kind: "offset", previousDataLength: 3 },
+                initialScroll: { contentOffset: 200, index: 0, kind: "offset", previousDataLength: 3 },
                 props: { data: [0, 1, 2] },
             },
         );
-        const session = ctx.state.initialScrollSession;
+        const session = ctx.state.initialScroll;
         evaluateBootstrapInitialScroll(ctx);
-        expect(ctx.state.initialScrollSession).toBe(session);
+        expect(ctx.state.initialScroll).toBe(session);
         expect(ctx.state.initialScroll).toMatchObject({ contentOffset: 200 });
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
@@ -134,8 +132,7 @@ describe("bootstrapInitialScroll", () => {
                         horizontalRTLScrollType: mode,
                         idCache: data.map((index) => `item_${index}`),
                         indexByKey: new Map(data.map((index) => [`item_${index}`, index])),
-                        initialScroll: { index: 5, viewPosition: 1 },
-                        initialScrollSession: { kind: "bootstrap", previousDataLength: 20 },
+                        initialScrollAnchor: { contentOffset: 300, index: 5, kind: "index", viewPosition: 1 },
                         positions: data.map((index) => index * 100),
                         props: {
                             data,
@@ -186,10 +183,10 @@ describe("bootstrapInitialScroll", () => {
                     clock.tick();
                     expect(logicalOffset()).toBe(interrupt ? 200 : 300);
                     if (interrupt) {
-                        expect(ctx.state.initialScroll).toBeUndefined();
-                        expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                        expect(ctx.state.initialScrollAnchor).toBeUndefined();
+                        expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
                     } else {
-                        expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                        expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
                         // Growth above the target moves its logical offset by 50px.
                         updateItemSizesBatch(ctx, [
                             { itemKey: "item_4", size: { height: mode ? 100 : 150, width: mode ? 150 : 100 } },
@@ -199,7 +196,7 @@ describe("bootstrapInitialScroll", () => {
                         clock.tick();
                         expect(logicalOffset()).toBe(350);
                         clock.tick();
-                        expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                        expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
                     }
                 } finally {
                     ctx.state.scheduledWork.dispose();
@@ -221,8 +218,7 @@ describe("bootstrapInitialScroll", () => {
                 endBuffered: 19,
                 idCache: data.map((index) => `item_${index}`),
                 indexByKey: new Map(data.map((index) => [`item_${index}`, index])),
-                initialScroll: { index: 19, viewPosition: 1 },
-                initialScrollSession: { kind: "bootstrap", previousDataLength: 20 },
+                initialScrollAnchor: { contentOffset: 1700, index: 19, kind: "index", viewPosition: 1 },
                 positions: data.map((index) => index * 100),
                 props: {
                     data,
@@ -254,14 +250,14 @@ describe("bootstrapInitialScroll", () => {
             await Promise.resolve();
             clock.tick();
             expect(observed).toBe(1700);
-            expect(ctx.state.preservedEndAnchorCorrection).toBeDefined();
+            expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(true);
             // A clamped no-op emits no scroll event; committing height alone does not either.
             clock.advance(64);
             domHeight = ctx.state.totalSize;
             clock.tick();
             expect(observed).toBe(1800);
             clock.tick();
-            expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+            expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
         } finally {
             ctx.state.scheduledWork.dispose();
             clock.restore();
@@ -281,7 +277,7 @@ describe("bootstrapInitialScroll", () => {
                     endBuffered: 19,
                     idCache: data.map((index) => `item_${index}`),
                     indexByKey: new Map(data.map((index) => [`item_${index}`, index])),
-                    initialScroll: { index: 19, viewPosition: 1 },
+                    initialScrollAnchor: { contentOffset: 1700, index: 19, kind: "index", viewPosition: 1 },
                     positions: data.map((index) => index * 100),
                     props: {
                         data,
@@ -329,8 +325,8 @@ describe("bootstrapInitialScroll", () => {
                     clock.tick();
                 }
                 expect(observed).toBe(200);
-                expect(ctx.state.initialScroll).toBeUndefined();
-                expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                expect(ctx.state.initialScrollAnchor).toBeUndefined();
+                expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
             } finally {
                 ctx.state.scheduledWork.dispose();
                 clock.restore();
@@ -636,12 +632,8 @@ describe("bootstrapInitialScroll", () => {
             preserveForBottomPadding: true,
             viewPosition: 1,
         });
-        expect(ctx.state.initialScroll).toMatchObject({
-            bootstrap: {
-                targetIndexSeed: data.length - 1,
-            },
-            kind: "bootstrap",
-        });
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(true);
     });
 
     it("hands rapid appends to end following after initial scrolling has finished", async () => {
@@ -657,7 +649,13 @@ describe("bootstrapInitialScroll", () => {
             {
                 didContainersLayout: true,
                 didFinishInitialScroll: true,
-                initialScroll: { index: 17, preserveForBottomPadding: true, viewPosition: 1 },
+                initialScrollAnchor: {
+                    contentOffset: 613,
+                    index: 17,
+                    kind: "end",
+                    preserveForBottomPadding: true,
+                    viewPosition: 1,
+                },
                 props: {
                     data: initialData,
                     getFixedItemSize: () => 72,
@@ -677,7 +675,11 @@ describe("bootstrapInitialScroll", () => {
             const previousDataLength = ctx.state.props.data.length;
             const data = Array.from({ length: previousDataLength + 3 }, (_, index) => index);
             ctx.state.props.data = data;
-            ctx.state.positions = data.map((index) => index * 72);
+            setLayoutValues(
+                ctx.state,
+                "positions",
+                data.map((index) => index * 72),
+            );
             ctx.state.indexByKey = new Map(data.map((index) => [String(index), index]));
             ctx.state.containerItemKeys = new Map(data.map((index) => [String(index), index]));
             ctx.state.sizesKnown = new Map(data.map((index) => [String(index), 72]));
@@ -1438,8 +1440,8 @@ describe("bootstrapInitialScroll", () => {
                 {
                     didFinishInitialScroll: true,
                     idCache: data.map((item) => item.id),
-                    initialScroll: { index: 19, viewPosition: 1 },
-                    initialScrollSession: undefined,
+                    initialScroll: undefined,
+                    initialScrollAnchor: { contentOffset: 1700, index: 19, kind: "index", viewPosition: 1 },
                     lastNativeScroll: 1709,
                     positions: data.map((_, index) => index * 100),
                     props: { data, estimatedItemSize: 100, keyExtractor: (item) => item.id },
@@ -1472,7 +1474,7 @@ describe("bootstrapInitialScroll", () => {
                 ctx.state.lastNativeScroll = nativeOffset;
                 ctx.state.scrollPending = nativeOffset;
                 for (let frame = 0; frame < 4 && frames.length > 0; frame++) frames.shift()?.(0);
-                expect(ctx.state.preservedEndAnchorCorrection).toBeUndefined();
+                expect(ctx.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
                 expect(nativeOffset).toBe(1569);
                 expect(ctx.state.scroll).toBe(1569);
             } finally {

@@ -80,7 +80,8 @@ describe("Container assigned index", () => {
         let ctx!: StateContext;
         const onPress = mock((_index: number) => {});
         const { Container } = await import("../../src/components/Container?retained-index");
-        const getRenderedItem = (key: string, id: number) => renderAssignedItem(ctx, key, id);
+        const getRenderedItem = (key: string, id: number, onReadIndex?: () => void) =>
+            renderAssignedItem(ctx, key, id, onReadIndex);
 
         function Harness() {
             ctx = useStateContext();

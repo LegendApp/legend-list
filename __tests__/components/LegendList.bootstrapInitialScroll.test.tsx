@@ -16,7 +16,7 @@ import { peek$, type StateContext, set$ } from "../../src/state/state";
 import type { InternalState, LegendListInternalRef } from "../../src/types.internal";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 import { skipLayoutInvariants } from "../helpers/layoutInvariantHarness";
-import { getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
+import { getLayoutOffsets, getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
 import { act, render } from "../helpers/testingLibrary";
 import { installFakeClock } from "../helpers/webScrollHarness";
 
@@ -651,8 +651,8 @@ describe("LegendList bootstrap initial scroll", () => {
             let observedOffset = 1800;
             let maxOffset = 1800;
             const scrollOffsets: number[] = [];
-            let firstCorrection: InternalState["preservedEndAnchorCorrection"];
-            let correctionAfterReplay: InternalState["preservedEndAnchorCorrection"];
+            let firstCorrection: InternalState["initialScrollAnchor"];
+            let correctionAfterReplay: InternalState["initialScrollAnchor"];
             let targetAfterReplay: InternalState["initialScroll"];
 
             function Measurement() {
@@ -670,12 +670,12 @@ describe("LegendList bootstrap initial scroll", () => {
                         state.startBuffered = 1;
                         state.endBuffered = 19;
                         state.scrollingTo = undefined;
-                        state.initialScroll = { index: 19, viewPosition: 1 };
-                        state.initialScrollSession = { kind: "bootstrap", previousDataLength: data.length };
+                        state.initialScroll = undefined;
+                        state.initialScrollAnchor = { contentOffset: 1800, index: 19, kind: "index", viewPosition: 1 };
                         set$(ctx, "totalSize", 2000);
                     } else {
-                        correctionAfterReplay = state.preservedEndAnchorCorrection;
-                        targetAfterReplay = state.initialScroll;
+                        correctionAfterReplay = state.initialScrollAnchor;
+                        targetAfterReplay = state.initialScrollAnchor;
                     }
                     state.refScroller.current = {
                         getCurrentScrollOffset: () => observedOffset,
@@ -688,7 +688,7 @@ describe("LegendList bootstrap initial scroll", () => {
                         },
                     } as any;
                     updateItemSizesBatch(ctx, [{ itemKey: "item_19", size: { height: 200, width: 320 } }]);
-                    firstCorrection ??= state.preservedEndAnchorCorrection;
+                    firstCorrection ??= state.initialScrollAnchor;
                 }, []);
                 return null;
             }
@@ -711,21 +711,21 @@ describe("LegendList bootstrap initial scroll", () => {
             try {
                 rendered = render(strictMode ? <React.StrictMode>{list}</React.StrictMode> : list);
                 expect(firstCorrection).toBeDefined();
-                expect(ctx!.state.preservedEndAnchorCorrection).toBeDefined();
+                expect(ctx!.state.scheduledWork.has("initialScrollAlignment")).toBe(true);
                 if (strictMode) {
                     expect(setups).toBe(2);
-                    expect(correctionAfterReplay).toBe(firstCorrection);
+                    expect(correctionAfterReplay).toMatchObject({ index: 19, viewPosition: 1 });
                     expect(targetAfterReplay).toMatchObject({ index: 19, viewPosition: 1 });
-                    expect(ctx!.state.preservedEndAnchorCorrection).toBe(firstCorrection);
-                    maxOffset = resolveInitialScrollOffset(ctx!, ctx!.state.initialScroll!);
+                    expect(ctx!.state.initialScrollAnchor).toBe(correctionAfterReplay);
+                    maxOffset = resolveInitialScrollOffset(ctx!, ctx!.state.initialScrollAnchor!);
                     await Promise.resolve();
                     act(() => clock.advance(64));
                     expect(scrollOffsets.length).toBeGreaterThan(0);
                     expect(observedOffset).toBe(maxOffset);
-                    expect(ctx!.state.preservedEndAnchorCorrection).toBeUndefined();
+                    expect(ctx!.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
                     // Start another clamped correction so final unmount also has pending work.
                     updateItemSizesBatch(ctx!, [{ itemKey: "item_19", size: { height: 400, width: 320 } }]);
-                    expect(ctx!.state.preservedEndAnchorCorrection).toBeDefined();
+                    expect(ctx!.state.scheduledWork.has("initialScrollAlignment")).toBe(true);
                 }
                 rendered.unmount();
                 expect(ctx!.state.isUnmounted).toBe(true);
@@ -736,7 +736,7 @@ describe("LegendList bootstrap initial scroll", () => {
                 act(() => clock.advance(1600));
                 expect(scheduleFrame.mock.calls.length).toBe(framesBefore);
                 expect(scrollOffsets).toHaveLength(callsBefore);
-                expect(ctx!.state.preservedEndAnchorCorrection).toBeUndefined();
+                expect(ctx!.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
 
                 // An old-architecture measurement can arrive after cleanup has run.
                 updateItemSizesBatch(ctx!, [{ itemKey: "item_19", size: { height: 500, width: 320 } }]);
@@ -746,7 +746,7 @@ describe("LegendList bootstrap initial scroll", () => {
                 act(() => clock.advance(1600));
                 expect(scheduleFrame.mock.calls.length).toBe(framesAfterMeasurement);
                 expect(scrollOffsets).toHaveLength(callsBefore);
-                expect(ctx!.state.preservedEndAnchorCorrection).toBeUndefined();
+                expect(ctx!.state.scheduledWork.has("initialScrollAlignment")).toBe(false);
             } finally {
                 rendered?.unmount();
                 clock.restore();
@@ -816,30 +816,45 @@ describe("LegendList bootstrap initial scroll", () => {
         );
         const rendered = render(list(firstData, "first"));
         const ctx = await getContextFromRender();
-        seedMeasuredLayout(ctx.state, firstData.length, 100);
+        const seed = (data: typeof firstData, size: number) => {
+            const { state } = ctx;
+            const store = state.layoutStoreRuntime!.store;
+            data.forEach(({ id }, index) => {
+                state.idCache[index] = id;
+                state.indexByKey.set(id, index);
+                state.sizes.set(id, size);
+                state.sizesKnown.set(id, size);
+                store.setMeasuredSize(index, size);
+            });
+        };
+        seed(firstData, 100);
         ctx.state.totalSize = 500;
         ctx.values.set("totalSize", 500);
         rendered.rerender(list(secondData, "second"));
         await flushAsync();
-        seedMeasuredLayout(ctx.state, secondData.length, 50);
+        seed(secondData, 50);
         ctx.state.totalSize = 150;
         ctx.values.set("totalSize", 150);
-        ctx.state.initialScrollSession = undefined;
         ctx.state.initialScroll = undefined;
+        ctx.state.initialScrollAnchor = undefined;
         ctx.state.didFinishInitialScroll = true;
-        const tracker = trackAssignedStateValue(ctx.state, "initialScrollSession");
+        const bootstrap = await import("../../src/core/bootstrapInitialScroll");
+        const evaluate = bootstrap.evaluateBootstrapInitialScroll;
+        const seeds: number[] = [];
+        const observe = spyOn(bootstrap, "evaluateBootstrapInitialScroll").mockImplementation((context) => {
+            const offset = context.state.initialScroll?.bootstrap?.seedContentOffset;
+            if (offset !== undefined) seeds.push(offset);
+            evaluate(context);
+        });
 
         try {
             rendered.rerender(list(firstData, "first"));
             await flushAsync();
-            const firstBootstrap = tracker.assignedValues.find(
-                (session) => session?.kind === "bootstrap" && session.bootstrap,
-            );
-            expect(firstBootstrap?.kind === "bootstrap" && firstBootstrap.bootstrap?.seedContentOffset).toBe(300);
+            expect(seeds[0]).toBe(300);
             expect(ctx.state.sizesKnown.get("first-4")).toBe(100);
-            expect(ctx.state.positions).toEqual([0, 100, 200, 300, 400]);
+            expect(getLayoutOffsets(ctx.state)).toEqual([0, 100, 200, 300, 400]);
         } finally {
-            tracker.restore();
+            observe.mockRestore();
             rendered.unmount();
         }
     });
@@ -1802,6 +1817,12 @@ describe("LegendList bootstrap initial scroll", () => {
         expect((state.initialScroll ?? state.initialScrollAnchor)?.index).toBe(4);
         expect(getBootstrapSession(state)).toBeUndefined();
 
+        const scrollTo = mock(() => {});
+        const observed = state.scrollPending;
+        state.refScroller.current = {
+            getCurrentScrollOffset: () => observed,
+            scrollTo,
+        } as any;
         const appendedData = [...data, { id: "item-5", label: "Item 5" }];
         rendered.rerender(
             <LegendList
@@ -1827,7 +1848,7 @@ describe("LegendList bootstrap initial scroll", () => {
         await act(async () => {
             await new Promise((resolve) => setTimeout(resolve, 20));
         });
-        expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toContain(50);
+        expect(scrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: observed + 50 });
     });
 
     it("does not retarget initialScrollAtEnd after the user scrolls near but away from the end", async () => {

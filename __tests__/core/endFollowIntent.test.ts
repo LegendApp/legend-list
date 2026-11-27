@@ -20,7 +20,6 @@ import { handleInitialScrollDataChange } from "../../src/core/initialScrollLifec
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
-import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import { updateScroll } from "../../src/core/updateScroll";
 import { armUserScrollSettle } from "../../src/core/userMomentum";
@@ -28,6 +27,7 @@ import { Platform } from "../../src/platform/Platform";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { rebuildTestLayout, setLayoutValue } from "../helpers/layoutStore";
 import { installFakeClock } from "../helpers/webScrollHarness";
 
 const originalRAF = globalThis.requestAnimationFrame;
@@ -483,7 +483,7 @@ describe("keyed navigation through layout changes", () => {
                 },
             );
             try {
-                updateItemPositions(ctx, true);
+                rebuildTestLayout(ctx);
                 const promise = createImperativeHandle(ctx).scrollToKey({
                     animated: !mvcp && platform !== "web",
                     key: "item-50",
@@ -551,7 +551,7 @@ describe("keyed navigation through layout changes", () => {
                 scrollLength: 100,
             },
         );
-        updateItemPositions(ctx, true);
+        rebuildTestLayout(ctx);
         const promise = createImperativeHandle(ctx).scrollToKey({
             animated: false,
             key: "target",
@@ -567,7 +567,7 @@ describe("keyed navigation through layout changes", () => {
             expect(scrollTo).not.toHaveBeenCalled();
             ctx.state.props.data = ["p", "q", "a", "target", "c"];
             resetLayoutCachesForDataChange(ctx.state);
-            updateItemPositions(ctx, true);
+            rebuildTestLayout(ctx);
             ctx.state.didDataChange = false;
             frames.shift()?.(0);
             frames.shift()?.(16);
@@ -592,7 +592,7 @@ describe("keyed navigation through layout changes", () => {
                 didStartFreshData: true,
                 initialScrollAtEnd: false,
                 latestInitialScroll: undefined,
-                latestInitialScrollSessionKind: "bootstrap",
+                latestInitialScrollSessionKind: "index",
                 stylePaddingEnd: 0,
                 useBootstrapInitialScroll: false,
             });
@@ -661,9 +661,9 @@ describe("end maintenance request ownership", () => {
                 totalSize: 300,
             },
         );
-        updateItemPositions(ctx, true);
+        rebuildTestLayout(ctx);
         ctx.scrollToEnd = (options) => scrollToEnd(ctx, options);
-        ctx.state.triggerCalculateItemsInView = () => updateItemPositions(ctx, false);
+        ctx.state.triggerCalculateItemsInView = () => rebuildTestLayout(ctx);
         finishInitialScroll(ctx, { preserveTarget: true });
         return { ctx, frames, observed: () => observed };
     }
@@ -675,7 +675,7 @@ describe("end maintenance request ownership", () => {
             ctx.state.didFinishInitialScroll = false;
             ctx.values.set("readyToRender", false);
             ctx.values.set("isFollowingEnd", false);
-            ctx.state.initialScrollSession = { kind: "bootstrap", previousDataLength: 3 };
+            ctx.state.initialScroll = { ...ctx.state.initialScrollAnchor, kind: "index", previousDataLength: 3 };
 
             try {
                 dispatchInitialScroll(ctx, {
@@ -750,7 +750,12 @@ describe("end maintenance request ownership", () => {
             const { ctx } = setupMeasuredEnd();
             Platform.OS = platform;
             ctx.state.didFinishInitialScroll = false;
-            ctx.state.initialScrollSession = { completion: {}, kind: "bootstrap", previousDataLength: 3 };
+            ctx.state.initialScroll = {
+                ...ctx.state.initialScroll,
+                completion: {},
+                kind: "index",
+                previousDataLength: 3,
+            };
             ctx.values.set("isFollowingEnd", false);
             try {
                 follow.doMaintainScrollAtEnd(ctx, { immediate: true });
@@ -768,18 +773,17 @@ describe("end maintenance request ownership", () => {
         ctx.state.didFinishInitialScroll = false;
         ctx.state.endFollowInterrupted = false;
         ctx.values.set("isFollowingEnd", false);
-        ctx.state.initialScrollSession = {
+        ctx.state.initialScroll = {
+            ...ctx.state.initialScroll,
             bootstrap: { mountFrameCount: 0, passCount: 0, scroll: 200, seedContentOffset: 200 },
-            kind: "bootstrap",
+            kind: "index",
             previousDataLength: 3,
         };
         try {
             updateItemSizes(ctx, { itemKey: "tail", size: { height: 122, width: 200 } });
             expect(ctx.state.pendingMaintainScrollAtEnd).toBe(false);
             updateScroll(ctx, 180, true, { fromNativeScrollEvent: true });
-            expect(
-                ctx.state.initialScrollSession?.kind === "bootstrap" && ctx.state.initialScrollSession.bootstrap,
-            ).toBeDefined();
+            expect(ctx.state.initialScroll?.kind === "index" && ctx.state.initialScroll.bootstrap).toBeDefined();
             expect(ctx.state.endFollowInterrupted).toBe(false);
             expect(ctx.state.didFinishInitialScroll).toBe(false);
         } finally {
@@ -908,11 +912,11 @@ describe("end follow rearm after settling", () => {
         globalThis.requestAnimationFrame = (callback) => frames.push(callback);
         Object.assign(ctx.state, {
             indexByKey: new Map([["row", 0]]),
-            positions: [0],
             props: { ...ctx.state.props, keyExtractor: (item: string) => item },
             sizes: new Map([["row", 1000]]),
             sizesKnown: new Map([["row", 1000]]),
         });
+        setLayoutValue(ctx.state, "positions", 0, 0);
         try {
             const handle = createImperativeHandle(ctx);
             await handle.scrollIndexIntoView({ index: 0 });
@@ -1025,12 +1029,12 @@ describe("end follow rearm after settling", () => {
             globalThis.requestAnimationFrame = (callback) => frames.push(callback);
             Object.assign(ctx.state, {
                 indexByKey: new Map([["row", 0]]),
-                positions: [0],
                 props: { ...ctx.state.props, keyExtractor: (item: string) => item },
                 refScroller: { current: { getScrollableNode: () => null, scrollTo: () => {} } },
                 sizes: new Map([["row", 1000]]),
                 sizesKnown: new Map([["row", 1000]]),
             });
+            setLayoutValue(ctx.state, "positions", 0, 0);
             const handle = createImperativeHandle(ctx);
             const request =
                 method === "scrollToIndex"

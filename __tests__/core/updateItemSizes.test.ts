@@ -6,10 +6,15 @@ import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView
 import { invalidateFixedItemSizes } from "../../src/core/containerItemMetadata";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
-import { scrollToEnd } from "../../src/core/scrollToEnd";
 import { setLayoutStoreMeasuredSize, syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { onScroll } from "../../src/core/onScroll";
-import { batchItemSizeUpdates, updateItemSizes, updateItemSizesBatch, updateOneItemSize } from "../../src/core/updateItemSizes";
+import { scrollToEnd } from "../../src/core/scrollToEnd";
+import {
+    batchItemSizeUpdates,
+    updateItemSizes,
+    updateItemSizesBatch,
+    updateOneItemSize,
+} from "../../src/core/updateItemSizes";
 import { listen$, type StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -720,14 +725,13 @@ describe("updateItemSizes", () => {
                 ? { animated: maintenance === "animated", onItemLayout: true }
                 : undefined;
             mockCtx.values.set("isFollowingEnd", !!maintenance);
-            mockState.initialScroll = { index: 2, viewPosition: 1 };
-            mockState.initialScrollSession = { kind: "bootstrap", previousDataLength: 3 };
+            mockState.initialScrollAnchor = { contentOffset: 900, index: 2, kind: "index", viewPosition: 1 };
             syncLayoutStoreStructure(mockCtx);
             for (let index = 0; index < 3; index++) {
                 const key = `item_${index}`;
                 mockState.sizes.set(key, 500);
                 mockState.sizesKnown.set(key, 500);
-            setLayoutStoreMeasuredSize(mockCtx, index, 500);
+                setLayoutStoreMeasuredSize(mockCtx, index, 500);
                 assignContainer(index, key);
             }
             // React commits the published content extent after the observer delivery,

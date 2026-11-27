@@ -87,7 +87,7 @@ describe("measureContainersInLayoutEffect web", () => {
             didStartFreshData: true,
             initialScrollAtEnd: true,
             latestInitialScroll: { index: 2, preserveForBottomPadding: true, viewPosition: 1 },
-            latestInitialScrollSessionKind: "bootstrap",
+            latestInitialScrollSessionKind: "end",
             stylePaddingEnd: 0,
             useBootstrapInitialScroll: true,
         });
@@ -113,9 +113,7 @@ describe("measureContainersInLayoutEffect web", () => {
             measureContainersInLayoutEffect(ctx);
             await Promise.resolve();
             expect(ctx.state.scrollingTo?.targetOffset).toBe(222);
-            expect(
-                ctx.state.initialScrollSession?.kind === "bootstrap" && ctx.state.initialScrollSession.bootstrap,
-            ).toBeUndefined();
+            expect(ctx.state.initialScroll?.bootstrap).toBeUndefined();
             expect(ctx.state.sizesKnown.get("tail")).toBe(122);
         } finally {
             ctx.state.scheduledWork.dispose();
@@ -196,10 +194,7 @@ describe("measureContainersInLayoutEffect web", () => {
         try {
             measureContainersInLayoutEffect(ctx, new Set([ctx.state.containerItemKeys.get("tail")!]));
             await Promise.resolve();
-            expect(
-                ctx.state.initialScrollSession?.kind === "bootstrap" &&
-                    ctx.state.initialScrollSession.bootstrap?.visibleIndices,
-            ).toEqual([2]);
+            expect(ctx.state.initialScroll?.bootstrap?.visibleIndices).toEqual([2]);
             expect(ctx.state.containerItemKeys.has("b")).toBe(true);
             expect(ctx.state.scrollingTo).toBeUndefined();
         } finally {
@@ -256,7 +251,7 @@ describe("measureContainersInLayoutEffect web", () => {
             "../../src/core/measureContainersInLayoutEffect.ts?web-layout-post-bootstrap-scope"
         );
         const { ctx } = setupCachedReturn(122, 100);
-        ctx.state.initialScrollSession = undefined;
+        ctx.state.initialScroll = undefined;
         ctx.state.initialScroll = undefined;
         ctx.state.didFinishInitialScroll = true;
         ctx.state.didContainersLayout = true;
@@ -326,10 +321,10 @@ describe("measureContainersInLayoutEffect web", () => {
         ctx.viewRefs.set(containerId, {
             current: {
                 getBoundingClientRect: () => {
-                    const session = state.initialScrollSession;
+                    const session = state.initialScroll;
                     const target = state.initialScroll;
                     state.initialScroll = undefined;
-                    state.initialScrollSession = undefined;
+                    state.initialScroll = undefined;
                     state.didContainersLayout = true;
                     state.didFinishInitialScroll = true;
                     state.scroll = 0;
@@ -340,7 +335,7 @@ describe("measureContainersInLayoutEffect web", () => {
                     expect(peek$(ctx, `containerItemKey${containerId}`)).toBe("tail");
                     expect(state.containerItemGenerations[containerId]).toBeGreaterThan(generation!);
                     state.initialScroll = target;
-                    state.initialScrollSession = session;
+                    state.initialScroll = session;
                     state.didContainersLayout = false;
                     state.didFinishInitialScroll = false;
                     return { height: 122, width: 320 };

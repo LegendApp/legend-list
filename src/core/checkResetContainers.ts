@@ -1,7 +1,6 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
-import { getDataLength } from "@/core/IndexedData";
 import { clearLayoutStoreKnownSizes } from "@/core/layoutStoreLifecycle";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
 import type { StateContext } from "@/state/state";
@@ -10,13 +9,12 @@ import { getId } from "@/utils/getId";
 
 interface CheckResetContainersOptions {
     didColumnsChange?: boolean;
-    previousDataLength?: number;
 }
 
 export function checkResetContainers(
     ctx: StateContext,
     dataProp: readonly unknown[],
-    { didColumnsChange = false, previousDataLength }: CheckResetContainersOptions = {},
+    { didColumnsChange = false }: CheckResetContainersOptions = {},
 ) {
     const state = ctx.state;
     const { previousData } = state;

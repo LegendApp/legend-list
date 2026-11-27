@@ -13,9 +13,10 @@ type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScr
 
 export type MockState = InternalState;
 
-export function createMockState(
-    overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
-): MockState {
+export function createMockState({
+    positions,
+    ...overrides
+}: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides; positions: number[] }> = {}): MockState {
     const state = {
         anchoredEndSpaceSize: undefined,
         averageSizes: {},
@@ -162,8 +163,8 @@ export function createMockState(
         },
     });
 
-    if (Array.isArray((overrides as any).positions) && (overrides as any).positions.length > 0) {
-        setLayoutValues(state as InternalState, "positions", (overrides as any).positions);
+    if (positions?.length) {
+        setLayoutValues(state as InternalState, "positions", positions);
     }
 
     return state as MockState;

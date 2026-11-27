@@ -3,14 +3,19 @@ import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { materializeFixedLayoutStoreRangeAtOffsets } from "@/core/fixedLayoutMaterialization";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { getDataLength } from "@/core/IndexedData";
-import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import {
-    getObservedScrollOffset,
+    advanceCurrentInitialScrollSession,
+    dispatchInitialScroll,
+    resolveInitialScrollOffset,
+    setInitialScrollTarget,
+} from "@/core/initialScroll";
+import {
     retargetInitialScroll,
     schedulePreservedEndAnchorCorrection,
     updateInitialScrollAnchor,
 } from "@/core/initialScrollAnchor";
 import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
+import { getObservedScrollOffset } from "@/core/observedScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -127,7 +132,6 @@ function resetBootstrapInitialScrollSession(
         }
     } else {
         bootstrapInitialScroll.passCount = 0;
-        bootstrapInitialScroll.previousResolvedOffset = undefined;
         bootstrapInitialScroll.scroll = options?.scroll ?? bootstrapInitialScroll.scroll;
         bootstrapInitialScroll.seedContentOffset =
             options?.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
@@ -204,7 +208,7 @@ export function startBootstrapInitialScrollOnMount(
             : target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1);
     const shouldFinishWithPreservedTarget = getDataLength(state) === 0 && target.index !== undefined;
 
-    if (shouldFinishAtOrigin) {
+    if (shouldFinishAtOrigin || shouldFinishWithPreservedTarget) {
         clearBootstrapInitialScrollSession(state);
         finishInitialScroll(ctx, {
             // Empty data retains its target for the first non-empty layout; origin targets are complete.
@@ -239,7 +243,8 @@ export function handleBootstrapInitialScrollDataChange(
         return;
     }
     if (initial.kind === "offset") return;
-    const replay = state.didFinishInitialScroll && previousDataLength === 0 && dataLength > 0;
+    const replay = previousDataLength === 0 && dataLength > 0;
+    const hadFinished = !!state.didFinishInitialScroll;
     const retarget = dataLength > 0 && (initialScrollAtEnd || initial.preserveForBottomPadding);
     if (!didDataChange && !replay && !retarget) return;
     const next = retarget
@@ -247,10 +252,13 @@ export function handleBootstrapInitialScrollDataChange(
         : initial;
     const changed = next.index !== initial.index || next.viewOffset !== initial.viewOffset;
     if (changed || initial.bootstrap || replay) {
-        setInitialScrollTarget(ctx, next, { resetDidFinish: !!replay });
+        setInitialScrollTarget(ctx, next, { resetDidFinish: replay && hadFinished });
         rearmBootstrapInitialScroll(ctx, {
             scroll: resolveInitialScrollOffset(ctx, next),
-            seedContentOffset: replay && !initial.bootstrap ? getObservedScrollOffset(state) : undefined,
+            seedContentOffset:
+                replay && hadFinished && !initial.bootstrap
+                    ? getObservedScrollOffset(ctx, state.scrollPending)
+                    : undefined,
             targetIndexSeed: next.index,
         });
     }
@@ -272,7 +280,10 @@ export function handleBootstrapInitialScrollFooterLayout(
     const initial = state.initialScroll;
     if (!initial) {
         updateInitialScrollAnchor(ctx, options);
-    } else if (initial.kind !== "offset" && (initial.bootstrap || initial.preserveForFooterLayout)) {
+    } else if (
+        initial.kind !== "offset" &&
+        (initial.bootstrap || initial.preserveForFooterLayout || state.scrollingTo?.isInitialScroll)
+    ) {
         const next = retargetInitialScroll(
             initial,
             options.dataLength,
@@ -280,7 +291,10 @@ export function handleBootstrapInitialScrollFooterLayout(
             options.stylePaddingEnd,
             options.initialScrollAtEnd,
         );
-        if (initial.kind === "end" || next.index !== initial.index || next.viewOffset !== initial.viewOffset) {
+        if (!initial.bootstrap && state.scrollingTo?.isInitialScroll) {
+            setInitialScrollTarget(ctx, next);
+            advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
+        } else if (next.index !== initial.index || next.viewOffset !== initial.viewOffset) {
             setInitialScrollTarget(ctx, next);
             rearmBootstrapInitialScroll(ctx, {
                 scroll: resolveInitialScrollOffset(ctx, next),
@@ -378,7 +392,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         Platform.OS !== "web" &&
         Platform.OS !== "android" &&
         Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1 &&
-        Math.abs(getObservedScrollOffset(state) - resolvedOffset) <= 1
+        Math.abs(getObservedScrollOffset(ctx, state.scrollPending) - resolvedOffset) <= 1
     ) {
         // Non-Android native can finish without a follow-up scroll when the
         // mount seed already landed exactly where bootstrap converged.

@@ -1,4 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
+import { setLayoutValue } from "../helpers/layoutStore";
 
 import "../setup";
 
@@ -76,8 +77,7 @@ describe("doScrollTo (web)", () => {
                 {
                     didContainersLayout: true,
                     horizontalRTLScrollType: rtlMode,
-                    initialScroll: { index: 75, viewPosition: 0 },
-                    initialScrollSession: { kind: "bootstrap", previousDataLength: 151 },
+                    initialScroll: { index: 75, kind: "index", previousDataLength: 151, viewPosition: 0 },
                     positions: Array.from({ length: 151 }, (_, index) => index * 100),
                     props: {
                         data: Array.from({ length: 151 }, (_, index) => index),
@@ -123,7 +123,7 @@ describe("doScrollTo (web)", () => {
                 // The extent commits, and measured rows move the index before retry.
                 domHeight = 15200;
                 ctx.state.totalSize = domHeight;
-                ctx.state.positions[75] = 7600;
+                setLayoutValue(ctx.state, "positions", 75, 7600);
                 clock.advance(500);
                 expect(physicalScroll).toBe(7600);
                 expect(calls.at(-1)).toBe(rtlMode === "negative" ? -7600 : rtlMode === "inverted" ? 6796 : 7600);
@@ -155,8 +155,7 @@ describe("doScrollTo (web)", () => {
             { totalSize: 1000 },
             {
                 didContainersLayout: true,
-                initialScroll: target,
-                initialScrollSession: { kind: "bootstrap", previousDataLength: 10 },
+                initialScroll: { ...target, kind: "index", previousDataLength: 10 },
                 positions: Array.from({ length: 10 }, (_, index) => index * 100),
                 props: { data: Array.from({ length: 10 }, (_, index) => index), getFixedItemSize: () => 100 },
                 scrollLength: 300,

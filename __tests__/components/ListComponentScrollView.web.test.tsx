@@ -1364,8 +1364,7 @@ describe("ListComponentScrollView (web)", () => {
             resetMocks();
             maxOffset = 1000;
             ownerScroll = 640;
-            const cancelWork = mock(() => {});
-            mockCtx.state.scheduledWork = { cancel: cancelWork };
+            const cancelWork = spyOn(mockCtx.state.scheduledWork, "cancel");
             const { ListComponentScrollView } = await import(
                 "../../src/components/ListComponentScrollView?initial-wheel-cancel"
             );
@@ -1373,7 +1372,7 @@ describe("ListComponentScrollView (web)", () => {
             try {
                 act(() => {
                     renderer = TestRenderer.create(
-                        <ListComponentScrollView horizontal={horizontal} onLayout={() => {}} style={{}}>
+                        <ListComponentScrollView horizontal={horizontal} onLayout={() => {}} style={{}} useWindowScroll>
                             <div />
                         </ListComponentScrollView>,
                     );
@@ -1396,6 +1395,7 @@ describe("ListComponentScrollView (web)", () => {
                     expect(cancelWork).toHaveBeenCalledWith("initialScrollAlignment");
                 }
             } finally {
+                cancelWork.mockRestore();
                 act(() => renderer?.unmount());
             }
             expect(scrollListeners.has("wheel")).toBe(false);
@@ -1627,7 +1627,7 @@ describe("ListComponentScrollView (web)", () => {
             resetMocks();
             mockCtx.state.didFinishInitialScroll = false;
             mockCtx.state.initialScroll = { index: 2, preserveForBottomPadding: true, viewPosition: 1 };
-            mockCtx.state.initialScrollSession = { kind: "bootstrap" };
+            mockCtx.state.initialScroll = { ...mockCtx.state.initialScroll, kind: "index" };
             mockCtx.state.scroll = 800;
             mockCtx.state.pendingMaintainScrollAtEnd = true;
             mockCtx.state.scrollingTo = hasActiveTarget ? { isInitialScroll: true } : undefined;

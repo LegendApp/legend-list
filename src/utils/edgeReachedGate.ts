@@ -1,4 +1,5 @@
 import { getContentInsetTop } from "@/core/clampScrollOffset";
+import { getDataLength, getLegacyData } from "@/core/IndexedData";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import type { ThresholdSnapshot } from "@/types.internal";
@@ -89,9 +90,16 @@ export function dispatchReachedEdge(ctx: StateContext, edge: ReachedEdge, dispat
     }
 }
 
-function getThresholdSnapshot(ctx: StateContext): ThresholdSnapshot {
-    const { data } = ctx.state.props;
-    return { contentSize: getContentSize(ctx), data, dataLength: data.length, scroll: ctx.state.scroll };
+export function getThresholdSnapshot(ctx: StateContext, contentSize = getContentSize(ctx)): ThresholdSnapshot {
+    const { state } = ctx;
+    const { dataSource } = state.props;
+    return {
+        contentSize,
+        data: getLegacyData(state) ?? dataSource,
+        dataLength: getDataLength(state),
+        dataRevision: dataSource?.getRevision(),
+        scroll: state.scroll,
+    };
 }
 
 export function prepareReachedEdgeForNextUserScroll(ctx: StateContext) {
@@ -112,7 +120,11 @@ export function beginReachedEdgeUserScroll(ctx: StateContext, scrollDelta: numbe
 
     const snapshotKey = allowedEdge === "start" ? "startReachedSnapshot" : "endReachedSnapshot";
     const snapshot = state[snapshotKey];
-    if (snapshot?.didRearmForData && snapshot.data === state.props.data) {
+    if (
+        snapshot?.didRearmForData &&
+        snapshot.data === (getLegacyData(state) ?? state.props.dataSource) &&
+        snapshot.dataRevision === state.props.dataSource?.getRevision()
+    ) {
         // New content was already delivered without waiting for this gesture.
         // Consume that delivery once, then let a later gesture retry unchanged data.
         snapshot.didRearmForData = false;

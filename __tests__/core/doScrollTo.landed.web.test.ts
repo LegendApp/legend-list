@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { getLayoutValue, rebuildTestLayout } from "../helpers/layoutStore";
 import "../setup";
 
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { scrollToEnd } from "@/core/scrollToEnd";
-import { updateItemPositions } from "@/core/updateItemPositions";
 import { Platform } from "@/platform/Platform";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
@@ -43,7 +43,10 @@ function endAlignedOffset(h: WebScrollHarness, index: number) {
     const size = h.state.sizes.get(`item_${index}`)!;
     return Math.max(
         0,
-        Math.min(h.state.positions[index]! - (h.state.scrollLength - size), h.state.totalSize - h.state.scrollLength),
+        Math.min(
+            getLayoutValue(h.state, "positions", index)! - (h.state.scrollLength - size),
+            h.state.totalSize - h.state.scrollLength,
+        ),
     );
 }
 
@@ -67,7 +70,7 @@ describe("animated web scrolls resolve only once landed", () => {
             await runUntilResolved(h, result);
             expect(result.resolved).toBe(true);
             expect(result.value).toBeUndefined();
-            expect(h.browser.offset).toBe(h.state.positions[50]!);
+            expect(h.browser.offset).toBe(getLayoutValue(h.state, "positions", 50)!);
             expect(h.browser.offset).toBe(6500);
         });
     }
@@ -595,7 +598,7 @@ describe("animated web scrolls resolve only once landed", () => {
             const scroll = trackScroll(h.ref.scrollToEnd({ animated: true }));
             h.browser.step(400);
             h.setData(0);
-            updateItemPositions(h.ctx, true);
+            rebuildTestLayout(h.ctx);
 
             await runUntilResolved(h, scroll);
 

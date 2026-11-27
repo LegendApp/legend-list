@@ -80,7 +80,6 @@ describe("viewability system", () => {
             ctx.state = state;
             let items: ViewToken[] = [];
             updateViewableItems(
-                state,
                 ctx,
                 [
                     {
@@ -170,7 +169,6 @@ describe("viewability system", () => {
             ctx.state = state;
 
             updateViewableItems(
-                state,
                 ctx,
                 [{ viewabilityConfig: { id: "horizontal", itemVisiblePercentThreshold: 60 } }],
                 100,
@@ -1015,7 +1013,7 @@ for (const useDataSource of [false, true]) {
         });
         ctx.state.viewabilityConfigCallbackPairs = pairs;
         let now = 0;
-        const clock = spyOn(Date, "now").mockImplementation(() => now);
+        const clock = spyOn(performance, "now").mockImplementation(() => now);
         const callbacks: Array<() => void> = [];
         const timer = spyOn(ctx.state.scheduledWork, "timeout").mockImplementation((callback: any) => {
             callbacks.push(callback);

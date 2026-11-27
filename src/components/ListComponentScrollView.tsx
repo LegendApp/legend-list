@@ -14,14 +14,14 @@ import {
 } from "react";
 
 import { interruptUserScroll } from "@/core/cancelScroll";
+import { clearInitialScrollAnchor } from "@/core/finishInitialScroll";
 import { rearmEndFollowIfSettled } from "@/core/finishMaintainScrollAtEnd";
+import { getDataLength } from "@/core/IndexedData";
 import {
     beginNativeScrollToStart,
     cancelNativeScrollToStart,
     hasNativeScrollToStart,
 } from "@/core/nativeScrollToStart";
-import { clearInitialScrollAnchor } from "@/core/finishInitialScroll";
-import { getDataLength } from "@/core/IndexedData";
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { listen$, peek$, useArr$, useStateContext } from "@/state/state";
@@ -500,7 +500,13 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 return false;
             }
             const explicit = captured?.explicit ?? isExplicitNavigation();
-            if (direction > 0 && !explicit && !state.initialScrollAnchor && !hasNativeScrollToStart(ctx) && !(isNew && state.props.onUserScroll))
+            if (
+                direction > 0 &&
+                !explicit &&
+                !state.initialScrollAnchor &&
+                !hasNativeScrollToStart(ctx) &&
+                !(isNew && state.props.onUserScroll)
+            )
                 return false;
             const node = resolveScrollableNode(scrollRef.current, externalTarget);
             const maxOffset = getMaxScrollOffset();

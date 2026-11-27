@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, jest, spyOn } from "bun:test";
+import { setLayoutValues } from "../helpers/layoutStore";
 import "../setup";
 
 import { setupViewability, updateViewableItems } from "../../src/core/viewability";
@@ -20,7 +21,11 @@ function setData(ctx: StateContext, keys: string[]) {
     state.props.keyExtractor = (item: { id: string }) => item.id;
     state.idCache = keys.slice();
     state.indexByKey = new Map(keys.map((key, index) => [key, index]));
-    state.positions = keys.map((_, index) => index * ROW);
+    setLayoutValues(
+        state,
+        "positions",
+        keys.map((_, index) => index * ROW),
+    );
     state.sizes = new Map(keys.map((key) => [key, ROW]));
 }
 
@@ -44,7 +49,7 @@ function createList(keys: string[], configs: ViewabilityConfig[], viewport = 300
         const start = Math.min(last, Math.floor(scroll / ROW));
         const end = Math.min(last, Math.floor((scroll + viewport - 1) / ROW));
         Object.assign(ctx.state, { endNoBuffer: end, scrollLength: viewport, startNoBuffer: start });
-        updateViewableItems(ctx.state, ctx, pairs, viewport, start, end);
+        updateViewableItems(ctx, pairs, viewport, start, end);
     };
     return { calls, ctx, scrollTo };
 }
@@ -422,7 +427,10 @@ describe("viewability minimumViewTime", () => {
         scrollTo(0);
         jest.advanceTimersByTime(200);
         const latest: OnViewableItemsChangedInfo[] = [];
-        setupViewability({ onViewableItemsChanged: (info) => latest.push(info), viewabilityConfig }, ctx);
+        ctx.state.viewabilityConfigCallbackPairs = setupViewability(
+            { onViewableItemsChanged: (info) => latest.push(info), viewabilityConfig },
+            ctx,
+        );
         jest.advanceTimersByTime(50);
         expect(calls.c).toEqual([]);
         expect(changes(ctx, latest)).toEqual(["+a@0", "+b@1", "+c@2"]);
@@ -434,10 +442,12 @@ describe("viewability minimumViewTime", () => {
         scrollTo(0);
         jest.advanceTimersByTime(200);
         const latest: OnViewableItemsChangedInfo[] = [];
-        setupViewability(
+        const replacement = setupViewability(
             { onViewableItemsChanged: (info) => latest.push(info), viewabilityConfig: config("new") },
             ctx,
         );
+        ctx.state.viewabilityConfigCallbackPairs = replacement;
+        updateViewableItems(ctx, replacement, ctx.state.scrollLength, ctx.state.startNoBuffer, ctx.state.endNoBuffer);
         jest.advanceTimersByTime(249);
         expect(calls.old).toEqual([]);
         expect(latest).toEqual([]);

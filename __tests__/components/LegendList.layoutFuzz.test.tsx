@@ -37,7 +37,7 @@ const VIEWPORT = 400;
 const KNOWN_ISSUES = {
     // A data change re-arms the initialScrollAtEnd bootstrap from offset 0, so it renders the first
     // rows while the view stays at the end until the bootstrap pass finishes.
-    "bootstrap-retarget": (ctx: StateContext) => !!ctx.state.initialScrollSession?.bootstrap,
+    "bootstrap-retarget": (ctx: StateContext) => !!ctx.state.initialScroll?.bootstrap,
     // The range is clamped against the content size from before the data change's position pass, so
     // the commit renders from the stale offset until the scroll view's clamp event arrives.
     "shrink-past-offset": (ctx: StateContext) =>

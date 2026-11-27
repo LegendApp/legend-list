@@ -10,7 +10,6 @@ import { syncLayoutStoreState, syncLayoutStoreStructure } from "../../src/core/l
 import * as scrollToModule from "../../src/core/scrollTo";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { getLayoutValue } from "../helpers/layoutStore";
 
 describe("initialScroll", () => {
     let scrollToSpy: ReturnType<typeof spyOn>;
@@ -116,7 +115,7 @@ describe("initialScroll", () => {
                 viewPosition: 1,
             }),
         ).toBe(4700);
-        expect(getLayoutValue(ctx.state, "positions", 90)).toBeUndefined();
+        expect(ctx.state.idCache[90]).toBeUndefined();
     });
 
     it("waits for measured layout before advancing bootstrap sessions that are not already scrolling", () => {
@@ -304,8 +303,7 @@ describe("initialScroll", () => {
         const ctx = createMockContext(
             {},
             {
-                initialScroll: { contentOffset: 220, index: 0 },
-                initialScrollSession: { kind: "offset" },
+                initialScroll: { contentOffset: 220, index: 0, kind: "offset" },
                 lastNativeScroll: 0,
                 scroll: 220,
                 scrollPending: 220,
@@ -321,8 +319,7 @@ describe("initialScroll", () => {
         const ctx = createMockContext(
             {},
             {
-                initialScroll: { contentOffset: 220, index: 0 },
-                initialScrollSession: { kind: "offset" },
+                initialScroll: { contentOffset: 220, index: 0, kind: "offset" },
                 scroll: 220,
                 scrollingTo: { isInitialScroll: true, offset: 220 },
                 scrollPending: 220,

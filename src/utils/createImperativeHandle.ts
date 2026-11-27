@@ -6,13 +6,13 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { armAppScrollRearm, interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
-import { getDataLength, getIndexedData } from "@/core/IndexedData";
+import { findIndexForKey, getDataLength, getIndexedData } from "@/core/IndexedData";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { clearItemSizeEstimates } from "@/core/itemSizeCache";
+import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
+import { clearLayoutStoreKnownSizes, rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { triggerMountedContainerLayouts } from "@/core/scheduleContainerLayout";
-import { getLayoutOffset } from "@/core/layoutAccessors";
-import { clearLayoutStoreKnownSizes, rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { getScrollRequestTracker, type ScrollRequestRun } from "@/core/scrollRequestTracker";
 import { findVisibleItemIndex, scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
@@ -36,7 +36,7 @@ import {
 import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
 import type { LegendListInternalRef, ScrollResolve } from "@/types.internal";
 import { getId } from "@/utils/getId";
-import { areKnownOrFixedItemSizesAvailable, getItemSizeAtIndex } from "@/utils/getItemSize";
+import { areKnownOrFixedItemSizesAvailable } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { findContainerId, isFunction } from "@/utils/helpers";
 
@@ -89,14 +89,6 @@ export function createImperativeHandle(
         }
 
         return areKnownOrFixedItemSizesAvailable(ctx, anchorIndex, dataLength - 1);
-    };
-
-    const getIndexForKey = (key: string) => {
-        if (state.props.keyExtractor) return state.indexByKey.get(key);
-        const index = Number(key);
-        return Number.isInteger(index) && String(index) === key && index >= 0 && index < getDataLength(state)
-            ? index
-            : undefined;
     };
 
     const runScrollRequest = (token: number, resolve: ScrollResolve, run: ScrollRequestRun, isReady: () => boolean) => {
@@ -169,7 +161,7 @@ export function createImperativeHandle(
         const hasRegion = itemOffset !== undefined || itemLength !== undefined;
         const observed = getObservedScrollOffset(ctx);
         const position = calculateOffsetForIndex(ctx, index) + getStartOffsetAdjustment(ctx) + (itemOffset ?? 0);
-        const size = hasRegion ? (itemLength ?? 0) : (getItemSizeAtIndex(ctx, index) ?? 0) - ctx.scrollAxisGap;
+        const size = hasRegion ? (itemLength ?? 0) : (getLayoutSize(ctx, index) ?? 0) - ctx.scrollAxisGap;
         const insetTop = getContentInsetTop(ctx);
         const viewportLength = state.scrollLength - insetTop - getContentInsetEnd(ctx);
         const viewportStart = observed + insetTop + (viewportMargin?.start ?? 0);
@@ -210,10 +202,11 @@ export function createImperativeHandle(
         ) {
             const viewportStart = state.scroll - getStartOffsetAdjustment(ctx);
             const index = findVisibleItemIndex(ctx, viewportStart, viewportStart + state.scrollLength);
-            if (index !== undefined) {
+            const position = getLayoutOffset(ctx, index);
+            if (index !== undefined && position !== undefined) {
                 state.visibleContentAnchor = {
                     key: getId(state, index),
-                    offset: state.scroll - state.positions[index]!,
+                    offset: state.scroll - position,
                     sizeOnly: true,
                 };
             }
@@ -269,14 +262,15 @@ export function createImperativeHandle(
             const index =
                 key === undefined
                     ? findVisibleItemIndex(ctx, viewportStart, viewportStart + state.scrollLength)
-                    : getIndexForKey(key);
-            if (index === undefined || state.positions[index] === undefined) return undefined;
+                    : findIndexForKey(state, key);
+            const position = getLayoutOffset(ctx, index);
+            if (index === undefined || position === undefined) return undefined;
             const id = getId(state, index);
-            const offset = viewportStart - state.positions[index]!;
+            const offset = viewportStart - position;
             if (hold && !(peek$(ctx, "isFollowingEnd") && peek$(ctx, "isAtEnd"))) {
                 updateScroll(ctx, observed, true, { markHasScrolled: false });
                 interruptMaintainScrollAtEnd(ctx);
-                state.visibleContentAnchor = { key: id, offset: state.scroll - state.positions[index]! };
+                state.visibleContentAnchor = { key: id, offset: state.scroll - position };
             }
             return { key: String(id), offset };
         },
@@ -418,14 +412,14 @@ export function createImperativeHandle(
         scrollToKey: ({ key, ...params }) =>
             runScrollWithPromise(
                 () => {
-                    const index = getIndexForKey(key);
+                    const index = findIndexForKey(state, key);
                     if (index === undefined) return "unreachable";
                     scrollToIndex(ctx, { ...params, index });
                     if (state.scrollingTo) state.scrollingTo.key = getId(state, index);
                     return true;
                 },
                 () => {
-                    const index = getIndexForKey(key);
+                    const index = findIndexForKey(state, key);
                     return index !== undefined && isScrollToIndexReady(index);
                 },
             ),

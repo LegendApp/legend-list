@@ -2,6 +2,7 @@
 // globalThis.__LEGEND_LIST_DEV_HOOK__ in dev builds (see src/components/useDevChecks.ts); nothing
 // here ships in the library. Shared by the unit-test harness, the fuzzer and the example apps.
 
+import { getDataLength } from "@/core/IndexedData";
 import { getContentSize } from "@/state/getContentSize";
 
 const POSITION_OUT_OF_VIEW = -10000000;
@@ -26,10 +27,6 @@ type Interval = [number, number];
 
 const DEFAULT_TOLERANCE = 1;
 
-function sizeOf(state: any, key: string | undefined) {
-    return key === undefined ? undefined : (state.sizesKnown.get(key) ?? state.sizes.get(key));
-}
-
 function startOffset(ctx: ListCtx) {
     const { state, values } = ctx;
     const padding = state.props.horizontal ? state.props.stylePaddingLeft || 0 : values.get("stylePaddingTop") || 0;
@@ -42,8 +39,8 @@ function isCheckable(ctx: ListCtx) {
         !state.isUnmounted &&
         !!values.get("readyToRender") &&
         state.scrollLength > 0 &&
-        state.props.data.length > 0 &&
-        state.idCache.length >= state.props.data.length
+        getDataLength(state) > 0 &&
+        !!state.layoutStoreRuntime?.store
     );
 }
 
@@ -85,7 +82,7 @@ export function getRenderedContainers(ctx: ListCtx) {
         const key = values.get(`containerItemKey${id}`);
         const position = values.get(`containerPosition${id}`);
         const index = key === undefined ? undefined : state.indexByKey.get(key);
-        const size = sizeOf(state, key);
+        const size = index === undefined ? undefined : state.layoutStoreRuntime?.store.getSize(index);
         if (index === undefined || size === undefined || position === undefined || position === POSITION_OUT_OF_VIEW) {
             continue;
         }
@@ -108,9 +105,9 @@ export function describeListState(ctx: ListCtx) {
         `scroll ${state.scroll}`,
         `scrollLength ${state.scrollLength}`,
         `totalSize ${state.totalSize}`,
-        `data ${state.props.data.length}`,
+        `data ${getDataLength(state)}`,
         `buffered ${state.startBuffered}-${state.endBuffered}`,
-        `bootstrap ${state.initialScrollSession?.bootstrap ? "active" : "none"}`,
+        `bootstrap ${state.initialScroll?.bootstrap ? "active" : "none"}`,
         `scrollingTo ${target ? `${target.index ?? ""}@${target.offset}${target.animated ? " animated" : ""}` : "none"}`,
         `rendered ${rendered.join(" ")}`,
     ].join(", ");
@@ -135,39 +132,28 @@ export function checkLayoutInvariants(ctx: ListCtx, options: CheckLayoutOptions 
     const { state, values } = ctx;
     const tolerance = options.tolerance ?? DEFAULT_TOLERANCE;
     const violations: LayoutViolation[] = [];
-    const { idCache, positions } = state;
-    const dataLength = state.props.data.length;
+    const store = state.layoutStoreRuntime.store;
     const numColumns = values.get("numColumns") ?? 1;
     const rendered = getRenderedContainers(ctx);
 
     if (numColumns === 1 && !options.blankOnly) {
-        // Positions past the rendered items may lag by design (early-break position passes).
-        let lastRenderedIndex = -1;
-        for (const [index] of rendered) lastRenderedIndex = Math.max(lastRenderedIndex, index);
-        if (positions[0] !== undefined && Math.abs(positions[0]) > tolerance) {
-            violations.push({ kind: "firstPosition", position: positions[0] });
+        const first = store.getOffset(0);
+        if (Math.abs(first) > tolerance) {
+            violations.push({ kind: "firstPosition", position: first });
         }
-        let sum = 0;
-        let sumKnown = true;
-        let reportedPosition = false;
-        for (let i = 0; i < dataLength; i++) {
-            const size = sizeOf(state, idCache[i]);
-            if (i <= lastRenderedIndex && i > 0 && sumKnown && !reportedPosition) {
-                const actual = positions[i];
-                if (actual !== undefined && Math.abs(actual - sum) > tolerance) {
-                    violations.push({ actual, expected: sum, index: i, kind: "position" });
-                    reportedPosition = true;
-                }
-            }
-            if (size === undefined) {
-                sumKnown = false;
-            } else {
-                sum += size;
+        for (const [index] of rendered) {
+            if (index === 0) continue;
+            const actual = store.getOffset(index);
+            const expected = store.getOffset(index - 1) + store.getSize(index - 1);
+            if (Math.abs(actual - expected) > tolerance) {
+                violations.push({ actual, expected, index, kind: "position" });
             }
         }
         const totalSize = state.pendingTotalSize ?? state.totalSize;
-        if (sumKnown && Math.abs(totalSize - sum) > tolerance) {
-            violations.push({ actual: totalSize, expected: sum, kind: "totalSize" });
+        const lastIndex = store.length - 1;
+        const extent = store.getOffset(lastIndex) + store.getSize(lastIndex);
+        if (Math.abs(totalSize - extent) > tolerance) {
+            violations.push({ actual: totalSize, expected: extent, kind: "totalSize" });
         }
     }
 
@@ -176,7 +162,7 @@ export function checkLayoutInvariants(ctx: ListCtx, options: CheckLayoutOptions 
 
     if (options.containerPositions && !options.blankOnly) {
         for (const [index, position, , containerId] of rendered) {
-            const expected = positions[index];
+            const expected = store.getOffset(index);
             const isSticky = values.get(`containerSticky${containerId}`);
             if (!isSticky && expected !== undefined && Math.abs(expected - position) > tolerance) {
                 violations.push({ actual: position, containerId, expected, index, kind: "containerPosition" });

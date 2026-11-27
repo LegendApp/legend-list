@@ -1,10 +1,10 @@
 import { afterEach, expect, it, spyOn } from "bun:test";
+import { getLayoutValue, rebuildTestLayout } from "../helpers/layoutStore";
 import "../setup";
 
 import * as platformScroll from "@/core/doScrollTo";
 import { doScrollTo as doNativeScrollTo } from "@/core/doScrollTo.native";
 import { getCurrentTargetOffset } from "@/core/getCurrentTargetOffset";
-import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateOneItemSize } from "@/core/updateItemSizes";
 import { Platform } from "@/platform/Platform";
 import { createWebScrollHarness, type WebScrollHarness } from "../helpers/webScrollHarness";
@@ -52,8 +52,8 @@ for (const platform of ["ios", "android", "web"] as const) {
                         if (!prefixKnown) {
                             for (let i = 0; i < index; i++) h.state.sizesKnown.delete(`item_${i}`);
                         }
-                        updateItemPositions(h.ctx, true);
-                        const consumedPrefix = h.state.positions[10];
+                        rebuildTestLayout(h.ctx);
+                        const consumedPrefix = getLayoutValue(h.state, "positions", 10);
                         void h.ref.scrollToIndex({ animated, index, viewOffset: 0, viewPosition: 0.5 });
                         const target = h.state.scrollingTo!;
                         const changes =
@@ -74,15 +74,11 @@ for (const platform of ["ios", "android", "web"] as const) {
                                         ];
                         for (const [changedIndex, size] of changes) {
                             updateOneItemSize(h.ctx, `item_${changedIndex}`, { height: 40, width: size! });
-                            updateItemPositions(h.ctx, false, {
-                                doMVCP: false,
-                                scrollBottomBuffered: -1,
-                                startIndex: changedIndex!,
-                            });
+                            rebuildTestLayout(h.ctx);
                         }
                         const finalSize = order === "previous-only" || order === "prefix-measurement" ? 40 : 56;
-                        const expected = h.state.positions[index]! + 16 - (402 - finalSize) / 2;
-                        expect(h.state.positions[10]).toBe(consumedPrefix);
+                        const expected = getLayoutValue(h.state, "positions", index)! + 16 - (402 - finalSize) / 2;
+                        expect(getLayoutValue(h.state, "positions", 10)).toBe(consumedPrefix);
                         h.browser.runToEnd();
                         h.clock.advance(2000);
                         h.browser.runToEnd();
@@ -112,12 +108,12 @@ it.each(["ios", "android"] as const)(
             h.state.didFinishInitialScroll = true;
             h.state.sizesKnown.set("item_56", 56);
             h.state.sizes.set("item_56", 56);
-            updateItemPositions(h.ctx, true);
+            rebuildTestLayout(h.ctx);
             h.browser.moveTo(1931);
             void h.ref.scrollToIndex({ animated: true, index: 57, viewPosition: 0.5 });
             const issued = h.browser.destination!;
             updateOneItemSize(h.ctx, "item_56", { height: 40, width: 40 });
-            updateItemPositions(h.ctx, false, { doMVCP: false, scrollBottomBuffered: -1, startIndex: 56 });
+            rebuildTestLayout(h.ctx);
             const expected = issued - 16;
             h.browser.step(expected - h.browser.offset);
             h.clock.tick();
@@ -151,17 +147,17 @@ for (const platform of ["ios", "android", "web"] as const) {
                 h.state.didFinishInitialScroll = true;
                 h.state.props.estimatedItemSize = 60;
                 for (let i = 0; i < 300; i++) h.state.sizesKnown.delete(`item_${i}`);
-                updateItemPositions(h.ctx, true);
+                rebuildTestLayout(h.ctx);
                 void h.ref.scrollToIndex({ animated, index, viewPosition: 0 });
                 for (const changed of [index - 1, index - 6, index - 12, index + 1]) {
                     updateOneItemSize(h.ctx, `item_${changed}`, { height: 180, width: 400 });
-                    updateItemPositions(h.ctx, false, { doMVCP: false, scrollBottomBuffered: -1, startIndex: changed });
+                    rebuildTestLayout(h.ctx);
                 }
                 h.browser.runToEnd();
                 h.clock.advance(2000);
                 h.browser.runToEnd();
                 h.clock.advance(1000);
-                expect(h.browser.offset).toBeCloseTo(h.state.positions[index]!, 5);
+                expect(h.browser.offset).toBeCloseTo(getLayoutValue(h.state, "positions", index)!, 5);
                 expect(h.state.scrollingTo).toBeUndefined();
             } finally {
                 now.mockRestore();

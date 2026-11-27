@@ -110,6 +110,7 @@ function flushLayoutStoreEstimate(
             const clampedAnchorIndex = Math.min(Math.max(anchorIndex, 0), store.length - 1);
             const oldAnchorTop = store.getOffset(clampedAnchorIndex);
             store.setEstimatedSize(estimatedSize);
+            state.containerSyncAdjust = undefined;
             syncLayoutStoreState(ctx, options?.notifyTotalSize);
             const newAnchorTop = store.getOffset(clampedAnchorIndex);
             const positionDiff = newAnchorTop - oldAnchorTop;
@@ -276,6 +277,7 @@ export function setLayoutStoreMeasuredSize(
             runtime.pendingEstimateMeasurements++;
         }
         if (didChange) {
+            ctx.state.containerSyncAdjust = undefined;
             syncLayoutStoreState(ctx, notifyTotalSize);
         }
         didSet = true;
@@ -435,6 +437,7 @@ export function rebuildLayoutStoreExact(ctx: StateContext) {
         const seed = getLayoutStoreSeed(ctx);
         store.replaceKnownSizeEntries(seed.sizeEntries, seed.estimatedSize);
     }
+    state.containerSyncAdjust = undefined;
     return state.layoutStoreRuntime?.store;
 }
 

@@ -1,3 +1,4 @@
+import { getDataLength } from "@/core/IndexedData";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getInitialContainerPoolSize } from "@/utils/containerPool";
@@ -56,7 +57,7 @@ export function scheduleFullDrawDistancePrewarm(ctx: StateContext) {
             }
         }
         if (isSparePoolPending(state)) {
-            const pooled = getInitialContainerPoolSize(state.props.data.length, peek$(ctx, "numContainers"));
+            const pooled = getInitialContainerPoolSize(getDataLength(state), peek$(ctx, "numContainers"));
             if (pooled > peek$(ctx, "numContainersPooled")) {
                 set$(ctx, "numContainersPooled", pooled);
             }

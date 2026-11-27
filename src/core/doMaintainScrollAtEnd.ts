@@ -3,6 +3,7 @@ import { getNativeScrollPoint } from "@/core/doScrollParams";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getCurrentTargetOffset } from "@/core/getCurrentTargetOffset";
+import { getDataLength } from "@/core/IndexedData";
 import { hasNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { getScrollRequestTracker } from "@/core/scrollRequestTracker";
@@ -69,15 +70,16 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
             !didFinishInitialScroll &&
             !state.scrollingTo &&
             didContainersLayout &&
-            state.initialScrollSession?.kind === "bootstrap" &&
-            !state.initialScrollSession.bootstrap &&
-            state.initialScrollSession.completion);
+            state.initialScroll &&
+            state.initialScroll.kind !== "offset" &&
+            !state.initialScroll.bootstrap &&
+            state.initialScroll.completion);
     if (
         initialEndScrollOwnsViewport &&
         maintainScrollAtEnd &&
         !state.endFollowInterrupted &&
         !ctx.scrollRequestTracker?.isWaitingToRun() &&
-        isEndOfContentTarget(state.initialScroll, state.props.data.length)
+        isEndOfContentTarget(state.initialScroll, getDataLength(state))
     ) {
         state.pendingMaintainScrollAtEnd = true;
         return false;
@@ -129,7 +131,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, options?: { immediate?:
     if (options?.prepareOnly) return true;
 
     const anchorIndex = state.props.anchoredEndSpace?.anchorIndex;
-    const dataLength = state.props.data.length;
+    const dataLength = getDataLength(state);
     if (
         !didContainersLayout ||
         // Wait for the anchored tail to be measured.

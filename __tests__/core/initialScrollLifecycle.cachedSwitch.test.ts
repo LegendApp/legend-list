@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { getLayoutValue, rebuildTestLayout } from "../helpers/layoutStore";
 import "../setup";
 
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { setInitialScrollTarget } from "../../src/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "../../src/core/initialScrollLifecycle";
 import { onScroll } from "../../src/core/onScroll";
-import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
 import { Platform } from "../../src/platform/Platform";
 import { resetInitialRenderState, setInitialRenderState } from "../../src/utils/setInitialRenderState";
@@ -70,9 +70,9 @@ describe("cached tall-row initial placement", () => {
                         state.sizesKnown.set(item.id, heightAt(index));
                     });
                 }
-                updateItemPositions(ctx, true);
+                rebuildTestLayout(ctx);
                 let domHeight = state.totalSize;
-                let physicalScroll = fresh ? 0 : state.positions[10]!;
+                let physicalScroll = fresh ? 0 : getLayoutValue(state, "positions", 10)!;
                 let pendingScrollEvent = false;
                 const clamp = (offset: number) => Math.max(0, Math.min(offset, domHeight - state.scrollLength));
                 state.scroll = physicalScroll;
@@ -122,7 +122,7 @@ describe("cached tall-row initial placement", () => {
                     const target = { index: targetIndex, viewOffset: 0, viewPosition: targetIndex === 150 ? 1 : 0 };
                     if (fresh) {
                         setInitialScrollTarget(ctx, target);
-                        updateItemPositions(ctx, true);
+                        rebuildTestLayout(ctx);
                         initializeInitialScrollOnMount(ctx, {
                             dataLength: dataA.length,
                             hasFooterComponent: false,
@@ -137,7 +137,7 @@ describe("cached tall-row initial placement", () => {
                             didStartFreshData: true,
                             initialScrollAtEnd: targetIndex === 150,
                             latestInitialScroll: target,
-                            latestInitialScrollSessionKind: "bootstrap",
+                            latestInitialScrollSessionKind: "index",
                             stylePaddingEnd: 0,
                             useBootstrapInitialScroll: true,
                         });
@@ -172,7 +172,9 @@ describe("cached tall-row initial placement", () => {
                     expect(
                         Math.abs(
                             physicalScroll -
-                                (targetIndex === 150 ? domHeight - state.scrollLength : state.positions[targetIndex]!),
+                                (targetIndex === 150
+                                    ? domHeight - state.scrollLength
+                                    : getLayoutValue(state, "positions", targetIndex)!),
                         ),
                     ).toBeLessThanOrEqual(1);
                     expect(state.startBuffered).toBeLessThanOrEqual(targetIndex);

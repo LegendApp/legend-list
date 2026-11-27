@@ -1,4 +1,12 @@
+import { getDataLength } from "@/core/IndexedData";
 import { LayoutStoreRuntime } from "@/core/LayoutStoreRuntime";
+import {
+    materializeLayoutStoreRange,
+    rebuildLayoutStoreExact,
+    syncLayoutStoreState,
+    syncLayoutStoreStructure,
+} from "@/core/layoutStoreLifecycle";
+import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
 
@@ -56,7 +64,7 @@ class TestLayoutStore {
         return this.estimatedSize;
     }
 
-    getMeasuredAverageSize() {
+    getPositiveMeasuredAverageSize() {
         return undefined;
     }
 
@@ -144,7 +152,12 @@ class TestLayoutStore {
     }
 
     setMeasuredSize(index: number, size: number) {
+        const previous = this.getSize(index);
         this.sizes[index] = size;
+        for (let following = index + 1; following < this.offsets.length; following++) {
+            const offset = this.offsets[following];
+            if (offset !== undefined) this.offsets[following] = offset + size - previous;
+        }
     }
 
     setOffset(index: number, value: number | undefined) {
@@ -228,11 +241,11 @@ function getOrCreateTestLayoutStore(state: InternalState) {
     let store = state.layoutStoreRuntime?.store as TestLayoutStore | undefined;
     const estimatedSize = state.props.estimatedItemSize ?? 100;
     if (!(store instanceof TestLayoutStore)) {
-        store = new TestLayoutStore(state, state.props.data.length, estimatedSize);
+        store = new TestLayoutStore(state, getDataLength(state), estimatedSize);
         state.layoutStoreRuntime = new LayoutStoreRuntime(store as any, estimatedSize);
     }
     store.setEstimatedSize(estimatedSize);
-    store.resize(Math.max(store.length, state.props.data.length));
+    store.resize(Math.max(store.length, getDataLength(state)));
     return store;
 }
 
@@ -243,7 +256,7 @@ export function getLayoutValue(state: InternalState, field: LayoutField, key: un
     }
     const store = state.layoutStoreRuntime?.store;
     if (!(store instanceof TestLayoutStore)) {
-        return undefined;
+        return field === "positions" && store?.hasIndex(index) ? store.getOffset(index) : undefined;
     }
     if (field === "positions") {
         return store.getStoredOffset(index);
@@ -281,7 +294,7 @@ export function hasLayoutValue(state: InternalState, field: LayoutField, key: un
 export function clearLayoutValues(state: InternalState, field: LayoutField) {
     const store = getOrCreateTestLayoutStore(state);
     if (field === "positions") {
-        store.resize(state.props.data.length);
+        store.resize(getDataLength(state));
         for (let index = 0; index < store.length; index++) {
             store.setOffset(index, undefined);
         }
@@ -308,4 +321,16 @@ export function countLayoutValues(state: InternalState, field: LayoutField): num
         }
     }
     return count;
+}
+
+export function getLayoutOffsets(state: InternalState) {
+    const store = state.layoutStoreRuntime?.store;
+    return store ? Array.from({ length: store.length }, (_, index) => store.getOffset(index)) : [];
+}
+
+export function rebuildTestLayout(ctx: StateContext) {
+    syncLayoutStoreStructure(ctx);
+    materializeLayoutStoreRange(ctx, 0, getDataLength(ctx.state) - 1);
+    rebuildLayoutStoreExact(ctx);
+    syncLayoutStoreState(ctx);
 }

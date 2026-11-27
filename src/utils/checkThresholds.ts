@@ -1,5 +1,6 @@
 import { EDGE_POSITION_EPSILON } from "@/constants";
 import { rearmEndFollowIfSettled } from "@/core/finishMaintainScrollAtEnd";
+import { getDataLength } from "@/core/IndexedData";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
@@ -13,7 +14,7 @@ function isSettledAwayFromEdges(ctx: StateContext) {
     const { props, scrollLength } = state;
     if (
         !state.queuedInitialLayout ||
-        props.data.length === 0 ||
+        getDataLength(state) === 0 ||
         state.edgeReachedGate ||
         state.isEndReached ||
         state.isStartReached ||

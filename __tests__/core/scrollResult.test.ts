@@ -9,12 +9,13 @@ import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { handleLayout } from "@/core/handleLayout";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
-import { updateItemPositions } from "@/core/updateItemPositions";
+import { reconcileActiveScrollTarget } from "@/core/scrollTo";
 import * as platform from "@/platform/Platform";
 import { Platform } from "@/platform/Platform";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { rebuildTestLayout } from "../helpers/layoutStore";
 import {
     createWebScrollHarness,
     flushMicrotasks,
@@ -283,11 +284,10 @@ describe("imperative scroll results", () => {
         });
         const h = harness;
         h.browser.moveTo(500);
-        h.state.initialScrollSession = { kind: "offset" } as any;
+        h.state.initialScroll = { kind: "offset" } as any;
         finishInitialScroll(h.ctx, { syncObservedOffset: true });
         expect(h.state.scroll).toBe(500);
         expect(h.state.scrollPending).toBe(500);
-        expect(h.state.scrollPrev).toBe(500);
     });
 
     it("settles a key still missing after the settle window without dispatch", async () => {
@@ -308,7 +308,8 @@ describe("imperative scroll results", () => {
         const result = trackScroll(h.ref.scrollToEnd({ animated: true }));
         h.browser.step(400);
         h.setData(110);
-        updateItemPositions(h.ctx, true);
+        rebuildTestLayout(h.ctx);
+        reconcileActiveScrollTarget(h.ctx);
         await flushMicrotasks();
         h.browser.runToEnd();
         h.clock.advance(100);
@@ -325,7 +326,8 @@ describe("imperative scroll results", () => {
         const result = trackScroll(h.ref.scrollToEnd({ animated: false }));
         h.state.scroll = h.state.scrollPending = 9500;
         h.setData(110);
-        updateItemPositions(h.ctx, true);
+        rebuildTestLayout(h.ctx);
+        reconcileActiveScrollTarget(h.ctx);
         checkFinishedScrollFallback(h.ctx);
         await flushMicrotasks();
         h.clock.advance(100);
@@ -389,7 +391,8 @@ describe("imperative scroll results", () => {
             const result = trackScroll(h.ref[method]({ animated: true, item: h.state.props.data[50] }));
             h.browser.step(400);
             h.setData(10);
-            updateItemPositions(h.ctx, true);
+            rebuildTestLayout(h.ctx);
+            reconcileActiveScrollTarget(h.ctx);
             await flushMicrotasks();
             expect(result.value).toBeUndefined();
             expect(h.state.scrollingTo).toBeUndefined();
@@ -401,8 +404,10 @@ describe("imperative scroll results", () => {
             h.browser.step(400);
             h.state.props.data = [{ id: -1 }, ...h.state.props.data.map((item: { id: number }) => ({ ...item }))];
             resetLayoutCachesForDataChange(h.state);
-            updateItemPositions(h.ctx, true);
+            rebuildTestLayout(h.ctx);
+            reconcileActiveScrollTarget(h.ctx);
             expect(h.state.scrollingTo?.index).toBe(51);
+            await flushMicrotasks();
             expect(result.resolved).toBe(false);
             h.browser.runToEnd();
             h.clock.advance(100);
@@ -428,7 +433,8 @@ describe("imperative scroll results", () => {
         const resizedKey = h.state.scrollingTo?.key;
         h.state.props.data = h.state.props.data.filter((entry: { id: number }) => entry !== item);
         resetLayoutCachesForDataChange(h.state);
-        updateItemPositions(h.ctx, true);
+        rebuildTestLayout(h.ctx);
+        reconcileActiveScrollTarget(h.ctx);
         h.browser.runToEnd();
         h.clock.advance(100);
         await flushMicrotasks();
@@ -443,7 +449,8 @@ describe("imperative scroll results", () => {
         const result = trackScroll(h.ref.scrollToItem({ animated: true, item: h.state.props.data[50] }));
         h.browser.step(400);
         h.state.props.data = h.state.props.data.map((item: { id: number }) => ({ ...item }));
-        updateItemPositions(h.ctx, true);
+        rebuildTestLayout(h.ctx);
+        reconcileActiveScrollTarget(h.ctx);
         expect(h.state.scrollingTo?.index).toBe(50);
         h.browser.runToEnd();
         h.clock.advance(100);
@@ -618,7 +625,8 @@ describe("imperative scroll results", () => {
         const result = trackScroll(h.ref.scrollToIndex({ animated: true, index: 50 }));
         h.browser.step(400);
         h.setData(10);
-        updateItemPositions(h.ctx, true);
+        rebuildTestLayout(h.ctx);
+        reconcileActiveScrollTarget(h.ctx);
         await flushMicrotasks();
         expect(result.value).toBeUndefined();
         expect(h.state.scrollingTo).toBeUndefined();

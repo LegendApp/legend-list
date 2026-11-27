@@ -4,6 +4,7 @@ import "../setup";
 import { updateViewableItems } from "../../src/core/viewability";
 import type { OnViewableItemsChangedInfo } from "../../src/types.base";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValues } from "../helpers/layoutStore";
 
 for (const minimumViewTime of [1e15, Number.POSITIVE_INFINITY]) {
     it(`does not report early with a real timer and minimumViewTime=${minimumViewTime}`, async () => {
@@ -12,15 +13,14 @@ for (const minimumViewTime of [1e15, Number.POSITIVE_INFINITY]) {
         Object.assign(ctx.state, {
             idCache: ["a"],
             indexByKey: new Map([["a", 0]]),
-            positions: [0],
             scroll: 0,
             sizes: new Map([["a", 100]]),
         });
         ctx.state.props.data = [{ id: "a" }];
+        setLayoutValues(ctx.state, "positions", [0]);
         ctx.state.props.keyExtractor = (item: { id: string }) => item.id;
         try {
             updateViewableItems(
-                ctx.state,
                 ctx,
                 [
                     {

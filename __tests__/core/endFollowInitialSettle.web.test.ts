@@ -1,15 +1,16 @@
 import { afterEach, expect, it } from "bun:test";
+import { getLayoutValue, rebuildTestLayout } from "../helpers/layoutStore";
 import "../setup";
 
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { dispatchInitialScroll } from "@/core/initialScroll";
 import { prepareMVCP } from "@/core/mvcp";
 import { scrollToEnd } from "@/core/scrollToEnd";
-import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSizes } from "@/core/updateItemSizes";
 import { Platform } from "@/platform/Platform";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
+import { reconcileActiveScrollTarget } from "../../src/core/scrollTo";
 import { createWebScrollHarness, type WebScrollHarness } from "../helpers/webScrollHarness";
 
 const originalPlatform = Platform.OS;
@@ -141,7 +142,7 @@ it("keeps measured streaming growth with animated following between requests", a
     // Measurements publish positions before React commits and before follow's microtask.
     // An instant MVCP here would change the scroll owner and create temporary scroll range.
     expect(h.state.scroll).toBe(9500);
-    expect(h.state.positions[99]).toBe(10200);
+    expect(getLayoutValue(h.state, "positions", 99)).toBe(10200);
     await Promise.resolve();
     h.clock.tick();
     h.browser.runToEnd();
@@ -241,7 +242,8 @@ it("keeps the full content size when the previous end target disappears before d
     const published: number[] = [];
     h.ctx.listeners.set("totalSize", new Set([(size) => published.push(size!)]));
     const applyMVCP = prepareMVCP(h.ctx, true);
-    updateItemPositions(h.ctx, true);
+    rebuildTestLayout(h.ctx);
+    reconcileActiveScrollTarget(h.ctx);
     expect(h.state.scrollingTo?.index).toBe(98);
     applyMVCP!();
     // A missing captured key must never be treated as addTotalSize's null reset key.

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
+import { getLayoutValue, setLayoutValue } from "../helpers/layoutStore";
 import "../setup";
 
 import { prepareMVCP } from "@/core/mvcp";
@@ -24,7 +25,7 @@ describe("Android item-resize end clamping", () => {
         const requestAdjust = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjust = prepareMVCP(ctx, false, "item-size");
-            ctx.state.positions[2]! -= 50;
+            setLayoutValue(ctx.state, "positions", 2, getLayoutValue(ctx.state, "positions", 2)! - 50);
             ctx.state.totalSize -= 50;
             adjust?.();
 
@@ -48,8 +49,8 @@ describe("Android item-resize end clamping", () => {
         const requestAdjust = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjust = prepareMVCP(ctx, false, "item-size");
-            ctx.state.positions[1] = 0;
-            ctx.state.positions[2] = 0;
+            setLayoutValue(ctx.state, "positions", 1, 0);
+            setLayoutValue(ctx.state, "positions", 2, 0);
             ctx.state.totalSize = 200;
             adjust?.();
 
@@ -67,7 +68,7 @@ describe("Android item-resize end clamping", () => {
         const ctx = createResizeContext(700);
         try {
             const adjust = prepareMVCP(ctx, true, "data");
-            ctx.state.positions[2]! -= 50;
+            setLayoutValue(ctx.state, "positions", 2, getLayoutValue(ctx.state, "positions", 2)! - 50);
             ctx.state.totalSize -= 50;
             adjust?.();
 
@@ -85,7 +86,7 @@ describe("Android item-resize end clamping", () => {
             const requestAdjust = spyOn(requestAdjustModule, "requestAdjust");
             try {
                 const adjust = prepareMVCP(ctx, false, "item-size");
-                ctx.state.positions[2]! -= 50;
+                setLayoutValue(ctx.state, "positions", 2, getLayoutValue(ctx.state, "positions", 2)! - 50);
                 ctx.state.totalSize -= 50;
                 adjust?.();
 

@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { getLayoutOffsets, getLayoutValue, setLayoutValue, setLayoutValues } from "../helpers/layoutStore";
 import "../setup";
 
-import { schedulePreservedEndAnchorCorrection } from "../../src/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "../../src/core/checkFinishedScroll";
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
 import * as platformScroll from "../../src/core/doScrollTo";
 import { doScrollTo as doNativeScrollTo } from "../../src/core/doScrollTo.native";
 import { advanceCurrentInitialScrollSession } from "../../src/core/initialScroll";
+import { schedulePreservedEndAnchorCorrection } from "../../src/core/initialScrollAnchor";
 import { prepareMVCP } from "../../src/core/mvcp";
 import { onScroll } from "../../src/core/onScroll";
 import { scrollTo as scrollToTarget } from "../../src/core/scrollTo";
@@ -153,7 +154,7 @@ describe("negative scroll targets", () => {
                     Platform.OS = platform;
                     const { ctx } = setup();
                     ctx.state.didFinishInitialScroll = false;
-                    ctx.state.initialScrollSession = { kind, previousDataLength: 10 };
+                    ctx.state.initialScroll = { ...ctx.state.initialScroll, kind, previousDataLength: 10 };
                     ctx.state.initialScroll =
                         kind === "offset"
                             ? { contentOffset: -requested, index: 0 }
@@ -195,7 +196,7 @@ describe("negative scroll targets", () => {
             Platform.OS = platform;
             const { ctx } = setup();
             ctx.state.didFinishInitialScroll = false;
-            ctx.state.initialScrollSession = { kind: "bootstrap", previousDataLength: 10 };
+            ctx.state.initialScroll = { ...ctx.state.initialScroll, kind: "index", previousDataLength: 10 };
             ctx.state.initialScroll = { index: 3, viewPosition: 0 };
             expect(advanceCurrentInitialScrollSession(ctx, { forceScroll: true })).toBe(true);
             expect(ctx.state.scrollingTo?.targetOffset).toBe(300 - top);
@@ -276,8 +277,7 @@ describe("negative scroll targets", () => {
         Platform.OS = "ios";
         const { ctx } = setup();
         ctx.state.didFinishInitialScroll = false;
-        ctx.state.initialScrollSession = { kind: "offset", previousDataLength: 10 };
-        ctx.state.initialScroll = { contentOffset: offset, index: 0 };
+        ctx.state.initialScroll = { contentOffset: offset, index: 0, kind: "offset", previousDataLength: 10 };
         advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
         expect(ctx.state.scrollingTo?.targetOffset).toBe(offset);
         land(ctx, offset);
@@ -367,11 +367,11 @@ describe("negative scroll targets", () => {
                 Platform.OS = "ios";
                 const { ctx, handle } = setup();
                 ctx.state.props.data = ctx.state.props.data.slice(0, count);
-                ctx.state.positions = ctx.state.positions.slice(0, count);
+                setLayoutValues(ctx.state, "positions", getLayoutOffsets(ctx.state).slice(0, count));
                 ctx.state.totalSize = count * 100;
                 handle.reportContentInsetForScrollInternal!({ bottom, top: 80 });
                 ctx.state.didFinishInitialScroll = false;
-                ctx.state.initialScrollSession = { kind: "bootstrap", previousDataLength: count };
+                ctx.state.initialScroll = { ...ctx.state.initialScroll, kind: "index", previousDataLength: count };
                 ctx.state.initialScroll = { index: count - 1, preserveForBottomPadding: true, viewPosition: 1 };
                 advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
                 const expected = Math.max(-80, count * 100 + bottom - 300);
@@ -390,7 +390,7 @@ describe("negative scroll targets", () => {
                     Platform.OS = "ios";
                     const { ctx, handle } = setup();
                     ctx.state.props.data = ctx.state.props.data.slice(0, count);
-                    ctx.state.positions = ctx.state.positions.slice(0, count);
+                    setLayoutValues(ctx.state, "positions", getLayoutOffsets(ctx.state).slice(0, count));
                     ctx.state.totalSize = count * 100;
                     ctx.state.props.alignItemsAtEndPaddingEnabled = alignItemsAtEnd;
                     handle.reportContentInsetForScrollInternal!({ bottom, top: 80 });
@@ -421,7 +421,11 @@ describe("negative scroll targets", () => {
             [4, 0, 100],
         ]) {
             ctx.state.props.data = Array.from({ length: count }, (_, id) => ({ id }));
-            ctx.state.positions = Array.from({ length: count }, (_, i) => i * 100);
+            setLayoutValues(
+                ctx.state,
+                "positions",
+                Array.from({ length: count }, (_, i) => i * 100),
+            );
             ctx.state.totalSize = count * 100;
             handle.reportContentInsetForScrollInternal!({ bottom, top: 80 });
             updateContentMetricsState(ctx);
@@ -442,13 +446,13 @@ describe("negative scroll targets", () => {
         ctx.state.visibleContentAnchor = { key: "item_3", offset: offset - 300 };
         for (const shift of [100, 200]) {
             const adjust = prepareMVCP(ctx, true);
-            ctx.state.positions.forEach((position, index) => {
-                ctx.state.positions[index] = position! + shift;
+            getLayoutOffsets(ctx.state).forEach((position, index) => {
+                setLayoutValue(ctx.state, "positions", index, position! + shift);
             });
             ctx.state.totalSize += shift;
             adjust!();
             expect(ctx.state.scroll).toBe(offset + (shift === 100 ? 100 : 300));
-            expect(ctx.state.scroll - ctx.state.positions[3]!).toBe(offset - 300);
+            expect(ctx.state.scroll - getLayoutValue(ctx.state, "positions", 3)!).toBe(offset - 300);
         }
     });
 
@@ -474,7 +478,7 @@ describe("negative scroll targets", () => {
             Platform.OS = "ios";
             const { ctx, scrollTo } = setup();
             ctx.state.didFinishInitialScroll = false;
-            ctx.state.initialScrollSession = { kind: "offset", previousDataLength: 10 };
+            ctx.state.initialScroll = { ...ctx.state.initialScroll, kind: "offset", previousDataLength: 10 };
             scrollToTarget(ctx, { animated: false, forceScroll, isInitialScroll: true, offset: -800 });
             expect(ctx.state.scrollPending).toBe(-80);
             expect(ctx.state.scrollingTo?.targetOffset).toBe(-80);
@@ -500,11 +504,11 @@ describe("negative scroll targets", () => {
         ctx.state.visibleContentAnchor = { key: "item_0", offset: -80 };
         const adjust = prepareMVCP(ctx, dataChanged);
         expect(adjust).toBeDefined();
-        ctx.state.positions[0] = 100;
+        setLayoutValue(ctx.state, "positions", 0, 100);
         ctx.state.totalSize += 100;
         adjust!();
         expect(ctx.state.scroll).toBe(20);
-        expect(ctx.state.scroll - ctx.state.positions[0]!).toBe(-80);
+        expect(ctx.state.scroll - getLayoutValue(ctx.state, "positions", 0)!).toBe(-80);
         expect(ctx.state.pendingNativeMVCPAdjust).toBeUndefined();
     });
 
@@ -513,10 +517,10 @@ describe("negative scroll targets", () => {
         const { ctx, scrollTo } = setup();
         ctx.scrollToEnd = (options) => scrollToEnd(ctx, options);
         ctx.state.props.data = ctx.state.props.data.slice(0, 2);
-        ctx.state.positions = [0, 100];
+        setLayoutValues(ctx.state, "positions", [0, 100]);
         ctx.state.totalSize = 200;
         ctx.state.didFinishInitialScroll = false;
-        ctx.state.initialScrollSession = { kind: "bootstrap", previousDataLength: 2 };
+        ctx.state.initialScroll = { ...ctx.state.initialScroll, kind: "index", previousDataLength: 2 };
         ctx.state.initialScroll = { index: 1, preserveForBottomPadding: true, viewPosition: 1 };
         advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
         expect(ctx.state.scrollingTo?.targetOffset).toBe(-80);
@@ -535,13 +539,13 @@ describe("negative scroll targets", () => {
         Platform.OS = "ios";
         const { ctx, scrollTo } = setup();
         ctx.state.didFinishInitialScroll = false;
-        ctx.state.initialScrollSession = { kind: "bootstrap", previousDataLength: 10 };
+        ctx.state.initialScroll = { ...ctx.state.initialScroll, kind: "index", previousDataLength: 10 };
         ctx.state.initialScroll = { index: 9, preserveForBottomPadding: true, viewPosition: 1 };
         advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
         expect(ctx.state.scrollingTo?.targetOffset).toBe(700);
         land(ctx, 700);
         ctx.state.totalSize = 1100;
-        ctx.state.positions[9] = 1000;
+        setLayoutValue(ctx.state, "positions", 9, 1000);
         schedulePreservedEndAnchorCorrection(ctx);
         flushFrames();
         expect(scrollTo).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 800 });

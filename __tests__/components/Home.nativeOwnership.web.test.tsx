@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "bun:test";
+import { setLayoutValue } from "../helpers/layoutStore";
 import "../setup";
 
 import { calculateItemsInView } from "@/core/calculateItemsInView";
@@ -105,7 +106,7 @@ function setup(following = true, supportsScrollEnd = true) {
             const id = `item_${index}`;
             ctx.state.idCache[index] = id;
             ctx.state.indexByKey.set(id, index);
-            ctx.state.positions[index] = index * 61;
+            setLayoutValue(ctx.state, "positions", index, index * 61);
             ctx.state.sizes.set(id, 61);
             ctx.state.sizesKnown.set(id, 61);
         }

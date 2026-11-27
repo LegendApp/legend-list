@@ -37,7 +37,9 @@ export function getRenderedItem(ctx: StateContext, key: string, containerId: num
     if (renderItem && shouldRender) {
         const type = useAssignedGeneration
             ? (metadata.itemType ?? "")
-            : item !== undefined && getItemType ? (getItemType(item, index) ?? "") : "";
+            : item !== undefined && getItemType
+              ? (getItemType(item, index) ?? "")
+              : "";
         let isRendering = true;
         const sharedItemProps = {
             extraData,

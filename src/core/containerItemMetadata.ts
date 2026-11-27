@@ -1,5 +1,5 @@
+import { findIndexForKey, getIndexedData } from "@/core/IndexedData";
 import type { ContainerItemMetadata, InternalState } from "@/types.internal";
-import { getId } from "@/utils/getId";
 
 export function createContainerItemMetadata(
     state: InternalState,
@@ -72,17 +72,14 @@ export function invalidateFixedItemSizes(state: InternalState) {
         state.sizesKnown.delete(key);
     }
     state.fixedItemSizeKeys?.clear();
-    const { data, getFixedItemSize, getItemType } = state.props;
+    const { getFixedItemSize, getItemType } = state.props;
     if (getFixedItemSize) {
-        // A measured row that now has a fixed size must drop its stale measurement.
-        // indexByKey can be stale before the first layout, so resolve keys from the current data.
-        for (let index = 0; index < data.length; index++) {
-            const key = getId(state, index);
-            const item = data[index];
-            if (
-                state.sizesKnown.has(key) &&
-                getFixedItemSize(item, index, getItemType ? (getItemType(item, index) ?? "") : "") !== undefined
-            ) {
+        const data = getIndexedData(state);
+        for (const key of state.sizesKnown.keys()) {
+            const index = findIndexForKey(state, key);
+            if (index === undefined) continue;
+            const item = data.getItem(index);
+            if (item !== undefined && getFixedItemSize(item, index, getItemType?.(item, index) ?? "") !== undefined) {
                 state.sizesKnown.delete(key);
             }
         }

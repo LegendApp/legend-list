@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { setLayoutValue } from "../helpers/layoutStore";
 import "../setup";
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
@@ -34,7 +35,7 @@ describe("ScrollAdjustHandler content container minimum size", () => {
         expect(handler.getAdjust()).toBe(0);
 
         // The animation lands before completion commits the queued MVCP adjustment.
-        ctx.state.scroll = 300;
+        ctx.state.scroll = ctx.state.scrollPending = 300;
         if (canceled) {
             ctx.state.scrollingTo = undefined;
             handler.commitPendingAdjust();
@@ -73,7 +74,7 @@ it.each([0, 200])("commits the web end (%ipx temporary range)", async (temporary
         },
     );
     ctx.state.idCache[0] = "item_0";
-    ctx.state.positions[0] = 0;
+    setLayoutValue(ctx.state, "positions", 0, 0);
     ctx.state.sizes.set("item_0", 1400);
     let temporaryRange = temporarySize;
     ctx.clearTemporaryScrollAdjust = () => {
@@ -84,7 +85,7 @@ it.each([0, 200])("commits the web end (%ipx temporary range)", async (temporary
     ctx.state.scrollAdjustHandler = handler;
     handler.requestAdjust(-43);
     expect(ctx.values.get("scrollAdjustPending")).toBe(-43);
-    ctx.state.scroll = 938;
+    ctx.state.scroll = ctx.state.scrollPending = 938;
     handler.commitPendingAdjust(ctx.state.scrollingTo);
     expect(ctx.state.scroll).toBe(938);
     expect(handler.getAdjust()).toBe(0);

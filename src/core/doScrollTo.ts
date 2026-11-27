@@ -4,6 +4,7 @@ import { cancelScroll } from "@/core/cancelScroll";
 import { checkFinishedScrollFallback, getCurrentTargetOffset } from "@/core/checkFinishedScroll";
 import { type DoScrollToParams, getNativeScrollPoint } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getDataLength } from "@/core/IndexedData";
 import { isWebScrollAwayFromEnd } from "@/core/updateScroll";
 import type { StateContext } from "@/state/state";
 import type { LegendListScrollerRef } from "@/types.internal";
@@ -124,11 +125,11 @@ function retryLanding(
         Math.abs(currentOffset - scrollingTo.landingRetryFrom) > EDGE_POSITION_EPSILON;
     // Bound animated retries; instant corrections still verify the current target next frame.
     const isLastRetry = retries >= SCROLL_LANDING_MAX_RETRIES || !madeProgress;
-    const { averageSizeSnapshot: _averageSizeSnapshot, ...target } = scrollingTo;
-    const index = target.index === undefined ? undefined : clampScrollIndex(target.index, ctx.state.props.data.length);
+    const index =
+        scrollingTo.index === undefined ? undefined : clampScrollIndex(scrollingTo.index, getDataLength(ctx.state));
 
     ctx.scrollTo!({
-        ...target,
+        ...scrollingTo,
         animated:
             !!scrollingTo.animated &&
             !isLastRetry &&

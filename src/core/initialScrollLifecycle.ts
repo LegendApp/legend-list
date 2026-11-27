@@ -5,10 +5,12 @@ import {
 import { cancelImperativeScroll, syncScrollActive } from "@/core/cancelImperativeScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
-import { getDataLength } from "@/core/IndexedData";
+import { getDataLength, getIndexedData } from "@/core/IndexedData";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
 import { schedulePreservedEndAnchorCorrection } from "@/core/initialScrollAnchor";
-import type { StateContext } from "@/state/state";
+import { rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
+import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
+import { type StateContext, set$ } from "@/state/state";
 import { resetInitialRenderState, setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function retargetActiveInitialScrollAtEnd(ctx: StateContext) {
@@ -167,7 +169,19 @@ export function handleInitialScrollDataChange(
     if (useBootstrapInitialScroll) {
         if (didStartFreshData && !state.didColumnsChange) {
             resetLayoutCachesForDataChange(state);
-            updateItemPositions(ctx, true);
+            if (!state.props.dataSource && (state.sizesKnown.size || state.sizes.size)) {
+                // A dataKey can return to an earlier array while retaining its measured keys.
+                const data = getIndexedData(state);
+                for (let index = 0; index < dataLength; index++) {
+                    const key = data.getKey(index);
+                    if (state.sizesKnown.has(key) || state.sizes.has(key)) {
+                        state.idCache[index] = key;
+                        state.indexByKey.set(key, index);
+                    }
+                }
+            }
+            rebuildLayoutStoreExact(ctx);
+            syncLayoutStoreState(ctx);
         }
         handleBootstrapInitialScrollDataChange(ctx, {
             dataLength,

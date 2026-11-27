@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, mock, spyOn } from "bun:test";
+import { getLayoutOffsets, getLayoutValue, rebuildTestLayout } from "../helpers/layoutStore";
 import "../setup";
 
 import { evaluateBootstrapInitialScroll } from "../../src/core/bootstrapInitialScroll";
@@ -10,7 +11,6 @@ import {
     retargetActiveInitialScrollAtEnd,
 } from "../../src/core/initialScrollLifecycle";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
-import { updateItemPositions } from "../../src/core/updateItemPositions";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import { resetInitialRenderState, setInitialRenderState } from "../../src/utils/setInitialRenderState";
@@ -71,7 +71,7 @@ describe("initialScrollLifecycle", () => {
                 didStartFreshData,
                 initialScrollAtEnd: true,
                 latestInitialScroll: { index: 24, viewPosition: 1 },
-                latestInitialScrollSessionKind: "bootstrap",
+                latestInitialScrollSessionKind: "index",
                 stylePaddingEnd: 0,
                 useBootstrapInitialScroll: false,
             });
@@ -100,9 +100,9 @@ describe("initialScrollLifecycle", () => {
                     { footerSize: 0, numColumns: 1, stylePaddingTop: 0 },
                     {
                         hasHadNonEmptyData: true,
-                        initialScrollSession: {
+                        initialScroll: {
                             bootstrap: { mountFrameCount: 0, passCount: 0, scroll: 1298, seedContentOffset: 1298 },
-                            kind: "bootstrap",
+                            kind: "index",
                             previousDataLength: 19,
                         },
                         props: {
@@ -122,8 +122,8 @@ describe("initialScrollLifecycle", () => {
                         });
                     }
                 }
-                updateItemPositions(ctx, true);
-                expect(ctx.state.positions).toHaveLength(19);
+                rebuildTestLayout(ctx);
+                expect(getLayoutOffsets(ctx.state)).toHaveLength(19);
 
                 // Do not run queued frames between switches: each destination supersedes an active bootstrap.
                 for (const data of [dataA, dataB, dataA]) {
@@ -136,7 +136,7 @@ describe("initialScrollLifecycle", () => {
                         didStartFreshData: true,
                         initialScrollAtEnd: target === "end",
                         latestInitialScroll: { index, viewPosition: target === "end" ? 1 : 0 },
-                        latestInitialScrollSessionKind: "bootstrap",
+                        latestInitialScrollSessionKind: "index",
                         stylePaddingEnd: 0,
                         useBootstrapInitialScroll: true,
                     });
@@ -146,9 +146,9 @@ describe("initialScrollLifecycle", () => {
                     );
                     const expectedOffset =
                         target === "end" ? position + (measured ? sizeAt(index) : 86) - 648 : position;
-                    expect(ctx.state.positions).toHaveLength(data.length);
-                    expect(ctx.state.positions[index]).toBe(position);
-                    expect(ctx.state.initialScrollSession?.bootstrap?.scroll).toBe(expectedOffset);
+                    expect(getLayoutOffsets(ctx.state)).toHaveLength(data.length);
+                    expect(getLayoutValue(ctx.state, "positions", index)).toBe(position);
+                    expect(ctx.state.initialScroll?.bootstrap?.scroll).toBe(expectedOffset);
                 }
 
                 // Measurements arriving after the last switch must refine the new target, never restore B's offset.
@@ -157,13 +157,13 @@ describe("initialScrollLifecycle", () => {
                     ctx.state.sizesKnown.set(item.id, sizeAt(index) + 60);
                 });
                 resetLayoutCachesForDataChange(ctx.state);
-                updateItemPositions(ctx, true);
+                rebuildTestLayout(ctx);
                 evaluateBootstrapInitialScroll(ctx);
                 const finalTargetIndex = ctx.state.initialScroll!.index!;
                 const expected =
-                    ctx.state.positions[finalTargetIndex]! +
+                    getLayoutValue(ctx.state, "positions", finalTargetIndex)! +
                     (target === "end" ? sizeAt(finalTargetIndex) + 60 - 648 : 0);
-                expect(ctx.state.initialScrollSession?.bootstrap?.scroll).toBe(expected);
+                expect(ctx.state.initialScroll?.bootstrap?.scroll).toBe(expected);
             });
         }
     }
@@ -181,7 +181,7 @@ describe("initialScrollLifecycle", () => {
                     didFinishInitialScroll: true,
                     hasHadNonEmptyData: true,
                     hasScrolled: true,
-                    initialScrollSession: { kind: "offset", previousDataLength: 30 },
+                    initialScroll: { kind: "offset", previousDataLength: 30 },
                     lastNativeScroll: offset,
                     props: { contentInset: { top: 116 }, data },
                     queuedInitialLayout: true,

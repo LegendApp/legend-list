@@ -72,8 +72,9 @@ export interface MaintainScrollAtEndNormalized {
 export interface ThresholdSnapshot {
     scroll: number;
     contentSize: number;
-    data: readonly unknown[] | undefined;
+    data: readonly unknown[] | LegendListDataSource<unknown> | undefined;
     dataLength?: number;
+    dataRevision?: number;
     didRearmForData?: boolean;
     isRequestPending?: boolean;
 }
@@ -236,7 +237,7 @@ export interface InternalState {
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
     ignoreScrollFromMVCPIgnored?: boolean;
     indexByKey: Map<string, number>;
-    previousIndexByKey?: Map<string, number>;
+    layoutDataChangeEpoch?: number;
     initialScroll: InternalInitialScrollTarget | undefined;
     isDragging?: boolean;
     isEndReached: boolean | null;
@@ -336,6 +337,7 @@ export interface InternalState {
         dataChanged?: boolean;
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
+        refreshFixedSizes?: boolean;
         mvcpAdjustmentSource?: ScrollAdjustmentSource;
         initialLayout?: boolean;
         scrollVelocity?: number;

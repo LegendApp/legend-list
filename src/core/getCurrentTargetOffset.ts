@@ -1,6 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { clampScrollOffset, getScrollRangeEnd } from "@/core/clampScrollOffset";
 import { getDataLength } from "@/core/IndexedData";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import { Platform } from "@/platform/Platform";
@@ -17,7 +17,10 @@ export function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: Activ
 }
 
 export function isIndexScrollTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    return !scrollingTo.isInitialScroll || (ctx.state.initialScroll !== undefined && ctx.state.initialScroll.kind !== "offset");
+    return (
+        !scrollingTo.isInitialScroll ||
+        (ctx.state.initialScroll !== undefined && ctx.state.initialScroll.kind !== "offset")
+    );
 }
 
 export function getCommittedWebEndOffset(ctx: StateContext) {
@@ -44,6 +47,7 @@ export function getMaintainedWebEndOffset(ctx: StateContext, scrollingTo: Active
 export function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const committedEnd = getMaintainedWebEndOffset(ctx, scrollingTo);
     if (committedEnd !== undefined) return committedEnd;
+    if (scrollingTo.kind === "end") return getScrollRangeEnd(ctx);
 
     const index = scrollingTo.isScrollToEnd
         ? getDataLength(ctx.state) - 1

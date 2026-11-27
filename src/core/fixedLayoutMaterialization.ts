@@ -12,18 +12,21 @@ export function materializeFixedLayoutStoreRange(ctx: StateContext, startIndex: 
         const end = Math.min(store.length - 1, Math.trunc(endIndex));
         for (let index = start; index <= end; index++) {
             const existingKey = state.idCache[index];
-            const knownSize = existingKey !== undefined ? state.sizesKnown.get(existingKey) : undefined;
-            const fixedSize = knownSize ?? getFixedItemLayoutSize(ctx, index, getDataItem(state, index));
-            if (fixedSize !== undefined) {
-                didChange = store.setMeasuredSize(index, fixedSize) || didChange;
-                if (existingKey !== undefined) {
-                    state.sizesKnown.set(existingKey, fixedSize);
-                    state.sizes.set(existingKey, fixedSize);
+            const knownSize = existingKey === undefined ? undefined : state.sizesKnown.get(existingKey);
+            const size = knownSize ?? getFixedItemLayoutSize(ctx, index, getDataItem(state, index));
+            if (size !== undefined) {
+                didChange = store.setMeasuredSize(index, size) || didChange;
+                if (knownSize === undefined && existingKey !== undefined) {
+                    state.sizesKnown.set(existingKey, size);
+                    state.sizes.set(existingKey, size);
+                    state.fixedItemSizeKeys ??= new Set();
+                    state.fixedItemSizeKeys.add(existingKey);
                 }
             }
         }
     }
 
+    if (didChange) state.containerSyncAdjust = undefined;
     return didChange;
 }
 

@@ -58,7 +58,7 @@ describe.each(["ios", "android"] as const)("end following across a viewport resi
                 hasScrolled: true,
                 idCache: data.map((item) => item.id),
                 indexByKey: new Map(data.map((item, index) => [item.id, index])),
-                initialScrollSession: undefined,
+                initialScroll: undefined,
                 lastLayout: { height: 400, width: 300, x: 0, y: 0 },
                 otherAxisSize: 300,
                 positions: data.map((_, index) => index * 100),

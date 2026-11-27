@@ -4,7 +4,7 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { getDataLength } from "@/core/IndexedData";
 import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
-import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
+import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
 export function finishScrollTo(ctx: StateContext) {
@@ -14,11 +14,10 @@ export function finishScrollTo(ctx: StateContext) {
         state.scheduledWork.flush("checkFinishedScrollRetryFrame");
         cancelScrollCompletionChecks(state);
         // An older active scroll must not settle a replacement still waiting for layout.
-        const pendingResolve = ctx.scrollRequestTracker?.isWaitingToRun() ? undefined : state.pendingScrollResolve;
-        const resolvePendingScroll = () => {
-            if (state.pendingScrollResolve === pendingResolve) state.pendingScrollResolve = undefined;
-            pendingResolve?.();
-        };
+        const resolvePendingScroll = ctx.scrollRequestTracker?.isWaitingToRun()
+            ? undefined
+            : state.pendingScrollResolve;
+        if (resolvePendingScroll) state.pendingScrollResolve = undefined;
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
@@ -32,7 +31,7 @@ export function finishScrollTo(ctx: StateContext) {
             addTotalSize(ctx, null, state.pendingTotalSize);
         }
 
-        if (PlatformAdjustBreaksScroll) {
+        if (PlatformAdjustBreaksScroll || Platform.OS === "macos") {
             state.scrollAdjustHandler.commitPendingAdjust(scrollingTo);
         }
 

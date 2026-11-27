@@ -1,11 +1,11 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { getViewPositionOffset } from "@/core/calculateOffsetWithOffsetPosition";
 import { getContentInsetTop, getScrollRangeEnd } from "@/core/clampScrollOffset";
+import { getDataItem, getDataLength, getLegacyData } from "@/core/IndexedData";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { hasNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
-import { getDataItem, getDataLength, getLegacyData } from "@/core/IndexedData";
-import { getLayoutOffset } from "@/core/layoutAccessors";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
@@ -290,7 +290,6 @@ export function prepareMVCP(
     const explicitAnchor = state.visibleContentAnchor;
     const shouldMVCP = !!explicitAnchor || (dataChanged ? mvcpData : mvcpScroll);
     const indexByKey = state.indexByKey;
-    const previousIndexByKey = dataChanged ? (state.previousIndexByKey ?? indexByKey) : indexByKey;
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
@@ -323,7 +322,7 @@ export function prepareMVCP(
         if (dataChanged && idsInView.length > 0 && state.didContainersLayout) {
             // Capture visible anchors for fallback in case the primary anchor disappears after data updates.
             for (const id of anchorCandidateIds) {
-                const index = previousIndexByKey.get(id);
+                const index = indexByKey.get(id);
                 if (index !== undefined) {
                     const position = state.dataSourceAnchorPositions?.get(id) ?? getLayoutOffset(ctx, index);
                     if (position !== undefined) {
@@ -334,7 +333,7 @@ export function prepareMVCP(
         }
 
         if (targetId !== undefined && prevPosition === undefined) {
-            const targetIndex = previousIndexByKey.get(targetId);
+            const targetIndex = indexByKey.get(targetId);
             if (targetIndex !== undefined) {
                 prevPosition = state.dataSourceAnchorPositions?.get(targetId) ?? getLayoutOffset(ctx, targetIndex);
             }
@@ -444,7 +443,12 @@ export function prepareMVCP(
             ) {
                 const targetIndex = scrollingTo.index!;
                 // Position rebuilding can retarget an end request after targetId was captured.
-                const newSize = getItemSize(ctx, getId(state, targetIndex), targetIndex, getDataItem(state, targetIndex));
+                const newSize = getItemSize(
+                    ctx,
+                    getId(state, targetIndex),
+                    targetIndex,
+                    getDataItem(state, targetIndex),
+                );
                 const prevSize = scrollingTo.itemSize;
                 if (prevSize !== undefined && newSize !== prevSize) {
                     if (scrollingTo.viewPositionFallback) {

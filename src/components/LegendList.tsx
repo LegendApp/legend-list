@@ -37,7 +37,7 @@ import { getEndAlignedViewOffset } from "@/core/endOfContentTarget";
 import { clearInitialScrollAnchor, clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { finishMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { handleLayout } from "@/core/handleLayout";
-import { getDataLength, type IndexedData, resolveIndexedData } from "@/core/IndexedData";
+import { getDataKey, getDataLength, type IndexedData, resolveIndexedData } from "@/core/IndexedData";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { restoreItemSizeEstimates, saveItemSizeEstimates } from "@/core/itemSizeCache";
@@ -96,7 +96,6 @@ import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { prepareReachedEdgeForNextUserScroll } from "@/utils/edgeReachedGate";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
-import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { normalizeLayoutSize } from "@/utils/layoutMeasurement";
@@ -467,7 +466,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const refState = useRef<InternalState | undefined>(undefined);
     const sizeCacheOwnerRef = useRef<object | undefined>(undefined);
     // Separator measurements depend on tail membership; keep them instance-local.
-    sizeCacheOwnerRef.current = props.ItemSeparatorComponent ? undefined : (keyExtractorProp ?? dataProp);
+    sizeCacheOwnerRef.current = dataSource || props.ItemSeparatorComponent ? undefined : (keyExtractorProp ?? dataProp);
     const hasOverrideItemLayout = !!overrideItemLayout;
     const prevHasOverrideItemLayout = useRef(hasOverrideItemLayout);
 
@@ -657,8 +656,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             didScrollAxisChange ||
             didScrollAxisGapChange);
 
-    const wrappedGetItemType = useWrapIfItem(getItemType);
-    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
     if (
         didDataReferenceChangeLocal ||
         state.props.getItemType !== wrappedGetItemType ||
@@ -693,7 +690,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType: wrappedGetItemType,
         hasExternalScroll,
         hasItemLayoutAnimationInternal,
-        hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         hasReliableKeyExtractor: !!dataSource || !!keyExtractorProp,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
@@ -798,19 +794,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (shouldExactSyncLayoutStore) {
         rebuildLayoutStoreExact(ctx);
         syncLayoutStoreState(ctx);
-    } else {
+    } else if (isFirstLocal || state.props.dataSource || !state.didDataChange || !state.scrollLength) {
         syncLayoutStoreStructure(ctx);
-    }
-
-    if (didDataChangeLocal && !isFirstLocal) {
-        // Child layout effects can measure before the parent's data-change effect.
-        // Keep their key lookup on the same dataset as state.props.data.
-        state.previousIndexByKey ??= state.indexByKey;
-        state.indexByKey = new Map();
-        state.idCache.length = dataProp.length;
-        for (let index = 0; index < dataProp.length; index++) {
-            state.indexByKey.set(getId(state, index), index);
-        }
     }
 
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
@@ -823,7 +808,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataLength) return [];
-        return Array.from({ length: Math.min(numColumnsProp, dataLength) }, (_, i) => getId(state, dataLength - 1 - i));
+        return Array.from({ length: Math.min(numColumnsProp, dataLength) }, (_, i) =>
+            getDataKey(state, dataLength - 1 - i),
+        );
     }, [dataLength, dataProp, dataKey, dataSource, dataSourceRevision, dataVersion, numColumnsProp]);
 
     // Run first time and whenever data changes
@@ -863,7 +850,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
         restoreItemSizeEstimates(ctx, estimatedListSize?.[horizontal ? "height" : "width"], sizeCacheOwnerRef.current);
-        if ((state.initialScroll && state.initialScroll.kind !== "offset") || snapToIndices?.length) {
+        if (
+            state.sizes.size ||
+            (state.initialScroll && state.initialScroll.kind !== "offset") ||
+            snapToIndices?.length
+        ) {
             rebuildLayoutStoreExact(ctx);
         }
         syncLayoutStoreState(ctx);
@@ -1138,7 +1129,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
             checkResetContainers(ctx, data, {
                 didColumnsChange,
-                previousDataLength: state.dataSourcePreviousLength,
             });
         }
         if (didPinsChange && !didDataChange && !didColumnsChange && !isFirst) {
@@ -1153,14 +1143,23 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.dataSourcePreviousLength = undefined;
             state.dataSourceResetReason = undefined;
             state.pendingDataComparison = undefined;
-            state.previousIndexByKey = undefined;
             state.pendingDataSourceBatches = undefined;
         }
         // Now that it's done, reset the flags
         state.didColumnsChange = false;
         state.didDataChange = false;
         state.isFirst = false;
-    }, [dataProp, dataKey, dataSource, dataSourceRevision, dataVersion, horizontal, numColumnsProp, nextScrollAxisGap, alwaysRenderIndices.arr.join(",")]);
+    }, [
+        dataProp,
+        dataKey,
+        dataSource,
+        dataSourceRevision,
+        dataVersion,
+        horizontal,
+        numColumnsProp,
+        nextScrollAxisGap,
+        alwaysRenderIndices.arr.join(","),
+    ]);
 
     const previousGetFixedItemSize = useRef(getFixedItemSize);
     useLayoutEffect(() => {
@@ -1171,7 +1170,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             invalidateFixedItemSizes(state);
             state.containerSyncAdjust = undefined;
             state.scrollForNextCalculateItemsInView = undefined;
-            state.triggerCalculateItemsInView?.({ doMVCP: true, forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({
+                doMVCP: true,
+                forceFullItemPositions: true,
+                refreshFixedSizes: true,
+            });
             if (state.props.maintainScrollAtEnd?.onItemLayout) doMaintainScrollAtEnd(ctx);
         }
     }, [!!getFixedItemSize, extraData]);
