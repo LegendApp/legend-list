@@ -190,7 +190,20 @@ export interface ContentExtentComponentInternalProps {
 // Keyboard integrations report occlusion separately from scroll-range insets.
 export interface LegendListInternalRef extends LegendListRef {
     reportViewabilityInsetEndInternal?: (inset: number) => void;
-    reportContentInsetForScrollInternal?: LegendListRef["reportContentInset"];
+    reportContentInsetForScrollInternal?: (
+        inset: Parameters<LegendListRef["reportContentInset"]>[0],
+        options?: ContentInsetForScrollOptions,
+    ) => void;
+}
+
+export interface ContentInsetForScrollOptions {
+    /**
+     * Keep an initial scroll-at-end at the end with this inset: retarget it while it settles, then
+     * hold the end while the inset's owner settles. The owner moves the content itself, but its
+     * move may start from a stale offset or land after its inset report, and a scroll the list sent
+     * before it may still be queued. Only for an owner that moves the content once per inset change.
+     */
+    keepInitialScrollAtEnd?: boolean;
 }
 
 export interface InternalState {

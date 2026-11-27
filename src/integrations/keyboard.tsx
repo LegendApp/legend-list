@@ -161,7 +161,10 @@ type KeyboardChatScrollViewContentInsets = Parameters<
 
 type KeyboardViewabilityListRef = LegendListRef & {
     reportViewabilityInsetEndInternal?: (inset: number) => void;
-    reportContentInsetForScrollInternal?: LegendListRef["reportContentInset"];
+    reportContentInsetForScrollInternal?: (
+        inset: Parameters<LegendListRef["reportContentInset"]>[0],
+        options?: { keepInitialScrollAtEnd?: boolean },
+    ) => void;
 };
 
 type ScrollMessageToEndOptions = {
@@ -433,12 +436,18 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
                 list?.reportContentInsetForScrollInternal
             ) {
                 // The controller owns keyboard movement in both directions; end-follow would fight it.
-                list.reportContentInsetForScrollInternal(insets);
+                // On iOS it moves the content once per inset change, from the offset it sees, while an
+                // initial scroll-at-end keeps sending its own end. Keep that end at this inset unless the
+                // controller never lifts. Android's controller scrolls every frame of the keyboard
+                // animation, so the list stays out of its way there.
+                list.reportContentInsetForScrollInternal(insets, {
+                    keepInitialScrollAtEnd: Platform.OS === "ios" && keyboardLiftBehavior !== "never",
+                });
             } else {
                 list?.reportContentInset(insets);
             }
         },
-        [endScrollFreeze, getEndInset, keyboard, keyboardTarget],
+        [endScrollFreeze, getEndInset, keyboard, keyboardLiftBehavior, keyboardTarget],
     );
     const reportClosingInset = useCallback((bottom: number) => {
         refLegendList.current?.reportContentInset({ ...reportedInsets.current, bottom });
