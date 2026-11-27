@@ -76,9 +76,17 @@ export function processContainerLayout({ containerId, ctx, rectangle, ref, state
         });
     };
 
+    // A shrink that arrives with a new cross-axis size is a reflow, such as text rewrapping
+    // in a wider row. It is the row's real size, and deferring it leaves the list one frame
+    // too long for as long as the resize continues.
+    const crossAxis = state.horizontal ? "height" : "width";
+    const didCrossAxisResize =
+        state.lastSize !== undefined && roundSize(rectangle[crossAxis]) !== roundSize(state.lastSize[crossAxis]);
+
     const shouldDeferWebShrinkLayoutUpdate =
         Platform.OS === "web" &&
         !isInMVCPActiveMode(listState) &&
+        !didCrossAxisResize &&
         previousSize !== undefined &&
         size + 1 < previousSize;
     if (shouldDeferWebShrinkLayoutUpdate) {
