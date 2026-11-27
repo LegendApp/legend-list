@@ -21,7 +21,7 @@ import { RowLayoutStore } from "../../src/core/RowLayoutStore";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { countLayoutValues, getLayoutValue } from "../helpers/layoutStore";
+import { countLayoutValues } from "../helpers/layoutStore";
 
 function captureTimeouts() {
     const callbacks: Array<() => void> = [];
@@ -619,7 +619,7 @@ describe("layout store lifecycle", () => {
         setLayoutStoreMeasuredSize(ctx, 0, 150);
 
         expect(positionUpdates).toEqual([2050]);
-        expect(getLayoutValue(ctx.state, "positions", 20)).toBeUndefined();
+        expect(Object.keys(ctx.state.idCache)).toEqual(["20"]);
         expect(countLayoutValues(ctx.state, "positions")).toBe(0);
     });
 
@@ -717,7 +717,7 @@ describe("layout store lifecycle", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(ctx.state.totalSize).toBe(500);
-            expect(getLayoutValue(ctx.state, "positions", 5)).toBeUndefined();
+            expect(Object.keys(ctx.state.idCache)).toEqual(["5", "6"]);
             expect(store.getOffset(5)).toBe(250);
             expect(requestedAdjustments).toEqual([-50]);
             expect(ctx.state.layoutStoreRuntime?.pendingEstimateMeasurements).toBe(0);

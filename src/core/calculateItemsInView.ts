@@ -488,16 +488,18 @@ export function calculateItemsInView(
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || EMPTY_INDEX_SET;
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
         const { didMeasureEstimatedLayout, forceFullItemPositions, initialLayout } = params;
-        const dataChanged =
-            params.dataChanged && (!state.didDataChange || state.layoutDataChangeEpoch !== state.dataChangeEpoch);
+        // Initial allocation already owns the seeded layout and its fixed prefix.
+        const didDataChange =
+            !!params.dataChanged &&
+            !state.isFirst &&
+            (!state.didDataChange || state.layoutDataChangeEpoch !== state.dataChangeEpoch);
         const { hasEstimatedInitialLayout } = state;
-        const didDataChange = !!dataChanged;
         const isInitialLayout = !!initialLayout;
         const bootstrapInitialScrollState = state.initialScroll?.bootstrap;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (scrollLength === 0 || !prevNumContainers) {
-            if (didDataChange && !state.isFirst && !state.dataSourceMutationApplied) {
+            if (didDataChange && !state.dataSourceMutationApplied) {
                 syncLayoutStoreStructure(ctx);
                 reconcileLayoutStoreDataChange(ctx);
                 syncLayoutStoreState(ctx);
@@ -522,7 +524,7 @@ export function calculateItemsInView(
             alwaysRenderIndicesSet.has(index) ||
             (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
-        if ((didDataChange || isInitialLayout) && state.isFirst) {
+        if (isInitialLayout && state.isFirst) {
             syncLayoutStoreState(ctx);
         }
         if (!didDataChange && syncActiveRowLayoutStoreSpans(ctx)) {
@@ -728,7 +730,6 @@ export function calculateItemsInView(
         const didApplyDataSourceMutation = !!state.dataSourceMutationApplied && !state.dataSourceNeedsReset;
         const canReconcileLayoutStoreDataChange =
             didDataChange &&
-            !state.isFirst &&
             hasActiveLayoutStore &&
             !state.dataSourceNeedsReset &&
             !didApplyDataSourceMutation &&
@@ -831,7 +832,37 @@ export function calculateItemsInView(
         const scrollBeforeMVCP = state.scroll;
         const scrollAdjustPendingBeforeMVCP = peek$(ctx, "scrollAdjustPending") ?? 0;
         const didRetargetScroll = didDataChange && reconcileActiveScrollTarget(ctx);
-        if (!didRetargetScroll) checkMVCP?.();
+        if (!didRetargetScroll) {
+            checkMVCP?.(
+                didDataChange && state.props.getFixedItemSize && !state.scrollingTo
+                    ? (readAdjustment) => {
+                          // Resolve fixed geometry at the translated viewport before
+                          // emitting the adjustment against that geometry.
+                          const adjustment = readAdjustment();
+                          materializeLayoutStoreOffsetRange(
+                              ctx,
+                              scrollTopBuffered + adjustment,
+                              scrollBottomBuffered + adjustment,
+                          );
+                          const stickyIndex = findCurrentStickyIndex(
+                              layout,
+                              stickyHeaderIndicesArr,
+                              scroll + readAdjustment(),
+                          );
+                          reconcileLayoutStorePinnedIndices(ctx, {
+                              alwaysRenderIndices: alwaysRenderIndicesArr,
+                              currentStickyIdx: stickyIndex,
+                              dataLength,
+                              hasScrollTargetPinnedRange,
+                              scrollTargetPinnedEnd,
+                              scrollTargetPinnedStart,
+                              stickyHeaderIndices: stickyHeaderIndicesArr,
+                          });
+                          totalSize = getContentSize(ctx, includeContentContainerMinSize);
+                      }
+                    : undefined,
+            );
+        }
         const didMVCPAdjustScroll =
             !!checkMVCP &&
             (state.scroll !== scrollBeforeMVCP ||
@@ -1215,7 +1246,7 @@ export function calculateItemsInView(
         const syncOnlyChanged =
             canReuseContainerSync &&
             state.containerSyncAdjust === scrollAdjustPending &&
-            !dataChanged &&
+            !didDataChange &&
             !state.didDataChange &&
             !forceFullItemPositions &&
             !hasStickyContainers;

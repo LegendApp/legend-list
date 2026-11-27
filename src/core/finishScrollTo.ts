@@ -17,10 +17,13 @@ export function finishScrollTo(ctx: StateContext) {
         const resolvePendingScroll = ctx.scrollRequestTracker?.isWaitingToRun()
             ? undefined
             : state.pendingScrollResolve;
-        if (resolvePendingScroll) state.pendingScrollResolve = undefined;
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
+        const finishesInitialScroll = scrollingTo.isInitialScroll || state.initialScroll !== undefined;
+        const waitForCompletionFrame = finishesInitialScroll && !!scrollingTo.waitForInitialScrollCompletionFrame;
+        // A deferred reveal still owns its promise. Unmount or supersession can settle it.
+        if (!waitForCompletionFrame && resolvePendingScroll) state.pendingScrollResolve = undefined;
 
         state.scrollHistory.length = 0;
         state.scrollingTo = undefined;
@@ -36,14 +39,20 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         const complete = () => {
-            resolvePendingScroll?.();
+            if (!waitForCompletionFrame) {
+                resolvePendingScroll?.();
+            } else if (resolvePendingScroll && state.pendingScrollResolve === resolvePendingScroll) {
+                state.pendingScrollResolve = undefined;
+                resolvePendingScroll();
+                syncScrollActive(ctx);
+            }
             if (state.pendingMaintainScrollAtEnd) {
                 state.maintainingScrollAtEnd = undefined;
                 doMaintainScrollAtEnd(ctx, { immediate: !!scrollingTo.isInitialScroll });
             }
         };
 
-        if (scrollingTo.isInitialScroll || state.initialScroll) {
+        if (finishesInitialScroll) {
             const isOffsetSession = state.initialScroll?.kind === "offset";
             const shouldPreserveResizeTarget =
                 !!scrollingTo.isInitialScroll && getDataLength(state) > 0 && state.initialScroll?.viewPosition === 1;
@@ -52,7 +61,7 @@ export function finishScrollTo(ctx: StateContext) {
                 preserveTarget: (isOffsetSession && getDataLength(state) === 0) || shouldPreserveResizeTarget,
                 recalculateItems: true,
                 syncObservedOffset: isOffsetSession,
-                waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,
+                waitForCompletionFrame,
             });
             return;
         }

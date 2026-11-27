@@ -1237,7 +1237,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.viewabilityConfigCallbackPairs = viewability;
         state.scrollForNextCalculateItemsInView = undefined;
         const hasViewabilityConsumersNow = hasViewabilityConsumers(ctx, viewability);
-        if (didViewabilityConfigChange || (!hadViewabilityConsumers && hasViewabilityConsumersNow)) {
+        if (!hadViewabilityConsumers && hasViewabilityConsumersNow) {
             resetViewabilityTimers(ctx);
         }
         if (

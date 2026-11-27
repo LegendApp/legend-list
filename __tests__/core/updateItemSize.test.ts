@@ -15,10 +15,10 @@ import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
+import { checkThresholds } from "../../src/utils/checkThresholds";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { getLayoutValue } from "../helpers/layoutStore";
 
 function updateItemAndFlush(ctx: StateContext, itemKey: string, size: { height: number; width: number }) {
     updateItemSizes(ctx, { itemKey, size });
@@ -130,9 +130,7 @@ describe("item size update functions", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(mockState.totalSize).toBe(250);
-            expect(getLayoutValue(mockState, "positions", 0)).toBeUndefined();
-            expect(getLayoutValue(mockState, "positions", 1)).toBeUndefined();
-            expect(getLayoutValue(mockState, "positions", 2)).toBeUndefined();
+            expect(Object.keys(mockState.idCache)).toEqual(["0", "1", "2"]);
         });
 
         it("defers the initial estimate flush while an indexed scroll is active", () => {
@@ -182,7 +180,7 @@ describe("item size update functions", () => {
             store.setEstimatedSize(200 / 3);
             syncLayoutStoreState(mockCtx);
 
-            const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.7, width: 400 });
+            const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.67, width: 400 });
 
             expect(diff).toBe(0);
             expect(store.getSize(0)).toBe(66.625);
@@ -240,7 +238,7 @@ describe("item size update functions", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(requestedAdjustments).toEqual([-500]);
-            expect(getLayoutValue(mockState, "positions", 10)).toBeUndefined();
+            expect(Object.keys(mockState.idCache)).toEqual(["10", "11", "12"]);
             expect(mockState.totalSize).toBe(1000);
         });
 
@@ -476,8 +474,9 @@ describe("item size update functions", () => {
                     on: { itemLayout: true },
                 };
                 getScrollRequestTracker(mockCtx).runNowIfIdle = () => runTrackedScrollToEnd();
-                mockState.totalSize = 1000;
-                mockCtx.values.set("totalSize", 1000);
+                mockState.props.data = Array.from({ length: 10 }, (_, index) => ({ id: `item${index + 1}` }));
+                syncLayoutStoreStructure(mockCtx);
+                syncLayoutStoreState(mockCtx);
                 mockState.scroll = 400;
             });
 
@@ -532,6 +531,7 @@ describe("item size update functions", () => {
                     interruptMaintainScrollAtEnd(mockCtx);
                     mockState.scroll = 380;
                     mockState.isDragging = false;
+                    checkThresholds(mockCtx);
 
                     updateItemAndFlush(mockCtx, "item_0", { height: 150, width: 400 });
                     await Promise.resolve();

@@ -337,7 +337,6 @@ it("settles the scroll promise when unmounted during deferred reveal", () => {
 
 it.each(["footer", "padding", "data"] as const)("corrects a revealed end anchor after %s changes", (change) => {
     const ctx = fixture();
-    ctx.state.scrollAdjustHandler.requestAdjust = mock(() => {});
     ctx.state.initialScroll = { index: 7, kind: "end", preserveForFooterLayout: true, viewPosition: 1 };
     ctx.state.scroll = 600;
     ctx.state.scrollPending = 600;
@@ -371,7 +370,11 @@ it.each(["footer", "padding", "data"] as const)("corrects a revealed end anchor 
         });
     }
     frame();
-    expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledWith(change === "data" ? 100 : 40);
+    expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledWith({
+        animated: false,
+        x: 0,
+        y: change === "data" ? 700 : 640,
+    });
     expect(ctx.state.initialScroll).toBeUndefined();
     expect(ctx.state.didFinishInitialScroll).toBe(true);
     expect(ctx.values.get("readyToRender")).toBe(true);
@@ -392,7 +395,9 @@ it.each(["web", "native"] as const)(
 it("keeps correcting an end footer that measures more than once after reveal", () => {
     const ctx = fixture();
     const requested: number[] = [];
-    ctx.state.scrollAdjustHandler.requestAdjust = (delta) => requested.push(delta);
+    ctx.state.refScroller.current!.scrollTo = ({ y }) => {
+        requested.push(y!);
+    };
     ctx.state.initialScroll = { index: 7, kind: "end", preserveForFooterLayout: true, viewPosition: 1 };
     ctx.state.scroll = ctx.state.scrollPending = 600;
     finishInitialScroll(ctx, { preserveTarget: true });
@@ -410,7 +415,7 @@ it("keeps correcting an end footer that measures more than once after reveal", (
         ctx.state.scrollPending = ctx.state.scroll;
         frame();
     }
-    expect(requested).toEqual([40, 40]);
+    expect(requested).toEqual([640, 680]);
     expect(ctx.state.scroll).toBe(680);
     expect(ctx.values.get("readyToRender")).toBe(true);
 });
@@ -420,7 +425,6 @@ function revealedEnd() {
     ctx.state.initialScroll = { index: 7, kind: "end", preserveForBottomPadding: true, viewPosition: 1 };
     ctx.state.scroll = ctx.state.scrollPending = 600;
     ctx.state.lastNativeScroll = 600;
-    ctx.state.scrollAdjustHandler.requestAdjust = mock(() => {});
     finishInitialScroll(ctx, { preserveTarget: true });
     frame();
     return ctx;
@@ -446,7 +450,7 @@ describe("post-reveal native observations", () => {
         footerLayout(ctx, 40);
         frame();
         for (let i = 0; i < 4; i++) frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(1);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(1);
         expect(ctx.state.scroll).toBe(640);
 
         // A later observation confirms that the platform applied only part of the correction.
@@ -455,8 +459,8 @@ describe("post-reveal native observations", () => {
         if (platform !== "web") ctx.state.scroll = ctx.state.scrollPending = 620;
         observed = 620;
         frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenLastCalledWith(20);
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(2);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 640 });
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(2);
         expect(ctx.state.scroll).toBe(640);
         ctx.state.lastNativeScroll = 640;
         observed = 640;
@@ -471,7 +475,7 @@ describe("post-reveal native observations", () => {
         ctx.state.lastNativeScroll = 640 + error;
         footerLayout(ctx, 40);
         frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).not.toHaveBeenCalled();
+        expect(ctx.state.refScroller.current!.scrollTo).not.toHaveBeenCalled();
         expect(frames.size).toBe(0);
     });
 
@@ -480,8 +484,8 @@ describe("post-reveal native observations", () => {
         for (const size of [20, 80, 40]) footerLayout(ctx, size);
         expect(frames.size).toBe(1);
         frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(1);
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledWith(40);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(1);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: 640 });
     });
 
     it("combines viewport shrink and footer growth into one correction", () => {
@@ -490,8 +494,8 @@ describe("post-reveal native observations", () => {
         handleBootstrapInitialScrollLayoutChange(ctx);
         footerLayout(ctx, 40);
         frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(1);
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledWith(90);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(1);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: 690 });
         expect(ctx.values.get("readyToRender")).toBe(true);
     });
 
@@ -500,8 +504,8 @@ describe("post-reveal native observations", () => {
         ctx.state.scrollLength = 300;
         handleBootstrapInitialScrollLayoutChange(ctx);
         frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(1);
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledWith(-100);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(1);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: 500 });
         expect(ctx.state.scroll).toBe(500);
     });
 });
@@ -513,7 +517,7 @@ describe("post-reveal ownership changes", () => {
         supersedeInitialScroll(ctx);
         ctx.state.scrollingTo = { animated: false, offset: 200 };
         frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).not.toHaveBeenCalled();
+        expect(ctx.state.refScroller.current!.scrollTo).not.toHaveBeenCalled();
         expect(ctx.state.initialScrollAnchor).toBeUndefined();
         expect(ctx.state.scrollingTo.offset).toBe(200);
         expect(frames.size).toBe(0);
@@ -527,7 +531,7 @@ describe("post-reveal ownership changes", () => {
         footerLayout(ctx, 40);
         frame();
         expect(ctx.state.initialScrollAnchor).toBeUndefined();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).not.toHaveBeenCalled();
+        expect(ctx.state.refScroller.current!.scrollTo).not.toHaveBeenCalled();
         expect(ctx.state.scroll).toBe(300);
     });
 
@@ -544,7 +548,7 @@ describe("post-reveal ownership changes", () => {
         });
         frame();
         expect(ctx.state.initialScrollAnchor).toBeUndefined();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).not.toHaveBeenCalled();
+        expect(ctx.state.refScroller.current!.scrollTo).not.toHaveBeenCalled();
     });
 
     it("does not schedule an end adjustment for empty data", () => {
@@ -589,14 +593,14 @@ it.each(["ios", "android", "web"] as const)(
         frame();
         footerLayout(ctx, 80);
         frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(1);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(1);
         expect(ctx.state.scroll).toBe(640);
         ctx.state.lastNativeScroll = 640;
         ctx.state.lastNativeScrollTime = ctx.state.initialScrollAnchor!.lastRequestTime! + 1;
         ctx.state.scroll = ctx.state.scrollPending = 640;
         frame();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(2);
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenLastCalledWith(40);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(2);
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 680 });
         expect(ctx.state.scroll).toBe(680);
     },
 );
@@ -614,7 +618,7 @@ it("expires unacknowledged alignment without hiding or resuming initialization",
     expect(frames.size).toBe(0);
     footerLayout(ctx, 80);
     frame();
-    expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(1);
+    expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(1);
 });
 
 it("an old expiry callback cannot clear a replacement target's anchor", () => {
@@ -655,7 +659,7 @@ it.each(["end", "index"] as const)(
         frame();
         expect(ctx.state.scroll).toBe(300);
         expect(ctx.state.initialScrollAnchor).toBeUndefined();
-        expect(ctx.state.scrollAdjustHandler.requestAdjust).not.toHaveBeenCalled();
+        expect(ctx.state.refScroller.current!.scrollTo).not.toHaveBeenCalled();
         expect(ctx.values.get("readyToRender")).toBe(true);
     },
 );
@@ -666,7 +670,7 @@ it.each(["web"] as const)("releases queued and outstanding end corrections on mo
         const ctx = revealedEnd();
         footerLayout(ctx, 40);
         if (dispatched) frame();
-        const requested = ctx.state.scrollAdjustHandler.requestAdjust as ReturnType<typeof mock>;
+        const requested = ctx.state.refScroller.current!.scrollTo as ReturnType<typeof mock>;
         const callsBeforeUserScroll = requested.mock.calls.length;
         ctx.values.set("isAtEnd", false);
         onScroll(ctx, {
@@ -700,8 +704,9 @@ it.each([620, 640])("keeps an outstanding correction on native acknowledgement a
     expect(ctx.state.initialScrollAnchor).toBeDefined();
     ctx.state.lastNativeScrollTime = ctx.state.initialScrollAnchor!.lastRequestTime! + 1;
     frame();
-    expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(offset === 620 ? 2 : 1);
-    if (offset === 620) expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenLastCalledWith(20);
+    expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(offset === 620 ? 2 : 1);
+    if (offset === 620)
+        expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenLastCalledWith({ animated: false, x: 0, y: 640 });
 });
 
 it.each(["ios", "android"] as const)(
@@ -724,8 +729,13 @@ it.each(["ios", "android"] as const)(
             expect(ctx.state.initialScrollAnchor).toBeDefined();
             ctx.state.lastNativeScrollTime = (ctx.state.initialScrollAnchor!.lastRequestTime ?? 0) + 1;
             frame();
-            expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenCalledTimes(dispatched ? 2 : 0);
-            if (dispatched) expect(ctx.state.scrollAdjustHandler.requestAdjust).toHaveBeenLastCalledWith(140);
+            expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenCalledTimes(dispatched ? 2 : 0);
+            if (dispatched)
+                expect(ctx.state.refScroller.current!.scrollTo).toHaveBeenLastCalledWith({
+                    animated: false,
+                    x: 0,
+                    y: 460,
+                });
         }
     },
 );

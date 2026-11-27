@@ -94,7 +94,7 @@ function flushLayoutStoreEstimate(
     ctx: StateContext,
     estimatedSize: number,
     anchorIndex: number,
-    options?: { notifyTotalSize?: boolean; requireAnchorCorrection?: boolean },
+    options?: { notifyTotalSize?: boolean; requireAnchorCorrection?: boolean; adjustAnchor?: boolean },
 ) {
     const state = ctx.state;
     const store = getActiveLayoutStore(ctx);
@@ -115,7 +115,7 @@ function flushLayoutStoreEstimate(
             const newAnchorTop = store.getOffset(clampedAnchorIndex);
             const positionDiff = newAnchorTop - oldAnchorTop;
 
-            if (canCorrectAnchor) {
+            if (canCorrectAnchor && options?.adjustAnchor !== false) {
                 requestAdjust(ctx, positionDiff);
             }
 
@@ -128,7 +128,10 @@ function flushLayoutStoreEstimate(
     return didFlush;
 }
 
-export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext, notifyTotalSize = true) {
+export function maybeFlushInitialLayoutStoreEstimate(
+    ctx: StateContext,
+    options?: { notifyTotalSize?: boolean; adjustAnchor?: boolean },
+) {
     const state = ctx.state;
     const runtime = ctx.state.layoutStoreRuntime;
     const store = runtime?.store;
@@ -156,7 +159,7 @@ export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext, notifyTo
                 areAllVisibleSizesKnown = false;
                 break;
             }
-            if (size > 0) {
+            if (size > 0 && !state.fixedItemSizeKeys?.has(id)) {
                 totalMeasuredSize += size;
                 measuredCount++;
             }
@@ -166,7 +169,7 @@ export function maybeFlushInitialLayoutStoreEstimate(ctx: StateContext, notifyTo
             const nextEstimate = totalMeasuredSize / measuredCount;
             runtime.didFlushInitialEstimate = true;
             runtime.pendingEstimateMeasurements = 0;
-            didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer, { notifyTotalSize });
+            didFlush = flushLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer, options);
         }
     }
 
@@ -535,7 +538,6 @@ function getLayoutStoreSeed(ctx: StateContext, options: LayoutStoreSeedOptions =
         if (
             options.mode === "reconcile" &&
             !canReusePreviousKey &&
-            !options.didKeyExtractorChange &&
             previousKey !== undefined &&
             (!isIndexInRange || key !== previousKey)
         ) {

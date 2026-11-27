@@ -67,11 +67,7 @@ export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
         }
         const scroller = state.refScroller.current;
         if (!scroller) return;
-        if (
-            Platform.OS === "web" ||
-            anchor.lastRequestTime === undefined ||
-            (state.lastNativeScrollTime ?? 0) > anchor.lastRequestTime
-        ) {
+        if (anchor.lastRequestTime === undefined || (state.lastNativeScrollTime ?? 0) > anchor.lastRequestTime) {
             anchor.lastRequestTime = Date.now();
             anchor.lastRequestOffset = observed;
             anchor.contentOffset = offset;
@@ -82,9 +78,8 @@ export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
         }
         if (state.initialScrollAnchor === anchor) state.scheduledWork.frame(correct, "initialScrollAlignment");
     };
-    // Wait for React to commit the DOM extent, then retry any silent clamp on a frame.
-    if (Platform.OS === "web") state.scheduledWork.microtask(correct, "initialScrollAlignment");
-    else state.scheduledWork.frame(correct, "initialScrollAlignment");
+    // The published extent must reach the scroller before dispatching the absolute correction.
+    state.scheduledWork.frame(correct, "initialScrollAlignment");
     return true;
 }
 
@@ -101,7 +96,8 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(
     // A correction may report an intermediate offset or a clamp as native geometry changes.
     if (
         state.scheduledWork.has("initialScrollAlignment") &&
-        (nativeGeometryChanged ||
+        (Platform.OS !== "web" ||
+            nativeGeometryChanged ||
             (anchor.lastRequestOffset !== undefined &&
                 observed >= Math.min(anchor.lastRequestOffset, target) - 1 &&
                 observed <= Math.max(anchor.lastRequestOffset, target) + 1))

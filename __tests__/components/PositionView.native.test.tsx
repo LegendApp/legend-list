@@ -54,6 +54,7 @@ function StickyHarness({
 
     const resolvedIndex = itemIndex ?? index;
     setLayoutValue(ctx.state, "positions", resolvedIndex, position);
+    ctx.state.layoutStoreRuntime!.store.setMeasuredSize(resolvedIndex, currentSize);
     setLayoutValue(
         ctx.state,
         "positions",
@@ -62,7 +63,6 @@ function StickyHarness({
     );
     ctx.state.props.stickyHeaderIndicesArr = stickyHeaderIndices;
     ctx.state.sizes.set(itemKey, currentSize);
-    ctx.state.layoutStoreRuntime!.store.setMeasuredSize(resolvedIndex, currentSize);
 
     ctx.values.set(`containerPosition7`, position);
     ctx.values.set(`containerItemKey7`, itemKey);

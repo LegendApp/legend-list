@@ -5,6 +5,7 @@ import { Text } from "react-native";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { setFooterSize } from "../../src/core/updateContentMetrics";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import { setDidLayout } from "../../src/utils/setDidLayout";
@@ -224,6 +225,7 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
         const footerFinishTracker = trackAssignedStateValue(state, "didFinishInitialScroll");
         try {
             await act(async () => {
+                setFooterSize(ctx, 40);
                 lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
             });
 

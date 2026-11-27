@@ -3,7 +3,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset, getScrollRangeEnd } from "@/core/clampScrollOffset";
 import { isEndOfContentTarget } from "@/core/endOfContentTarget";
 import { clearInitialScrollAnchor, finishInitialScroll } from "@/core/finishInitialScroll";
-import { materializeFixedLayoutStoreIndex, materializeFixedLayoutStorePrefix } from "@/core/fixedLayoutMaterialization";
+import { materializeFixedLayoutStorePrefix } from "@/core/fixedLayoutMaterialization";
 import { getDataLength } from "@/core/IndexedData";
 import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { getObservedScrollOffset } from "@/core/observedScroll";
@@ -74,9 +74,7 @@ export function resolveInitialScrollOffset(
         return (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
     }
 
-    const materialize =
-        initialScroll.kind === "end" ? materializeFixedLayoutStoreIndex : materializeFixedLayoutStorePrefix;
-    if (materialize(ctx, initialScroll.index)) {
+    if (materializeFixedLayoutStorePrefix(ctx, initialScroll.index)) {
         syncLayoutStoreState(ctx);
     }
     if (initialScroll.kind === "end") return getScrollRangeEnd(ctx);

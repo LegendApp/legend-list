@@ -181,22 +181,13 @@ function updateViewableItemsWithConfig(
     const timerKey = `viewability:${configId}` as const;
     let timing = viewabilityState.minimumViewTime;
     if (minimumViewTime > 0) {
-        if (
-            !timing ||
-            timing.dataSource !== state.props.dataSource ||
-            timing.dataKey !== state.props.dataKey ||
-            timing.config.minimumViewTime !== viewabilityConfig.minimumViewTime ||
-            timing.config.waitForInteraction !== viewabilityConfig.waitForInteraction
-        ) {
+        if (!timing || timing.dataSource !== state.props.dataSource || timing.dataKey !== state.props.dataKey) {
             state.scheduledWork.cancel(timerKey);
             timing = viewabilityState.minimumViewTime = {
-                config: viewabilityConfig,
                 dataKey: state.props.dataKey,
                 dataSource: state.props.dataSource,
                 since: new Map(),
             };
-        } else {
-            timing.config = viewabilityConfig;
         }
     } else if (timing) {
         state.scheduledWork.cancel(timerKey);
@@ -453,9 +444,13 @@ function computeViewability(
     const percentOfScroller = effectiveScrollSize > 0 ? 100 * (sizeVisible / effectiveScrollSize) : 0;
     const percent = isEntirelyVisible ? 100 : viewAreaMode ? percentOfScroller : percentVisible;
 
+    // Instant reports preserve the zero-threshold boundary behavior. Dwell
+    // requires visible pixels throughout the timing interval.
+    const allowsZeroCoverage =
+        !((viewabilityConfig.minimumViewTime ?? 0) > 0) && startOffset === 0 && !state.viewabilityInsetEnd;
     const isViewable =
         effectiveScrollSize > 0 &&
-        (sizeVisible > 0 || (sizeVisible === 0 && startOffset === 0 && !state.viewabilityInsetEnd)) &&
+        (sizeVisible > 0 || (sizeVisible === 0 && allowsZeroCoverage)) &&
         percent >= (viewablePercentThreshold ?? 0);
 
     const value: ViewAmountToken = {

@@ -2,6 +2,7 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { getDataItem, getDataLength } from "@/core/IndexedData";
+import { getActiveLayoutStore, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getInitialContainerPoolSize } from "@/utils/containerPool";
 import { getEffectiveDrawDistance, isSparePoolPending } from "@/utils/getEffectiveDrawDistance";
@@ -23,14 +24,21 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         let averageItemSize: number;
         if (getFixedItemSize) {
             let totalSize = 0;
+            let areAllFixed = true;
             const num = Math.min(20, dataLength);
             for (let i = 0; i < num; i++) {
                 const item = getDataItem(state, i);
-                totalSize +=
-                    (item !== undefined ? getFixedItemLayoutSize(ctx, i, item) : undefined) ??
-                    estimatedItemSize! + ctx.scrollAxisGap;
+                const fixedSize = item !== undefined ? getFixedItemLayoutSize(ctx, i, item) : undefined;
+                areAllFixed &&= fixedSize !== undefined;
+                totalSize += fixedSize ?? estimatedItemSize! + ctx.scrollAxisGap;
             }
             averageItemSize = totalSize / num;
+            const store = !state.props.dataSource ? getActiveLayoutStore(ctx) : undefined;
+            // Reuse the allocation sample for array estimates without scanning distant rows.
+            if (areAllFixed && store?.getMeasuredCount() === 0 && averageItemSize > 0) {
+                store.setEstimatedSize(averageItemSize);
+                syncLayoutStoreState(ctx);
+            }
         } else {
             averageItemSize = estimatedItemSize! + ctx.scrollAxisGap;
         }

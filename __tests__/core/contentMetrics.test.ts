@@ -1,5 +1,6 @@
 import { describe, expect, it, mock, spyOn } from "bun:test";
 import { clampScrollOffset } from "../../src/core/clampScrollOffset";
+import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { setContentInsetOverride, setFooterSize, setHeaderSize } from "../../src/core/updateContentMetrics";
 import { updateContentMetricsState } from "../../src/core/updateContentMetricsState";
 import { updateItemSizesBatch } from "../../src/core/updateItemSizes";
@@ -72,9 +73,12 @@ describe("updateContentMetrics", () => {
                 {
                     didContainersLayout: true,
                     didFinishInitialScroll: true,
-                    positions: [0],
+                    idCache: ["item_0"],
+                    indexByKey: new Map([["item_0", 0]]),
                     props: {
                         data: [0],
+                        estimatedItemSize: 1000,
+                        keyExtractor: () => "item_0",
                         maintainVisibleContentPosition: { data: false, size: false },
                         onEndReached,
                         onEndReachedThreshold: 1,
@@ -86,6 +90,7 @@ describe("updateContentMetrics", () => {
                     sizesKnown: new Map([["item_0", 1000]]),
                 },
             );
+            syncLayoutStoreStructure(ctx);
             checkThresholds(ctx);
             expect(onEndReached).not.toHaveBeenCalled();
             const shrink = () => {

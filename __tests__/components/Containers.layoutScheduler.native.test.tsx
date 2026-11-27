@@ -258,13 +258,14 @@ describe("Containers layout-effect measurement scheduling", () => {
         );
         let ctx: ReturnType<typeof useStateContext>;
         let scrollProps: any;
-        const committedIndices: number[] = [];
+        let measuredBeforeRemap = false;
         const Surface = React.forwardRef((props: any, ref: React.Ref<any>) => {
             ctx = useStateContext();
             scrollProps = props;
             React.useImperativeHandle(ref, () => ({ measure: () => {}, scrollTo: () => {} }));
             React.useLayoutEffect(() => {
-                committedIndices.push(ctx.state.indexByKey.get("0")!);
+                measuredBeforeRemap ||=
+                    ctx.state.didDataChange && ctx.state.layoutDataChangeEpoch !== ctx.state.dataChangeEpoch;
                 measureContainersInLayoutEffect(ctx);
             });
             return <>{props.children}</>;
@@ -295,11 +296,15 @@ describe("Containers layout-effect measurement scheduling", () => {
                 scrollProps.onLayout({ nativeEvent: { layout: { height: 500, width: 320, x: 0, y: 0 } } });
             });
             renders.length = 0;
-            committedIndices.length = 0;
+            measuredBeforeRemap = false;
             measuredHeights.set(0, 180);
             items = [...Array.from({ length: 50 }, (_, index) => ({ id: String(index - 50) })), ...items];
             await act(async () => renderer!.update(list()));
-            expect(committedIndices[0]).toBe(50);
+            // Child layout may run before the sparse layout pass remaps keys.
+            // Its measurement must still reach the retained row at the new index.
+            expect(measuredBeforeRemap).toBe(true);
+            expect(ctx!.state.indexByKey.get("0")).toBe(50);
+            expect(ctx!.state.sizesKnown.get("0")).toBe(180);
             expect(renders).toEqual(["-1"]);
             expect(ctx!.state.startBuffered).toBeGreaterThanOrEqual(49);
         } finally {

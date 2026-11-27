@@ -220,6 +220,16 @@ export function updateItemSizesBatch(ctx: StateContext, measurements: ItemSizeMe
                 mergeItemSizeUpdateResult(result, nextResult);
             }
         }
+        // The batch anchor already covers changes to both measurements and the estimate.
+        if (
+            maybeFlushInitialLayoutStoreEstimate(ctx, {
+                adjustAnchor: !result.applyMVCPAdjustment,
+                notifyTotalSize: false,
+            })
+        ) {
+            result.didChange = true;
+            result.needsRecalculate = true;
+        }
     } finally {
         // Keep the internal total current while measuring, but publish only the batch result.
         // Publish before scroll recalculation, including when an item callback interrupts the batch.
@@ -420,8 +430,10 @@ export function updateOneItemSize(
     // equal-to-estimate measurements so future estimate flushes do not reclassify
     // real measured rows as estimated rows.
     if (didSizeChange || didSetPrefixLayoutStoreSize) {
-        setSize(ctx, itemKey, size, notifyTotalSize);
-        maybeFlushInitialLayoutStoreEstimate(ctx, notifyTotalSize);
+        if (!didSetPrefixLayoutStoreSize) {
+            setSize(ctx, itemKey, size, notifyTotalSize);
+        }
+        if (notifyTotalSize) maybeFlushInitialLayoutStoreEstimate(ctx);
         return didSizeChange ? size - prevSize : 0;
     }
     return 0;

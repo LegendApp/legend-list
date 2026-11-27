@@ -240,7 +240,7 @@ export function prepareMVCP(
     ctx: StateContext,
     dataChanged?: boolean,
     adjustmentSource?: ScrollAdjustmentSource,
-): (() => void) | undefined {
+): ((materializeAnchorRange?: (readAdjustment: () => number) => void) => void) | undefined {
     const state = ctx.state;
     const { idsInView, props } = state;
     const {
@@ -340,7 +340,7 @@ export function prepareMVCP(
         }
 
         // Return a function to do MVCP based on the prepared values
-        return () => {
+        return (materializeAnchorRange) => {
             // A keyed redispatch already accounts for the rebuilt target's position and alignment.
             if (scrollTarget !== undefined && state.scrollingTo !== scrollingTo) {
                 return;
@@ -470,6 +470,19 @@ export function prepareMVCP(
                         positionDiff += (newSize - prevSize) * scrollingToViewPosition;
                     }
                     scrollingTo.itemSize = newSize;
+                }
+            }
+
+            if (materializeAnchorRange && anchorIdForLock !== undefined && anchorPositionForLock !== undefined) {
+                const anchorIndex = indexByKey.get(anchorIdForLock);
+                const positionBefore = anchorPositionForLock;
+                materializeAnchorRange(
+                    () => positionDiff + (getLayoutOffset(ctx, anchorIndex) ?? positionBefore) - positionBefore,
+                );
+                const position = getLayoutOffset(ctx, anchorIndex);
+                if (position !== undefined) {
+                    positionDiff += position - anchorPositionForLock;
+                    anchorPositionForLock = position;
                 }
             }
 

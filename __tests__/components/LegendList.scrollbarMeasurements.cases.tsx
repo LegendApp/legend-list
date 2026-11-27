@@ -94,7 +94,10 @@ for (const sourceMode of [false, true]) {
             let scenario = 0;
             for (const height of [40, 220]) {
                 for (const destination of [72000, 1000, 43000, 84000, 2000]) {
-                    await scroll(3000000 + scenario++ * 10000);
+                    // Land at a row boundary so its predecessor is in the buffer
+                    // even during the unexpanded, visible-first range pass.
+                    const destinationIndex = 30_000 + scenario++ * 100;
+                    await scroll(ctx.state.layoutStoreRuntime!.store.getOffset(destinationIndex));
                     await act(async () => {
                         await new Promise((resolve) => requestAnimationFrame(resolve));
                     });

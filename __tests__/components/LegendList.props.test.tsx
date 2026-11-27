@@ -550,6 +550,7 @@ describe("LegendList props behavior", () => {
         const onViewableItemsChanged = mock(() => {});
         const { LegendList } = await import("../../src/components/LegendList?source-empty-viewability");
         const callbacks: Array<() => void> = [];
+        const clock = spyOn(performance, "now").mockReturnValue(0);
         const nativeSetTimeout = globalThis.setTimeout;
         const timer = spyOn(globalThis, "setTimeout").mockImplementation(((callback: () => void, delay: number) => {
             if (delay === 100) callbacks.push(callback);
@@ -580,6 +581,7 @@ describe("LegendList props behavior", () => {
             expect(onViewableItemsChanged).not.toHaveBeenCalled();
         } finally {
             timer.mockRestore();
+            clock.mockRestore();
             rendered.unmount();
         }
     });

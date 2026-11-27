@@ -11,7 +11,6 @@ import type {
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
-    ViewabilityConfig,
     ViewToken,
 } from "@/types.base";
 import type { InternalScrollTarget, InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
@@ -169,7 +168,6 @@ export interface StateContext {
             minimumViewTime?: {
                 dataSource: object | undefined;
                 dataKey: InternalState["props"]["dataKey"];
-                config: ViewabilityConfig;
                 since: Map<string, number>;
                 deadline?: number;
             };

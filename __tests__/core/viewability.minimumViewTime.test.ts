@@ -163,15 +163,15 @@ it("uses a replacement callback without resetting unchanged visibility timing", 
         expect(replacement).toHaveLength(1);
     }));
 
-it("restarts timing when threshold configuration changes", () =>
+it("applies a shorter dwell duration to the existing visibility interval", () =>
     scenario(({ advance, calls, configure, update }) => {
         update(0);
         advance(40);
         configure({ minimumViewTime: 50 });
         update();
-        advance(89);
+        advance(49);
         expect(calls).toEqual([]);
-        advance(90);
+        advance(50);
         expect(calls).toHaveLength(1);
     }));
 
