@@ -180,12 +180,13 @@ describe("item size update functions", () => {
             store.setEstimatedSize(200 / 3);
             syncLayoutStoreState(mockCtx);
 
-            const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.67, width: 400 });
+            const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.7, width: 400 });
 
             expect(diff).toBe(0);
-            expect(store.getSize(0)).toBe(66.625);
+            expect(store.getSize(0)).toBe(66.75);
+            expect(store.getOffset(1)).toBe(66.75);
             expect(store.getMeasuredCount()).toBe(1);
-            expect(mockState.sizesKnown.get("item_0")).toBe(66.625);
+            expect(mockState.sizesKnown.get("item_0")).toBe(66.75);
         });
 
         it("ignores stale prefix measurements outside the active store length", () => {

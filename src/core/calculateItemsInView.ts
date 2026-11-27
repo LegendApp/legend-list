@@ -282,7 +282,7 @@ function reconcileLayoutStorePinnedIndices(
 ) {
     const hasStickyIndex = options.currentStickyIdx >= 0 && options.stickyHeaderIndices.length > 0;
     if (options.alwaysRenderIndices.length === 0 && !options.hasScrollTargetPinnedRange && !hasStickyIndex) {
-        return;
+        return false;
     }
 
     let didMaterializeFixedSizes = false;
@@ -310,6 +310,7 @@ function reconcileLayoutStorePinnedIndices(
     if (didMaterializeFixedSizes) {
         syncLayoutStoreState(ctx);
     }
+    return didMaterializeFixedSizes;
 }
 
 function materializeLayoutStoreOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
@@ -836,29 +837,36 @@ export function calculateItemsInView(
             checkMVCP?.(
                 didDataChange && state.props.getFixedItemSize && !state.scrollingTo
                     ? (readAdjustment) => {
-                          // Resolve fixed geometry at the translated viewport before
-                          // emitting the adjustment against that geometry.
-                          const adjustment = readAdjustment();
-                          materializeLayoutStoreOffsetRange(
-                              ctx,
-                              scrollTopBuffered + adjustment,
-                              scrollBottomBuffered + adjustment,
-                          );
-                          const stickyIndex = findCurrentStickyIndex(
-                              layout,
-                              stickyHeaderIndicesArr,
-                              scroll + readAdjustment(),
-                          );
-                          reconcileLayoutStorePinnedIndices(ctx, {
-                              alwaysRenderIndices: alwaysRenderIndicesArr,
-                              currentStickyIdx: stickyIndex,
-                              dataLength,
-                              hasScrollTargetPinnedRange,
-                              scrollTargetPinnedEnd,
-                              scrollTargetPinnedStart,
-                              stickyHeaderIndices: stickyHeaderIndicesArr,
-                          });
-                          totalSize = getContentSize(ctx, includeContentContainerMinSize);
+                          const scrollBeforeProjection = nativeScrollState;
+                          const projectViewport = () => {
+                              totalSize = getContentSize(ctx, includeContentContainerMinSize);
+                              updateScroll(scrollBeforeMVCP + readAdjustment());
+                              updateScrollRange();
+                          };
+                          projectViewport();
+                          let needsMaterialization: boolean;
+                          do {
+                              const start = scrollTopBuffered;
+                              const end = scrollBottomBuffered;
+                              materializeLayoutStoreOffsetRange(ctx, start, end);
+                              projectViewport();
+
+                              // The translated viewport can cross a sticky boundary as fixed sizes settle.
+                              const didChangePinnedSizes = reconcileLayoutStorePinnedIndices(ctx, {
+                                  alwaysRenderIndices: alwaysRenderIndicesArr,
+                                  currentStickyIdx: findCurrentStickyIndex(layout, stickyHeaderIndicesArr, scroll),
+                                  dataLength,
+                                  hasScrollTargetPinnedRange,
+                                  scrollTargetPinnedEnd,
+                                  scrollTargetPinnedStart,
+                                  stickyHeaderIndices: stickyHeaderIndicesArr,
+                              });
+                              if (didChangePinnedSizes) projectViewport();
+                              needsMaterialization =
+                                  didChangePinnedSizes || start !== scrollTopBuffered || end !== scrollBottomBuffered;
+                          } while (needsMaterialization);
+                          updateScroll(scrollBeforeProjection);
+                          updateScrollRange();
                       }
                     : undefined,
             );

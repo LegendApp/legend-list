@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
-import { Text } from "react-native";
+import type { ComponentProps } from "react";
+import { Text, View } from "react-native";
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
-import { setFooterSize } from "../../src/core/updateContentMetrics";
+import type { LayoutView } from "../../src/platform/LayoutView.native";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import { setDidLayout } from "../../src/utils/setDidLayout";
@@ -188,6 +189,23 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
             id: `item-${index}`,
             label: `Item ${index}`,
         }));
+        const { ListComponent } = await import("../../src/components/ListComponent?bootstrap-footer-oldarch");
+        mock.module("@/components/ListComponent", () => ({
+            ListComponent: (props: ComponentProps<typeof ListComponent>) => {
+                lastListProps = props;
+                return <ListComponent {...props} />;
+            },
+        }));
+
+        const footerStyle = { paddingTop: 1 };
+        let onFooterLayout!: ComponentProps<typeof LayoutView>["onLayoutChange"];
+        mock.module("@/platform/LayoutView", () => ({
+            LayoutView: ({ children, onLayoutChange, style }: ComponentProps<typeof LayoutView>) => {
+                if (style === footerStyle) onFooterLayout = onLayoutChange;
+                return <View>{children}</View>;
+            },
+        }));
+
         const { LegendList } = await importOldArchitectureLegendList("bootstrap-footer-layout-retarget-oldarch");
 
         render(
@@ -198,6 +216,7 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
                 initialScrollAtEnd
                 keyExtractor={(item: { id: string }) => item.id}
                 ListFooterComponent={() => <Text>Footer</Text>}
+                ListFooterComponentStyle={footerStyle}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -225,10 +244,10 @@ describe("LegendList bootstrap initial scroll old architecture", () => {
         const footerFinishTracker = trackAssignedStateValue(state, "didFinishInitialScroll");
         try {
             await act(async () => {
-                setFooterSize(ctx, 40);
-                lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
+                onFooterLayout({ height: 40, width: 320, x: 0, y: 0 }, false);
             });
 
+            expect(ctx.values.get("footerSize")).toBe(40);
             expect(footerFinishTracker.assignedValues).not.toContain(false);
             expect((state.initialScroll ?? state.initialScrollAnchor)?.viewPosition).toBe(1);
         } finally {
