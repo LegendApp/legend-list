@@ -51,6 +51,7 @@ export interface LegendListScrollerRef {
 }
 
 export interface MaintainVisibleContentPositionNormalized<ItemT = any> {
+    anchor?: "start" | "end";
     autoscrollToTopThreshold?: number;
     data: boolean;
     size: boolean;

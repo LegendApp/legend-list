@@ -243,6 +243,7 @@ export function prepareMVCP(
     const { idsInView, positions, props } = state;
     const {
         maintainVisibleContentPosition: {
+            anchor,
             autoscrollToTopThreshold,
             data: mvcpData,
             size: mvcpScroll,
@@ -250,10 +251,10 @@ export function prepareMVCP(
         },
     } = props;
     const isWeb = Platform.OS === "web";
-    // A list aligned to and kept at its end is read from the bottom, so the last visible item stays in place and
-    // changes move the content above it.
-    const anchorCandidateIds =
-        props.alignItemsAtEnd && props.maintainScrollAtEnd ? [...idsInView].reverse() : idsInView;
+    // Keep the automatic choice for lists that do not specify an anchor.
+    const anchorFromEnd =
+        anchor === "end" || (anchor === undefined && props.alignItemsAtEnd && props.maintainScrollAtEnd);
+    const anchorCandidateIds = anchorFromEnd ? [...idsInView].reverse() : idsInView;
 
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
