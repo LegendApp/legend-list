@@ -75,7 +75,8 @@ it("reuses measurements as estimates on remount without treating them as current
     act(() => updateOneItemSize(ctx!, "row-0", { height: 300, width: 320 }));
     expect(ctx!.state.sizesKnown.get("row-0")).toBe(300);
     reopened.rerender(list([...data, { id: "new-row" }]));
-    expect(ctx!.state.sizes.get("row-0")).toBe(300);
+    expect(ctx!.state.sizesKnown.get("row-0")).toBe(300);
+    expect(ctx!.state.layoutStoreRuntime?.store.getSize(0)).toBe(300);
     reopened.unmount();
 
     const sameArray = render(list(data, 320, 0, (item) => item.id));

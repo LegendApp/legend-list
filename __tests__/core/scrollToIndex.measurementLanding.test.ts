@@ -108,12 +108,12 @@ it.each(["ios", "android"] as const)(
             h.state.didFinishInitialScroll = true;
             h.state.sizesKnown.set("item_56", 56);
             h.state.sizes.set("item_56", 56);
+            h.state.layoutStoreRuntime = undefined;
             rebuildTestLayout(h.ctx);
             h.browser.moveTo(1931);
             void h.ref.scrollToIndex({ animated: true, index: 57, viewPosition: 0.5 });
             const issued = h.browser.destination!;
             updateOneItemSize(h.ctx, "item_56", { height: 40, width: 40 });
-            rebuildTestLayout(h.ctx);
             const expected = issued - 16;
             h.browser.step(expected - h.browser.offset);
             h.clock.tick();

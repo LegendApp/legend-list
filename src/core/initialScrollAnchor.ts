@@ -67,7 +67,11 @@ export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
         }
         const scroller = state.refScroller.current;
         if (!scroller) return;
-        if (anchor.lastRequestTime === undefined || (state.lastNativeScrollTime ?? 0) > anchor.lastRequestTime) {
+        const maxOffset = Platform.OS === "web" ? scroller.getMaxScrollOffset?.() : undefined;
+        if (
+            (maxOffset === undefined || offset <= maxOffset + 1) &&
+            (anchor.lastRequestTime === undefined || (state.lastNativeScrollTime ?? 0) > anchor.lastRequestTime)
+        ) {
             anchor.lastRequestTime = Date.now();
             anchor.lastRequestOffset = observed;
             anchor.contentOffset = offset;
@@ -78,8 +82,13 @@ export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
         }
         if (state.initialScrollAnchor === anchor) state.scheduledWork.frame(correct, "initialScrollAlignment");
     };
-    // The published extent must reach the scroller before dispatching the absolute correction.
-    state.scheduledWork.frame(correct, "initialScrollAlignment");
+    // A DOM extent that has committed can land before paint. Retry on a frame
+    // when the new extent cannot yet accommodate the target.
+    if (Platform.OS === "web" && state.refScroller.current?.getMaxScrollOffset) {
+        state.scheduledWork.microtask(correct, "initialScrollAlignment");
+    } else {
+        state.scheduledWork.frame(correct, "initialScrollAlignment");
+    }
     return true;
 }
 
@@ -93,16 +102,14 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(
     if (!anchor || state.scrollingTo) return;
     const observed = observedOffset ?? getObservedScrollOffset(ctx, state.scrollPending);
     const target = anchor.contentOffset ?? resolveInitialScrollOffset(ctx, anchor);
-    // A correction may report an intermediate offset or a clamp as native geometry changes.
-    if (
-        state.scheduledWork.has("initialScrollAlignment") &&
-        (Platform.OS !== "web" ||
-            nativeGeometryChanged ||
-            (anchor.lastRequestOffset !== undefined &&
-                observed >= Math.min(anchor.lastRequestOffset, target) - 1 &&
-                observed <= Math.max(anchor.lastRequestOffset, target) + 1))
-    )
-        return;
+    if (state.scheduledWork.has("initialScrollAlignment")) {
+        if (nativeGeometryChanged) return;
+        const from = anchor.lastRequestOffset ?? target;
+        const to = resolveInitialScrollOffset(ctx, anchor);
+        // A native resize can clamp and then consume the same in-flight correction.
+        const overshoot = Platform.OS !== "web" && anchor.lastRequestOffset !== undefined ? Math.max(0, from - to) : 0;
+        if (observed >= Math.min(from, to) - overshoot - 1 && observed <= Math.max(from, to) + 1) return;
+    }
     if (Math.abs(observed - target) <= 1) return;
     if ((anchor.preserveForBottomPadding || anchor.preserveForFooterLayout) && peek$(ctx, "isAtEnd")) return;
     // A revealed list belongs to the user once they leave its settled target.

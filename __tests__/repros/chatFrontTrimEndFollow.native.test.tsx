@@ -2,7 +2,7 @@ import * as React from "react";
 import { Text } from "react-native";
 
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
-import { getLayoutValue } from "../helpers/layoutStore";
+import { getLayoutOffset, getLayoutSize } from "../../src/core/layoutAccessors";
 import "../setup";
 
 import { LegendList } from "../../src/components/LegendList";
@@ -125,8 +125,8 @@ async function runChat(platform: "ios" | "android" | "web", mvcpData: boolean, t
     const screenBottom = (key: string) => {
         const index = ctx.state.indexByKey.get(key);
         if (index === undefined) return undefined;
-        const top = getLayoutValue(ctx.state, "positions", index);
-        const size = ctx.state.sizes.get(key);
+        const top = getLayoutOffset(ctx, index);
+        const size = getLayoutSize(ctx, index);
         if (top === undefined || size === undefined) return undefined;
         return getStartOffsetAdjustment(ctx) + top + size - scroll;
     };

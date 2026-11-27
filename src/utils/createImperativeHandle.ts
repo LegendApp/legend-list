@@ -191,7 +191,7 @@ export function createImperativeHandle(
     const refScroller = state.refScroller;
     const clearCaches = (options?: Parameters<LegendListRef["clearCaches"]>[0]) => {
         const mode = options?.mode ?? "sizes";
-        const shouldRebuildPrefixLayoutStore = state.props.getFixedItemSize !== undefined;
+        const retainedEstimate = mode === "sizes" ? state.layoutStoreRuntime?.store.getEstimatedSize() : undefined;
 
         if (
             mode === "sizes" &&
@@ -212,7 +212,12 @@ export function createImperativeHandle(
             }
         }
         clearItemSizeEstimates(ctx);
-        // Keep rendered sizes as estimates so native content cannot collapse before remeasurement.
+        // Retain the last measured geometry as estimates until the rows remeasure.
+        if (retainedEstimate !== undefined) {
+            for (const [key, size] of state.sizesKnown) {
+                state.sizes.set(key, size);
+            }
+        }
         state.sizesKnown.clear();
         invalidateFixedItemSizes(state);
         for (const key in state.averageSizes) {
@@ -232,8 +237,9 @@ export function createImperativeHandle(
             state.idCache.length = 0;
         }
 
-        if (shouldRebuildPrefixLayoutStore) {
-            rebuildLayoutStoreExact(ctx);
+        if (retainedEstimate !== undefined || state.props.getFixedItemSize !== undefined) {
+            const store = rebuildLayoutStoreExact(ctx);
+            if (retainedEstimate !== undefined) store?.setEstimatedSize(retainedEstimate);
             syncLayoutStoreState(ctx);
         }
 

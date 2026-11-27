@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Animated, Text } from "react-native";
 
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { installListRegistry, type ListCtx } from "../../examples-shared/layoutInvariants";
 import { batchItemSizeUpdates } from "../../src/core/updateItemSizes";
 import { Platform } from "../../src/platform/Platform";
@@ -113,6 +113,8 @@ async function runChat(scenario: Scenario) {
     const lists = new Set<ListCtx>();
     const uninstall = installListRegistry(lists);
     const clock = installFakeClock();
+    const wallClock = spyOn(Date, "now").mockImplementation(() => clock.now);
+    const monotonicClock = spyOn(performance, "now").mockImplementation(() => clock.now);
     const ref = React.createRef<LegendListRef>();
     const { LegendList } = await import("../../src/components/LegendList?chat-older-page-anchor");
     const renderList = () => (
@@ -231,6 +233,8 @@ async function runChat(scenario: Scenario) {
     } finally {
         unlisten?.();
         await act(async () => renderer?.unmount());
+        monotonicClock.mockRestore();
+        wallClock.mockRestore();
         clock.restore();
         uninstall();
         device.reset();
