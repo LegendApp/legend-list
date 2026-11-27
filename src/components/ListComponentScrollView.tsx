@@ -107,7 +107,10 @@ export interface ListComponentScrollViewProps {
 interface ExtraPropsFromRN {
     contentInset?: { bottom?: number; left?: number; right?: number; top?: number };
     scrollEventThrottle?: number;
+    keyboardShouldPersistTaps?: boolean | "always" | "never" | "handled";
     ScrollComponent?: React.ComponentType<unknown>;
+    scrollsToTop?: boolean;
+    testID?: string;
 }
 
 const SCROLLBAR_HIDDEN_STYLE_ID = "legend-list-scrollbar-axis-hidden-style";
@@ -771,8 +774,12 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         contentInset: _contentInset,
         scrollEventThrottle: _scrollEventThrottle,
         ScrollComponent: _ScrollComponent,
+        // Native-only ScrollView props: react-native-web drops them; on the div React warns about unknown props
+        keyboardShouldPersistTaps: _keyboardShouldPersistTaps,
+        scrollsToTop: _scrollsToTop,
         snapToOffsets,
         className: scrollViewClassNameProp,
+        testID,
         ...webProps
     } = props as ListComponentScrollViewProps & ExtraPropsFromRN & HTMLAttributes<HTMLDivElement>;
     const snapOffsets = !isExternalScroll ? getFiniteSnapOffsets(snapToOffsets) : [];
@@ -804,6 +811,8 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             className={scrollViewClassName}
             ref={scrollRef}
             {...(webProps as HTMLAttributes<HTMLDivElement>)}
+            // React Native's testID, rendered as react-native-web renders it for every other element
+            data-testid={testID}
             style={scrollViewStyle}
         >
             {refreshControl}

@@ -1680,6 +1680,64 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    it("renders testID as data-testid on the scroll element", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-test-id"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}} testID="my-list">
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props["data-testid"]).toBe("my-list");
+            expect(divs[0]?.props.testID).toBeUndefined();
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("does not pass the native-only scrollsToTop and keyboardShouldPersistTaps to the scroll element", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-native-only-props"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        keyboardShouldPersistTaps="handled"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        scrollsToTop={false}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props).not.toHaveProperty("scrollsToTop");
+            expect(divs[0]?.props).not.toHaveProperty("keyboardShouldPersistTaps");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("disables browser scroll anchoring while MVCP is enabled", async () => {
         resetMocks();
         const { ListComponentScrollView } = await import(
