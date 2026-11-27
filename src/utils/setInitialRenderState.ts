@@ -1,6 +1,7 @@
 import { resetAdaptiveRender, setAdaptiveRender } from "@/core/adaptiveRender";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { INITIAL_DRAW_DISTANCE, scheduleFullDrawDistancePrewarm } from "@/utils/getEffectiveDrawDistance";
+import { flushInitialMountAdjusts } from "@/utils/requestAdjust";
 
 export function resetInitialRenderState(
     ctx: StateContext,
@@ -30,6 +31,7 @@ export function resetInitialRenderState(
         state.didFinishInitialScroll = false;
     }
 
+    state.didFullDrawDistancePrewarm = false;
     set$(ctx, "readyToRender", false);
     resetAdaptiveRender(ctx);
 }
@@ -58,10 +60,13 @@ export function setInitialRenderState(
 
     const isReadyToRender = Boolean(state.didContainersLayout && state.didFinishInitialScroll);
     if (isReadyToRender && !peek$(ctx, "readyToRender")) {
+        // Land queued adjustments in the same commit that reveals the list, so it never shows the unadjusted offset.
+        flushInitialMountAdjusts(state);
         set$(ctx, "readyToRender", true);
         setAdaptiveRender(ctx, "normal", "ready");
 
         if (state.props.drawDistance > INITIAL_DRAW_DISTANCE) {
+            state.drawDistanceLimit = INITIAL_DRAW_DISTANCE;
             scheduleFullDrawDistancePrewarm(ctx);
         }
 

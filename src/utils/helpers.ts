@@ -22,7 +22,7 @@ export function clearWarnDevOnceForTests() {
 }
 
 export function roundSize(size: number) {
-    return Math.floor(size * 8) / 8; // Round to nearest quater pixel to avoid accumulating rounding errors
+    return Math.round(size * 8) / 8; // Round to the nearest 1/8 pixel to avoid accumulating rounding errors
 }
 
 export function isNullOrUndefined(value: unknown) {

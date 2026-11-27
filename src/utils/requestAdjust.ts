@@ -55,18 +55,11 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;
 
         const doit = () => {
-            if (preservesOffsetTarget(ctx, source)) {
-                if (state.adjustingFromInitialMount) state.adjustingFromInitialMount--;
-                return;
-            }
+            if (preservesOffsetTarget(ctx, source)) return;
             if (needsScrollWorkaround) {
                 ctx.doScrollTo!({ horizontal: state.props.horizontal, isAdjustment: true, offset: state.scroll });
             } else {
                 state.scrollAdjustHandler.requestAdjust(scrollCorrection);
-
-                if (state.adjustingFromInitialMount) {
-                    state.adjustingFromInitialMount--;
-                }
             }
         };
         state.scroll = scroll + modelCorrection;
@@ -117,8 +110,21 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
                 );
             }
         } else {
-            state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 0) + 1;
-            requestAnimationFrame(doit);
+            // Becoming ready or the next frame applies it, whichever comes first.
+            if (!state.initialMountAdjusts?.length) {
+                state.initialMountAdjusts = [];
+                requestAnimationFrame(() => flushInitialMountAdjusts(state));
+            }
+            state.initialMountAdjusts.push(doit);
         }
+    }
+}
+
+export function flushInitialMountAdjusts(state: StateContext["state"]) {
+    const adjusts = state.initialMountAdjusts;
+    // Each one stays queued while it runs, so the web ScrollAdjust sees it as an initial-mount adjustment.
+    while (adjusts?.length) {
+        adjusts[0]();
+        adjusts.shift();
     }
 }

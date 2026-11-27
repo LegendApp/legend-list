@@ -1379,4 +1379,120 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).not.toHaveBeenCalled();
         });
     });
+
+    describe("lists read from the bottom", () => {
+        const readFromBottom = () => {
+            mockState.props.alignItemsAtEnd = true;
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(true);
+        };
+
+        it("honors an explicit start anchor when the list follows its end", () => {
+            readFromBottom();
+            mockState.props.maintainVisibleContentPosition = {
+                ...mockState.props.maintainVisibleContentPosition,
+                anchor: "start",
+            };
+            setScrollingTo(undefined);
+            mockState.idsInView = ["item-2", "item-3"];
+
+            const adjust = expectAdjustFunction(prepareMVCP(mockCtx));
+            setLayoutValue(mockState, "positions", "item-2", 300);
+            adjust();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+        });
+
+        it("keeps the last visible item in place when older rows load", () => {
+            withWebPlatform(() => {
+                readFromBottom();
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                    data: true,
+                });
+
+                const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+                // Older rows load above and the first visible row loses its header, so the rows move by
+                // different amounts. The last visible row decides the adjustment.
+                setLayoutValue(mockState, "positions", "item-1", 300);
+                setLayoutValue(mockState, "positions", "item-2", 420);
+
+                adjustFunction();
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 170, "data");
+            });
+        });
+
+        it("keeps the last visible item in place when older rows load during momentum", () => {
+            readFromBottom();
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({ data: true });
+            mockState.isMomentumScrolling = true;
+            mockState.scroll = 180;
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+            setLayoutValue(mockState, "positions", "item-1", 300);
+            setLayoutValue(mockState, "positions", "item-2", 420);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 170, "data");
+        });
+
+        it("keeps the last visible item in place when a visible row resizes while idle", () => {
+            readFromBottom();
+            setScrollingTo(undefined);
+            mockState.idsInView = ["item-2", "item-3"];
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            // item-2 shrinks, so only the item below it moves
+            setLayoutValue(mockState, "positions", "item-3", 400);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -50, undefined);
+        });
+
+        it("keeps the last visible item in place when a visible row resizes during momentum", () => {
+            readFromBottom();
+            setScrollingTo(undefined);
+            mockState.idsInView = ["item-2", "item-3"];
+            mockState.isMomentumScrolling = true;
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, undefined, "item-size"));
+
+            setLayoutValue(mockState, "positions", "item-3", 400);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -50, "item-size");
+        });
+
+        it("keeps the first visible item in place unless the list is aligned to and kept at its end", () => {
+            setScrollingTo(undefined);
+            mockState.idsInView = ["item-2", "item-3"];
+            for (const configure of [
+                () => {},
+                () => {
+                    mockState.props.alignItemsAtEnd = true;
+                },
+                () => {
+                    mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(true);
+                },
+            ]) {
+                mockState.props.alignItemsAtEnd = false;
+                mockState.props.maintainScrollAtEnd = undefined;
+                configure();
+                requestAdjustSpy.mockClear();
+
+                const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+                setLayoutValue(mockState, "positions", "item-3", 400);
+                adjustFunction();
+                setLayoutValue(mockState, "positions", "item-3", 450);
+
+                // item-2 stays in place, so the shrink moves only the rows below it
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+            }
+        });
+    });
 });

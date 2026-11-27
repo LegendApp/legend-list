@@ -3,22 +3,17 @@ import "../setup";
 
 import { resetInitialRenderState, setInitialRenderState } from "../../src/utils/setInitialRenderState";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { installFakeClock } from "../helpers/webScrollHarness";
 
 describe("setInitialRenderState", () => {
-    let originalRAF: typeof globalThis.requestAnimationFrame;
-    let rafCallbacks: Array<(time: number) => void>;
+    let clock: ReturnType<typeof installFakeClock>;
 
     beforeEach(() => {
-        originalRAF = globalThis.requestAnimationFrame;
-        rafCallbacks = [];
-        globalThis.requestAnimationFrame = (callback: (time: number) => void) => {
-            rafCallbacks.push(callback);
-            return rafCallbacks.length;
-        };
+        clock = installFakeClock();
     });
 
     afterEach(() => {
-        globalThis.requestAnimationFrame = originalRAF;
+        clock.restore();
     });
 
     it("schedules a full drawDistance prewarm after the list becomes ready", () => {
@@ -38,10 +33,10 @@ describe("setInitialRenderState", () => {
 
         expect(ctx.values.get("readyToRender")).toBe(true);
         expect(ctx.values.get("adaptiveRender")).toBe("normal");
-        expect(rafCallbacks).toHaveLength(1);
+        expect(clock.pendingTimerCount()).toBe(1);
         expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
 
-        rafCallbacks[0](Date.now());
+        clock.advance(100);
 
         expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
@@ -62,7 +57,7 @@ describe("setInitialRenderState", () => {
 
         expect(ctx.values.get("readyToRender")).toBe(true);
         expect(ctx.values.get("adaptiveRender")).toBe("normal");
-        expect(rafCallbacks).toHaveLength(0);
+        expect(clock.pendingTimerCount()).toBe(0);
     });
 
     it("does not schedule a second prewarm after readyToRender is already true", () => {
@@ -81,7 +76,7 @@ describe("setInitialRenderState", () => {
 
         setInitialRenderState(ctx, { didInitialScroll: true });
 
-        expect(rafCallbacks).toHaveLength(0);
+        expect(clock.pendingTimerCount()).toBe(0);
     });
 
     it("calls onLoad only once across replayed readiness transitions", () => {

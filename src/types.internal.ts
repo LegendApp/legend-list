@@ -196,7 +196,8 @@ export interface LegendListInternalRef extends LegendListRef {
 
 export interface InternalState {
     viewabilityInsetEnd?: number;
-    adjustingFromInitialMount?: number;
+    /** Adjustments requested before the list was ready, applied on the next frame or when it becomes ready. */
+    initialMountAdjusts?: Array<() => void>;
     anchoredEndSpacePendingReady?: boolean;
     anchoredEndSpaceReadyAnchorIndex?: number;
     anchoredEndSpaceReadyAnchorKey?: string;
@@ -215,6 +216,8 @@ export interface InternalState {
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
+    didFullDrawDistancePrewarm?: boolean;
+    drawDistanceLimit?: number;
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
@@ -301,11 +304,13 @@ export interface InternalState {
     runPendingScrollToEnd?: () => void;
     positions: Array<number | undefined>;
     positionsAreCurrent?: boolean;
+    containerSyncAdjust?: number;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
     queuedInitialLayout?: boolean | undefined;
     reprocessCurrentScroll?: () => void;
     refScroller: React.RefObject<LegendListScrollerRef | null>;
+    renderRangeProjectionSettleAt?: number;
     scroll: number;
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
@@ -367,6 +372,7 @@ export interface InternalState {
         estimatedItemSize: number | undefined;
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];
+        hasItemLayoutAnimationInternal?: boolean;
         hideItemsUntilMeasured: LegendListPropsInternal["experimental_hideItemsUntilMeasured"];
         horizontal: boolean;
         rtl?: boolean;

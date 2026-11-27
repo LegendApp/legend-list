@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import * as React from "react";
+import { View } from "react-native";
 
 import { getStickyPushLimit } from "../../src/components/stickyPositionUtils";
 import { POSITION_OUT_OF_VIEW } from "../../src/constants";
@@ -46,12 +47,12 @@ function collectTextFromTree(node: any, values: string[] = []) {
 
 const LegendListMock = React.forwardRef(function LegendListStub(props: any, _ref: React.Ref<any>) {
     legendListPropsRenders.push(props);
-    return null;
+    return props.renderItem?.();
 });
 
 const ReanimatedViewMock = React.forwardRef(function ReanimatedViewStub(props: any, _ref: React.Ref<any>) {
     reanimatedViewRenders.push(props);
-    return null;
+    return props.children;
 });
 
 const ReanimatedScrollViewMock = React.forwardRef(function ReanimatedScrollViewStub(_props: any, _ref: React.Ref<any>) {
@@ -97,13 +98,15 @@ registerLegendListModuleMock();
 
 beforeEach(() => registerReanimatedModuleMock(createReanimatedOverrides()));
 
-function PositionComponentHarness({
+const PositionComponentHarness = React.memo(function RenderPositionComponent({
+    children,
     containerId,
     itemKey,
     layoutReady,
     position,
     PositionComponent,
 }: {
+    children?: React.ReactNode;
     containerId: number;
     itemKey: string;
     layoutReady?: boolean;
@@ -125,8 +128,38 @@ function PositionComponentHarness({
 
     return (
         <PositionComponent horizontal={false} id={containerId} onLayout={() => {}} refView={refView} style={{}}>
-            {null}
+            {children}
         </PositionComponent>
+    );
+});
+
+type AnimatedList = typeof import("../../src/integrations/reanimated").AnimatedLegendList;
+const positionTestData = [{ id: "a" }];
+
+function renderPositionList(
+    List: AnimatedList,
+    {
+        itemLayoutAnimation,
+        recycleItems,
+        ...positionProps
+    }: Omit<React.ComponentProps<typeof PositionComponentHarness>, "PositionComponent"> &
+        Pick<React.ComponentProps<AnimatedList>, "itemLayoutAnimation" | "recycleItems">,
+) {
+    return (
+        <List
+            data={positionTestData}
+            estimatedItemSize={10}
+            itemLayoutAnimation={itemLayoutAnimation}
+            recycleItems={recycleItems}
+            renderItem={() => (
+                <StateProvider>
+                    <PositionComponentHarness
+                        {...positionProps}
+                        PositionComponent={legendListPropsRenders.at(-1).positionComponentInternal ?? View}
+                    />
+                </StateProvider>
+            )}
+        />
     );
 }
 
@@ -199,22 +232,82 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         });
 
         const props = legendListPropsRenders.at(-1);
-        expect(typeof props.positionComponentInternal).toBe("function");
+        expect(props.positionComponentInternal).toBeDefined();
         expect(typeof props.renderScrollComponent).toBe("function");
         expect(typeof props.stickyPositionComponentInternal).toBe("function");
     });
 
-    it("does not forward a custom position component when itemLayoutAnimation is not set", async () => {
-        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-disabled");
+    it("adds no reanimated position view to rows of a list without itemLayoutAnimation", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-absent");
 
         act(() => {
-            TestRenderer.create(
-                <AnimatedLegendList data={[{ id: "a" }]} estimatedItemSize={10} renderItem={() => null} />,
-            );
+            TestRenderer.create(renderPositionList(AnimatedLegendList, { containerId: 0, itemKey: "a", position: 10 }));
         });
 
-        const props = legendListPropsRenders.at(-1);
-        expect(props.positionComponentInternal).toBeUndefined();
+        expect(legendListPropsRenders.at(-1).positionComponentInternal).toBeUndefined();
+        expect(reanimatedViewRenders).toHaveLength(0);
+    });
+
+    it("toggles item layout animation after mount without remounting an existing row", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-toggle");
+        const transition = { type: "linear" } as any;
+        const mounts = mock();
+        const unmounts = mock();
+        let ctx!: ReturnType<typeof useStateContext>;
+        const Row = () => {
+            ctx = useStateContext();
+            React.useEffect(() => {
+                mounts();
+                return () => {
+                    unmounts();
+                };
+            }, []);
+            return null;
+        };
+        const row = <Row />;
+        const renderList = (itemLayoutAnimation?: typeof transition) =>
+            renderPositionList(AnimatedLegendList, {
+                children: row,
+                containerId: 0,
+                itemKey: "a",
+                itemLayoutAnimation,
+                position: 10,
+            });
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(renderList(transition));
+        });
+        expect(mounts).toHaveBeenCalledTimes(1);
+        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+        expect(legendListPropsRenders.at(-1).hasItemLayoutAnimationInternal).toBe(true);
+        const otherTransition = { ...transition };
+        act(() => {
+            renderer.update(renderList(otherTransition));
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBe(otherTransition);
+
+        act(() => {
+            renderer.update(renderList());
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
+        expect(legendListPropsRenders.at(-1).hasItemLayoutAnimationInternal).toBe(false);
+        const inactiveRenders = reanimatedViewRenders.length;
+        act(() => set$(ctx, "isScrollActive", true));
+        expect(reanimatedViewRenders).toHaveLength(inactiveRenders);
+        act(() => {
+            set$(ctx, "isScrollActive", false);
+            set$(ctx, "containerPosition0", 20);
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
+
+        act(() => {
+            renderer.update(renderList(transition));
+        });
+        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+        expect(mounts).toHaveBeenCalledTimes(1);
+        expect(unmounts).not.toHaveBeenCalled();
+        act(() => renderer.unmount());
     });
 
     it("keeps the custom scroll subtree mounted when the render callback identity changes", async () => {
@@ -267,223 +360,42 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         });
     });
 
-    it("keeps positionComponentInternal stable when transition reference is stable", async () => {
-        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-stable");
-        const transition = { type: "linear" } as any;
+    it.each([{ recycleItems: true }, { recycleItems: false }])(
+        "skips one transition on reassignment (recycleItems=$recycleItems)",
+        async ({ recycleItems }) => {
+            const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-reassign");
+            const transition = { duration: 280, type: "linear" } as any;
+            const renderList = (itemKey: string, position: number) =>
+                renderPositionList(AnimatedLegendList, {
+                    containerId: 7,
+                    itemKey,
+                    itemLayoutAnimation: transition,
+                    position,
+                    recycleItems,
+                });
+            let renderer!: TestRenderer.ReactTestRenderer;
 
-        let renderer!: TestRenderer.ReactTestRenderer;
+            act(() => {
+                renderer = TestRenderer.create(renderList("a", 10));
+            });
+            expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
 
-        act(() => {
-            renderer = TestRenderer.create(
-                <AnimatedLegendList
-                    data={[{ id: "a" }]}
-                    estimatedItemSize={10}
-                    extraData={0}
-                    itemLayoutAnimation={transition}
-                    renderItem={() => null}
-                />,
-            );
-        });
+            act(() => {
+                renderer.update(renderList("b", 600));
+            });
+            expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
 
-        const firstProps = legendListPropsRenders.at(-1);
-        const firstPositionComponent = firstProps.positionComponentInternal;
-
-        act(() => {
-            renderer.update(
-                <AnimatedLegendList
-                    data={[{ id: "a" }]}
-                    estimatedItemSize={10}
-                    extraData={1}
-                    itemLayoutAnimation={transition}
-                    renderItem={() => null}
-                />,
-            );
-        });
-
-        const secondProps = legendListPropsRenders.at(-1);
-        const secondPositionComponent = secondProps.positionComponentInternal;
-
-        expect(secondPositionComponent).toBe(firstPositionComponent);
-    });
-
-    it("keeps positionComponentInternal stable when transition identity changes", async () => {
-        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-changing-reference");
-        const transitionA = { duration: 280, type: "linear" } as any;
-        const transitionB = { duration: 280, type: "linear" } as any;
-
-        let renderer!: TestRenderer.ReactTestRenderer;
-
-        act(() => {
-            renderer = TestRenderer.create(
-                <AnimatedLegendList
-                    data={[{ id: "a" }]}
-                    estimatedItemSize={10}
-                    extraData={0}
-                    itemLayoutAnimation={transitionA}
-                    renderItem={() => null}
-                />,
-            );
-        });
-
-        const firstProps = legendListPropsRenders.at(-1);
-        const firstPositionComponent = firstProps.positionComponentInternal;
-
-        act(() => {
-            renderer.update(
-                <AnimatedLegendList
-                    data={[{ id: "a" }]}
-                    estimatedItemSize={10}
-                    extraData={1}
-                    itemLayoutAnimation={transitionB}
-                    renderItem={() => null}
-                />,
-            );
-        });
-
-        const secondProps = legendListPropsRenders.at(-1);
-        const secondPositionComponent = secondProps.positionComponentInternal;
-        expect(secondPositionComponent).toBe(firstPositionComponent);
-
-        const element = secondPositionComponent({
-            children: null,
-            horizontal: false,
-            id: 0,
-            index: 0,
-            onLayout: () => {},
-            refView: { current: null },
-            style: {},
-        });
-        expect(element.props.layoutTransition).toBe(transitionB);
-    });
-
-    it("skips one layout transition when a recycled container is reassigned", async () => {
-        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-recycle-reassign");
-        const transition = { duration: 280, type: "linear" } as any;
-
-        act(() => {
-            TestRenderer.create(
-                <AnimatedLegendList
-                    data={[{ id: "a" }]}
-                    estimatedItemSize={10}
-                    itemLayoutAnimation={transition}
-                    recycleItems
-                    renderItem={() => null}
-                />,
-            );
-        });
-
-        const props = legendListPropsRenders.at(-1);
-        const PositionComponent = props.positionComponentInternal as React.ComponentType<any>;
-        let renderer!: TestRenderer.ReactTestRenderer;
-
-        act(() => {
-            renderer = TestRenderer.create(
-                <StateProvider>
-                    <PositionComponentHarness
-                        containerId={7}
-                        itemKey="a"
-                        PositionComponent={PositionComponent}
-                        position={10}
-                    />
-                </StateProvider>,
-            );
-        });
-        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
-
-        act(() => {
-            renderer.update(
-                <StateProvider>
-                    <PositionComponentHarness
-                        containerId={7}
-                        itemKey="b"
-                        PositionComponent={PositionComponent}
-                        position={600}
-                    />
-                </StateProvider>,
-            );
-        });
-        expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
-
-        act(() => {
-            renderer.update(
-                <StateProvider>
-                    <PositionComponentHarness
-                        containerId={7}
-                        itemKey="b"
-                        PositionComponent={PositionComponent}
-                        position={620}
-                    />
-                </StateProvider>,
-            );
-        });
-        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
-    });
-
-    it("skips layout transitions on item reassignment even when recycling is disabled", async () => {
-        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-no-recycle");
-        const transition = { duration: 280, type: "linear" } as any;
-
-        act(() => {
-            TestRenderer.create(
-                <AnimatedLegendList
-                    data={[{ id: "a" }]}
-                    estimatedItemSize={10}
-                    itemLayoutAnimation={transition}
-                    recycleItems={false}
-                    renderItem={() => null}
-                />,
-            );
-        });
-
-        const props = legendListPropsRenders.at(-1);
-        const PositionComponent = props.positionComponentInternal as React.ComponentType<any>;
-        let renderer!: TestRenderer.ReactTestRenderer;
-
-        act(() => {
-            renderer = TestRenderer.create(
-                <StateProvider>
-                    <PositionComponentHarness
-                        containerId={8}
-                        itemKey="a"
-                        PositionComponent={PositionComponent}
-                        position={15}
-                    />
-                </StateProvider>,
-            );
-        });
-        expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
-
-        act(() => {
-            renderer.update(
-                <StateProvider>
-                    <PositionComponentHarness
-                        containerId={8}
-                        itemKey="b"
-                        PositionComponent={PositionComponent}
-                        position={640}
-                    />
-                </StateProvider>,
-            );
-        });
-        expect(reanimatedViewRenders.at(-1)?.layout).toBeUndefined();
-    });
+            act(() => {
+                renderer.update(renderList("b", 620));
+            });
+            expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+        },
+    );
 
     it("skips layout transitions while scrolling and for one render after a scroll adjustment", async () => {
         const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-scroll-active");
         const transition = { duration: 280, type: "linear" } as any;
 
-        act(() => {
-            TestRenderer.create(
-                <AnimatedLegendList
-                    data={[{ id: "a" }]}
-                    estimatedItemSize={10}
-                    itemLayoutAnimation={transition}
-                    renderItem={() => null}
-                />,
-            );
-        });
-
-        const PositionComponent = legendListPropsRenders.at(-1).positionComponentInternal as React.ComponentType<any>;
         let context!: ReturnType<typeof useStateContext>;
         const CaptureContext = () => {
             context = useStateContext();
@@ -492,15 +404,13 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
 
         act(() => {
             TestRenderer.create(
-                <StateProvider>
-                    <CaptureContext />
-                    <PositionComponentHarness
-                        containerId={9}
-                        itemKey="a"
-                        PositionComponent={PositionComponent}
-                        position={10}
-                    />
-                </StateProvider>,
+                renderPositionList(AnimatedLegendList, {
+                    children: <CaptureContext />,
+                    containerId: 9,
+                    itemKey: "a",
+                    itemLayoutAnimation: transition,
+                    position: 10,
+                }),
             );
         });
         expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
@@ -579,35 +489,19 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         const transition = { __transition: true } as any;
         const { AnimatedLegendList } = await import("../../src/integrations/reanimated?position-layout-ready");
 
-        act(() => {
-            TestRenderer.create(
-                <AnimatedLegendList
-                    data={[{ id: "a" }]}
-                    estimatedItemSize={10}
-                    itemLayoutAnimation={transition}
-                    recycleItems
-                    renderItem={() => null}
-                />,
-            );
-        });
-
-        const props = legendListPropsRenders.at(-1);
-        const PositionComponent = props.positionComponentInternal as React.ComponentType<any>;
         const flattenLastStyle = () => {
             const style = reanimatedViewRenders.at(-1)?.style;
             return Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
         };
-        const renderHarness = (layoutReady: boolean) => (
-            <StateProvider>
-                <PositionComponentHarness
-                    containerId={5}
-                    itemKey="a"
-                    layoutReady={layoutReady}
-                    PositionComponent={PositionComponent}
-                    position={40}
-                />
-            </StateProvider>
-        );
+        const renderHarness = (layoutReady: boolean) =>
+            renderPositionList(AnimatedLegendList, {
+                containerId: 5,
+                itemKey: "a",
+                itemLayoutAnimation: transition,
+                layoutReady,
+                position: 40,
+                recycleItems: true,
+            });
         let renderer!: TestRenderer.ReactTestRenderer;
 
         act(() => {

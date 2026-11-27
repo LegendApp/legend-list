@@ -10,8 +10,10 @@ import type { StateContext } from "@/state/state";
 import { peek$ } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
+import * as getScrollVelocityModule from "@/utils/getScrollVelocity";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { installFakeClock } from "../helpers/webScrollHarness";
 
 describe("updateScroll end state after content growth", () => {
     for (const os of ["ios", "android", "web"] as const) {
@@ -270,6 +272,7 @@ describe("updateScroll large user jumps", () => {
     });
 
     it("uses visible-first drawDistance for large user scroll jumps and prewarms the full range", () => {
+        const clock = installFakeClock();
         const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
         );
@@ -284,10 +287,10 @@ describe("updateScroll large user jumps", () => {
                 scrollVelocity: 0,
             },
         ]);
-        expect(rafCallbacks).toHaveLength(1);
         expect(mockCtx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
 
-        rafCallbacks[0](Date.now());
+        clock.advance(100);
+        clock.restore();
 
         expect(triggerCalculateItemsInViewSpy.mock.calls[1]).toEqual([]);
         expect(mockCtx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(false);
@@ -295,6 +298,7 @@ describe("updateScroll large user jumps", () => {
     });
 
     it("dedupes full drawDistance prewarm passes across repeated large user scroll jumps", () => {
+        const clock = installFakeClock();
         const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
         );
@@ -318,8 +322,11 @@ describe("updateScroll large user jumps", () => {
                 }),
             ],
         ]);
-        expect(rafCallbacks).toHaveLength(1);
         expect(mockCtx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
+        clock.advance(100);
+        clock.restore();
+
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledTimes(3);
         triggerCalculateItemsInViewSpy.mockRestore();
     });
 
@@ -992,5 +999,28 @@ describe("updateScroll user scroll ownership", () => {
 
         updateScroll(ctx, 600, true, { fromNativeScrollEvent: true });
         expect(ctx.state.visibleContentAnchor).toBeUndefined();
+    });
+});
+
+describe("updateScroll per-event work", () => {
+    it("skips adaptive-render and velocity work when adaptive render is off and the range does not recalculate", () => {
+        Platform.OS = "ios";
+        const ctx = createMockContext(
+            { readyToRender: true },
+            { scroll: 100, scrollLastCalculate: 100, scrollLength: 100 },
+        );
+        const cancelSpy = spyOn(ctx.state.scheduledWork, "cancel");
+        const velocitySpy = spyOn(getScrollVelocityModule, "getScrollVelocity");
+        try {
+            for (const offset of [100.5, 101, 101.5, 102]) {
+                updateScroll(ctx, offset, false, { fromNativeScrollEvent: true });
+            }
+            expect(cancelSpy).not.toHaveBeenCalledWith("adaptiveRender");
+            expect(velocitySpy).not.toHaveBeenCalled();
+            expect(peek$(ctx, "adaptiveRender")).toBe("normal");
+        } finally {
+            cancelSpy.mockRestore();
+            velocitySpy.mockRestore();
+        }
     });
 });
