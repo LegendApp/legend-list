@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { Platform } from "@/platform/Platform";
 import { describe, expect, it, mock } from "bun:test";
 import {
     getScrollAdjustAxis,
@@ -217,6 +218,55 @@ describe("ScrollAdjust (web)", () => {
         scrollAdjustBy(scrollElement, 3, 4);
 
         expect(scrollElement.scrollBy).toHaveBeenCalledWith({ behavior: "auto", left: 3, top: 4 });
+    });
+
+    it("preserves the prepend offset during iOS momentum and leaves row measurements alone", async () => {
+        const { ScrollAdjustHandler } = await import("../../src/core/ScrollAdjustHandler?web-prepend");
+        const { requestAdjust } = await import("../../src/utils/requestAdjust?web-prepend");
+        const platform = Platform.OS;
+        const css = Object.getOwnPropertyDescriptor(globalThis, "CSS");
+        const { ctx, renderer, scrollElement } = renderPaddingAdjustment({ scroll: -8 });
+        // iOS can report a negative offset during rubber-banding, then clamp it when overflow changes.
+        let overflowY = "auto";
+        const style = {
+            get overflowY() {
+                return overflowY;
+            },
+            set overflowY(value) {
+                overflowY = value;
+                if (value === "hidden") scrollElement.scrollTop = Math.max(0, scrollElement.scrollTop);
+            },
+        };
+        Object.defineProperty(scrollElement, "style", { value: style });
+        const writes: string[] = [];
+        scrollElement.scrollTop = -8;
+        scrollElement.scrollBy = ({ top = 0 }: ScrollToOptions) => {
+            writes.push(style.overflowY);
+            // An active fling can overwrite the first scroll write unless momentum was interrupted.
+            if (writes.length === 1 && style.overflowY !== "hidden") return;
+            scrollElement.scrollTop += top;
+        };
+        try {
+            Platform.OS = "web";
+            Object.defineProperty(globalThis, "CSS", {
+                configurable: true,
+                value: { supports: (property: string) => property === "-webkit-touch-callout" },
+            });
+            ctx.state.scrollAdjustHandler = new ScrollAdjustHandler(ctx);
+            act(() => set$(ctx, "readyToRender", true));
+
+            act(() => requestAdjust(ctx, 40, "data"));
+            expect(scrollElement.scrollTop).toBe(32);
+            expect(style.overflowY).toBe("auto");
+            act(() => requestAdjust(ctx, 10, "item-size"));
+            expect(scrollElement.scrollTop).toBe(42);
+            expect(writes).toEqual(["hidden", "auto"]);
+        } finally {
+            Platform.OS = platform;
+            if (css) Object.defineProperty(globalThis, "CSS", css);
+            else Reflect.deleteProperty(globalThis, "CSS");
+            act(() => renderer.unmount());
+        }
     });
 
     it("does not scroll again when content shrink clamps the DOM to the intended scroll", () => {

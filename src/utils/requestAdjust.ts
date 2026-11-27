@@ -58,6 +58,8 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, source?: 
             if (preservesOffsetTarget(ctx, source)) return;
             if (needsScrollWorkaround) {
                 ctx.doScrollTo!({ horizontal: state.props.horizontal, isAdjustment: true, offset: state.scroll });
+            } else if (Platform.OS === "web" && dataChanged) {
+                state.scrollAdjustHandler.requestAdjust(scrollCorrection, source);
             } else {
                 state.scrollAdjustHandler.requestAdjust(scrollCorrection);
             }
