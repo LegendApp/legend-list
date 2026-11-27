@@ -59,14 +59,16 @@ const ContainersInner = typedMemo(function ContainersInner({
         style.pointerEvents = "none";
     }
 
-    if (columnWrapperStyle && numColumns > 1) {
+    if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
         const { columnGap, rowGap, gap } = columnWrapperStyle;
 
         const gapX = columnGap || gap || 0;
         const gapY = rowGap || gap || 0;
+        // As in Containers.native: every row pads its trailing side with the gap, so the main-axis margin
+        // cancels the last one for any number of columns; the cross-axis margin only matters with columns.
         if (horizontal) {
-            if (gapY) {
+            if (gapY && numColumns > 1) {
                 style.marginTop = style.marginBottom = -gapY / 2;
             }
             if (gapX) {

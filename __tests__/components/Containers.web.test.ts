@@ -10,17 +10,19 @@ function StateSetup({
     children,
     columnWrapperStyle,
     horizontal,
+    numColumns,
     readyToRender,
 }: {
     children: React.ReactNode;
     columnWrapperStyle: { columnGap?: number; rowGap?: number; gap?: number };
     horizontal: boolean;
+    numColumns: number;
     readyToRender: boolean;
 }) {
     const ctx = useStateContext();
     ctx.columnWrapperStyle = columnWrapperStyle;
     ctx.values.set("numContainersPooled", 0);
-    ctx.values.set("numColumns", 2);
+    ctx.values.set("numColumns", numColumns);
     ctx.values.set("otherAxisSize", 100);
     ctx.values.set("readyToRender", readyToRender);
     ctx.values.set("totalSize", 500);
@@ -29,7 +31,7 @@ function StateSetup({
     return children;
 }
 
-async function renderContainers(horizontal: boolean, readyToRender = true) {
+async function renderContainers(horizontal: boolean, readyToRender = true, numColumns = 2) {
     const { Containers } = await import("../../src/components/Containers?web-render");
     let renderer: TestRenderer.ReactTestRenderer | undefined;
 
@@ -43,6 +45,7 @@ async function renderContainers(horizontal: boolean, readyToRender = true) {
                     {
                         columnWrapperStyle: { columnGap: 12, rowGap: 8 },
                         horizontal,
+                        numColumns,
                         readyToRender,
                     },
                     React.createElement(Containers, {
@@ -86,6 +89,41 @@ describe("Containers (web)", () => {
             marginBottom: -4,
             marginRight: -12,
             marginTop: -4,
+            minHeight: 100,
+            opacity: 1,
+            position: "relative",
+            width: 500,
+        });
+
+        act(() => {
+            renderer.unmount();
+        });
+    });
+
+    it("cancels the gap after the last row of a vertical single-column list, as on native", async () => {
+        const renderer = await renderContainers(false, true, 1);
+
+        const div = renderer.root.findByType("div");
+        expect(div.props.style).toEqual({
+            height: 500,
+            marginBottom: -8,
+            minWidth: 100,
+            opacity: 1,
+            position: "relative",
+        });
+
+        act(() => {
+            renderer.unmount();
+        });
+    });
+
+    it("cancels only the trailing gap of a horizontal single-column list, as on native", async () => {
+        const renderer = await renderContainers(true, true, 1);
+
+        const div = renderer.root.findByType("div");
+        expect(div.props.style).toEqual({
+            flexShrink: 0,
+            marginRight: -12,
             minHeight: 100,
             opacity: 1,
             position: "relative",
