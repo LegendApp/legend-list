@@ -519,6 +519,13 @@ export interface MaintainVisibleContentPositionConfig<ItemT = any> {
      */
     autoscrollToTopThreshold?: number;
     data?: boolean;
+    /**
+     * Native scroll distance, in layout points, that can be covered before the viewport passes the anchor.
+     * Compensated adjustments move the anchor with the viewport. Larger ranges can round small adjustments.
+     * Set a positive, finite value when the list mounts.
+     * @default 1000000
+     */
+    nativeAnchorRange?: number;
     size?: boolean;
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }

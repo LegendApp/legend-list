@@ -107,3 +107,26 @@ it("forwards and updates the threshold on the default native ScrollView", () => 
     rendered.rerender(list());
     expect(rendered.toJSON().props.maintainVisibleContentPosition).toStrictEqual({ minIndexForVisible: 0 });
 });
+
+it("holds each list's native anchor range for the lifetime of the mount", () => {
+    Platform.OS = "ios";
+    const rows = ["row"];
+    const renderItem = ({ item }: { item: string }) => <Text>{item}</Text>;
+    const list = (nativeAnchorRange: number, key = "first") => (
+        <LegendList
+            data={rows}
+            key={key}
+            maintainVisibleContentPosition={{ data: true, nativeAnchorRange }}
+            renderItem={renderItem}
+        />
+    );
+    const rendered = render(list(2_000_000));
+    expect(rendered.toJSON().children[0].props.style.top).toBe(2_000_000);
+
+    rendered.rerender(list(3_000_000));
+    expect(rendered.toJSON().children[0].props.style.top).toBe(2_000_000);
+
+    rendered.rerender(list(3_000_000, "second"));
+    expect(rendered.toJSON().children[0].props.style.top).toBe(3_000_000);
+    rendered.unmount();
+});
