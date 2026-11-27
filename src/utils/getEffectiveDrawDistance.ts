@@ -1,19 +1,36 @@
-import { peek$, type StateContext } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
+import type { InternalState } from "@/types.internal";
+import { getInitialContainerPoolSize } from "@/utils/containerPool";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { toLogicalHorizontalOffset } from "@/utils/rtl";
 
 export const INITIAL_DRAW_DISTANCE = 50;
+// requestAnimationFrame runs before the next paint on web and is a zero-delay timer on React Native's
+// bridgeless runtime, so widening there can join the first rows' paint. Wait until they have painted.
+const FULL_DRAW_DISTANCE_PREWARM_DELAY = 100;
+// Later steps each add about one viewport of rows, so a large drawDistance mounts across frames.
+const DRAW_DISTANCE_STEP_DELAY = 16;
 
-export type DrawDistanceMode = "full" | "visible-first";
+export type DrawDistanceMode = "visible-first";
 
 export function getEffectiveDrawDistance(ctx: StateContext, mode?: DrawDistanceMode): number {
     const drawDistance = ctx.state.props.drawDistance;
     const initialScroll = ctx.state.initialScroll;
     const needsFullInitialDrawDistance = initialScroll !== undefined && (initialScroll.viewPosition ?? 0) > 0;
     const shouldCapDrawDistance =
-        mode === "visible-first" || (mode !== "full" && !peek$(ctx, "readyToRender") && !needsFullInitialDrawDistance);
+        mode === "visible-first" || (!needsFullInitialDrawDistance && !peek$(ctx, "readyToRender"));
 
-    return shouldCapDrawDistance ? Math.min(drawDistance, INITIAL_DRAW_DISTANCE) : drawDistance;
+    if (shouldCapDrawDistance) {
+        return Math.min(drawDistance, INITIAL_DRAW_DISTANCE);
+    }
+    return needsFullInitialDrawDistance
+        ? drawDistance
+        : Math.min(drawDistance, ctx.state.drawDistanceLimit ?? drawDistance);
+}
+
+// Until the first post-paint widen runs, the pool holds only the containers in use; the widen adds the spare.
+export function isSparePoolPending(state: InternalState) {
+    return !state.didFullDrawDistancePrewarm && state.props.drawDistance > INITIAL_DRAW_DISTANCE;
 }
 
 export function scheduleFullDrawDistancePrewarm(ctx: StateContext) {
@@ -22,7 +39,7 @@ export function scheduleFullDrawDistancePrewarm(ctx: StateContext) {
         return;
     }
 
-    state.scheduledWork.frame(() => {
+    const widen = () => {
         if (
             state.props.hasExternalScroll &&
             !hasActiveInitialScroll(state) &&
@@ -38,6 +55,22 @@ export function scheduleFullDrawDistancePrewarm(ctx: StateContext) {
                     : offset;
             }
         }
+        if (isSparePoolPending(state)) {
+            const pooled = getInitialContainerPoolSize(state.props.data.length, peek$(ctx, "numContainers"));
+            if (pooled > peek$(ctx, "numContainersPooled")) {
+                set$(ctx, "numContainersPooled", pooled);
+            }
+        }
+        state.didFullDrawDistancePrewarm = peek$(ctx, "readyToRender");
+        if (state.drawDistanceLimit !== undefined) {
+            state.drawDistanceLimit += Math.max(1, state.scrollLength / 2);
+            if (state.drawDistanceLimit >= state.props.drawDistance) {
+                state.drawDistanceLimit = undefined;
+            } else {
+                state.scheduledWork.timeout(widen, DRAW_DISTANCE_STEP_DELAY, "fullDrawDistancePrewarm");
+            }
+        }
         state.triggerCalculateItemsInView?.();
-    }, "fullDrawDistancePrewarm");
+    };
+    state.scheduledWork.timeout(widen, FULL_DRAW_DISTANCE_PREWARM_DELAY, "fullDrawDistancePrewarm");
 }

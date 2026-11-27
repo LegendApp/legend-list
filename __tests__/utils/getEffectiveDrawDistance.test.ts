@@ -6,7 +6,9 @@ import {
     INITIAL_DRAW_DISTANCE,
     scheduleFullDrawDistancePrewarm,
 } from "../../src/utils/getEffectiveDrawDistance";
+import { setInitialRenderState } from "../../src/utils/setInitialRenderState";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { installFakeClock } from "../helpers/webScrollHarness";
 
 describe("getEffectiveDrawDistance", () => {
     it("caps drawDistance before the list is ready to render", () => {
@@ -65,26 +67,27 @@ describe("getEffectiveDrawDistance", () => {
         expect(getEffectiveDrawDistance(ctx, "visible-first")).toBe(INITIAL_DRAW_DISTANCE);
     });
 
-    it("uses the configured drawDistance in full mode before the list is ready to render", () => {
-        const ctx = createMockContext(
-            {},
-            {
-                props: {
-                    drawDistance: 1_000,
-                },
-            },
-        );
-
-        expect(getEffectiveDrawDistance(ctx, "full")).toBe(1_000);
+    it("widens to the full drawDistance only after the revealed rows have had time to paint", () => {
+        const clock = installFakeClock();
+        try {
+            let passes = 0;
+            const ctx = createMockContext({}, { props: { drawDistance: 1_000 } });
+            ctx.state.triggerCalculateItemsInView = () => {
+                passes++;
+            };
+            setInitialRenderState(ctx, { didInitialScroll: true, didLayout: true });
+            // A frame callback runs before the next paint on web and is a zero-delay timer on bridgeless RN.
+            clock.tick(16);
+            expect(passes).toBe(0);
+            clock.advance(100);
+            expect(passes).toBe(1);
+        } finally {
+            clock.restore();
+        }
     });
 
     it("dedupes scheduled full drawDistance prewarm passes", () => {
-        const originalRAF = globalThis.requestAnimationFrame;
-        const rafCallbacks: Array<(time: number) => void> = [];
-        globalThis.requestAnimationFrame = (callback: (time: number) => void) => {
-            rafCallbacks.push(callback);
-            return rafCallbacks.length;
-        };
+        const clock = installFakeClock();
         try {
             const ctx = createMockContext(
                 {},
@@ -102,25 +105,19 @@ describe("getEffectiveDrawDistance", () => {
             scheduleFullDrawDistancePrewarm(ctx);
             scheduleFullDrawDistancePrewarm(ctx);
 
-            expect(rafCallbacks).toHaveLength(1);
             expect(ctx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
 
-            rafCallbacks[0](Date.now());
+            clock.advance(100);
 
             expect(calculateCount).toBe(1);
             expect(ctx.state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(false);
         } finally {
-            globalThis.requestAnimationFrame = originalRAF;
+            clock.restore();
         }
     });
 
     it("refreshes the external list position before expanding its buffer", () => {
-        const originalRAF = globalThis.requestAnimationFrame;
-        let frame: FrameRequestCallback | undefined;
-        globalThis.requestAnimationFrame = (callback) => {
-            frame = callback;
-            return 1;
-        };
+        const clock = installFakeClock();
         const ctx = createMockContext({}, { props: { drawDistance: 320, hasExternalScroll: true } });
         let offset = -252;
         ctx.state.refScroller.current = { getRawScrollOffset: () => offset } as any;
@@ -132,21 +129,16 @@ describe("getEffectiveDrawDistance", () => {
         try {
             scheduleFullDrawDistancePrewarm(ctx);
             offset = -835;
-            frame!(0);
+            clock.advance(100);
         } finally {
             ctx.state.scheduledWork.dispose();
-            globalThis.requestAnimationFrame = originalRAF;
+            clock.restore();
         }
     });
 
     for (const mode of ["native", "initial", "target", "adjustment"] as const) {
         it(`preserves the pending scroll state during ${mode} prewarming`, () => {
-            const originalRAF = globalThis.requestAnimationFrame;
-            let frame: FrameRequestCallback | undefined;
-            globalThis.requestAnimationFrame = (callback) => {
-                frame = callback;
-                return 1;
-            };
+            const clock = installFakeClock();
             const ctx = createMockContext({}, { props: { drawDistance: 320, hasExternalScroll: mode !== "native" } });
             ctx.state.scroll = ctx.state.scrollPending = 500;
             ctx.state.refScroller.current = { getRawScrollOffset: () => -835 } as any;
@@ -164,11 +156,11 @@ describe("getEffectiveDrawDistance", () => {
             };
             try {
                 scheduleFullDrawDistancePrewarm(ctx);
-                frame!(0);
+                clock.advance(100);
                 expect(calculated).toBe(true);
             } finally {
                 ctx.state.scheduledWork.dispose();
-                globalThis.requestAnimationFrame = originalRAF;
+                clock.restore();
             }
         });
     }

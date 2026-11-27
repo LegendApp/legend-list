@@ -3,7 +3,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getInitialContainerPoolSize } from "@/utils/containerPool";
-import { getEffectiveDrawDistance } from "@/utils/getEffectiveDrawDistance";
+import { getEffectiveDrawDistance, isSparePoolPending } from "@/utils/getEffectiveDrawDistance";
 
 export function doInitialAllocateContainers(ctx: StateContext): boolean | undefined {
     // Allocate containers
@@ -44,7 +44,11 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         }
 
         set$(ctx, "numContainers", numContainers);
-        set$(ctx, "numContainersPooled", getInitialContainerPoolSize(data.length, numContainers));
+        set$(
+            ctx,
+            "numContainersPooled",
+            isSparePoolPending(state) ? numContainers : getInitialContainerPoolSize(data.length, numContainers),
+        );
 
         if (!IsNewArchitecture || state.lastLayout || state.hasEstimatedInitialLayout) {
             if (state.initialScroll && !state.hasEstimatedInitialLayout) {

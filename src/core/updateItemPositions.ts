@@ -215,6 +215,7 @@ export function updateItemPositions(
         if (currentRowTop !== positions[i]) {
             // Set position for this item
             positions[i] = currentRowTop;
+            state.containerSyncAdjust = undefined;
             if (hasPositionListeners) {
                 notifyPosition$(ctx, id, currentRowTop);
             }

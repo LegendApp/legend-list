@@ -137,7 +137,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     useEffect(subscribeScreenReader, []);
-    const noopOnScroll = useCallback((_event: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
     if (props.recycleItems === undefined) {
         warnDevOnce(
             "recycleItems-omitted",
@@ -222,13 +221,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const {
         anchoredEndSpaceOwnerInternal,
         contentExtentComponentInternal,
+        hasItemLayoutAnimationInternal,
         positionComponentInternal,
         stickyPositionComponentInternal,
         ...restProps
     } = rest as typeof rest &
         Pick<
             InternalState["props"],
-            "contentExtentComponentInternal" | "positionComponentInternal" | "stickyPositionComponentInternal"
+            | "contentExtentComponentInternal"
+            | "hasItemLayoutAnimationInternal"
+            | "positionComponentInternal"
+            | "stickyPositionComponentInternal"
         > & { anchoredEndSpaceOwnerInternal?: AnchoredEndSpaceOwner };
     const anchoredEndSpaceOwner = anchoredEndSpaceOwnerInternal ?? "list";
 
@@ -527,12 +530,22 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
     const dataChangeEpoch = state.dataChangeEpoch;
     const freshDataTransitionEpoch = state.freshDataTransitionEpoch;
-    const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
-    const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
+    const throttleScrollFn = useThrottledOnScroll(onScrollProp, scrollEventThrottle ?? 0);
     const didAnchoredEndSpaceAnchorIndexChange =
         !isFirstLocal &&
         !didDataChangeLocal &&
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpace?.anchorIndex;
+
+    const wrappedGetItemType = useWrapIfItem(getItemType);
+    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
+    if (
+        didDataReferenceChangeLocal ||
+        state.props.getItemType !== wrappedGetItemType ||
+        state.props.itemsAreEqual !== itemsAreEqual ||
+        state.props.keyExtractor !== wrappedKeyExtractor
+    ) {
+        state.containerSyncAdjust = undefined;
+    }
 
     state.props = {
         adaptiveRender: experimental_adaptiveRender,
@@ -555,12 +568,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         drawDistance,
         estimatedItemSize,
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
-        getItemType: useWrapIfItem(getItemType),
+        getItemType: wrappedGetItemType,
         hasExternalScroll,
+        hasItemLayoutAnimationInternal,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
         horizontal: !!horizontal,
         itemsAreEqual,
-        keyExtractor: useWrapIfItem(keyExtractor),
+        keyExtractor: wrappedKeyExtractor,
         maintainScrollAtEnd: maintainScrollAtEndConfig,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,

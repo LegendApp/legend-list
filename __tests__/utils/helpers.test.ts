@@ -129,21 +129,22 @@ describe("helpers", () => {
 
     describe("roundSize", () => {
         it("should round to nearest eighth pixel", () => {
-            expect(roundSize(10.1)).toBe(10);
+            expect(roundSize(10.05)).toBe(10);
+            expect(roundSize(10.1)).toBe(10.125);
             expect(roundSize(10.125)).toBe(10.125); // Exactly 1/8
-            expect(roundSize(10.2)).toBe(10.125);
+            expect(roundSize(10.2)).toBe(10.25);
             expect(roundSize(10.25)).toBe(10.25); // Exactly 2/8
             expect(roundSize(10.3)).toBe(10.25);
         });
 
         it("should handle zero and negative numbers", () => {
             expect(roundSize(0)).toBe(0);
-            expect(roundSize(-5.3)).toBe(-5.375); // Rounds down for negatives
+            expect(roundSize(-5.3)).toBe(-5.25);
             expect(roundSize(-10.125)).toBe(-10.125);
         });
 
         it("should handle large numbers", () => {
-            expect(roundSize(1000.1)).toBe(1000);
+            expect(roundSize(1000.1)).toBe(1000.125);
             expect(roundSize(1000.125)).toBe(1000.125);
             expect(roundSize(999999.9)).toBe(999999.875);
         });
@@ -151,6 +152,7 @@ describe("helpers", () => {
         it("should handle floating point precision", () => {
             expect(roundSize(0.1 + 0.2)).toBe(0.25); // 0.1 + 0.2 = 0.30000000000000004
             expect(roundSize(10.125000000001)).toBe(10.125);
+            expect(roundSize(63.9999)).toBe(64); // Native layout noise just under a whole size
         });
 
         it("should handle edge cases", () => {
