@@ -42,4 +42,18 @@ describe("ScrollAdjust native axis", () => {
 
         unmount();
     });
+
+    it("is never flattened out of the native view tree", () => {
+        for (const horizontal of [false, true]) {
+            const { toJSON, unmount } = render(
+                <StateProvider>
+                    <Setup horizontal={horizontal} />
+                </StateProvider>,
+            );
+
+            expect((toJSON() as any)?.props?.collapsable).toBe(false);
+
+            unmount();
+        }
+    });
 });
