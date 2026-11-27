@@ -1,3 +1,19 @@
+## 3.9.2
+
+- Fix: On web, items no longer jump for a frame when a scroll event repositions them before a pending size correction is applied. #596
+- Fix: New data that arrives right after a large scroll jump keeps the visible items in place instead of pushing them for a frame. #598
+- Fix: On native, `initialScrollIndex` lands on its target without a visible jump on mount when item sizes miss their estimate, with no added mount delay. #600
+- Fix: Lists using both `alignItemsAtEnd` and `maintainScrollAtEnd` keep the last visible row in place when rows resize or data changes, so loading older messages no longer moves the newest ones. #597
+- Fix: Rows stay mounted when `itemLayoutAnimation` is turned off and on again. Lists that never use it keep the plain position view.
+- Fix: On native, `scrollToOffset` reports the correct first visible row when called after the list shrinks, even if a scroll correction is still pending.
+- Fix: Throttled `onScroll` callbacks drop pending events when throttling is turned off or the list unmounts.
+- Perf: Scrolling does less work per event. Edge checks are skipped while the list is far from both edges, including after a drag, adaptive render and velocity work is skipped when unused, and the `onScroll` throttle keeps one timer per window instead of resetting it on every event.
+- Perf: `AnimatedLegendList` skips JS throttling for native Reanimated scroll worklets and avoids an extra list render when the ref attaches.
+- Perf: Scroll range passes can skip unchanged containers, notify each container subscriber once per pass, and reuse the settle timer across scroll events.
+- Perf: Row positions stay current when a row's first measurement matches its estimate, and measured sizes round to the nearest eighth of a point instead of down, so rows no longer shift 0.125 pt in an extra reposition pass.
+- Perf: Lists with a large draw distance show the first rows before mounting spare containers and widening the range over several frames.
+- Perf: On Fabric, lists without `anchoredEndSpace` update the content size and row positions in the same commit.
+
 ## 3.9.1
 
 - Perf: Lists wait until after first paint to widen the initial render range, so first rows render as fast as before while fast scrolls still find rows ready.
