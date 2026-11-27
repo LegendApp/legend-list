@@ -1,6 +1,6 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { getViewPositionOffset } from "@/core/calculateOffsetWithOffsetPosition";
-import { getContentInsetTop, getScrollRangeEnd } from "@/core/clampScrollOffset";
+import { getAdjustAfterAndroidShrinkClamp, getContentInsetTop, getScrollRangeEnd } from "@/core/clampScrollOffset";
 import { hasNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
@@ -503,15 +503,8 @@ export function prepareMVCP(
                 positionDiff = endOffset - state.scroll;
             }
 
-            if (Platform.OS === "android" && !dataChanged && scrollTarget === undefined) {
-                const maxScroll = getScrollRangeEnd(ctx);
-                if (state.scroll > maxScroll + MVCP_POSITION_EPSILON) {
-                    // Android clamps shrinking content before native MVCP applies the anchor delta.
-                    const targetScroll = Math.max(0, Math.min(state.scroll + positionDiff, maxScroll));
-                    state.scroll = maxScroll;
-                    state.scrollPending = maxScroll;
-                    positionDiff = targetScroll - maxScroll;
-                }
+            if (!dataChanged && scrollTarget === undefined) {
+                positionDiff = getAdjustAfterAndroidShrinkClamp(ctx, positionDiff);
             }
 
             if (
