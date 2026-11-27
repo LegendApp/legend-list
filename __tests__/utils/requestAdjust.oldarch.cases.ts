@@ -50,4 +50,34 @@ describe("requestAdjust old-architecture cases", () => {
         expect(ctx.state.ignoreScrollFromMVCP).toEqual({ lt: 175 });
         expect(scheduledDelay).toBe(250);
     });
+
+    it("runs a queued Android data-change workaround before the list is ready", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            { readyToRender: false },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                props: { horizontal: false },
+                scroll: 100,
+                scrollAdjustHandler: {
+                    getAdjust: () => 0,
+                    requestAdjust: mock(),
+                } as any,
+            },
+        );
+        const originalRAF = globalThis.requestAnimationFrame;
+        const frames: Array<() => void> = [];
+        globalThis.requestAnimationFrame = ((callback: () => void) => frames.push(callback)) as any;
+
+        try {
+            requestAdjust(ctx, 150, "data");
+            frames[0]();
+        } finally {
+            globalThis.requestAnimationFrame = originalRAF;
+        }
+
+        expect(doScrollTo.mock.calls.at(-1)?.[1]).toEqual({ horizontal: false, isAdjustment: true, offset: 250 });
+        expect(ctx.state.initialMountAdjusts).toEqual([]);
+    });
 });

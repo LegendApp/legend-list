@@ -1,7 +1,8 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
 import { setFooterSize } from "../../src/core/updateContentMetrics";
+import * as getContentSizeModule from "../../src/state/getContentSize";
 import { checkThresholds } from "../../src/utils/checkThresholds";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { beginReachedEdgeUserScroll, prepareReachedEdgeForNextUserScroll } from "../../src/utils/edgeReachedGate";
@@ -353,5 +354,33 @@ describe("checkThresholds", () => {
         setFooterSize(ctx, 0);
         expect([startCalls, endCalls]).toEqual([2, 2]);
         ctx.state.scheduledWork.dispose();
+    });
+    it("skips the edge checks while scrolling far from both edges", () => {
+        const endCalls: number[] = [];
+        const ctx = createMockContext(
+            { totalSize: 10_000 },
+            {
+                props: {
+                    data: Array.from({ length: 100 }, (_, i) => ({ id: i })),
+                    onEndReached: ({ distanceFromEnd }) => endCalls.push(distanceFromEnd),
+                    onEndReachedThreshold: 0.5,
+                    onStartReached: () => {},
+                    onStartReachedThreshold: 0.5,
+                },
+                queuedInitialLayout: true,
+                scroll: 5000,
+                scrollLength: 800,
+            },
+        );
+        checkThresholds(ctx);
+        const contentSize = spyOn(getContentSizeModule, "getContentSize");
+        ctx.state.scroll = 5100;
+        checkThresholds(ctx);
+        expect(contentSize).toHaveBeenCalledTimes(1);
+        contentSize.mockRestore();
+
+        ctx.state.scroll = 10_000 - 800 - 100;
+        checkThresholds(ctx);
+        expect(endCalls).toEqual([100]);
     });
 });

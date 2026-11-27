@@ -2614,6 +2614,8 @@ describe("LegendList props behavior", () => {
                     ctx.state.isMomentumScrolling = testCase.momentum;
                     ctx.state.scroll = testCase.scroll ?? -before;
                     if (testCase.scrollingTo) ctx.state.scrollingTo = { animated: true, offset: 200 } as any;
+                    // A real scroll into the middle runs a pass for its rows.
+                    if (testCase.scroll) act(() => ctx.state.triggerCalculateItemsInView?.());
                     scrollToCalls = [];
 
                     rendered.rerender(list(after));

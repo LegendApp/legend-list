@@ -9,6 +9,8 @@ import type { StateContext } from "@/state/state";
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
+        // A silent-dispatch retry nudged the native offset away and returns on the next frame; return now instead.
+        state.scheduledWork.flush("checkFinishedScrollRetryFrame");
         cancelScrollCompletionChecks(state);
         // An older active scroll can finish while its replacement still waits for layout.
         // Its completion must not settle or release the newer request's ownership.

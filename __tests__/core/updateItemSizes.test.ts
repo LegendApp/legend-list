@@ -104,6 +104,23 @@ describe("updateItemSizes", () => {
         expect(mockState.fixedItemSizeKeys?.has("item_0")).toBe(false);
     });
 
+    it("keeps positions current when a first measurement matches the size its position used", () => {
+        mockState.sizes.set("item_0", 100);
+        mockState.positionsAreCurrent = true;
+        updateOneItemSize(mockCtx, "item_0", { height: 100, width: 400 });
+        expect(mockState.positionsAreCurrent).toBe(true);
+
+        // Native layout reports a row that matches its estimate as slightly under it
+        mockState.sizes.set("item_2", 100);
+        expect(updateOneItemSize(mockCtx, "item_2", { height: 99.9999, width: 400 })).toBe(0);
+        expect(mockState.sizesKnown.get("item_2")).toBe(100);
+        expect(mockState.positionsAreCurrent).toBe(true);
+
+        mockState.sizes.set("item_1", 100);
+        updateOneItemSize(mockCtx, "item_1", { height: 101, width: 400 });
+        expect(mockState.positionsAreCurrent).toBe(false);
+    });
+
     it("follows every web size measurement before the next frame without replacing the end request", async () => {
         Platform.OS = "web";
         const originalRAF = globalThis.requestAnimationFrame;

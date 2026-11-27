@@ -24,7 +24,6 @@ const {
     typedMemo,
     useArr$,
     useCombinedRef,
-    useLatestRef,
     useStableRenderComponent,
     getComponent,
 } = internal;
@@ -47,6 +46,7 @@ type ReanimatedScrollRenderProps = ReanimatedScrollViewProps & {
 };
 
 type ReanimatedLayoutAnimation = ComponentProps<typeof Reanimated.View>["layout"];
+const ItemLayoutAnimationContext = React.createContext<ReanimatedLayoutAnimation>(undefined);
 
 export interface AnimatedLegendListSharedValues {
     activeStickyIndex?: SharedValue<number>;
@@ -133,13 +133,13 @@ interface ReanimatedPositionViewStickyProps {
     children: React.ReactNode;
 }
 
-interface ReanimatedPositionViewProps {
+interface PositionComponentInternalProps {
     id: number;
     horizontal: boolean;
     style: StyleProp<ViewStyle>;
     refView: React.RefObject<View | null>;
     onLayout: (event: LayoutChangeEvent) => void;
-    layoutTransition?: ReanimatedLayoutAnimation;
+    stickyHeaderConfig?: StickyHeaderConfig;
     children: React.ReactNode;
 }
 
@@ -210,19 +210,24 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
     );
 });
 
-const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponent(props: ReanimatedPositionViewProps) {
+const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponent(
+    props: PositionComponentInternalProps,
+) {
     const ctx = useStateContext();
-    const { id, horizontal, style, refView, children, layoutTransition, ...rest } = props;
-    const [positionValue = POSITION_OUT_OF_VIEW, layoutReady = true, isScrollActive] = useArr$([
+    const { id, horizontal, style, refView, children, ...rest } = props;
+    const layoutTransition = React.useContext(ItemLayoutAnimationContext);
+    const itemKeySignal = `containerItemKey${id}` as const;
+    const [positionValue = POSITION_OUT_OF_VIEW, layoutReady = true, scrollActiveOrItemKey] = useArr$([
         `containerPosition${id}`,
         `containerLayoutReady${id}`,
-        "isScrollActive",
+        // Without a transition, track assignments like the regular position view.
+        layoutTransition ? "isScrollActive" : itemKeySignal,
     ]);
     const prevItemKeyRef = React.useRef<string | undefined>(undefined);
     let shouldSkipTransitionForRecycleReuse = false;
 
     if (layoutTransition) {
-        const itemKey = peek$(ctx, `containerItemKey${id}`);
+        const itemKey = peek$(ctx, itemKeySignal);
 
         shouldSkipTransitionForRecycleReuse =
             itemKey !== undefined && prevItemKeyRef.current !== undefined && prevItemKeyRef.current !== itemKey;
@@ -236,7 +241,7 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
     const previousAdjustment = React.useRef(ctx.state.layoutAdjustmentEpoch);
     const wasAdjusted = previousAdjustment.current !== ctx.state.layoutAdjustmentEpoch;
     previousAdjustment.current = ctx.state.layoutAdjustmentEpoch;
-    const shouldSkipLayoutTransition = wasAdjusted || isScrollActive || !!ctx.state.scrollingTo;
+    const shouldSkipLayoutTransition = wasAdjusted || scrollActiveOrItemKey === true || !!ctx.state.scrollingTo;
 
     // Layout transitions require positional layout props instead of transform.
     // An unmeasured row stays laid out but invisible when hideItemsUntilMeasured is on,
@@ -259,16 +264,6 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
     );
 });
 
-interface PositionComponentInternalProps {
-    id: number;
-    horizontal: boolean;
-    style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View | null>;
-    onLayout: (event: LayoutChangeEvent) => void;
-    stickyHeaderConfig?: StickyHeaderConfig;
-    children: React.ReactNode;
-}
-
 interface LegendListForwardedRefProps<ItemT> extends AnimatedLegendListPropsBase<ItemT> {
     /**
      * Internal bridge-only prop used to feed Reanimated animatedProps into LegendList's ScrollView.
@@ -276,6 +271,31 @@ interface LegendListForwardedRefProps<ItemT> extends AnimatedLegendListPropsBase
      */
     animatedPropsInternal?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
     refLegendList: (r: LegendListRef | null) => void;
+    /**
+     * Internal: comma-joined event props Reanimated replaced with its empty listener; see getWorkletEventNames.
+     * A string keeps the memoized shell's props equal across renders.
+     */
+    workletEventNamesInternal?: string;
+}
+
+// Reanimated registers native worklet event handlers on the scroll view and passes an empty listener
+// down in their place. LegendList would otherwise throttle that no-op on every scroll event.
+function getWorkletEventNames(props: Record<string, unknown>) {
+    const names: string[] = [];
+    for (const key in props) {
+        const handler = (props[key] as { workletEventHandler?: { eventNames: string[] } } | null | undefined)
+            ?.workletEventHandler;
+        // Web handlers carry JS listeners, which LegendList must still receive.
+        if (handler && !("listeners" in handler)) {
+            for (const name of handler.eventNames.length > 0 ? handler.eventNames : [key]) {
+                // A JS handler passed under the same name can win over the placeholder; leave it alone.
+                if (typeof props[name] !== "function") {
+                    names.push(name);
+                }
+            }
+        }
+    }
+    return names.length > 0 ? names.join(",") : undefined;
 }
 
 function setSharedValueValue<T>(sharedValue: SharedValue<T> | undefined, value: T) {
@@ -364,7 +384,17 @@ const LegendListForwardedRef = typedMemo(
         props: LegendListForwardedRefProps<ItemT>,
         ref: React.Ref<AnimatedScrollView>,
     ) {
-        const { itemLayoutAnimation, refLegendList, renderScrollComponent, sharedValues, ...rest } = props;
+        const {
+            itemLayoutAnimation,
+            refLegendList,
+            renderScrollComponent,
+            sharedValues,
+            workletEventNamesInternal,
+            ...rest
+        } = props;
+        for (const name of workletEventNamesInternal?.split(",") ?? []) {
+            delete (rest as Record<string, unknown>)[name];
+        }
 
         const internalScrollOffset = useSharedValue(0);
         const scrollOffset = sharedValues?.scrollOffset ?? internalScrollOffset;
@@ -404,27 +434,24 @@ const LegendListForwardedRef = typedMemo(
             [scrollOffset],
         );
 
-        const itemLayoutAnimationRef = useLatestRef(itemLayoutAnimation);
-        const hasItemLayoutAnimation = !!itemLayoutAnimation;
-
-        const positionComponentInternal = React.useMemo(() => {
-            if (!hasItemLayoutAnimation) {
-                return undefined;
-            }
-
-            return function PositionComponent(positionProps: PositionComponentInternalProps) {
-                return <ReanimatedPositionView {...positionProps} layoutTransition={itemLayoutAnimationRef.current} />;
-            };
-        }, [hasItemLayoutAnimation]);
+        // Lists that never animate item layout keep the plain position view. Once enabled, keep the
+        // reanimated one so later toggles don't remount rows.
+        const hasUsedItemLayoutAnimationRef = React.useRef(false);
+        hasUsedItemLayoutAnimationRef.current ||= !!itemLayoutAnimation;
 
         const legendListProps = {
             ...rest,
-            positionComponentInternal,
+            hasItemLayoutAnimationInternal: !!itemLayoutAnimation,
+            positionComponentInternal: hasUsedItemLayoutAnimationRef.current ? ReanimatedPositionView : undefined,
             renderScrollComponent: renderReanimatedScrollComponent,
             ...(IsNewArchitecture ? { stickyPositionComponentInternal } : {}),
         };
 
-        return <LegendList ref={refLegendList} refScrollView={ref} {...(legendListProps as LegendListProps<ItemT>)} />;
+        return (
+            <ItemLayoutAnimationContext.Provider value={itemLayoutAnimation}>
+                <LegendList ref={refLegendList} refScrollView={ref} {...(legendListProps as LegendListProps<ItemT>)} />
+            </ItemLayoutAnimationContext.Provider>
+        );
     }),
 );
 
@@ -463,9 +490,13 @@ const AnimatedLegendList = typedMemo(
         );
         useAnimatedLegendListSharedValuesSync(legendList, sharedValues);
         const forwardedProps = {
-            ...(rest as Omit<LegendListForwardedRefProps<ItemT>, "animatedPropsInternal" | "refLegendList">),
+            ...(rest as Omit<
+                LegendListForwardedRefProps<ItemT>,
+                "animatedPropsInternal" | "refLegendList" | "workletEventNamesInternal"
+            >),
             animatedPropsInternal: animatedProps,
             refLegendList: combinedRef,
+            workletEventNamesInternal: getWorkletEventNames(rest),
         };
 
         return <AnimatedLegendListComponentTyped {...forwardedProps} ref={refScrollView} />;

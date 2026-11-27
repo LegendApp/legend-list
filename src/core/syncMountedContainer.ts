@@ -1,6 +1,6 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { updateContainerItemMetadata } from "@/core/containerItemMetadata";
-import { peek$, type StateContext, set$ } from "@/state/state";
+import { type DeferredListeners, peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { toPhysicalHorizontalItemPosition } from "@/utils/rtl";
@@ -9,7 +9,7 @@ export function syncMountedContainer(
     ctx: StateContext,
     containerIndex: number,
     itemIndex: number,
-    options?: { scrollAdjustPending?: number; updateLayout?: boolean },
+    options?: { deferred?: DeferredListeners; scrollAdjustPending?: number; updateLayout?: boolean },
 ) {
     const state = ctx.state;
     const {
@@ -25,6 +25,7 @@ export function syncMountedContainer(
     const itemKey = state.idCache[itemIndex] ?? getId(state, itemIndex);
     const metadata = updateContainerItemMetadata(state, containerIndex, itemIndex, item);
 
+    const deferred = options?.deferred;
     const updateLayout = options?.updateLayout ?? true;
     let didChangePosition = false;
     let didRefreshData = false;
@@ -32,7 +33,7 @@ export function syncMountedContainer(
     if (updateLayout) {
         const positionValue = positions[itemIndex];
         if (positionValue === undefined) {
-            set$(ctx, `containerPosition${containerIndex}`, POSITION_OUT_OF_VIEW);
+            set$(ctx, `containerPosition${containerIndex}`, POSITION_OUT_OF_VIEW, deferred);
             return { didChangePosition: false, didRefreshData: false };
         }
 
@@ -49,25 +50,25 @@ export function syncMountedContainer(
         const prevSpan = peek$(ctx, `containerSpan${containerIndex}`);
 
         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
-            set$(ctx, `containerPosition${containerIndex}`, position);
+            set$(ctx, `containerPosition${containerIndex}`, position, deferred);
             didChangePosition = true;
         }
         if (column >= 0 && column !== prevColumn) {
-            set$(ctx, `containerColumn${containerIndex}`, column);
+            set$(ctx, `containerColumn${containerIndex}`, column, deferred);
         }
         if (span !== prevSpan) {
-            set$(ctx, `containerSpan${containerIndex}`, span);
+            set$(ctx, `containerSpan${containerIndex}`, span, deferred);
         }
     }
 
     const prevIndex = peek$(ctx, `containerItemIndex${containerIndex}`);
     if (prevIndex !== itemIndex) {
-        set$(ctx, `containerItemIndex${containerIndex}`, itemIndex);
+        set$(ctx, `containerItemIndex${containerIndex}`, itemIndex, deferred);
     }
 
     const prevData = peek$(ctx, `containerItemData${containerIndex}`);
     const updateData = () => {
-        set$(ctx, `containerItemData${containerIndex}`, item);
+        set$(ctx, `containerItemData${containerIndex}`, item, deferred);
         didRefreshData = true;
     };
 

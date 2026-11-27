@@ -164,8 +164,6 @@ export function updateScroll(
     const scrollLength = state.scrollLength;
     const isLargeUserScrollJump =
         scrollLength > 0 && scrollingTo === undefined && scrollDelta > scrollLength && !state.pendingNativeMVCPAdjust;
-    const scrollVelocity = getScrollVelocity(state);
-    updateAdaptiveRender(ctx, scrollVelocity, { forceLight: isLargeUserScrollJump });
     const lastCalculated = state.scrollLastCalculate;
     // During MVCP stabilization we cannot rely on the normal scroll delta threshold.
     const useAggressiveItemRecalculation = isInMVCPActiveMode(state);
@@ -179,6 +177,9 @@ export function updateScroll(
         forceUpdate ||
         lastCalculated === undefined ||
         Math.abs(state.scroll - lastCalculated) > 2;
+    // Velocity feeds only the range recalculation and adaptive render; skip it on events that use neither.
+    const scrollVelocity = shouldUpdate || state.props.adaptiveRender ? getScrollVelocity(state) : 0;
+    updateAdaptiveRender(ctx, scrollVelocity, { forceLight: isLargeUserScrollJump });
 
     if (shouldUpdate) {
         state.scrollLastCalculate = state.scroll;

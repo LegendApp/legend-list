@@ -67,7 +67,7 @@ export class ScheduledWork {
 
     frame(callback: () => void, key: ScheduledWorkKey) {
         this.cancel(key);
-        const work: Work = { cancel: () => cancelAnimationFrame(handle) };
+        const work: Work = { callback, cancel: () => cancelAnimationFrame(handle) };
         this.work.set(key, work);
         const handle = requestAnimationFrame(() => {
             if (this.work.get(key) === work) {
@@ -88,6 +88,13 @@ export class ScheduledWork {
             this.work.delete(key);
             work.cancel();
         }
+    }
+
+    /** Runs pending work now instead of when it was scheduled. */
+    flush(key: ScheduledWorkKey) {
+        const callback = this.work.get(key)?.callback;
+        this.cancel(key);
+        callback?.();
     }
 
     has(key: ScheduledWorkKey) {

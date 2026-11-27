@@ -184,6 +184,8 @@ export function scrollTo(
             targetOffset,
         };
         if (!isInitialScroll) {
+            // The replacement owns its offset samples, including the optimistic update for an instant scroll.
+            state.pendingNativeMVCPAdjust = undefined;
             state.scrollTargetPinnedRange = getTargetViewportRenderRange(ctx, targetOffset, scrollTarget.index);
             if (state.scrollTargetPinnedRange) {
                 state.scrollForNextCalculateItemsInView = undefined;

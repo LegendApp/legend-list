@@ -1,11 +1,14 @@
 import * as React from "react";
 
 import { IsNewArchitecture } from "@/constants-platform";
+import { batchItemSizeUpdates } from "@/core/updateItemSizes";
 import { Platform } from "@/platform/Platform";
+import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, useStateContext } from "@/state/state";
+import type { LegendListRef } from "@/types.base";
 import type { LegendListPropsBase } from "@/types.internal";
 import { expect, mock } from "bun:test";
-import { act, render } from "../helpers/testingLibrary";
+import TestRenderer, { act, type ReactTestRenderer } from "../helpers/testRenderer";
 import { installFakeClock } from "../helpers/webScrollHarness";
 
 const data = Array.from({ length: 30 }, (_, index) => String(index));
@@ -14,10 +17,10 @@ const getFixedItemSize = () => itemSize;
 const keyExtractor = (item: string) => item;
 const Empty = () => <div data-empty />;
 
-type Layout = { height: number; width: number; x: number; y: number };
-type Props = Partial<LegendListPropsBase<string>>;
+type Props = Partial<Extract<LegendListPropsBase<string, LooseScrollViewProps>, { data: readonly string[] }>>;
+type ScrollPhase = "onScroll" | "onScrollBeginDrag" | "onScrollEndDrag" | "onMomentumScrollBegin";
 
-export async function mountList(platform: "ios" | "web", overrides: Props = {}, legacy = false) {
+export async function mountList(platform: "android" | "ios" | "web", overrides: Props = {}, legacy = false) {
     Platform.OS = platform;
     const clock = installFakeClock();
     const emitResize = { current: undefined as ((entry: ResizeObserverEntry) => void) | undefined };
@@ -56,9 +59,10 @@ export async function mountList(platform: "ios" | "web", overrides: Props = {}, 
     expect(IsNewArchitecture).toBe(!legacy);
 
     const { LegendList } = await import("../../src/components/LegendList?show-immediately");
+    const listRef = React.createRef<LegendListRef>();
     const scrollWrites: number[] = [];
     let scroll = 0;
-    let emitNativeLayout: ((event: { nativeEvent: { layout: Layout } }) => void) | undefined;
+    let nativeProps: LooseScrollViewProps;
     let ctx!: ReturnType<typeof useStateContext>;
     const committed = new Map<symbol, string>();
     let firstCommit: Array<[string, number | undefined]> | undefined;
@@ -82,19 +86,15 @@ export async function mountList(platform: "ios" | "web", overrides: Props = {}, 
         return <div data-row={item} />;
     }
 
-    function Surface({
-        children,
-        contentOffset,
-        onLayout,
-        ref,
-    }: {
-        children?: React.ReactNode;
-        contentOffset?: { x: number; y: number };
-        onLayout?: typeof emitNativeLayout;
-        ref?: React.Ref<unknown>;
-    }) {
+    function Surface(
+        props: LooseScrollViewProps & {
+            children?: React.ReactNode;
+            ref?: React.Ref<unknown>;
+        },
+    ) {
+        const { children, contentOffset, ref } = props;
         ctx = useStateContext();
-        emitNativeLayout = onLayout;
+        nativeProps = props;
         React.useImperativeHandle(ref, () => ({
             getCurrentScrollOffset: () => scroll,
             getScrollableNode: () => viewport,
@@ -118,15 +118,31 @@ export async function mountList(platform: "ios" | "web", overrides: Props = {}, 
             getFixedItemSize={getFixedItemSize}
             keyExtractor={keyExtractor}
             recycleItems={false}
-            renderItem={({ item }) => <Row item={item} />}
-            renderScrollComponent={(scrollProps) => <Surface {...scrollProps} />}
+            ref={listRef}
+            renderItem={({ item }: { item: string }) => <Row item={item} />}
+            renderScrollComponent={(scrollProps: LooseScrollViewProps) => <Surface {...scrollProps} />}
             showImmediately
             {...props}
         />
     );
 
-    let mounted: ReturnType<typeof render> | undefined;
+    let mounted: ReactTestRenderer | undefined;
     return {
+        context: () => ctx,
+        emitScroll: (y: number, phase: ScrollPhase = "onScroll") => {
+            scroll = y;
+            act(() =>
+                nativeProps[phase]!({
+                    nativeEvent: {
+                        contentInset: { bottom: 0, left: 0, right: 0, top: 0 },
+                        contentOffset: { x: 0, y },
+                        contentSize: { height: ctx.state.totalSize, width: 250 },
+                        layoutMeasurement: { height: ctx.state.scrollLength, width: 250 },
+                        zoomScale: 1,
+                    },
+                }),
+            );
+        },
         endPadding: () => peek$(ctx, "alignItemsAtEndPadding") ?? 0,
         firstCommit: () => firstCommit,
         layout: (size: number) => {
@@ -142,24 +158,46 @@ export async function mountList(platform: "ios" | "web", overrides: Props = {}, 
                         target: viewport,
                     } as unknown as ResizeObserverEntry);
                 } else {
-                    expect(emitNativeLayout).toBeDefined();
-                    emitNativeLayout?.({ nativeEvent: { layout } });
+                    nativeProps.onLayout!({ nativeEvent: { layout } });
                 }
             });
         },
-        mount: () => {
-            mounted = render(list(overrides));
+        measureRows: (getHeight: (key: string) => number | undefined) => {
+            const views = mounted!.root.findAll(
+                (node) => typeof node.type !== "string" && typeof node.props.id === "number" && !!node.props.refView,
+            );
+            act(() =>
+                batchItemSizeUpdates(() => {
+                    for (const view of views) {
+                        const key = peek$(ctx, `containerItemKey${view.props.id}`);
+                        const height = key === undefined ? undefined : getHeight(key);
+                        if (height === undefined) continue;
+                        view.props.onLayout({
+                            nativeEvent: { layout: { height, width: 250, x: 0, y: 0 } },
+                        });
+                    }
+                }),
+            );
+        },
+        mount: () =>
+            act(() => {
+                mounted = TestRenderer.create(list(overrides));
+            }),
+        nativeContentStyle: () => {
+            const tree = mounted!.toJSON();
+            return Array.isArray(tree) ? tree.find((node) => node.type === "AnimatedView")?.props.style : undefined;
         },
         offset: () => scroll,
+        ref: listRef,
         renderedRange: () => [ctx.state.startBuffered, ctx.state.endBuffered],
-        rerender: (props: Props) => mounted!.rerender(list({ ...overrides, ...props })),
+        rerender: (props: Props) => act(() => mounted!.update(list({ ...overrides, ...props }))),
         rows: () => snapshot(),
         scrollWrites,
         state: () => ctx.state,
         tick: () => act(() => clock.tick()),
         tree: () => mounted!.toJSON(),
         unmount: () => {
-            mounted?.unmount();
+            act(() => mounted?.unmount());
             clock.restore();
             globalThis.HTMLElement = originalHTMLElement;
         },

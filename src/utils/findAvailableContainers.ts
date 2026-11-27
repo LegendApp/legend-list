@@ -1,6 +1,7 @@
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { isSparePoolPending } from "@/utils/getEffectiveDrawDistance";
 
 export interface ContainerAllocation {
     containerIndex: number;
@@ -45,7 +46,7 @@ export function findAvailableContainers(
     const { containerItemMetadata, stickyContainerPool } = state;
     const { data, getItemType } = state.props;
     const hasItemTypes = !!getItemType;
-    const shouldAvoidAssignedContainerReuse = state.props.recycleItems && !!state.props.positionComponentInternal;
+    const shouldAvoidAssignedContainerReuse = state.props.recycleItems && !!state.props.hasItemLayoutAnimationInternal;
     const pendingRemovalSet = pendingRemoval.length > 0 ? new Set(pendingRemoval) : undefined;
     // Recycling a focused web row would move focus onto another item and force the DOM sort
     // to carry every other row past it, so keep that row mounted while its item exists.
@@ -207,7 +208,7 @@ export function findAvailableContainers(
         }
     }
 
-    if (IS_DEV) {
+    if (IS_DEV && !isSparePoolPending(state)) {
         const numContainersPooled = peek$(ctx, "numContainersPooled") ?? Number.POSITIVE_INFINITY;
         if (nextNewContainerIndex > numContainersPooled) {
             console.warn(

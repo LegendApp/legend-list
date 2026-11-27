@@ -212,13 +212,12 @@ describe("item size update functions", () => {
             expect(average.avg).toBe(80);
         });
 
-        it("should round sizes to quarter pixels", () => {
+        it("should round sizes to the nearest eighth pixel", () => {
             const sizeObj = { height: 150.123456, width: 400 };
 
             updateOneItemSize(mockCtx, "item_0", sizeObj);
 
-            const expectedSize = Math.floor(150.123456 * 8) / 8; // Quarter pixel rounding
-            expect(mockState.sizesKnown.get("item_0")).toBe(expectedSize);
+            expect(mockState.sizesKnown.get("item_0")).toBe(150.125);
         });
 
         it("should handle zero and negative sizes", () => {

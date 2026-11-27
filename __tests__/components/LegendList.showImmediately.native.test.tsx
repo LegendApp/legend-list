@@ -1,6 +1,12 @@
-import { expect, it } from "bun:test";
+import { expect, it, spyOn } from "bun:test";
 import "../setup";
 
+import { Animated } from "react-native";
+
+import * as platformScroll from "../../src/core/doScrollTo";
+import { doScrollTo as doNativeScrollTo } from "../../src/core/doScrollTo.native";
+import { listen$, peek$ } from "../../src/state/state";
+import { act } from "../helpers/testRenderer";
 import { Empty, mountList, positions } from "./LegendList.showImmediately.cases";
 
 it("mounts visible fixed rows at their final positions before Fabric layout", async () => {
@@ -79,6 +85,378 @@ it("mounts rows around the initial index on the first Fabric commit", async () =
         list.tick();
         expect(list.rows()).toEqual(positions(10, 13));
         expect(list.offset()).toBe(500);
+    } finally {
+        list.unmount();
+    }
+});
+
+it("renders a disjoint fling viewport and its sticky header before draw-distance prewarm", async () => {
+    const list = await mountList("ios", {
+        drawDistance: 300,
+        showImmediately: false,
+        stickyHeaderIndices: [0, 14],
+    });
+    const animations = Animated.Value.prototype;
+    const originalInterpolate = animations.interpolate;
+    try {
+        animations.interpolate = ((config: unknown) => config) as typeof originalInterpolate;
+        list.mount();
+        list.layout(150);
+        list.tick();
+        const ctx = list.context();
+        const { state } = ctx;
+        expect(list.nativeContentStyle()?.opacity).toBe(1);
+        expect(state.startNoBuffer).toBe(0);
+        expect(peek$(ctx, "activeStickyIndex")).toBe(0);
+        expect(state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
+
+        list.emitScroll(0, "onScrollBeginDrag");
+        list.emitScroll(20, "onScrollEndDrag");
+        list.emitScroll(20, "onMomentumScrollBegin");
+        list.tick();
+        list.emitScroll(775);
+
+        expect([state.startNoBuffer, state.endNoBuffer]).toEqual([15, 18]);
+        expect(list.rows().filter(([, top]) => top! >= 750 && top! < 925)).toEqual(positions(15, 18));
+        expect(peek$(ctx, "activeStickyIndex")).toBe(14);
+        expect(state.didFullDrawDistancePrewarm).toBeFalsy();
+        expect(state.scheduledWork.has("fullDrawDistancePrewarm")).toBe(true);
+    } finally {
+        list.unmount();
+        if (originalInterpolate) animations.interpolate = originalInterpolate;
+        else Reflect.deleteProperty(animations, "interpolate");
+    }
+});
+
+it("retries a measured initial index with viewOffset before revealing it", async () => {
+    spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
+    const list = await mountList("ios", {
+        data: Array.from({ length: 10 }, (_, index) => String(index)),
+        drawDistance: 300,
+        estimatedItemSize: 50,
+        getFixedItemSize: undefined,
+        initialScrollIndex: { index: 4, viewOffset: 13, viewPosition: 0.5 },
+        showImmediately: false,
+    });
+    try {
+        list.mount();
+        const seed = list.offset();
+        expect(seed).toBe(137);
+        list.layout(150);
+        expect(list.nativeContentStyle()?.opacity).toBe(0);
+        expect(list.scrollWrites).toEqual([]);
+
+        const heights = [40, 70, 55, 65, 90, 60, 45, 70, 60, 50];
+        list.measureRows((key) => heights[Number(key)]);
+        for (let frame = 0; frame < 6 && !list.scrollWrites.length; frame++) list.tick();
+        // Row 4 starts at 230. Centering a 90px row in 150px leaves 30px, plus the 13px viewOffset.
+        expect(list.scrollWrites).toEqual([187]);
+        list.emitScroll(seed);
+        list.tick();
+        const writesBeforeResize = list.scrollWrites.length;
+        list.measureRows((key) => (key === "4" ? 130 : undefined));
+
+        for (let frame = 0; frame < 8 && list.scrollWrites.length === writesBeforeResize; frame++) list.tick();
+        expect(list.scrollWrites.slice(writesBeforeResize)).toEqual([207]);
+        expect(list.nativeContentStyle()?.opacity).toBe(0);
+        list.emitScroll(list.offset());
+        list.tick();
+
+        expect(list.nativeContentStyle()?.opacity).toBe(1);
+        expect(list.state().scroll).toBe(207);
+        expect(list.state().sizesKnown.get("4")).toBe(130);
+        const targetTop = list.rows().find(([key]) => key === "4")?.[1];
+        expect(targetTop).toBe(230);
+        expect(targetTop! - list.offset()).toBe(23);
+    } finally {
+        list.unmount();
+    }
+});
+
+it("lets a drag take over from a silent Android initial-scroll retry", async () => {
+    spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
+    const list = await mountList("android", {
+        drawDistance: 300,
+        estimatedItemSize: 50,
+        getFixedItemSize: undefined,
+        initialScrollIndex: { index: 4, viewOffset: 13, viewPosition: 0.5 },
+        showImmediately: false,
+    });
+    try {
+        list.mount();
+        list.layout(150);
+        list.measureRows((key) => (key === "4" ? 90 : 50));
+        for (let frame = 0; frame < 8 && list.scrollWrites.length < 2; frame++) list.tick();
+        // The measured destination is 157px. Android nudges by 1px when the dispatch is silent.
+        expect(list.scrollWrites).toEqual([157, 156]);
+        expect(list.nativeContentStyle()?.opacity).toBe(0);
+
+        list.emitScroll(156, "onScrollBeginDrag");
+        list.emitScroll(425);
+        list.tick();
+        list.emitScroll(475, "onScrollEndDrag");
+        for (let frame = 0; frame < 8; frame++) list.tick();
+
+        expect(list.scrollWrites).toEqual([157, 156]);
+        expect(list.nativeContentStyle()?.opacity).toBe(1);
+        expect(list.state().scroll).toBe(475);
+        expect(list.rows().filter(([, top]) => top! > 425 && top! < 625)).toEqual([
+            ["8", 440],
+            ["9", 490],
+            ["10", 540],
+            ["11", 590],
+        ]);
+    } finally {
+        list.unmount();
+    }
+});
+
+it("does not deliver an older trailing onScroll event after throttling is turned off", async () => {
+    const received: number[] = [];
+    const list = await mountList("ios", {
+        onScroll: (event) => received.push(event.nativeEvent.contentOffset.y),
+        scrollEventThrottle: 64,
+    });
+    const now = spyOn(Date, "now").mockReturnValue(1000);
+    try {
+        list.mount();
+        list.layout(150);
+        list.emitScroll(50);
+        list.emitScroll(100);
+        expect(received).toEqual([50]);
+
+        list.rerender({ scrollEventThrottle: 0 });
+        list.emitScroll(150);
+        for (let frame = 0; frame < 5; frame++) list.tick();
+
+        expect(received).toEqual([50, 150]);
+    } finally {
+        now.mockRestore();
+        list.unmount();
+    }
+});
+
+it("keeps recycled rows and their subscribers aligned through a prepend and a row resize", async () => {
+    const data = Array.from({ length: 30 }, (_, index) => String(index));
+    const list = await mountList("ios", {
+        data,
+        drawDistance: 100,
+        estimatedItemSize: 50,
+        getFixedItemSize: (item) => (item === "10" ? undefined : 50),
+        maintainVisibleContentPosition: true,
+        recycleItems: true,
+    });
+    const unsubscribe: (() => void)[] = [];
+    try {
+        list.mount();
+        list.layout(150);
+        for (let frame = 0; frame < 8; frame++) list.tick();
+        const ctx = list.context();
+        const firstAssignments = [...ctx.state.containerItemKeys];
+        list.emitScroll(550);
+        list.measureRows((key) => (key === "10" ? 50 : undefined));
+        list.tick();
+        expect(
+            firstAssignments.some(([key, slot]) => {
+                const nextKey = peek$(ctx, `containerItemKey${slot}`);
+                return nextKey !== undefined && nextKey !== key;
+            }),
+        ).toBe(true);
+
+        // Model the native offset shift as the ScrollAdjust spacer moves.
+        let nativeOffset = list.offset();
+        let previousAdjust = peek$(ctx, "scrollAdjust") ?? 0;
+        unsubscribe.push(
+            listen$(ctx, "scrollAdjust", (adjust) => {
+                nativeOffset += adjust - previousAdjust;
+                previousAdjust = adjust;
+            }),
+        );
+        const snapshots: [string | undefined, number | undefined, unknown, number | undefined][] = [];
+        for (let slot = 0; slot < peek$(ctx, "numContainersPooled"); slot++) {
+            const key = `containerItemKey${slot}` as const;
+            const index = `containerItemIndex${slot}` as const;
+            const item = `containerItemData${slot}` as const;
+            const position = `containerPosition${slot}` as const;
+            const observe = () =>
+                snapshots.push([peek$(ctx, key), peek$(ctx, index), peek$(ctx, item), peek$(ctx, position)]);
+            unsubscribe.push(
+                listen$(ctx, key, observe),
+                listen$(ctx, index, observe),
+                listen$(ctx, item, observe),
+                listen$(ctx, position, observe),
+            );
+        }
+
+        const paged = ["30", "31", "32", ...data];
+        const anchorSlot = ctx.state.containerItemKeys.get("11")!;
+        const resizedIndex = paged.indexOf("10");
+        const checkPage = (growth: number) => {
+            expect(list.nativeContentStyle()?.height).toBe(1650 + growth);
+            expect(nativeOffset).toBe(700 + growth);
+            expect(ctx.state.scroll).toBe(nativeOffset);
+            expect(ctx.state.containerItemKeys.get("11")).toBe(anchorSlot);
+            expect(list.rows().filter(([, top]) => top! >= nativeOffset && top! < nativeOffset + 150)).toEqual([
+                ["11", nativeOffset],
+                ["12", nativeOffset + 50],
+                ["13", nativeOffset + 100],
+            ]);
+            expect(snapshots.length).toBeGreaterThan(0);
+            for (const [key, index, item, position] of snapshots) {
+                if (index === undefined) {
+                    expect([key, item]).toEqual([undefined, undefined]);
+                } else {
+                    const expectedPosition = index * 50 + (index > resizedIndex ? growth : 0);
+                    expect([key, item, position]).toEqual([paged[index], paged[index], expectedPosition]);
+                }
+            }
+        };
+
+        expect(list.rows()).toContainEqual(["11", 550]);
+        list.rerender({ data: paged });
+        checkPage(0);
+        list.emitScroll(nativeOffset);
+        snapshots.length = 0;
+
+        list.measureRows((key) => (key === "10" ? 90 : undefined));
+        checkPage(40);
+        list.emitScroll(nativeOffset);
+        expect(ctx.state.scroll).toBe(740);
+        expect(ctx.state.sizesKnown.get("10")).toBe(90);
+    } finally {
+        for (const stop of unsubscribe) stop();
+        list.unmount();
+    }
+});
+
+it("keeps a surviving row anchored when a reversed fling loses its first fully visible row", async () => {
+    const data = Array.from({ length: 30 }, (_, index) => String(index));
+    const list = await mountList("ios", {
+        data,
+        drawDistance: 300,
+        estimatedItemSize: 50,
+        getFixedItemSize: (item) => (item === "10" ? undefined : 50),
+        maintainVisibleContentPosition: true,
+        recycleItems: true,
+        showImmediately: false,
+    });
+    try {
+        list.mount();
+        list.layout(150);
+        list.tick();
+        list.emitScroll(1100);
+        list.emitScroll(575);
+        const ctx = list.context();
+        expect(ctx.state.didFullDrawDistancePrewarm).toBeFalsy();
+        expect(list.rows()).toContainEqual(["12", 600]);
+        expect(list.rows()).toContainEqual(["13", 650]);
+
+        list.rerender({ data: ["older-a", "older-b", ...data.filter((item) => item !== "12")] });
+        expect(list.rows()).toContainEqual(["13", 700]);
+        // Moving the native adjustment spacer shifts the surface from 575px to 625px.
+        expect(peek$(ctx, "scrollAdjust")).toBe(50);
+        list.emitScroll(625);
+
+        list.measureRows((key) => (key === "10" ? 85 : undefined));
+        expect(peek$(ctx, "scrollAdjust")).toBe(85);
+        list.emitScroll(660);
+        for (let frame = 0; frame < 12; frame++) list.tick();
+
+        expect(list.nativeContentStyle()?.height).toBe(1585);
+        expect(list.state().scroll).toBe(660);
+        expect(list.rows()).toContainEqual(["8", 500]);
+        expect(list.rows()).toContainEqual(["13", 735]);
+        expect(list.rows().some(([key]) => key === "12")).toBe(false);
+        expect(list.scrollWrites).toEqual([]);
+    } finally {
+        list.unmount();
+    }
+});
+
+it("lands an absolute scroll when a preceding data shrink is still waiting for the native clamp", async () => {
+    spyOn(platformScroll, "doScrollTo").mockImplementation(doNativeScrollTo);
+    const data = Array.from({ length: 30 }, (_, index) => String(index));
+    const visible: string[] = [];
+    const list = await mountList("ios", {
+        data,
+        maintainVisibleContentPosition: true,
+        onFirstVisibleItemChanged: ({ item }) => visible.push(item),
+        recycleItems: true,
+    });
+    try {
+        list.mount();
+        list.layout(150);
+        list.tick();
+        list.emitScroll(1200);
+        list.rerender({ data: data.slice(5) });
+        expect(list.nativeContentStyle()?.height).toBe(1250);
+        // The trim displaced the anchor by 250px. The list applies 150px and waits for the clamp.
+        const ctx = list.context();
+        expect(peek$(ctx, "scrollAdjust")).toBe(-150);
+        expect(list.scrollWrites).toEqual([]);
+
+        visible.length = 0;
+        const handle = list.ref.current!;
+        let landing!: Promise<void>;
+        act(() => {
+            landing = handle.scrollToOffset({ animated: false, offset: 500 });
+        });
+        for (let frame = 0; frame < 10 && !list.scrollWrites.length; frame++) list.tick();
+        expect(list.scrollWrites).toEqual([500]);
+        expect(visible).toEqual(["15"]);
+        list.emitScroll(500);
+        list.tick();
+
+        expect(peek$(ctx, "scrollAdjust")).toBe(-150);
+        expect(handle.getState().scroll).toBe(500);
+        expect(list.rows().filter(([, top]) => top! >= 500 && top! < 650)).toEqual([
+            ["15", 500],
+            ["16", 550],
+            ["17", 600],
+        ]);
+        await landing;
+    } finally {
+        list.unmount();
+    }
+});
+
+it("delivers each edge after crossing back from the middle by the last pixel", async () => {
+    const calls: Array<["start" | "end", number]> = [];
+    const list = await mountList("ios", {
+        maintainVisibleContentPosition: false,
+        onEndReached: ({ distanceFromEnd }) => calls.push(["end", distanceFromEnd]),
+        onEndReachedThreshold: 0.1,
+        onStartReached: ({ distanceFromStart }) => calls.push(["start", distanceFromStart]),
+        onStartReachedThreshold: 0.1,
+    });
+    try {
+        list.mount();
+        list.layout(150);
+        list.tick();
+        expect(calls).toEqual([["start", 0]]);
+
+        for (const offset of [550, 800, 1334]) list.emitScroll(offset);
+        expect(calls).toEqual([["start", 0]]);
+        list.emitScroll(1335);
+        expect(calls).toEqual([
+            ["start", 0],
+            ["end", 15],
+        ]);
+
+        // A short reversal leaves the hysteresis window and can rearm the same edge.
+        for (const offset of [1320, 1334, 1335, 1336, 550, 16]) list.emitScroll(offset);
+        expect(calls).toEqual([
+            ["start", 0],
+            ["end", 15],
+            ["end", 15],
+        ]);
+        list.emitScroll(15);
+        expect(calls).toEqual([
+            ["start", 0],
+            ["end", 15],
+            ["end", 15],
+            ["start", 15],
+        ]);
     } finally {
         list.unmount();
     }

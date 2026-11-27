@@ -40,8 +40,11 @@ const ContainersLayer = typedMemo(function ContainersLayer({
 }: ContainersLayerProps) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const size = useValue$("totalSize");
+    const animatedSize = useValue$("totalSize");
     const minSize = useCommittedMinSize();
+    // Without end space set outside React, the committed size already lands with the row positions.
+    // An attached Animated size would add a Fabric setNativeProps commit per change.
+    const size = isFabric && !ctx.state.props.anchoredEndSpace ? minSize : animatedSize;
     const [readyToRender, numColumns, otherAxisSize = 0, footerSize = 0] = useArr$([
         "readyToRender",
         "numColumns",
