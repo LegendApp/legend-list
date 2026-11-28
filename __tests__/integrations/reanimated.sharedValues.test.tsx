@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import * as React from "react";
+import { Platform } from "react-native";
 
 import { getStickyPushLimit } from "../../src/components/stickyPositionUtils";
 import { POSITION_OUT_OF_VIEW } from "../../src/constants";
@@ -281,6 +282,44 @@ describe("AnimatedLegendList sharedValues integration", () => {
             );
         });
         expect(replacementScrollOffset.get()).toBe(currentLegendListState.scroll);
+    });
+
+    it.each([
+        ["ios", false],
+        ["web", true],
+    ] as const)("passes the sticky style's dependencies to Reanimated only on web (%s)", async (os, passesDeps) => {
+        Platform.OS = os;
+        const depsArgs: unknown[] = [];
+        registerReanimatedModuleMock({
+            ...createReanimatedOverrides(),
+            useAnimatedStyle: (updater: () => unknown, deps?: unknown) => {
+                depsArgs.push(deps);
+                return updater();
+            },
+        });
+        const { AnimatedLegendList } = await import(`../../src/integrations/reanimated?sticky-deps-${os}`);
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList
+                    data={[{ id: "header" }]}
+                    estimatedItemSize={36}
+                    renderItem={() => null}
+                    stickyHeaderIndices={[0]}
+                />,
+            );
+        });
+        act(() => {
+            TestRenderer.create(
+                <StateProvider>
+                    <StickyHeaderProbe PositionComponent={lastLegendListProps.stickyPositionComponentInternal} />
+                </StateProvider>,
+            );
+        });
+
+        expect(depsArgs.length).toBeGreaterThan(0);
+        for (const deps of depsArgs) {
+            expect(Array.isArray(deps)).toBe(passesDeps);
+        }
     });
 
     it("does not track the scroll offset for semantic shared values", async () => {

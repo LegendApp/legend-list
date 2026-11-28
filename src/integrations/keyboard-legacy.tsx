@@ -21,6 +21,11 @@ import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/lis
 
 const { typedForwardRef, useCombinedRef } = internal;
 
+// Reanimated only reads hook dependency arrays on web. On native it ignores
+// them and logs "Dependencies should only be used on the web" once per call
+// site, so pass them on web only.
+const webOnlyDeps = <T extends unknown[]>(deps: T): T | undefined => (Platform.OS === "web" ? deps : undefined);
+
 type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
 type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;
 type KeyboardAnimationMode = "idle" | "running";
@@ -173,7 +178,7 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
                 }
             }
         },
-        [horizontal, onScrollCallback, onScrollCallbackIsWorklet],
+        webOnlyDeps([horizontal, onScrollCallback, onScrollCallbackIsWorklet]),
     );
     const composedScrollHandler = useComposedEventHandler([
         scrollHandler as ScrollHandlerProcessed<Record<string, unknown>>,
@@ -551,7 +556,7 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
             ...(styleFlattened || {}),
             marginBottom: keyboardInset.get(),
         }),
-        [styleProp, keyboardInset],
+        webOnlyDeps([styleProp, keyboardInset]),
     );
 
     // contentInset is not supported on Android so we have to use marginBottom instead.
