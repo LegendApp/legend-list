@@ -38,6 +38,11 @@ import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/lis
 
 const { typedForwardRef, useCombinedRef } = internal;
 
+// Reanimated only reads hook dependency arrays on web. On native it ignores
+// them and logs "Dependencies should only be used on the web" once per call
+// site, so pass them on web only.
+const webOnlyDeps = <T extends unknown[]>(deps: T): T | undefined => (Platform.OS === "web" ? deps : undefined);
+
 /**
  * Writes a shared value through runOnUI: runOnUI jobs reach the UI runtime in call order, while on
  * Reanimated 4.3+ a JS-thread `.value` write takes a separate path and can overtake them.
@@ -98,7 +103,7 @@ function ReanimatedContentExtent({
         }
     }, [extent, holdShrink, committedSize]);
     // An explicit 0 rather than no key: a key dropped from an animated style keeps its last value.
-    const style = useAnimatedStyle(() => ({ minHeight: holdShrink ? extent.value : 0 }), [holdShrink]);
+    const style = useAnimatedStyle(() => ({ minHeight: holdShrink ? extent.value : 0 }), webOnlyDeps([holdShrink]));
     // The wrapper takes the content container's place as the footer's parent: give it the same gap
     // and cross-axis alignment.
     const wrapperStyle = useMemo(
@@ -376,7 +381,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
                 runOnJS(reportViewabilityInset)(current);
             }
         },
-        [contentInsetEndAdjustment, isHorizontal, keyboard, keyboardOffset, reportViewabilityInset],
+        webOnlyDeps([contentInsetEndAdjustment, isHorizontal, keyboard, keyboardOffset, reportViewabilityInset]),
     );
 
     useEffect(() => {
@@ -484,7 +489,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
             const end = Math.max(0, contentEnd + inset);
             if (current.scroll > end) scrollTo(scrollRef, 0, end, false);
         },
-        [freeze, getEndInset, isHorizontal, keyboardOffset, reportClosingInset],
+        webOnlyDeps([freeze, getEndInset, isHorizontal, keyboardOffset, reportClosingInset]),
     );
 
     const memoList = useCallback(

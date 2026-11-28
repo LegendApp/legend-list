@@ -1,6 +1,13 @@
 import * as React from "react";
 import { type ComponentProps, useCallback } from "react";
-import { type LayoutChangeEvent, type ScrollViewProps, type StyleProp, View, type ViewStyle } from "react-native";
+import {
+    type LayoutChangeEvent,
+    Platform,
+    type ScrollViewProps,
+    type StyleProp,
+    View,
+    type ViewStyle,
+} from "react-native";
 import Reanimated, {
     type SharedValue,
     useAnimatedRef,
@@ -28,6 +35,11 @@ const {
     getComponent,
 } = internal;
 const { peek$, useStateContext } = internal;
+
+// Reanimated only reads hook dependency arrays on web. On native it ignores
+// them and logs "Dependencies should only be used on the web" once per call
+// site, so pass them on web only.
+const webOnlyDeps = <T extends unknown[]>(deps: T): T | undefined => (Platform.OS === "web" ? deps : undefined);
 
 type KeysToOmit =
     | "getFixedItemSize"
@@ -187,15 +199,18 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
     const stickyOffset = stickyHeaderConfig?.offset ?? 0;
     const stickyStart = position + headerSize + stylePaddingTop - stickyOffset;
 
-    const stickyPositionStyle = useAnimatedStyle(() => {
-        const delta = Math.max(0, stickyScrollOffset.value - stickyStart);
-        const stickyPosition = position + delta;
-        const resolvedPosition = pushLimit !== undefined ? Math.min(stickyPosition, pushLimit) : stickyPosition;
+    const stickyPositionStyle = useAnimatedStyle(
+        () => {
+            const delta = Math.max(0, stickyScrollOffset.value - stickyStart);
+            const stickyPosition = position + delta;
+            const resolvedPosition = pushLimit !== undefined ? Math.min(stickyPosition, pushLimit) : stickyPosition;
 
-        return horizontal
-            ? { transform: [{ translateX: resolvedPosition }] }
-            : { transform: [{ translateY: resolvedPosition }] };
-    }, [horizontal, position, pushLimit, stickyStart]);
+            return horizontal
+                ? { transform: [{ translateX: resolvedPosition }] }
+                : { transform: [{ translateY: resolvedPosition }] };
+        },
+        webOnlyDeps([horizontal, position, pushLimit, stickyStart]),
+    );
 
     const viewStyle = React.useMemo(
         () => [style, { zIndex: itemIndex + 1000 }, stickyPositionStyle],
